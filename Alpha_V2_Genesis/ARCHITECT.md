@@ -386,3 +386,39 @@ The Meta App Factory has been migrated from Tkinter to React/FastAPI:
 | `/api/chat/stream` | POST | SSE streaming chat |
 | `/api/chat/clear` | POST | Clear chat history |
 | `/api/health` | GET | Health check |
+
+---
+
+## 🤖 Gemini Streaming Engine (V3 Chat)
+
+### API Key Flow
+
+```
+vault.enc → vault_client.get_secret("GEMINI_API_KEY")
+         → .strip() → os.environ["GOOGLE_API_KEY"]
+         → stream_bridge.py → REST API call
+```
+
+### Model Fallback Chain
+
+Models confirmed available via `ListModels` API (2026-02-27):
+
+1. `gemini-2.5-flash` (v1beta) — primary
+2. `gemini-2.0-flash` (v1beta) — fallback
+3. `gemini-2.0-flash-lite` (v1beta) — lightweight fallback
+
+### Context Payload Field Map (`getContext` → `dashboard_context`)
+
+| UI Label | API Path | Notes |
+| :--- | :--- | :--- |
+| SPX Price | `market_snapshot.spx` | NOT `spx_price` |
+| VIX | `market_snapshot.vix` | Direct field |
+| IV Rank | `market_snapshot.iv_rank` | Direct field |
+| 5-Day Trend | `market_snapshot.trend_5d_pct` | NOT `spx_trend_5d` |
+| Verdict | `final_action` | "HOLD", "ROLL", etc. |
+| Strategy | `loki_proposal.strategy` | Nested |
+| Risk Score | `loki_proposal.risk_score` | 0-100 |
+| Market State | `market_state` | "STABLE" or "VOLATILE" |
+| Trade Strikes | `expert_opinions.watchdog.trade_details.*` | `short_put_strike`, etc. |
+
+> **Reference**: See `GEMINI_INTEGRATION.md` in the Meta_App_Factory root for the full reusable pattern guide.

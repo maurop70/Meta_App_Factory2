@@ -45,6 +45,16 @@ if _langsmith_key:
 else:
     logger.warning("LANGCHAIN_API_KEY not found in vault. LangSmith tracing disabled.")
 
+# ── Gemini API Key → Environment ──────────────────────────────
+# LangChain expects GOOGLE_API_KEY; Vault stores GEMINI_API_KEY
+_gemini_key = get_secret("GEMINI_API_KEY")
+if _gemini_key:
+    os.environ["GOOGLE_API_KEY"] = _gemini_key
+    os.environ["GEMINI_API_KEY"] = _gemini_key
+    logger.info(f"Gemini API key loaded from vault ({len(_gemini_key)} chars, ends ...{_gemini_key[-4:]})")
+else:
+    logger.error("GEMINI_API_KEY not found in vault! Streaming will fail with 403.")
+
 # ── Conversation Memory (lightweight) ────────────────────────
 _HISTORY_DIR = os.path.join(SCRIPT_DIR, ".Gemini_state")
 _STREAM_HISTORY = os.path.join(_HISTORY_DIR, ".stream_history.json")
@@ -137,10 +147,15 @@ def stream_chat(prompt: str, project_name: str = "General", dashboard_context=No
                    {"text": "", "done": True}  for completion
                    {"error": "msg"}  on failure
     """
-    api_key = get_secret("GEMINI_API_KEY")
+    # Get key from env (set on boot) or vault, strip whitespace
+    api_key = (os.environ.get("GEMINI_API_KEY") or get_secret("GEMINI_API_KEY") or "").strip()
     if not api_key:
-        yield {"error": "GEMINI_API_KEY not found in vault. Cannot stream."}
+        logger.error("GEMINI_API_KEY is empty after vault lookup!")
+        yield {"error": "GEMINI_API_KEY not found in vault or environment. Cannot stream."}
         return
+
+    print(f"DEBUG: API key loaded, length={len(api_key)}, starts={api_key[:4]}..., ends=...{api_key[-4:]}")
+    logger.info(f"API key ready: {len(api_key)} chars")
 
     # Build conversation context — prefer Supabase, fallback to local JSON
     if SUPA_AVAILABLE:
@@ -173,11 +188,6 @@ def stream_chat(prompt: str, project_name: str = "General", dashboard_context=No
             "parts": [{"text": msg["content"]}]
         })
 
-    url = (
-        f"https://generativelanguage.googleapis.com/v1beta/models/"
-        f"gemini-2.5-flash:streamGenerateContent?alt=sse&key={api_key}"
-    )
-
     payload = {
         "contents": contents,
         "generationConfig": {
@@ -188,51 +198,80 @@ def stream_chat(prompt: str, project_name: str = "General", dashboard_context=No
 
     full_response = []
 
+    # Model fallback chain (confirmed via ListModels API)
+    models_with_api = [
+        ("gemini-2.5-flash", "v1beta"),
+        ("gemini-2.0-flash", "v1beta"),
+        ("gemini-2.0-flash-lite", "v1beta"),
+    ]
+    resp = None
+    last_error = ""
+    
+    for model_name, api_version in models_with_api:
+        url = (
+            f"https://generativelanguage.googleapis.com/{api_version}/models/"
+            f"{model_name}:streamGenerateContent?alt=sse&key={api_key}"
+        )
+        try:
+            print(f"DEBUG: Trying {model_name} via {api_version}...")
+            logger.info(f"Streaming request to {model_name} ({api_version}) (prompt: {prompt[:60]}...)")
+            resp = requests.post(url, json=payload, stream=True, timeout=120)
+            print(f"DEBUG: {model_name} → HTTP {resp.status_code}")
+            if resp.status_code == 200:
+                logger.info(f"Connected to {model_name} successfully")
+                break
+            else:
+                last_error = resp.text[:500]
+                print(f"DEBUG: {model_name} error body: {last_error}")
+                logger.warning(f"{model_name} returned {resp.status_code}: {last_error[:200]}")
+                resp.close()
+                resp = None
+        except Exception as e:
+            logger.warning(f"{model_name} connection failed: {e}")
+            print(f"DEBUG: {model_name} exception: {e}")
+            last_error = str(e)
+            resp = None
+    
+    if resp is None or resp.status_code != 200:
+        yield {"error": f"Gemini API error: {last_error[:300]}"}
+        return
+
     try:
-        logger.info(f"Streaming request to Gemini (prompt: {prompt[:60]}...)")
-        
-        with requests.post(url, json=payload, stream=True, timeout=120) as resp:
-            if resp.status_code != 200:
-                error_text = resp.text[:300]
-                logger.warning(f"Gemini API returned {resp.status_code}: {error_text}")
-                yield {"error": f"Gemini API error ({resp.status_code}). Check API key."}
-                return
-
-            # Parse SSE stream from Gemini
-            for line in resp.iter_lines(decode_unicode=True):
-                if not line:
-                    continue
+        # Parse SSE stream from Gemini
+        for line in resp.iter_lines(decode_unicode=True):
+            if not line:
+                continue
+            
+            # SSE format: "data: {json}"
+            if line.startswith("data: "):
+                json_str = line[6:]  # Strip "data: " prefix
                 
-                # SSE format: "data: {json}"
-                if line.startswith("data: "):
-                    json_str = line[6:]  # Strip "data: " prefix
-                    
-                    try:
-                        chunk_data = json.loads(json_str)
-                    except json.JSONDecodeError:
-                        continue
+                try:
+                    chunk_data = json.loads(json_str)
+                except json.JSONDecodeError:
+                    continue
 
-                    # Extract text from Gemini response structure
-                    candidates = chunk_data.get("candidates", [])
-                    if not candidates:
-                        continue
+                # Extract text from Gemini response structure
+                candidates = chunk_data.get("candidates", [])
+                if not candidates:
+                    continue
 
-                    parts = (
-                        candidates[0]
-                        .get("content", {})
-                        .get("parts", [])
-                    )
-                    
-                    for part in parts:
-                        text = part.get("text", "")
-                        if text:
-                            full_response.append(text)
-                            yield {"text": text}
+                parts = (
+                    candidates[0]
+                    .get("content", {})
+                    .get("parts", [])
+                )
+                
+                for part in parts:
+                    text = part.get("text", "")
+                    if text:
+                        full_response.append(text)
+                        yield {"text": text}
 
-                    # Check if generation is complete
-                    finish_reason = candidates[0].get("finishReason")
-                    if finish_reason and finish_reason != "STOP":
-                        logger.info(f"Stream finished: {finish_reason}")
+                # Check if generation is complete
+                finish_reason = candidates[0].get("finishReason")
+                if finish_reason and finish_reason != "STOP":
+                    logger.info(f"Stream finished: {finish_reason}")
 
         # Save completed response to history
         complete_text = "".join(full_response)
@@ -251,6 +290,11 @@ def stream_chat(prompt: str, project_name: str = "General", dashboard_context=No
     except Exception as e:
         logger.error(f"Streaming error: {e}")
         yield {"error": f"Streaming failed: {str(e)}"}
+    finally:
+        try:
+            resp.close()
+        except Exception:
+            pass
 
 
 def chat_sync(prompt: str, project_name: str = "General") -> str:

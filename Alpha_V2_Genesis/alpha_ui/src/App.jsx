@@ -1487,33 +1487,119 @@ function App() {
         onToggle={() => setChatOpen(false)}
         apiBase={apiBase}
         getContext={() => {
-          const ctx = {};
-          if (data) {
-            ctx.market = {
-              spx_price: data.spx_price,
-              vix: data.vix,
-              signal: data.signal,
-              risk_score: data.risk_score,
-              recommendation: data.recommendation,
-            };
-            if (data.trade) ctx.active_trade = data.trade;
-            if (data.greeks) ctx.greeks = data.greeks;
+          try {
+            const ctx = {};
+            if (data) {
+              // ── Market Snapshot (confirmed fields: spx, vix, iv_rank, trend_5d_pct, news_count) ──
+              const ms = data?.market_snapshot || {};
+              ctx.market = {
+                spx_price: ms?.spx ?? null,
+                vix: ms?.vix ?? null,
+                iv_rank: ms?.iv_rank ?? null,
+                trend_5d_pct: ms?.trend_5d_pct ?? null,
+                news_count: ms?.news_count ?? null,
+                market_state: data?.market_state ?? null,
+              };
+
+              // ── Expert Signals ──
+              const eo = data?.expert_opinions || {};
+              const wd = eo?.watchdog || {};
+              const sent = eo?.sentiment || {};
+              const macro = eo?.macro || {};
+              const vol = eo?.volatility || {};
+              const n8nOp = eo?.n8n || {};
+              ctx.signals = {
+                watchdog_verdict: wd?.verdict ?? null,
+                watchdog_status: wd?.status ?? null,
+                watchdog_distance_pct: wd?.distance_pct ?? null,
+                watchdog_danger_side: wd?.danger_side ?? null,
+                sentiment_bias: sent?.bias ?? sent?.signal ?? null,
+                macro_risk: macro?.risk_level ?? macro?.risk ?? null,
+                macro_events: Array.isArray(macro?.events) ? macro.events : [],
+                volatility_signal: vol?.signal ?? vol?.regime ?? null,
+                n8n_forecast: n8nOp?.forecast ?? n8nOp?.signal ?? vol?.n8n_forecast ?? null,
+              };
+
+              // ── Strategy (Loki Proposal) ──
+              const lp = data?.loki_proposal || {};
+              ctx.strategy = {
+                action: data?.final_action ?? lp?.strategy ?? null,
+                strategy: lp?.strategy ?? null,
+                risk_score: lp?.risk_score ?? null,
+                confidence: lp?.confidence ?? null,
+                rationale: lp?.rationale ?? null,
+                n8n_status: data?.n8n_status ?? null,
+              };
+
+              // ── Risk Check ──
+              if (data?.risk_check) {
+                ctx.risk_check = data.risk_check;
+              }
+
+              // ── Active Trade (from watchdog.trade_details) ──
+              const td = wd?.trade_details || {};
+              if (td?.short_put_strike || td?.short_call_strike) {
+                ctx.active_trade = {
+                  strategy: td?.strategy ?? null,
+                  symbol: td?.symbol ?? null,
+                  short_put_strike: td?.short_put_strike ?? null,
+                  long_put_strike: td?.long_put_strike ?? null,
+                  short_call_strike: td?.short_call_strike ?? null,
+                  long_call_strike: td?.long_call_strike ?? null,
+                  credit_received: td?.credit_received ?? td?.open_price ?? null,
+                  expiration_date: td?.expiration_date ?? null,
+                  open_date: td?.open_date ?? null,
+                  status: td?.status ?? null,
+                  notes: td?.notes ?? null,
+                };
+              }
+
+              // ── Defense Matrix ──
+              const defense = eo?.defense || {};
+              if (defense?.recommendation || defense?.action) {
+                ctx.defense_matrix = {
+                  recommendation: defense?.recommendation ?? null,
+                  action: defense?.action ?? null,
+                  roll_credit: defense?.roll_credit ?? null,
+                  cost_to_close: defense?.cost_to_close ?? null,
+                };
+              }
+            }
+
+            // ── Ledger ──
+            if (ledger) {
+              const positions = Array.isArray(ledger?.positions) ? ledger.positions : [];
+              ctx.ledger_summary = {
+                total_positions: positions.length,
+                positions: positions.slice(0, 3).map(p => ({
+                  strategy: p?.strategy ?? null,
+                  strikes: p?.strikes ?? null,
+                  credit: p?.credit ?? null,
+                  mark: p?.mark ?? null,
+                  pnl: p?.pnl ?? null,
+                  dte: p?.dte ?? null,
+                })),
+              };
+            }
+
+            // ── Recent Trades ──
+            const journal = Array.isArray(tradeJournal) ? tradeJournal : [];
+            if (journal.length) {
+              ctx.recent_trades = journal.slice(0, 5).map(t => ({
+                date: t?.date || t?.opened || null,
+                strikes: t?.strikes ?? null,
+                credit: t?.credit ?? null,
+                result: t?.result ?? null,
+                pnl: t?.pnl ?? t?.pnl_dollars ?? null,
+              }));
+            }
+
+            ctx.fetch_timestamp = new Date().toISOString();
+            return Object.keys(ctx).length > 1 ? ctx : null;
+          } catch (e) {
+            console.warn('[getContext] Failed to build context:', e);
+            return { fetch_timestamp: new Date().toISOString(), error: 'context_build_failed' };
           }
-          if (ledger) {
-            ctx.ledger_summary = {
-              total_trades: ledger.state?.total_trades,
-              win_rate: ledger.state?.win_rate,
-              net_pnl: ledger.state?.net_pnl,
-              avg_credit: ledger.state?.avg_credit,
-            };
-          }
-          if (tradeJournal?.length) {
-            ctx.recent_trades = tradeJournal.slice(0, 5).map(t => ({
-              date: t.date, strikes: t.strikes, credit: t.credit,
-              result: t.result, pnl: t.pnl,
-            }));
-          }
-          return Object.keys(ctx).length ? ctx : null;
         }}
       />
 

@@ -1,5 +1,5 @@
 # ALPHA V2 GENESIS - STRATEGY LEDGER
-**Generated:** 2026-02-27 13:29:46  |  **Engine:** Lead Quant Architect v2.0
+**Generated:** 2026-02-27 18:07:18  |  **Engine:** Lead Quant Architect v2.0
 
 ---
 
@@ -9,10 +9,10 @@
 | :--- | :--- |
 | **Portfolio Health** | GREEN |
 | **Open Positions** | 1 |
-| **SPX Spot** | 6,853.69 |
-| **VIX** | 20.65 (RISING) |
-| **IV Rank (52W)** | 15.6% |
-| **IV-HV Spread** | +7.4pp (Seller Edge) |
+| **SPX Spot** | 6,878.88 |
+| **VIX** | 19.86 (FLAT) |
+| **IV Rank (52W)** | 13.9% |
+| **IV-HV Spread** | +6.8pp (Seller Edge) |
 | **N8N System Health** | DEGRADED (13 failures in log) |
 | **Last Hot Updates** | 0 n8n pushes detected |
 
@@ -47,8 +47,8 @@
 | **Opened** | 2026-02-23 |
 | **Expires** | 2026-04-10 (42 DTE remaining) |
 | **Credit Received** | $9.30 |
-| **Current Mark** | $8.35 |
-| **P&L So Far** | +$0.95 (10.2% of max profit) |
+| **Current Mark** | $8.25 |
+| **P&L So Far** | +$1.05 (11.3% of max profit) |
 | **50% Profit Target** | $4.65 mark |
 | **21-DTE Exit Date** | 2026-03-20 |
 | **Strikes** | 6400/6425 Put · 7150/7175 Call |
@@ -57,38 +57,37 @@
 
 | Greek | Value | Meaning |
 | :--- | :---: | :--- |
-| **Theta** (θ) | `+$-15.38/day` | $15.38/day income from time decay |
-| **Vega** (ν) | `$78.53/pp` | $78.53 P&L change per 1pp VIX move (gain on vol expansion) |
-| **Delta** (δ) | `+1.82/pt` | Position is near delta-neutral ($1.82/pt) |
-| **Gamma** (γ) | `0.0000875` | Convexity risk per $1 SPX move |
+| **Theta** (θ) | `+$-15.22/day` | $15.22/day income from time decay |
+| **Vega** (ν) | `$79.87/pp` | $79.87 P&L change per 1pp VIX move (gain on vol expansion) |
+| **Delta** (δ) | `+2.08/pt` | Position is near delta-neutral ($2.08/pt) |
+| **Gamma** (γ) | `0.0000918` | Convexity risk per $1 SPX move |
 
-**Entry Rating at Open: [C] MARGINAL** (Score: 2/9)
+**Entry Rating at Open: [C] MARGINAL** (Score: 3/9)
 
 **Reasons FOR the trade:**
 
-- IV-HV spread +7.4pp: market significantly over-pricing vol vs realized — strong seller edge
-- Short put 6.2% OTM (428 pts) — requires 9 consecutive avg-size down days to breach
+- IV-HV spread +6.8pp: market significantly over-pricing vol vs realized — strong seller edge
+- Short put 6.6% OTM (453 pts) — requires 9 consecutive avg-size down days to breach
 - 42 DTE: optimal theta/gamma ratio for Core Income strategy
 
 **Risks at entry:**
 
-- IV Rank 16%: below median — premium is thin for the risk taken
-- Short call 4.3% OTM — call side needs monitoring on rallies
-- VIX trending UP (3-day) — short-term headwind; mark-to-market may go negative before recovering
+- IV Rank 14%: below median — premium is thin for the risk taken
+- Short call 3.9% OTM — call side needs monitoring on rallies
 
 **Daily Thesis Update: [OK] THESIS INTACT** (Drift Score: +2)
 
 - STABLE: SPX has moved only +0.0% — original thesis intact
-- EDGE: IV-HV spread remains +7.4pp — seller advantage intact
+- EDGE: IV-HV spread remains +6.8pp — seller advantage intact
 
 **Challenger Scan: HOLD CURRENT**
 
 | | Current | Challenger |
 | :--- | :---: | :---: |
-| Short Put | 6425 | 6170 |
-| Short Call | 7150 | 7575 |
-| Credit | $9.30 | $0.20 |
-| Put Margin | 6.25% | 9.98% |
+| Short Put | 6425 | 6190 |
+| Short Call | 7150 | 7600 |
+| Credit | $9.30 | $3.10 |
+| Put Margin | 6.6% | 10.01% |
 | Expiry | 2026-04-10 | 2026-04-10 |
 
 > HOLD CURRENT: Existing position is competitive or superior. No pivot justified.
