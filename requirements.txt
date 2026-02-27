@@ -1,0 +1,6 @@
+python-dotenv
+sentry-sdk
+requests
+fastapi
+uvicorn
+pydantic

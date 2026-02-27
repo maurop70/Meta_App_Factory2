@@ -1,0 +1,47 @@
+[
+  {
+    "label": "🚀 Triad Execute",
+    "cmd": "Execute per SOP Triad Protocol.",
+    "desc": "Triggers collaborative review between Gemini (Strategy), Antigravity (Architect), and Claude (Code)."
+  },
+  {
+    "label": "🛠️ System Diagnostic",
+    "cmd": "Run full system diagnostic and check agent connectivity.",
+    "desc": "Verifies that Docker, n8n, and API endpoints are all responding correctly."
+  },
+  {
+    "label": "🧹 Flush Memory",
+    "cmd": "Wipe sentry cache and reset DCC.",
+    "desc": "Clears stale session data and ghost errors to resolve system freezes."
+  },
+  {
+    "label": "⏪ Rollback",
+    "cmd": "Revert to last stable git/snapshot build.",
+    "desc": "Instantly undoes changes if the 'Self-Heal' logic fails to stabilize the build."
+  },
+  {
+    "label": "🛡️ Security Audit",
+    "cmd": "Run Specialist - Security audit on current code.",
+    "desc": "Scans for vulnerabilities and ensures enterprise-grade security standards."
+  },
+  {
+    "label": "🧪 Twin Test",
+    "cmd": "Spin up Digital Twin container and run integration tests.",
+    "desc": "Tests features in a sandbox before merging them into your live factory."
+  },
+  {
+    "label": "🩹 Self-Heal",
+    "cmd": "Review recent logs and repair execution errors.",
+    "desc": "Commands the Architect and Critic to fix bugs in the current runtime."
+  },
+  {
+    "label": "🔍 Market Research",
+    "cmd": "Analyze market competitors and prior art for this task.",
+    "desc": "Forces the system to innovate by checking what similar apps already exist."
+  },
+  {
+    "label": "📦 Docker Export",
+    "cmd": "Package current application for cloud deployment.",
+    "desc": "Flattens the current build into a clean state ready for a production server."
+  }
+]

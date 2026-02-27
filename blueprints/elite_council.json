@@ -1,0 +1,139 @@
+{
+    "name": "Elite Council Blueprint (Robust)",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "elite-council",
+                "responseMode": "responseNode"
+            },
+            "name": "Webhook_Trigger",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                100,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "promptType": "define",
+                "text": "={{ $json.body.prompt }}",
+                "options": {
+                    "systemMessage": "SYSTEM ROLE: You are the ELITE EXECUTIVE BOARD. The CEO is the USER's Chief of Staff.\n\nCOMMAND PROTOCOL:\n1. CEO LEADERSHIP: All communication goes through the CEO. The CEO delegates to specialists in the background.\n2. PRESENTATION ARCHITECTURE: The 'Creative Director' is now the **Presentation Architect**. They are responsible for BOTH Strategic Content (Narrative Flow) and Premium Graphics (Visual Aesthetics). They must ensure data from the CFO/CMO is translated into impactful, boardroom-ready storytelling.\n3. CONFLICT & SYNERGY: The CEO ensures synergy between the Technical board (CFO, Product) and the Creative Architect. The CEO presents the final unified recommendation.\n4. TOOLS: CEO triggers Background Tools:\n   - CMO: 'market_search'.\n   - Analyst: 'vector_memory'.\n   - CFO/Presentation Architect: 'google_workspace' for Living Documents (Slides/Sheets). Specify 'update/append' for file persistence.\n5. DRAFTING: The CEO presents all drafts for review.\n\nPERSONAS: [CEO: Leader, CMO: Market, Product: MVP, CFO: Finance, Presentation Architect: Strategic Design & Narrative, Critic: Risk, Analyst: Memory].\n\nWait for approval after CEO-led drafts."
+                }
+            },
+            "name": "Council_Brain",
+            "type": "@n8n/n8n-nodes-langchain.agent",
+            "typeVersion": 1,
+            "position": [
+                400,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "modelName": "models/gemini-2.0-flash",
+                "options": {}
+            },
+            "name": "Gemini_Flash_Model",
+            "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+            "typeVersion": 1,
+            "position": [
+                400,
+                500
+            ],
+            "credentials": {
+                "googlePalmApi": {
+                    "id": "QWP5J4JcbFQKs34N"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={{ JSON.stringify({ text: typeof $json.output === 'string' ? $json.output : JSON.stringify($json.output), source: 'elite_council' }) }}",
+                "options": {}
+            },
+            "name": "Response",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1,
+            "position": [
+                700,
+                300
+            ]
+        },
+        {
+            "parameters": {},
+            "name": "Error_Trigger",
+            "type": "n8n-nodes-base.errorTrigger",
+            "typeVersion": 1,
+            "position": [
+                400,
+                600
+            ]
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={{ JSON.stringify({ text: 'Internal workflow error: ' + ($json.execution?.error?.message || 'Unknown error'), source: 'elite_council_error' }) }}",
+                "options": {
+                    "responseCode": 200
+                }
+            },
+            "name": "Error_Response",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1,
+            "position": [
+                700,
+                600
+            ]
+        }
+    ],
+    "connections": {
+        "Webhook_Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Council_Brain",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Gemini_Flash_Model": {
+            "ai_languageModel": [
+                [
+                    {
+                        "node": "Council_Brain",
+                        "type": "ai_languageModel",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Council_Brain": {
+            "main": [
+                [
+                    {
+                        "node": "Response",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Error_Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Error_Response",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

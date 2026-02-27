@@ -1,0 +1,554 @@
+{
+  "version": "2.0",
+  "positions": {
+    "spx_ic_20260223_02": {
+      "original_thesis": {
+        "trade_id": "spx_ic_20260223_02",
+        "entry_date": "2026-02-23",
+        "expiry": "2026-04-10",
+        "dte_at_report": 42,
+        "credit_opened": 9.3,
+        "put_dist_pct": 6.25,
+        "call_dist_pct": 4.32,
+        "put_breach_days": 9,
+        "call_breach_days": 6,
+        "rating": "MARGINAL",
+        "score": 2,
+        "pros": [
+          "IV-HV spread +7.4pp: market significantly over-pricing vol vs realized \u2014 strong seller edge",
+          "Short put 6.2% OTM (428 pts) \u2014 requires 9 consecutive avg-size down days to breach",
+          "42 DTE: optimal theta/gamma ratio for Core Income strategy"
+        ],
+        "cons": [
+          "IV Rank 16%: below median \u2014 premium is thin for the risk taken",
+          "Short call 4.3% OTM \u2014 call side needs monitoring on rallies",
+          "VIX trending UP (3-day) \u2014 short-term headwind; mark-to-market may go negative before recovering"
+        ],
+        "upcoming_events": [
+          {
+            "date": "2026-02-27",
+            "event": "Q4 GDP (2nd Estimate)",
+            "impact": "HIGH",
+            "note": "GDP surprise = SPX gap",
+            "days_away": 0
+          },
+          {
+            "date": "2026-02-28",
+            "event": "PCE Inflation",
+            "impact": "HIGH",
+            "note": "Fed's preferred inflation metric",
+            "days_away": 1
+          },
+          {
+            "date": "2026-03-05",
+            "event": "ISM Services PMI",
+            "impact": "MED",
+            "note": "Economy health",
+            "days_away": 6
+          },
+          {
+            "date": "2026-03-07",
+            "event": "Nonfarm Payrolls",
+            "impact": "HIGH",
+            "note": "Biggest monthly vol event",
+            "days_away": 8
+          },
+          {
+            "date": "2026-03-11",
+            "event": "CPI (Feb 2026)",
+            "impact": "HIGH",
+            "note": "Inflation print \u2014 VIX spike risk",
+            "days_away": 12
+          },
+          {
+            "date": "2026-03-12",
+            "event": "PPI (Feb 2026)",
+            "impact": "MED",
+            "note": "Producer price feed-through",
+            "days_away": 13
+          },
+          {
+            "date": "2026-03-14",
+            "event": "Michigan Consumer Sentiment",
+            "impact": "MED",
+            "note": "Inflation expectations",
+            "days_away": 15
+          },
+          {
+            "date": "2026-03-18",
+            "event": "FOMC Meeting (Day 1)",
+            "impact": "HIGH",
+            "note": "Rate decision \u2014 highest vol event",
+            "days_away": 19
+          },
+          {
+            "date": "2026-03-19",
+            "event": "FOMC Decision + Press Conference",
+            "impact": "HIGH",
+            "note": "Powell presser = VIX spike guaranted",
+            "days_away": 20
+          }
+        ],
+        "snapshot_at_report": {
+          "timestamp": "2026-02-27T13:29:45.542071",
+          "spx": 6853.69,
+          "vix": 20.65,
+          "iv_rank": 15.6,
+          "iv_pctile": 76.6,
+          "hv30": 13.2,
+          "iv_hv_spread": 7.4,
+          "vix_hi_52w": 60.1,
+          "vix_lo_52w": 13.4,
+          "vix_median": 17.3,
+          "vix_mean": 19.1,
+          "vix_trend": "RISING",
+          "vix_3d_chg": 1.1,
+          "trend_5d": -0.81,
+          "trend_30d": -1.79,
+          "avg_daily_move": 0.68
+        }
+      },
+      "entry_snapshot": {
+        "timestamp": "2026-02-27T13:29:45.542071",
+        "spx": 6853.69,
+        "vix": 20.65,
+        "iv_rank": 15.6,
+        "iv_pctile": 76.6,
+        "hv30": 13.2,
+        "iv_hv_spread": 7.4,
+        "vix_hi_52w": 60.1,
+        "vix_lo_52w": 13.4,
+        "vix_median": 17.3,
+        "vix_mean": 19.1,
+        "vix_trend": "RISING",
+        "vix_3d_chg": 1.1,
+        "trend_5d": -0.81,
+        "trend_30d": -1.79,
+        "avg_daily_move": 0.68
+      },
+      "first_seen": "2026-02-27T13:29:45.542737",
+      "drift": {
+        "drift_score": 2,
+        "status": "THESIS INTACT",
+        "flags": [
+          "STABLE: SPX has moved only +0.0% \u2014 original thesis intact",
+          "EDGE: IV-HV spread remains +7.4pp \u2014 seller advantage intact"
+        ],
+        "spx_delta_pct": 0.0,
+        "vix_delta": 0.0,
+        "updated_at": "2026-02-27T13:29:45.542968"
+      },
+      "current_mark": 8.35,
+      "challenger": {
+        "available": true,
+        "expiry": "2026-04-10",
+        "strikes": {
+          "short_put": 6170,
+          "long_put": 6145,
+          "short_call": 7575,
+          "long_call": 7600
+        },
+        "net_credit": 0.2,
+        "put_margin_pct": 9.98,
+        "call_margin_pct": 10.52,
+        "active_credit": 9.3,
+        "active_put_pct": 6.25,
+        "pivot_warranted": false,
+        "pivot_rationale": "HOLD CURRENT: Existing position is competitive or superior. No pivot justified.",
+        "leg_detail": [
+          {
+            "label": "Long Put",
+            "strike": 6145,
+            "type": "put",
+            "sign": -1,
+            "bid": 30.3,
+            "ask": 30.7,
+            "mark": 30.5,
+            "iv_pct": 25.82,
+            "iv_dec": 0.2582,
+            "delta": 0.0,
+            "gamma": 0.0,
+            "theta": 0.0,
+            "vega": 0.0,
+            "greeks_source": "unavailable"
+          },
+          {
+            "label": "Short Put",
+            "strike": 6170,
+            "type": "put",
+            "sign": 1,
+            "bid": 30.3,
+            "ask": 30.7,
+            "mark": 30.5,
+            "iv_pct": 25.82,
+            "iv_dec": 0.2582,
+            "delta": 0.0,
+            "gamma": 0.0,
+            "theta": 0.0,
+            "vega": 0.0,
+            "greeks_source": "unavailable"
+          },
+          {
+            "label": "Short Call",
+            "strike": 7575,
+            "type": "call",
+            "sign": 1,
+            "bid": 0.8,
+            "ask": 1.0,
+            "mark": 0.9,
+            "iv_pct": 12.08,
+            "iv_dec": 0.1208,
+            "delta": 0.0,
+            "gamma": 0.0,
+            "theta": 0.0,
+            "vega": 0.0,
+            "greeks_source": "unavailable"
+          },
+          {
+            "label": "Long Call",
+            "strike": 7600,
+            "type": "call",
+            "sign": -1,
+            "bid": 0.6,
+            "ask": 0.8,
+            "mark": 0.7,
+            "iv_pct": 12.45,
+            "iv_dec": 0.12449,
+            "delta": 0.0,
+            "gamma": 0.0,
+            "theta": 0.0,
+            "vega": 0.0,
+            "greeks_source": "unavailable"
+          }
+        ]
+      },
+      "daily_updates": [
+        {
+          "date": "2026-02-23 16:05",
+          "spx": 6837.75,
+          "vix": 21.42,
+          "drift_status": "THESIS INTACT",
+          "drift_score": 2,
+          "current_mark": 9.05
+        },
+        {
+          "date": "2026-02-23 16:36",
+          "spx": 6837.75,
+          "vix": 21.01,
+          "drift_status": "THESIS INTACT",
+          "drift_score": 2,
+          "current_mark": 9.2
+        },
+        {
+          "date": "2026-02-23 16:44",
+          "spx": 6837.75,
+          "vix": 21.01,
+          "drift_status": "THESIS INTACT",
+          "drift_score": 2,
+          "current_mark": 9.25
+        },
+        {
+          "date": "2026-02-23 16:44",
+          "spx": 6837.75,
+          "vix": 21.01,
+          "drift_status": "THESIS INTACT",
+          "drift_score": 2,
+          "current_mark": 9.25
+        },
+        {
+          "date": "2026-02-23 17:01",
+          "spx": 6837.75,
+          "vix": 21.01,
+          "drift_status": "THESIS INTACT",
+          "drift_score": 2,
+          "current_mark": 9.35
+        },
+        {
+          "date": "2026-02-24 09:06",
+          "spx": 6837.75,
+          "vix": 21.03,
+          "drift_status": "THESIS INTACT",
+          "drift_score": 2,
+          "current_mark": 9.1
+        },
+        {
+          "date": "2026-02-24 09:07",
+          "spx": 6837.75,
+          "vix": 21.03,
+          "drift_status": "THESIS INTACT",
+          "drift_score": 2,
+          "current_mark": 9.1
+        },
+        {
+          "date": "2026-02-24 09:17",
+          "spx": 6837.75,
+          "vix": 21.06,
+          "drift_status": "THESIS INTACT",
+          "drift_score": 2,
+          "current_mark": 9.45
+        },
+        {
+          "date": "2026-02-24 09:17",
+          "spx": 6837.75,
+          "vix": 21.06,
+          "drift_status": "THESIS INTACT",
+          "drift_score": 2,
+          "current_mark": 9.5
+        },
+        {
+          "date": "2026-02-24 10:13",
+          "spx": 6852.33,
+          "vix": 20.96,
+          "drift_status": "THESIS INTACT",
+          "drift_score": 2,
+          "current_mark": 9.8
+        },
+        {
+          "date": "2026-02-24 10:13",
+          "spx": 6853.84,
+          "vix": 20.96,
+          "drift_status": "THESIS INTACT",
+          "drift_score": 2,
+          "current_mark": 9.8
+        },
+        {
+          "date": "2026-02-24 10:30",
+          "spx": 6881.3,
+          "vix": 20.92,
+          "drift_status": "THESIS INTACT",
+          "drift_score": 2,
+          "current_mark": 9.8
+        },
+        {
+          "date": "2026-02-24 10:30",
+          "spx": 6881.28,
+          "vix": 20.92,
+          "drift_status": "THESIS INTACT",
+          "drift_score": 2,
+          "current_mark": 9.8
+        },
+        {
+          "date": "2026-02-24 10:33",
+          "spx": 6878.03,
+          "vix": 20.86,
+          "drift_status": "THESIS INTACT",
+          "drift_score": 2,
+          "current_mark": 8.45
+        },
+        {
+          "date": "2026-02-24 10:33",
+          "spx": 6878.24,
+          "vix": 20.86,
+          "drift_status": "THESIS INTACT",
+          "drift_score": 2,
+          "current_mark": 7.3
+        },
+        {
+          "date": "2026-02-24 10:34",
+          "spx": 6877.27,
+          "vix": 20.79,
+          "drift_status": "THESIS INTACT",
+          "drift_score": 2,
+          "current_mark": 8.5
+        },
+        {
+          "date": "2026-02-24 10:34",
+          "spx": 6877.27,
+          "vix": 20.79,
+          "drift_status": "THESIS INTACT",
+          "drift_score": 2,
+          "current_mark": 8.5
+        },
+        {
+          "date": "2026-02-24 11:15",
+          "spx": 6883.1,
+          "vix": 20.06,
+          "drift_status": "THESIS INTACT",
+          "drift_score": 2,
+          "current_mark": 9.2
+        },
+        {
+          "date": "2026-02-24 11:25",
+          "spx": 6876.55,
+          "vix": 19.84,
+          "drift_status": "THESIS INTACT",
+          "drift_score": 2,
+          "current_mark": 9.5
+        },
+        {
+          "date": "2026-02-24 11:25",
+          "spx": 6877.39,
+          "vix": 19.82,
+          "drift_status": "THESIS INTACT",
+          "drift_score": 2,
+          "current_mark": 9.5
+        },
+        {
+          "date": "2026-02-24 11:27",
+          "spx": 6877.69,
+          "vix": 19.79,
+          "drift_status": "THESIS INTACT",
+          "drift_score": 2,
+          "current_mark": 8.8
+        },
+        {
+          "date": "2026-02-24 11:27",
+          "spx": 6877.8,
+          "vix": 19.79,
+          "drift_status": "THESIS INTACT",
+          "drift_score": 2,
+          "current_mark": 8.8
+        },
+        {
+          "date": "2026-02-24 12:09",
+          "spx": 6883.21,
+          "vix": 19.8,
+          "drift_status": "THESIS INTACT",
+          "drift_score": 2,
+          "current_mark": 9.95
+        },
+        {
+          "date": "2026-02-24 12:09",
+          "spx": 6883.26,
+          "vix": 19.79,
+          "drift_status": "THESIS INTACT",
+          "drift_score": 2,
+          "current_mark": 9.55
+        },
+        {
+          "date": "2026-02-24 12:10",
+          "spx": 6887.45,
+          "vix": 19.79,
+          "drift_status": "THESIS INTACT",
+          "drift_score": 2,
+          "current_mark": 9.15
+        },
+        {
+          "date": "2026-02-24 12:10",
+          "spx": 6887.52,
+          "vix": 19.79,
+          "drift_status": "THESIS INTACT",
+          "drift_score": 2,
+          "current_mark": 9.3
+        },
+        {
+          "date": "2026-02-24 12:31",
+          "spx": 6891.61,
+          "vix": 19.49,
+          "drift_status": "THESIS INTACT",
+          "drift_score": 2,
+          "current_mark": 9.4
+        },
+        {
+          "date": "2026-02-24 12:37",
+          "spx": 6890.22,
+          "vix": 19.49,
+          "drift_status": "THESIS INTACT",
+          "drift_score": 2,
+          "current_mark": 9.35
+        },
+        {
+          "date": "2026-02-24 12:37",
+          "spx": 6890.45,
+          "vix": 19.49,
+          "drift_status": "THESIS INTACT",
+          "drift_score": 2,
+          "current_mark": 9.35
+        },
+        {
+          "date": "2026-02-24 12:38",
+          "spx": 6890.43,
+          "vix": 19.51,
+          "drift_status": "THESIS INTACT",
+          "drift_score": 2,
+          "current_mark": 9.3
+        },
+        {
+          "date": "2026-02-24 12:38",
+          "spx": 6890.56,
+          "vix": 19.52,
+          "drift_status": "THESIS INTACT",
+          "drift_score": 2,
+          "current_mark": 9.45
+        },
+        {
+          "date": "2026-02-24 12:50",
+          "spx": 6891.68,
+          "vix": 19.48,
+          "drift_status": "THESIS INTACT",
+          "drift_score": 2,
+          "current_mark": 9.4
+        },
+        {
+          "date": "2026-02-24 12:51",
+          "spx": 6892.82,
+          "vix": 19.49,
+          "drift_status": "THESIS INTACT",
+          "drift_score": 2,
+          "current_mark": 9.75
+        },
+        {
+          "date": "2026-02-24 12:51",
+          "spx": 6892.88,
+          "vix": 19.49,
+          "drift_status": "THESIS INTACT",
+          "drift_score": 2,
+          "current_mark": 9.75
+        },
+        {
+          "date": "2026-02-24 14:15",
+          "spx": 6887.98,
+          "vix": 19.43,
+          "drift_status": "THESIS INTACT",
+          "drift_score": 2,
+          "current_mark": 9.5
+        },
+        {
+          "date": "2026-02-25 08:32",
+          "spx": 6890.07,
+          "vix": 19.01,
+          "drift_status": "THESIS INTACT",
+          "drift_score": 2,
+          "current_mark": 10.0
+        },
+        {
+          "date": "2026-02-25 11:46",
+          "spx": 6936.85,
+          "vix": 18.46,
+          "drift_status": "THESIS INTACT",
+          "drift_score": 2,
+          "current_mark": 10.2
+        },
+        {
+          "date": "2026-02-25 14:14",
+          "spx": 6945.26,
+          "vix": 18.34,
+          "drift_status": "THESIS INTACT",
+          "drift_score": 2,
+          "current_mark": 10.35
+        },
+        {
+          "date": "2026-02-27 13:29",
+          "spx": 6853.69,
+          "vix": 20.65,
+          "drift_status": "THESIS INTACT",
+          "drift_score": 2,
+          "current_mark": 8.35
+        }
+      ],
+      "position_greeks": {
+        "net_delta_per_pt": 1.82,
+        "net_theta_per_day": -15.38,
+        "net_vega_per_pp": 78.53,
+        "net_gamma": 8.75e-05,
+        "interpretation": {
+          "theta": "$15.38/day income from time decay",
+          "vega": "$78.53 P&L change per 1pp VIX move (gain on vol expansion)",
+          "delta": "Position is near delta-neutral ($1.82/pt)"
+        }
+      },
+      "alerts_sent": {}
+    }
+  },
+  "last_run": "2026-02-27T13:29:46.459941"
+}

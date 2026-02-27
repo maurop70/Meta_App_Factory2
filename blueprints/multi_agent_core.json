@@ -1,0 +1,272 @@
+{
+    "name": "Multi-Agent Super Blueprint",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "super-agent",
+                "responseMode": "responseNode",
+                "options": {}
+            },
+            "name": "Webhook_Trigger",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                100,
+                240
+            ],
+            "webhookId": "super-agent-v1"
+        },
+        {
+            "parameters": {
+                "prompt": "={{ $json.body.prompt }}",
+                "options": {}
+            },
+            "name": "Reasoning_Agent",
+            "type": "@n8n/n8n-nodes-langchain.chainLlm",
+            "typeVersion": 1,
+            "position": [
+                320,
+                240
+            ]
+        },
+        {
+            "parameters": {
+                "modelName": "models/gemini-2.0-flash",
+                "options": {}
+            },
+            "name": "Gemini_Flash_Model",
+            "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+            "typeVersion": 1,
+            "position": [
+                320,
+                460
+            ],
+            "credentials": {
+                "googlePalmApi": {
+                    "id": "QWP5J4JcbFQKs34N"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "jsCode": "const inputs = $input.all();\nconst text = inputs[0].json.text;\nconst prompt = $('Webhook_Trigger').item.json.body.prompt;\n\n// Basic heuristic to extract a filename or create one\nlet fileName = \"Agent_Report.md\";\nif (prompt.toLowerCase().includes(\"java\")) fileName = \"Logic.js\";\nif (prompt.toLowerCase().includes(\"python\")) fileName = \"script.py\";\n\nreturn [{\n  json: {\n    app_name: \"Generated_App_\" + Math.floor(Math.random() * 1000),\n    file_name: fileName,\n    code: text\n  }\n}];"
+            },
+            "name": "Integration_Logic",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                540,
+                240
+            ]
+        },
+        {
+            "parameters": {
+                "resource": "folder",
+                "name": "={{ $json.app_name }}",
+                "driveId": {
+                    "__rl": true,
+                    "mode": "list",
+                    "value": "My Drive"
+                },
+                "folderId": {
+                    "__rl": true,
+                    "value": "14uwBeFn8g5CbKLdOeUQSLH1ZD8B8Tc9W",
+                    "mode": "id"
+                },
+                "options": {}
+            },
+            "name": "Action_Agent_Folder",
+            "type": "n8n-nodes-base.googleDrive",
+            "typeVersion": 3,
+            "position": [
+                760,
+                240
+            ],
+            "credentials": {
+                "googleDriveOAuth2Api": {
+                    "id": "pVhQkv0LNDx2q0Ts",
+                    "name": "Google Drive account 7"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "operation": "toText",
+                "sourceProperty": "={{ $('Integration_Logic').item.json.code }}",
+                "options": {
+                    "fileName": "={{ $('Integration_Logic').item.json.file_name }}"
+                }
+            },
+            "name": "Translator",
+            "type": "n8n-nodes-base.convertToFile",
+            "typeVersion": 1,
+            "position": [
+                980,
+                240
+            ]
+        },
+        {
+            "parameters": {
+                "name": "={{ $('Integration_Logic').item.json.file_name }}",
+                "driveId": {
+                    "__rl": true,
+                    "mode": "list",
+                    "value": "My Drive"
+                },
+                "folderId": {
+                    "__rl": true,
+                    "value": "={{ $node[\"Action_Agent_Folder\"].json[\"id\"] }}",
+                    "mode": "id"
+                },
+                "options": {}
+            },
+            "name": "Action_Agent_File",
+            "type": "n8n-nodes-base.googleDrive",
+            "typeVersion": 3,
+            "position": [
+                1200,
+                240
+            ],
+            "credentials": {
+                "googleDriveOAuth2Api": {
+                    "id": "pVhQkv0LNDx2q0Ts",
+                    "name": "Google Drive account 7"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={{ JSON.stringify({ text: 'App created: ' + $('Integration_Logic').item.json.app_name + ', file: ' + $('Integration_Logic').item.json.file_name, status: 'success', app_name: $('Integration_Logic').item.json.app_name, file_created: $('Integration_Logic').item.json.file_name, source: 'multi_agent_core' }) }}",
+                "options": {}
+            },
+            "name": "Response",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1,
+            "position": [
+                1420,
+                240
+            ]
+        },
+        {
+            "parameters": {},
+            "name": "Error_Trigger",
+            "type": "n8n-nodes-base.errorTrigger",
+            "typeVersion": 1,
+            "position": [
+                540,
+                500
+            ]
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={{ JSON.stringify({ text: 'Internal workflow error: ' + ($json.execution?.error?.message || 'Unknown error'), source: 'multi_agent_core_error' }) }}",
+                "options": {
+                    "responseCode": 200
+                }
+            },
+            "name": "Error_Response",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1,
+            "position": [
+                850,
+                500
+            ]
+        }
+    ],
+    "connections": {
+        "Webhook_Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Reasoning_Agent",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Gemini_Flash_Model": {
+            "ai_languageModel": [
+                [
+                    {
+                        "node": "Reasoning_Agent",
+                        "type": "ai_languageModel",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Reasoning_Agent": {
+            "main": [
+                [
+                    {
+                        "node": "Integration_Logic",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Integration_Logic": {
+            "main": [
+                [
+                    {
+                        "node": "Action_Agent_Folder",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Action_Agent_Folder": {
+            "main": [
+                [
+                    {
+                        "node": "Translator",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Translator": {
+            "main": [
+                [
+                    {
+                        "node": "Action_Agent_File",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Action_Agent_File": {
+            "main": [
+                [
+                    {
+                        "node": "Response",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Error_Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Error_Response",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1"
+    }
+}

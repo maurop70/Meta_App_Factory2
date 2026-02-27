@@ -1,0 +1,5 @@
+{
+    "app_name": "MyNewApp",
+    "webhook_url": "https://humanresource.app.n8n.cloud/webhook/MyNewApp-webhook",
+    "workflow_id": "TODO_RETRIEVE"
+}

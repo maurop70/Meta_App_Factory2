@@ -1,0 +1,5 @@
+{
+    "app_name": "Adv_Autonomous_Agent",
+    "webhook_url": "https://humanresource.app.n8n.cloud/webhook/gemini-flash",
+    "blueprint": "multi_agent_core"
+}

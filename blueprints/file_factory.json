@@ -1,0 +1,133 @@
+{
+    "name": "File Factory Blueprint",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "file-factory",
+                "options": {}
+            },
+            "name": "Webhook_Sentinel_Bridge",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                100,
+                200
+            ],
+            "webhookId": "file-factory-v1"
+        },
+        {
+            "parameters": {
+                "resource": "folder",
+                "name": "={{ $json.body.name }}",
+                "driveId": {
+                    "__rl": true,
+                    "mode": "list",
+                    "value": "My Drive"
+                },
+                "folderId": {
+                    "__rl": true,
+                    "value": "14uwBeFn8g5CbKLdOeUQSLH1ZD8B8Tc9W",
+                    "mode": "id"
+                },
+                "options": {}
+            },
+            "name": "Google_Drive_Factory_Init",
+            "type": "n8n-nodes-base.googleDrive",
+            "typeVersion": 3,
+            "position": [
+                350,
+                200
+            ],
+            "credentials": {
+                "googleDriveOAuth2Api": {
+                    "id": "pVhQkv0LNDx2q0Ts",
+                    "name": "Google Drive account 7"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "operation": "toText",
+                "sourceProperty": "={{ $('Webhook_Sentinel_Bridge').item.json.body.code || '/* no code provided */' }}",
+                "options": {
+                    "fileName": "={{ $('Webhook_Sentinel_Bridge').item.json.body.name }}"
+                }
+            },
+            "name": "Translator",
+            "type": "n8n-nodes-base.convertToFile",
+            "typeVersion": 1,
+            "position": [
+                600,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "name": "={{ $node[\"Webhook_Sentinel_Bridge\"].json[\"file_name\"] || \"index.js\" }}",
+                "driveId": {
+                    "__rl": true,
+                    "mode": "list",
+                    "value": "My Drive"
+                },
+                "folderId": {
+                    "__rl": true,
+                    "value": "={{ $node[\"Google_Drive_Factory_Init\"].json[\"id\"] }}",
+                    "mode": "id"
+                },
+                "options": {}
+            },
+            "name": "File_Injector",
+            "type": "n8n-nodes-base.googleDrive",
+            "typeVersion": 3,
+            "position": [
+                850,
+                200
+            ],
+            "credentials": {
+                "googleDriveOAuth2Api": {
+                    "id": "pVhQkv0LNDx2q0Ts",
+                    "name": "Google Drive account 7"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "Webhook_Sentinel_Bridge": {
+            "main": [
+                [
+                    {
+                        "node": "Google_Drive_Factory_Init",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Google_Drive_Factory_Init": {
+            "main": [
+                [
+                    {
+                        "node": "Translator",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Translator": {
+            "main": [
+                [
+                    {
+                        "node": "File_Injector",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1"
+    }
+}

@@ -1,0 +1,14 @@
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-exporter-otlp
+pandas
+openpyxl
+python-pptx
+uvicorn
+fastapi
+pydantic
+reportlab
+requests
+python-dotenv
+python-docx
+openai

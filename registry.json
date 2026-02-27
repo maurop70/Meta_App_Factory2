@@ -1,0 +1,43 @@
+{
+    "services": {
+        "CLAUDE_CODE_SERVICE": {
+            "url": "https://humanresource.app.n8n.cloud/webhook/JlEXsH2MbzBx15Mk/claude-exec",
+            "url_env_key": "N8N_CLAUDE_WEBHOOK_URL",
+            "description": "Webhook to trigger Claude Code via n8n",
+            "method": "POST",
+            "auth_type": "none"
+        },
+        "DEBUG_SERVICE_SENTRY": {
+            "dsn_env_key": "SENTRY_DSN",
+            "description": "Sentry DSN for error tracking and debugging",
+            "environment": "production"
+        }
+    },
+    "apps": [
+        {
+            "name": "Alpha_V2_Genesis",
+            "workflow_id": "VkE0dmwynRPMIyjdmiONL",
+            "webhook_url": "https://humanresource.app.n8n.cloud/webhook/alpha-macro-poll",
+            "blueprint": "trading_intelligence",
+            "n8n_project": "Alpha Architect",
+            "capabilities": [
+                "trading intelligence",
+                "strategy ledger",
+                "stability suite",
+                "n8n lifecycle management"
+            ],
+            "last_build": "2026-02-26T12:00:00.000000"
+        },
+        {
+            "name": "Adv_Autonomous_Agent",
+            "workflow_id": "jcaX1fYmEbnDpxWl",
+            "webhook_url": "https://humanresource.app.n8n.cloud/webhook/Adv_Autonomous_Agent-webhook",
+            "blueprint": "multi_agent_core",
+            "capabilities": [
+                "multi agent core"
+            ],
+            "last_build": "2026-02-12T15:29:49.894007"
+        }
+    ],
+    "last_updated": "2026-02-27T10:22:00.000000"
+}

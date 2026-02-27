@@ -1,0 +1,9 @@
+{
+    "workflow_id": "tbQnSD6n9JHHvZ3D",
+    "workflow_name": "Alpha Ledger Daily Cron",
+    "target_node": "Refresh_Ledger",
+    "target_url_key": "url",
+    "created_at": "2026-02-23T16:15:00",
+    "schedule": "15 14 * * 1-5",
+    "schedule_human": "09:15 EST, Monday-Friday"
+}

@@ -1,0 +1,11 @@
+version: '3.8'
+services:
+  meta_factory:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - ../../skills:/skills
+    environment:
+      - N8N_URL=https://humanresource.app.n8n.cloud/webhook/gemini-flash

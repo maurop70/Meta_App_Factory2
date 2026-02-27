@@ -1,0 +1,26 @@
+# Secrets & Config
+.env
+.env.local
+config.json
+
+# Dependencies
+node_modules/
+venv/
+__pycache__/
+*.pyc
+
+# Data
+uploads/
+portfolio.json 
+# ^ We might want to EXCLUDE portfolio.json if we use OneDrive for data
+# but include it if we want a default template. For now, let's keep it 
+# but warn user not to put real account numbers in it (which they haven't).
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Vault Secrets
+.vault_pw
+vault.enc
+vault.enc.salt

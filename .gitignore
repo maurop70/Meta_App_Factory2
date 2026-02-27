@@ -1,0 +1,43 @@
+# ═══════════════════════════════════════════════════════
+#  Meta App Factory — Security Shield (.gitignore)
+# ═══════════════════════════════════════════════════════
+
+# ── Secrets & Credentials ─────────────────────────────
+.env
+.vault_pw
+vault.enc
+vault.enc.salt
+*.key
+*.pem
+
+# ── Node / Frontend ──────────────────────────────────
+node_modules/
+dist/
+.vite/
+
+# ── Python ───────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.eggs/
+venv/
+.venv/
+
+# ── Logs ─────────────────────────────────────────────
+*.log
+alpha.log
+
+# ── OS Artifacts ─────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── IDE ──────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── Gemini State (session cache, not secrets) ────────
+.Gemini_state/

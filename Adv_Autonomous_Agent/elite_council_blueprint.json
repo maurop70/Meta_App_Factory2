@@ -1,0 +1,126 @@
+{
+    "name": "Elite Council Blueprint (Export Version)",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "elite-council",
+                "responseMode": "responseNode"
+            },
+            "name": "Webhook_Trigger",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                100,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "promptType": "define",
+                "text": "={{ $json.body.prompt }}",
+                "options": {
+                    "systemMessage": "SYSTEM ROLE: You are the ELITE EXECUTIVE BOARD. The CEO is the USER's Chief of Staff.\n\nCOMMAND PROTOCOL:\n1. CEO LEADERSHIP: All communication goes through the CEO. The CEO delegates to specialists in the background.\n2. ROUTER PATTERN: When you need a specialist (CFO, CMO, HR, Product, Sales), you MUST NOT just 'ask' them. You MUST return a specific JSON action to route the task to them.\n\nDELEGATION SCHEMA:\n{\n  \"action\": \"delegate_task\",\n  \"recipient\": \"CFO\", // Options: CFO, CMO, HR, PRODUCT, SALES, ANALYST\n  \"content\": \"<Exact instructions for the agent>\"\n}\n\n3. PRESENTATION ARCHITECTURE: The 'Creative Director' is now the **Presentation Architect**. They are responsible for BOTH Strategic Content (Narrative Flow) and Premium Graphics (Visual Aesthetics).\n4. TOOLS: CEO triggers Background Tools:\n   - CMO: 'market_search'.\n   - Analyst: 'vector_memory'.\n   - CFO/Presentation Architect: 'google_workspace' for Living Documents. Specify 'update/append'.\n5. DRAFTING: The CEO presents all drafts for review.\n6. SENTRY PROTOCOL: The **Sentry Debugger** is active in the background.\n\nPERSONAS: [CEO: Leader, CMO: Market, Product: MVP, CFO: Finance, Presentation Architect: Strategic Design & Narrative].\n\nWait for approval after CEO-led drafts."
+                }
+            },
+            "name": "Council_Brain",
+            "type": "@n8n/n8n-nodes-langchain.agent",
+            "typeVersion": 1,
+            "position": [
+                400,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "modelName": "models/gemini-2.0-flash",
+                "options": {}
+            },
+            "name": "Gemini_Flash_Model",
+            "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+            "typeVersion": 1,
+            "position": [
+                400,
+                500
+            ],
+            "credentials": {
+                "googlePalmApi": {
+                    "id": "QWP5J4JcbFQKs34N"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={{ $json }}",
+                "options": {}
+            },
+            "name": "Response",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1,
+            "position": [
+                700,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "sessionId": "={{ $node[\"Webhook_Trigger\"].json[\"body\"][\"sessionId\"] }}",
+                "options": {}
+            },
+            "name": "Window_Buffer_Memory",
+            "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+            "typeVersion": 1,
+            "position": [
+                400,
+                700
+            ]
+        }
+    ],
+    "connections": {
+        "Webhook_Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Council_Brain",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Gemini_Flash_Model": {
+            "ai_languageModel": [
+                [
+                    {
+                        "node": "Council_Brain",
+                        "type": "ai_languageModel",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Window_Buffer_Memory": {
+            "ai_memory": [
+                [
+                    {
+                        "node": "Council_Brain",
+                        "type": "ai_memory",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Council_Brain": {
+            "main": [
+                [
+                    {
+                        "node": "Response",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

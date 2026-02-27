@@ -1,0 +1,151 @@
+{
+    "name": "Claude Executor (Triad Protocol)",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "claude-executor",
+                "responseMode": "responseNode",
+                "options": {}
+            },
+            "name": "Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                200,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "prompt": "={{ $json.body.prompt }}",
+                "messages": {
+                    "messageValues": [
+                        {
+                            "message": "You are Claude, an execution agent in the Antigravity Triad Protocol. Your role is to EXECUTE tasks, not describe them.\n\nRULES:\n1. When asked to create a file, return: {\"action\": \"use_tool\", \"tool\": \"write_file\", \"query\": {\"path\": \"filename.ext\", \"content\": \"full file content\"}}\n2. When asked to modify code, return: {\"action\": \"use_tool\", \"tool\": \"modify_code\", \"query\": {\"path\": \"file.py\", \"search\": \"old code\", \"replace\": \"new code\"}}\n3. When asked to create a document, return: {\"action\": \"use_tool\", \"tool\": \"produce_document\", \"query\": {\"file_type\": \"pptx\", \"file_name\": \"name.pptx\", \"content\": \"content\"}}\n4. When asked to research, return: {\"action\": \"use_tool\", \"tool\": \"market_search\", \"query\": \"search terms\"}\n5. When asked to delegate, return: {\"action\": \"delegate_task\", \"recipient\": \"AGENT_NAME\", \"content\": \"task\"}\n\nCRITICAL: Always return a valid JSON action. Never return plain text descriptions of what you would do. EXECUTE by returning the tool-call JSON.\n\nIf the task requires analysis or planning only (no file operations), return your analysis as plain text."
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "name": "Claude Chain",
+            "type": "@n8n/n8n-nodes-langchain.chainLlm",
+            "typeVersion": 1,
+            "position": [
+                450,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "model": "claude-sonnet-4-20250514",
+                "options": {
+                    "maxTokensToSample": 4096,
+                    "temperature": 0.3
+                }
+            },
+            "name": "Anthropic Claude Model",
+            "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+            "typeVersion": 1,
+            "position": [
+                450,
+                420
+            ],
+            "credentials": {
+                "anthropicApi": {
+                    "id": "2OuQCUzSyT0zNSsb",
+                    "name": "Anthropic Claude API"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={{ JSON.stringify({ text: typeof $json.text === 'string' ? $json.text : JSON.stringify($json), source: 'claude_executor' }) }}",
+                "options": {}
+            },
+            "name": "Respond to Webhook",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1,
+            "position": [
+                700,
+                200
+            ]
+        },
+        {
+            "parameters": {},
+            "name": "Error_Trigger",
+            "type": "n8n-nodes-base.errorTrigger",
+            "typeVersion": 1,
+            "position": [
+                450,
+                620
+            ]
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={{ JSON.stringify({ text: 'Claude execution error: ' + ($json.execution?.error?.message || 'Unknown error'), source: 'claude_executor_error' }) }}",
+                "options": {
+                    "responseCode": 200
+                }
+            },
+            "name": "Error_Response",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1,
+            "position": [
+                700,
+                620
+            ]
+        }
+    ],
+    "connections": {
+        "Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "Claude Chain",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Anthropic Claude Model": {
+            "ai_languageModel": [
+                [
+                    {
+                        "node": "Claude Chain",
+                        "type": "ai_languageModel",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Claude Chain": {
+            "main": [
+                [
+                    {
+                        "node": "Respond to Webhook",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Error_Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Error_Response",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1"
+    }
+}

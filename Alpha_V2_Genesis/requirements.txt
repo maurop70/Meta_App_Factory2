@@ -1,0 +1,11 @@
+flask
+flask-cors
+yfinance
+pandas
+numpy
+requests
+pyngrok
+python-dotenv
+postgrest
+cryptography
+langsmith

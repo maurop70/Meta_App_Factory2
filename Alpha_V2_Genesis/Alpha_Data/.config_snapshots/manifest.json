@@ -1,0 +1,14 @@
+{
+  "snapshots": [
+    {
+      "file": ".env",
+      "original_path": "C:\\AlphaV2\\.env",
+      "snapshot_name": ".env.20260225_183938.bak",
+      "snapshot_path": "C:\\AlphaV2\\Alpha_Data\\.config_snapshots\\.env.20260225_183938.bak",
+      "timestamp": "2026-02-25T18:39:38.880079",
+      "reason": "test snapshot",
+      "app": "TestApp",
+      "size_bytes": 609
+    }
+  ]
+}

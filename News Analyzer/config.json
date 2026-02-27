@@ -1,0 +1,5 @@
+{
+    "app_name": "News Analyzer",
+    "webhook_url": "https://humanresource.app.n8n.cloud/webhook/News Analyzer-webhook",
+    "workflow_id": "TODO_RETRIEVE"
+}

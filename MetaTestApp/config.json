@@ -1,0 +1,5 @@
+{
+    "app_name": "MetaTestApp",
+    "webhook_url": "https://humanresource.app.n8n.cloud/webhook/MetaTestApp-webhook",
+    "workflow_id": "TODO_RETRIEVE"
+}
