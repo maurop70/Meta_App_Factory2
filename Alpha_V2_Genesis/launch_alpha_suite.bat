@@ -9,28 +9,11 @@ echo       Lead Quant Architect ^| Strategy Ledger v2.2
 echo  ============================================================
 echo.
 
-:: ── Python Path Detection ──────────────────────────────────
-set "PYTHON="
-if exist "%LOCALAPPDATA%\Python\pythoncore-3.14-64\python.exe" (
-    set "PYTHON=%LOCALAPPDATA%\Python\pythoncore-3.14-64\python.exe"
-) else if exist "%LOCALAPPDATA%\Programs\Python\Python314\python.exe" (
-    set "PYTHON=%LOCALAPPDATA%\Programs\Python\Python314\python.exe"
-) else (
-    where python >nul 2>&1
-    if %errorlevel%==0 (
-        set "PYTHON=python"
-    ) else (
-        echo  [ERROR] Python not found! Install Python or update this script.
-        pause
-        exit /b 1
-    )
-)
-echo  Python: %PYTHON%
+:: ── Portable Environment Bootstrap ──────────────────────────
+:: Auto-detects Python, sets ALPHA_RUNTIME_DIR, creates .env if needed
+call "%~dp0..\bootstrap_env.bat"
+if %ERRORLEVEL% NEQ 0 exit /b 1
 
-:: ── Runtime Data Isolation (Multi-PC Support) ──────────────
-set "ALPHA_RUNTIME_DIR=%LOCALAPPDATA%\AlphaArchitect\Alpha_Data"
-if not exist "%ALPHA_RUNTIME_DIR%" mkdir "%ALPHA_RUNTIME_DIR%"
-echo  Runtime Dir: %ALPHA_RUNTIME_DIR%
 
 :: 1. Force-kill existing processes for a clean start
 echo.

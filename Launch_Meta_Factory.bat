@@ -4,14 +4,18 @@ color 0B
 echo.
 echo  ===================================================
 echo    META APP FACTORY - ELITE COUNCIL SYSTEM
-echo    Antigravity Launch Sequence v2.1
+echo    Antigravity Launch Sequence v3.0 (Portable)
 echo  ===================================================
 echo.
+
+:: ── Portable Environment Bootstrap ──────────────────────────
+call "%~dp0bootstrap_env.bat"
+if %ERRORLEVEL% NEQ 0 exit /b 1
 
 :: ── Step 0: Preflight Check ──────────────────────────────────
 echo  [0/4] Running Preflight Check...
 cd /d "%~dp0\Alpha_V2_Genesis"
-python preflight.py --app meta --dir "%~dp0"
+"%PYTHON%" preflight.py --app meta --dir "%~dp0"
 echo.
 
 :: ── Step 1: Ensure Docker Desktop is Running ──────────────────
@@ -25,7 +29,7 @@ echo        Waiting for Docker daemon to initialize...
 set /a WAIT_COUNT=0
 
 :DOCKER_WAIT
-timeout /t 5 /nobreak >nul
+ping -n 6 127.0.0.1 >nul
 docker info >nul 2>&1
 if %ERRORLEVEL% EQU 0 goto DOCKER_READY
 set /a WAIT_COUNT+=1
@@ -51,25 +55,26 @@ if %ERRORLEVEL% NEQ 0 (
     cd /d "%~dp0"
     docker compose up -d 2>nul || docker-compose up -d 2>nul
 )
-timeout /t 3 /nobreak >nul
+ping -n 4 127.0.0.1 >nul
 echo.
 
 :: ── Step 3: Activate N8N Workflows for Meta App Factory ──────
 echo  [3/4] Activating N8N Meta Workflows...
 cd /d "%~dp0\Alpha_V2_Genesis"
-python n8n_lifecycle.py activate meta
-timeout /t 1 /nobreak >nul
+"%PYTHON%" n8n_lifecycle.py activate meta
+ping -n 2 127.0.0.1 >nul
 echo.
 
 :: ── Step 4: Open Swagger + Launch UI ─────────────────────────
 echo  [4/4] Launching Elite Council...
 start http://localhost:8000/docs
 cd /d "%~dp0\Adv_Autonomous_Agent"
-start python ui.py "Elite_Council"
+start "%PYTHON%" ui.py "Elite_Council"
 echo.
 
 echo  ===================================================
 echo    Startup Complete. Neural Network is Online.
+echo    Machine: %ALPHA_MACHINE_ID%
 echo    Press any key to SHUT DOWN and deactivate N8N.
 echo  ===================================================
 pause
@@ -78,10 +83,11 @@ pause
 echo.
 echo  Shutting down N8N Meta workflows...
 cd /d "%~dp0\Alpha_V2_Genesis"
-python n8n_lifecycle.py deactivate meta
+"%PYTHON%" n8n_lifecycle.py deactivate meta
 
 echo.
 echo  ===================================================
 echo    SESSION ENDED. N8N workflows deactivated.
 echo  ===================================================
 pause
+

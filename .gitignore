@@ -4,6 +4,7 @@
 
 # ── Secrets & Credentials ─────────────────────────────
 .env
+!env.template
 .vault_pw
 vault.enc
 vault.enc.salt
@@ -28,6 +29,14 @@ venv/
 *.log
 alpha.log
 
+# ── Machine-Specific Runtime Data ────────────────────
+Alpha_Data/connection_info.json
+Alpha_Data/ledger_state.json
+Alpha_Data/ledger_cron_meta.json
+Alpha_Data/n8n_execution_log.json
+Alpha_Data/.config_snapshots/
+Alpha_Data/LEDGER.md
+
 # ── OS Artifacts ─────────────────────────────────────
 .DS_Store
 Thumbs.db
@@ -41,3 +50,4 @@ desktop.ini
 
 # ── Gemini State (session cache, not secrets) ────────
 .Gemini_state/
+
