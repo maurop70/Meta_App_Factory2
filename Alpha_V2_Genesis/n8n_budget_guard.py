@@ -13,7 +13,8 @@ sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-BUDGET_LOG = os.path.join(SCRIPT_DIR, "Alpha_Data", "n8n_execution_log.json")
+RUNTIME_DIR = os.environ.get('ALPHA_RUNTIME_DIR', os.path.join(SCRIPT_DIR, 'Alpha_Data'))
+BUDGET_LOG = os.path.join(RUNTIME_DIR, "n8n_execution_log.json")
 N8N_BASE = "https://humanresource.app.n8n.cloud/api/v1"
 DEFAULT_MONTHLY_LIMIT = 10000
 

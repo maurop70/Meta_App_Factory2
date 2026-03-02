@@ -22,15 +22,17 @@ except ImportError:
 
 # ── Path Setup ─────────────────────────────────────────────────
 ROOT    = os.path.dirname(os.path.abspath(__file__))
-DATA    = os.path.join(ROOT, "Alpha_Data")
+DATA    = os.path.join(ROOT, "Alpha_Data")  # Shared data (Google Drive synced)
+RUNTIME = os.environ.get('ALPHA_RUNTIME_DIR', DATA)  # Runtime data (local to each PC)
 LOG_SRC = os.path.join(ROOT, "alpha.log")
-PORTFOLIO_PATH  = os.path.join(DATA, "portfolio.json")
-EVENTS_PATH     = os.path.join(DATA, "upcoming_events.json")
-STATE_PATH      = os.path.join(DATA, "ledger_state.json")
-LEDGER_MD_PATH  = os.path.join(DATA, "LEDGER.md")
-JOURNAL_PATH    = os.path.join(DATA, "trade_journal.json")
+PORTFOLIO_PATH  = os.path.join(DATA, "portfolio.json")      # Shared
+EVENTS_PATH     = os.path.join(DATA, "upcoming_events.json") # Shared
+JOURNAL_PATH    = os.path.join(DATA, "trade_journal.json")   # Shared
+STATE_PATH      = os.path.join(RUNTIME, "ledger_state.json") # Runtime (local)
+LEDGER_MD_PATH  = os.path.join(RUNTIME, "LEDGER.md")         # Runtime (local)
 
 os.makedirs(DATA, exist_ok=True)
+os.makedirs(RUNTIME, exist_ok=True)
 
 # ── Alert Manager (Priority 3) ──────────────────────────────────
 try:
@@ -52,7 +54,7 @@ logging.basicConfig(
     format="%(asctime)s - Ledger - %(levelname)s - %(message)s",
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler(os.path.join(DATA, "ledger.log"), encoding="utf-8")
+        logging.FileHandler(os.path.join(RUNTIME, "ledger.log"), encoding="utf-8")
     ]
 )
 logger = logging.getLogger("StrategyLedger")

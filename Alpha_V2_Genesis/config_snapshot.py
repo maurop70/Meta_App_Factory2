@@ -15,7 +15,8 @@ sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-SNAPSHOT_DIR = os.path.join(SCRIPT_DIR, "Alpha_Data", ".config_snapshots")
+RUNTIME_DIR = os.environ.get('ALPHA_RUNTIME_DIR', os.path.join(SCRIPT_DIR, 'Alpha_Data'))
+SNAPSHOT_DIR = os.path.join(RUNTIME_DIR, ".config_snapshots")
 MANIFEST_PATH = os.path.join(SNAPSHOT_DIR, "manifest.json")
 MAX_SNAPSHOTS_PER_FILE = 10  # Keep last N snapshots per file
 

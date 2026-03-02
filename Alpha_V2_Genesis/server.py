@@ -63,9 +63,11 @@ N8N_API_KEY = get_secret("N8N_API_KEY")
 N8N_WORKFLOW_ID = "VkE0dmwynRPMIyjdmiONL"
 N8N_NODE_NAME = "Push_to_Alpha_UI"
 
-# Pathing for local data
+# Pathing: shared data stays in Google Drive, runtime data goes to local machine
 script_dir = os.path.dirname(os.path.abspath(__file__))
-PORTFOLIO_PATH = os.path.join(script_dir, 'Alpha_Data', 'portfolio.json')
+RUNTIME_DIR = os.environ.get('ALPHA_RUNTIME_DIR', os.path.join(script_dir, 'Alpha_Data'))
+os.makedirs(RUNTIME_DIR, exist_ok=True)
+PORTFOLIO_PATH = os.path.join(script_dir, 'Alpha_Data', 'portfolio.json')  # Shared (Google Drive)
 MEMO_PATH = os.path.join(script_dir, 'market_memo.md')
 
 # Initialize Loki Pattern
@@ -118,7 +120,7 @@ def heal_ledger_cron(new_url):
     Reads ledger_cron_meta.json and patches the Refresh_Ledger HTTP node
     with the current ngrok URL so the 09:15 daily trigger always reaches us.
     """
-    meta_path = os.path.join(script_dir, "Alpha_Data", "ledger_cron_meta.json")
+    meta_path = os.path.join(RUNTIME_DIR, "ledger_cron_meta.json")
     if not os.path.exists(meta_path):
         print("⚠️ ledger_cron_meta.json not found — skipping Ledger Cron self-heal.")
         return
@@ -398,7 +400,7 @@ if __name__ == '__main__':
 
             # ── Static URL Detection ────────────────────────────
             # Load the previously known URL from connection_info.json
-            conn_info_path  = os.path.join(script_dir, "Alpha_Data", "connection_info.json")
+            conn_info_path  = os.path.join(RUNTIME_DIR, "connection_info.json")
             previous_url    = None
             try:
                 if os.path.exists(conn_info_path):

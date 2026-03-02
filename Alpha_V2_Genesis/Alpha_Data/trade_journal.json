@@ -1,1 +1,24 @@
-[]
+[
+  {
+    "trade_id": "spx_ic_20260223_02",
+    "strategy": "IRON_CONDOR",
+    "entry_date": "2026-02-23",
+    "close_date": "2026-03-02",
+    "expiry": "2026-04-10",
+    "credit_received": 9.3,
+    "close_mark": 8.25,
+    "realized_pnl": 1.05,
+    "realized_pnl_pct": 11.3,
+    "days_held": 7,
+    "entry_rating": "MARGINAL",
+    "entry_score": 3,
+    "worst_drift_score": 2,
+    "max_drawdown_pct": 11.3,
+    "closes_at": "2026-03-02T14:53:02.950607",
+    "strikes": {
+      "long_put": 6.6,
+      "short_put": 6.6,
+      "short_call": 3.94
+    }
+  }
+]

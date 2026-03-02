@@ -19,8 +19,3 @@ portfolio.json
 # OS
 .DS_Store
 Thumbs.db
-
-# Vault Secrets
-.vault_pw
-vault.enc
-vault.enc.salt
