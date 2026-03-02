@@ -9,7 +9,31 @@ echo       Lead Quant Architect ^| Strategy Ledger v2.2
 echo  ============================================================
 echo.
 
+:: ── Python Path Detection ──────────────────────────────────
+set "PYTHON="
+if exist "%LOCALAPPDATA%\Python\pythoncore-3.14-64\python.exe" (
+    set "PYTHON=%LOCALAPPDATA%\Python\pythoncore-3.14-64\python.exe"
+) else if exist "%LOCALAPPDATA%\Programs\Python\Python314\python.exe" (
+    set "PYTHON=%LOCALAPPDATA%\Programs\Python\Python314\python.exe"
+) else (
+    where python >nul 2>&1
+    if %errorlevel%==0 (
+        set "PYTHON=python"
+    ) else (
+        echo  [ERROR] Python not found! Install Python or update this script.
+        pause
+        exit /b 1
+    )
+)
+echo  Python: %PYTHON%
+
+:: ── Runtime Data Isolation (Multi-PC Support) ──────────────
+set "ALPHA_RUNTIME_DIR=%LOCALAPPDATA%\AlphaArchitect\Alpha_Data"
+if not exist "%ALPHA_RUNTIME_DIR%" mkdir "%ALPHA_RUNTIME_DIR%"
+echo  Runtime Dir: %ALPHA_RUNTIME_DIR%
+
 :: 1. Force-kill existing processes for a clean start
+echo.
 echo  [0/4] Cleaning up stale processes...
 taskkill /f /im ngrok.exe 2>nul
 taskkill /f /im python.exe /t 2>nul
@@ -18,13 +42,13 @@ taskkill /f /im python.exe /t 2>nul
 for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":5173" 2^>nul') do taskkill /f /PID %%a 2>nul
 timeout /t 2 /nobreak >nul
 
-:: Set Project Root
+:: Set Project Root (handles paths with spaces via %~dp0)
 cd /d "%~dp0"
 set "PYTHONPATH=%~dp0"
 
 :: 2. Start Flask Backend + ngrok + Loki Engine
 echo  [1/4] Starting Alpha Backend (Flask + ngrok + Loki)...
-start "Alpha Server" /min python server.py
+start "Alpha Server" /min "%PYTHON%" "%~dp0server.py"
 echo        Server starting in background...
 
 echo  [2/4] Waiting for server stabilization (ngrok tunnel + warm-up)...
@@ -32,16 +56,16 @@ timeout /t 12 /nobreak >nul
 
 :: 3. Infrastructure Supervisor (Portfolio Watchdog + Daily Ledger Cron)
 echo  [3/4] Launching Infrastructure Supervisor (Ledger Watchdog)...
-start "Infrastructure Supervisor" /min python infrastructure_supervisor.py
+start "Infrastructure Supervisor" /min "%PYTHON%" "%~dp0infrastructure_supervisor.py"
 timeout /t 2 /nobreak >nul
 
-:: 4. React UI (Vite) — use node directly to bypass PowerShell execution policy
+:: 4. React UI (Vite)
 echo  [4/4] Launching Alpha UI (Vite Dev Server)...
-cd alpha_ui
+cd /d "%~dp0alpha_ui"
 start "" http://localhost:5173
 
-:: Use .cmd shim directly to avoid ExecutionPolicy block AND bash-script SyntaxError
-node_modules\.bin\vite.cmd --host
+:: Use .cmd shim directly to avoid ExecutionPolicy block
+"%~dp0alpha_ui\node_modules\.bin\vite.cmd" --host
 
 echo.
 echo  ============================================================
