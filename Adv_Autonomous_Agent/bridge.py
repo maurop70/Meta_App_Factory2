@@ -42,7 +42,7 @@ PROJECTS_DIR = os.getenv("PROJECTS_DIR", os.path.join(BASE_DIR, "Projects"))
 if os.path.exists("/skills"):
     SKILLS_DIR = "/skills"
 else:
-    SKILLS_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "..", "skills"))
+    SKILLS_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "Alpha_V2_Genesis", "skills"))
 
 if SKILLS_DIR not in sys.path: sys.path.append(SKILLS_DIR)
 
