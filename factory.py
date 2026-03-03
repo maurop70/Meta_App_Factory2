@@ -15,6 +15,8 @@ FACTORY_DIR = os.path.dirname(os.path.abspath(__file__))
 SKILL_PATH = os.path.abspath(os.path.join(FACTORY_DIR, "..", "..", "_ANTIGRAVITY_SKILLS_LIBRARY"))
 if not os.path.exists(SKILL_PATH):
     SKILL_PATH = os.path.abspath(os.path.join(FACTORY_DIR, "..", "skills"))  # legacy fallback
+if not os.path.exists(SKILL_PATH):
+    SKILL_PATH = os.path.join(FACTORY_DIR, "Alpha_V2_Genesis", "skills")  # playground fallback
 sys.path.append(SKILL_PATH)
 
 from n8n_architect.architect import N8NArchitect
@@ -30,17 +32,50 @@ N8N_HEADERS = {"X-N8N-API-KEY": N8N_API_KEY, "Content-Type": "application/json"}
 DEFAULT_PROJECT_ID = "boV7btArBtpvCiXm"  # Specialist Agents (fallback)
 
 class MetaAppFactory:
+    # Canonical app storage: Google Drive > local fallback
+    GDRIVE_PATH = os.path.join(os.path.expanduser("~"), "My Drive", "Antigravity-AI Agents", "Meta_App_Factory")
+
     def __init__(self):
         self.architect = N8NArchitect()
         self.librarian = Librarian()
         self.critic = ArtisanCritic()
         self.scribe = Scribe()
         self.designer = UIDesigner()
-        self.base_dir = FACTORY_DIR
-        self.blueprints_dir = os.path.join(self.base_dir, "blueprints")
+        # Always create apps in Google Drive if available
+        if os.path.isdir(self.GDRIVE_PATH):
+            self.base_dir = self.GDRIVE_PATH
+        else:
+            self.base_dir = FACTORY_DIR  # local fallback
+        self.blueprints_dir = os.path.join(FACTORY_DIR, "blueprints")  # blueprints stay with the code
+
+    # ── Port Allocation ────────────────────────────────────
+    PORT_BASE = 5005
+    PORT_RANGE = 100  # 5005-5104
+
+    def _allocate_port(self):
+        """Scan registry for used ports and return the next available one."""
+        used_ports = set()
+        reg_path = os.path.join(FACTORY_DIR, "registry.json")
+        try:
+            with open(reg_path, "r") as f:
+                registry = json.load(f)
+            for app_data in registry.get("apps", {}).values():
+                p = app_data.get("port")
+                if p:
+                    used_ports.add(int(p))
+        except Exception:
+            pass
+        for port in range(self.PORT_BASE, self.PORT_BASE + self.PORT_RANGE):
+            if port not in used_ports:
+                return port
+        raise RuntimeError("No available ports in range {}-{}".format(self.PORT_BASE, self.PORT_BASE + self.PORT_RANGE))
 
     def create_app(self, app_name: str, blueprint_name: str, description: str, system_prompt: Optional[str] = None):
         print(f"--- Creating Meta App: {app_name} ---")
+
+        # 0. Allocate a dedicated port for this app
+        app_port = self._allocate_port()
+        print(f"  >> Allocated port: {app_port}")
         
         # 1. Load Blueprint
         blueprint_path = os.path.join(self.blueprints_dir, f"{blueprint_name}.json")
@@ -108,7 +143,7 @@ class MetaAppFactory:
         os.makedirs(os.path.join(app_dir, ".Gemini_state"), exist_ok=True)
         
         # 4. Generate Local Bridge
-        self._generate_bridge(app_dir, app_name, webhook_path, blueprint_name)
+        self._generate_bridge(app_dir, app_name, webhook_path, blueprint_name, workflow_id, port=app_port)
 
         # 4.5 Copy Action Plan Engine (Triad Execute Inheritance)
         import shutil
@@ -165,6 +200,7 @@ class MetaAppFactory:
             drive_path=f".system_core/Meta_App_Factory/{app_name}/",
             capabilities=capabilities,
             item_type="App",
+            port=app_port,
         )
 
         # 6. Inspector: Smoke Test
@@ -174,10 +210,10 @@ class MetaAppFactory:
         self.scribe.generate_commercial_docs(app_dir, app_name, blueprint_name, description, capabilities)
 
         # 8. Designer: Create UI (with Action Plan panel)
-        self.designer.build_ui(app_dir, app_name)
+        self.designer.build_ui(app_dir, app_name, port=app_port)
 
         # 8.5 Generate Launch Script
-        self._generate_launch_script(app_dir, app_name)
+        self._generate_launch_script(app_dir, app_name, port=app_port)
 
         # 9. Register as Skill / Tool
         self._register_as_skill(app_dir, app_name, webhook_url, capabilities, description)
@@ -224,7 +260,7 @@ class MetaAppFactory:
         print(f"--- Documentation: README.md, USER_GUIDE.md, INSTALL.md, API_REFERENCE.md, LICENSE, CHANGELOG.md ---")
         print(f"--- Skill registered at: skills/{app_name.lower().replace(' ', '_')} ---")
 
-    def _generate_bridge(self, app_dir, app_name, webhook_path, blueprint_name):
+    def _generate_bridge(self, app_dir, app_name, webhook_path, blueprint_name, workflow_id=None, port=5005):
         webhook_url = f"https://humanresource.app.n8n.cloud/webhook/{webhook_path}"
         
         if "elite" in blueprint_name.lower():
@@ -798,7 +834,8 @@ if __name__ == "__main__":
             "app_name": app_name,
             "webhook_url": webhook_url,
             "blueprint": blueprint_name,
-            "n8n_workflow_id": workflow_id
+            "n8n_workflow_id": workflow_id,
+            "port": port
         }
         with open(os.path.join(app_dir, "config.json"), "w") as f:
             json.dump(config_data, f, indent=4)
@@ -989,7 +1026,7 @@ PROJECTS_DIR=./Projects
         with open(os.path.join(app_dir, ".env.template"), "w") as f:
             f.write(env_content.replace(webhook_url, "YOUR_WEBHOOK_URL_HERE"))
 
-    def _generate_launch_script(self, app_dir, app_name):
+    def _generate_launch_script(self, app_dir, app_name, port=5005):
         """Generate a launch .bat script with N8N lifecycle hooks."""
         bat_content = f"""@echo off
 title {app_name} Launcher
@@ -1117,7 +1154,7 @@ def invoke(prompt: str, context: str = "", agent: str = "") -> str:
         data = response.json()
         return data.get("text", data.get("output", str(data)))
     except Exception as e:
-        return f"Skill Error ({APP_DIR}): {{e}}"
+        return f"Skill Error ({{APP_DIR}}): {{e}}"
 
 
 def get_capabilities():

@@ -146,14 +146,64 @@ function TelemetryBar({ streaming }) {
 }
 
 // ── BUILDER CHAT ───────────────────────────────────────────
-function BuilderChat({ registry, onAtomizerUpdate, externalCommand }) {
+function BuilderChat({ registry, onAtomizerUpdate, externalCommand, onBuildComplete }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [streaming, setStreaming] = useState(false);
+  const [building, setBuilding] = useState(false);
   const [lastPrompt, setLastPrompt] = useState('');
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
   const fileRef = useRef(null);
+
+  const triggerBuild = async (appName, blueprint = 'multi_agent_core', description = '', systemPrompt = null) => {
+    setBuilding(true);
+    setMessages(prev => [...prev, { role: 'system', text: `🏗️ BUILD STARTED: ${appName} [${blueprint}]` }]);
+    setMessages(prev => [...prev, { role: 'assistant', text: '' }]);
+
+    try {
+      const res = await fetch(`${API_BASE}/api/build/stream`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ app_name: appName, blueprint, description, system_prompt: systemPrompt }),
+      });
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const event = JSON.parse(line.slice(6));
+            if (event.done) break;
+            if (event.text) {
+              setMessages(prev => {
+                const copy = [...prev];
+                copy[copy.length - 1] = {
+                  role: 'assistant',
+                  text: copy[copy.length - 1].text + event.text + '\n',
+                };
+                return copy;
+              });
+            }
+          } catch { /* skip */ }
+        }
+      }
+    } catch (err) {
+      setMessages(prev => [...prev, { role: 'assistant', text: `❌ Build error: ${err.message}` }]);
+    } finally {
+      setBuilding(false);
+      if (onBuildComplete) onBuildComplete();
+    }
+  };
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -179,6 +229,62 @@ function BuilderChat({ registry, onAtomizerUpdate, externalCommand }) {
   const executePrompt = async (promptText, isTriad = false) => {
     const prompt = promptText.trim();
     if (!prompt || streaming) return;
+
+    // Handle /refine command
+    if (prompt === '/refine' || prompt.startsWith('/refine ')) {
+      const appName = prompt === '/refine'
+        ? window.prompt('Which app do you want to refine?', 'Resonance')
+        : prompt.split('/refine ')[1].split(':')[0].trim();
+      if (!appName) return;
+
+      const feedback = prompt.includes(':')
+        ? prompt.split(':').slice(1).join(':').trim()
+        : window.prompt(`What feedback do you have for ${appName}?`, '');
+      if (!feedback) return;
+
+      setInput('');
+      setMessages(prev => [...prev, { role: 'user', text: `🔄 Refine ${appName}: ${feedback}` }]);
+      setStreaming(true);
+      setMessages(prev => [...prev, { role: 'assistant', text: '' }]);
+
+      try {
+        const res = await fetch(`${API_BASE}/api/refine`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ app_name: appName, feedback }),
+        });
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            try {
+              const event = JSON.parse(line.slice(6));
+              if (event.done) break;
+              if (event.text) {
+                setMessages(prev => {
+                  const copy = [...prev];
+                  copy[copy.length - 1] = { role: 'assistant', text: copy[copy.length - 1].text + event.text };
+                  return copy;
+                });
+              }
+            } catch { /* skip */ }
+          }
+        }
+      } catch (err) {
+        setMessages(prev => [...prev, { role: 'assistant', text: `❌ Refine error: ${err.message}` }]);
+      } finally {
+        setStreaming(false);
+      }
+      return;
+    }
+
     setLastPrompt(prompt);
     setInput('');
     setMessages(prev => [...prev, { role: 'user', text: prompt }]);
@@ -259,10 +365,27 @@ function BuilderChat({ registry, onAtomizerUpdate, externalCommand }) {
     try { await fetch(`${API_BASE}/api/chat/clear`, { method: 'POST' }); } catch { }
   };
 
-  const recoverLastPrompt = () => {
-    if (lastPrompt) {
-      setInput(lastPrompt);
-      inputRef.current?.focus();
+  const [recovering, setRecovering] = useState(false);
+
+  const recoverSession = async () => {
+    setRecovering(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/chat/history?limit=20`);
+      const data = await res.json();
+      if (data.messages && data.messages.length > 0) {
+        setMessages(data.messages);
+      } else if (lastPrompt) {
+        setInput(lastPrompt);
+        inputRef.current?.focus();
+      }
+    } catch {
+      // Fallback to local last prompt
+      if (lastPrompt) {
+        setInput(lastPrompt);
+        inputRef.current?.focus();
+      }
+    } finally {
+      setRecovering(false);
     }
   };
 
@@ -288,8 +411,20 @@ function BuilderChat({ registry, onAtomizerUpdate, externalCommand }) {
           <span className="stream-badge">SSE STREAM</span>
         </h2>
         <div className="chat-header-actions">
-          <button className="action-btn recover" onClick={recoverLastPrompt} title="Recover last prompt" disabled={!lastPrompt}>
-            ⏪ Recover
+          <button className="action-btn recover" onClick={recoverSession} title="Recover session from Supabase" disabled={recovering}>
+            {recovering ? '⏳ Loading...' : '⏪ Recover'}
+          </button>
+          <button
+            className="action-btn deploy"
+            onClick={() => {
+              const name = prompt('Enter app name to build:', 'Resonance');
+              if (name) triggerBuild(name, 'multi_agent_core', 'Multi-agent educational app', input || lastPrompt || null);
+            }}
+            disabled={building || streaming}
+            title="Deploy app via Factory Pipeline"
+            style={{ background: building ? '#f59e0b' : '#10b981', color: '#fff', border: 'none' }}
+          >
+            {building ? '⚙️ Building...' : '🚀 Deploy'}
           </button>
           <button className="action-btn upload" onClick={() => fileRef.current?.click()} title="Upload a file">
             📎 Upload
@@ -440,6 +575,9 @@ function App() {
             registry={registry}
             onAtomizerUpdate={(c, p) => { setAtomizerChunks(c); setAtomizerProgress(p); }}
             externalCommand={externalCommand}
+            onBuildComplete={() => {
+              fetch(`${API_BASE}/api/registry`).then(r => r.json()).then(data => setRegistry(data.apps || [])).catch(() => { });
+            }}
           />
         )}
 

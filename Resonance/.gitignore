@@ -1,0 +1,10 @@
+.env
+.vault_pw
+vault.enc
+vault.enc.salt
+node_modules/
+dist/
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db

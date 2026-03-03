@@ -48,6 +48,8 @@ try:
     MEMORY_AVAILABLE = True
 except ImportError:
     MEMORY_AVAILABLE = False
+    def supa_get_history(*a, **kw):
+        return []
 
 # ── LangSmith Telemetry ───────────────────────────────────────
 _langsmith_key = get_secret("LANGCHAIN_API_KEY")

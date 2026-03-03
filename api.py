@@ -42,6 +42,13 @@ except ImportError as e:
     STREAMING_AVAILABLE = False
     logger.warning(f"Factory streaming bridge not available: {e}")
 
+# Try to import Supabase history retrieval
+try:
+    from factory_stream import supa_get_history, STREAM_SESSION
+    HISTORY_RETRIEVAL = MEMORY_AVAILABLE
+except ImportError:
+    HISTORY_RETRIEVAL = False
+
 
 # ── MODELS ────────────────────────────────────────────────────
 class TaskRequest(BaseModel):
@@ -75,6 +82,142 @@ def execute_task(request: TaskRequest):
         }
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+
+class BuildRequest(BaseModel):
+    app_name: str
+    blueprint: str = "multi_agent_core"
+    description: str = ""
+    system_prompt: str | None = None
+
+
+@app.post("/api/build/stream")
+async def build_stream(req: BuildRequest):
+    """SSE endpoint: streams factory build progress in real-time."""
+    import io
+    import contextlib
+    import threading
+    import queue
+
+    progress_queue = queue.Queue()
+
+    def run_build():
+        # Capture stdout from factory.create_app
+        old_stdout = sys.stdout
+        sys.stdout = buffer = io.StringIO()
+        try:
+            # Import factory here to avoid circular imports at module level
+            sys.path.insert(0, SCRIPT_DIR)
+            from factory import MetaAppFactory
+            factory = MetaAppFactory()
+            factory.create_app(
+                app_name=req.app_name,
+                blueprint_name=req.blueprint,
+                description=req.description,
+                system_prompt=req.system_prompt,
+            )
+            progress_queue.put({"step": "COMPLETE", "text": f"✅ App '{req.app_name}' built successfully!"})
+        except Exception as e:
+            progress_queue.put({"step": "ERROR", "text": f"❌ Build failed: {str(e)}"})
+        finally:
+            sys.stdout = old_stdout
+            # Push all captured output
+            output = buffer.getvalue()
+            for line in output.strip().split("\n"):
+                if line.strip():
+                    progress_queue.put({"step": "LOG", "text": line.strip()})
+            progress_queue.put(None)  # Sentinel
+
+    # Start build in background thread
+    thread = threading.Thread(target=run_build, daemon=True)
+    thread.start()
+
+    def generate():
+        while True:
+            try:
+                item = progress_queue.get(timeout=120)
+                if item is None:
+                    break
+                yield f"data: {json.dumps(item)}\n\n"
+            except Exception:
+                yield f"data: {json.dumps({'step': 'TIMEOUT', 'text': 'Build timed out.'})}\n\n"
+                break
+        yield f"data: {json.dumps({'done': True})}\n\n"
+
+    return StreamingResponse(generate(), media_type="text/event-stream")
+
+
+@app.post("/api/build/direct")
+def build_direct(req: BuildRequest):
+    """Non-streaming build: directly calls factory.create_app and returns result."""
+    import io
+    old_stdout = sys.stdout
+    sys.stdout = buffer = io.StringIO()
+    try:
+        sys.path.insert(0, SCRIPT_DIR)
+        from factory import MetaAppFactory
+        factory = MetaAppFactory()
+        factory.create_app(
+            app_name=req.app_name,
+            blueprint_name=req.blueprint,
+            description=req.description,
+            system_prompt=req.system_prompt,
+        )
+        output = buffer.getvalue()
+        return {"status": "success", "app_name": req.app_name, "log": output}
+    except Exception as e:
+        output = buffer.getvalue()
+        return {"status": "error", "message": str(e), "log": output}
+    finally:
+        sys.stdout = old_stdout
+
+
+
+class RefineRequest(BaseModel):
+    app_name: str
+    feedback: str
+
+
+@app.post("/api/refine")
+async def refine_app(req: RefineRequest):
+    """Accept user feedback about a built app and stream improvement analysis."""
+    # Find the app directory
+    gdrive = os.path.join(os.path.expanduser("~"), "My Drive", "Antigravity-AI Agents", "Meta_App_Factory")
+    app_dir = os.path.join(gdrive, req.app_name) if os.path.isdir(os.path.join(gdrive, req.app_name)) else os.path.join(SCRIPT_DIR, req.app_name)
+
+    # Gather app context
+    context_parts = [f"App: {req.app_name}", f"Location: {app_dir}"]
+    config_path = os.path.join(app_dir, "config.json")
+    if os.path.exists(config_path):
+        with open(config_path, "r") as f:
+            context_parts.append(f"Config: {f.read()}")
+    readme_path = os.path.join(app_dir, "README.md")
+    if os.path.exists(readme_path):
+        with open(readme_path, "r") as f:
+            context_parts.append(f"README:\n{f.read()[:1000]}")
+
+    # Build the refinement prompt
+    refine_prompt = (
+        f"FACTORY REFINEMENT REQUEST\n"
+        f"{'='*40}\n"
+        f"App Context:\n" + "\n".join(context_parts) + "\n\n"
+        f"User Feedback:\n{req.feedback}\n\n"
+        f"As the Meta App Factory Architect, analyze this feedback and provide:\n"
+        f"1. What specific changes are needed\n"
+        f"2. Which files need modification\n"
+        f"3. Priority ranking of improvements\n"
+        f"4. Any architectural concerns\n"
+        f"Respond with actionable, specific recommendations."
+    )
+
+    # Stream through the existing chat pipeline
+    if STREAMING_AVAILABLE:
+        def generate():
+            for event in stream_chat(refine_prompt, dashboard_context={"mode": "refine", "app_name": req.app_name}):
+                yield f"data: {json.dumps(event)}\n\n"
+        return StreamingResponse(generate(), media_type="text/event-stream")
+    else:
+        return {"status": "error", "message": "Streaming not available"}
 
 
 @app.get("/api/commands")
@@ -153,6 +296,20 @@ def clear_chat():
     if STREAMING_AVAILABLE:
         clear_stream_history()
     return {"status": "ok", "message": "Chat history cleared."}
+
+
+@app.get("/api/chat/history")
+def get_chat_history(limit: int = 20):
+    """Retrieve conversation history from Supabase for session recovery."""
+    if not HISTORY_RETRIEVAL:
+        return {"messages": [], "source": "unavailable"}
+    try:
+        raw = supa_get_history(STREAM_SESSION, limit=limit)
+        messages = [{"role": m["role"], "text": m["content"]} for m in raw]
+        return {"messages": messages, "source": "supabase"}
+    except Exception as e:
+        logger.warning(f"History retrieval failed: {e}")
+        return {"messages": [], "source": "error", "error": str(e)}
 
 
 @app.get("/api/health")

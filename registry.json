@@ -13,9 +13,11 @@
             "environment": "production"
         }
     },
-    "apps": [
-        {
-            "name": "Alpha_V2_Genesis",
+    "apps": {
+        "Alpha_V2_Genesis": {
+            "status": "active",
+            "type": "Trading Dashboard",
+            "port": 5005,
             "workflow_id": "VkE0dmwynRPMIyjdmiONL",
             "webhook_url": "https://humanresource.app.n8n.cloud/webhook/alpha-macro-poll",
             "blueprint": "trading_intelligence",
@@ -23,21 +25,37 @@
             "capabilities": [
                 "trading intelligence",
                 "strategy ledger",
-                "stability suite",
-                "n8n lifecycle management"
+                "stability suite"
             ],
             "last_build": "2026-02-26T12:00:00.000000"
         },
-        {
-            "name": "Adv_Autonomous_Agent",
-            "workflow_id": "jcaX1fYmEbnDpxWl",
-            "webhook_url": "https://humanresource.app.n8n.cloud/webhook/Adv_Autonomous_Agent-webhook",
+        "Resonance": {
+            "status": "active",
+            "type": "Multi-Agent Educational App",
+            "port": 5006,
+            "workflow_id": "IT4LuCQm7Ph62Hf2",
+            "webhook_url": "https://humanresource.app.n8n.cloud/webhook/Resonance-webhook",
             "blueprint": "multi_agent_core",
             "capabilities": [
-                "multi agent core"
+                "multi-agent",
+                "educational",
+                "SSE streaming",
+                "V3 web UI"
             ],
-            "last_build": "2026-02-12T15:29:49.894007"
+            "last_build": "2026-03-02T22:33:00.000000"
+        },
+        "MetaTestApp": {
+            "status": "inactive",
+            "type": "Test",
+            "port": null,
+            "blueprint": "gemini_reasoner"
+        },
+        "News Analyzer": {
+            "status": "inactive",
+            "type": "Data Pipeline",
+            "port": null,
+            "blueprint": "file_factory"
         }
-    ],
-    "last_updated": "2026-02-27T10:22:00.000000"
+    },
+    "last_updated": "2026-03-02T22:35:00.000000"
 }
