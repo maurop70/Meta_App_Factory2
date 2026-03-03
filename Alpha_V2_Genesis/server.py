@@ -230,6 +230,26 @@ def get_journal():
         return jsonify({"error": str(e)}), 500
 
 
+# ── Fragility Index Engine ──────────────────────────────────────
+try:
+    from fragility_engine import compute_fragility
+    FRAGILITY_AVAILABLE = True
+except ImportError as e:
+    FRAGILITY_AVAILABLE = False
+    print(f"⚠️ Fragility engine not available: {e}")
+
+@app.route('/api/fragility', methods=['GET'])
+def get_fragility():
+    """Returns the Fragility Index and all sub-module data."""
+    if not FRAGILITY_AVAILABLE:
+        return jsonify({"error": "Fragility engine not available"}), 503
+    try:
+        result = compute_fragility()
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 # ── SSE Streaming Chat ──────────────────────────────────────────
 STREAM_SESSION = "alpha-stream"  # Default session ID for the chat panel
 

@@ -9,4 +9,12 @@ export default defineConfig({
     // the symlink to Google Drive (spaces/parens break file loading)
     preserveSymlinks: true,
   },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5005',
+        changeOrigin: true,
+      },
+    },
+  },
 })
