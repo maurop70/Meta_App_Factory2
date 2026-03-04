@@ -313,7 +313,220 @@ def _compute_credit_stress():
 
 
 # ══════════════════════════════════════════════════════════════════
-# 4. SYNTHESIS & RISK OVERLAY (Fragility Index 0–100)
+# 4a. NARRATIVE INTELLIGENCE — Glossary & Regime Synthesis
+# ══════════════════════════════════════════════════════════════════
+
+def _build_narrative_logic(vol, corr, credit, fragility_index, regime):
+    """
+    Builds the Narrative Intelligence layer:
+    - glossary: plain-English definitions for each indicator with live values
+    - regime_narrative: a 2-3 sentence market weather report with posture advice
+    """
+
+    # ── GLOSSARY ──────────────────────────────────────────────────
+    vix_ratio = vol.get("vix_ratio")
+    vix_ratio_status = vol.get("term_structure", "UNKNOWN")
+
+    hyg_zscore = credit.get("hyg_iei_zscore")
+    hyg_status = credit.get("hyg_iei_trend", "UNKNOWN")
+
+    spy_tlt = corr.get("spy_tlt_corr_20d")
+    spy_tlt_status = (
+        "BROKEN" if corr.get("spy_tlt_flip") else
+        "WARNING" if spy_tlt is not None and spy_tlt > 0.1 else
+        "HEALTHY" if spy_tlt is not None and spy_tlt < -0.1 else
+        "NEUTRAL"
+    )
+
+    skew_val = vol.get("skew")
+    skew_status = (
+        "CRITICAL" if skew_val is not None and skew_val > 145 else
+        "ELEVATED" if skew_val is not None and skew_val > 135 else
+        "LOW" if skew_val is not None and skew_val < 120 else
+        "NORMAL"
+    )
+
+    liq_status = credit.get("liquidity_status", "NORMAL")
+
+    glossary = [
+        {
+            "id": "vix_ratio",
+            "name": "VIX / VIX3M Ratio",
+            "icon": "📊",
+            "value": vix_ratio if vix_ratio is not None else "N/A",
+            "status": vix_ratio_status,
+            "meaning": (
+                "Measures fear urgency. When VIX exceeds VIX3M (ratio > 1), "
+                "traders are paying more for near-term protection — markets "
+                "expect turbulence NOW, not later. Contango (ratio < 1) is "
+                "normal and signals complacency."
+            ),
+        },
+        {
+            "id": "hyg_iei",
+            "name": "HYG / IEI Credit Ratio",
+            "icon": "💳",
+            "value": credit.get("hyg_iei_ratio", "N/A"),
+            "status": hyg_status,
+            "meaning": (
+                "Compares junk bonds (HYG) to intermediate treasuries (IEI). "
+                "A falling ratio means investors are dumping risky debt for "
+                "safe havens — an early warning of credit stress before it "
+                "hits equities."
+            ),
+        },
+        {
+            "id": "spy_tlt_corr",
+            "name": "SPY / TLT Correlation",
+            "icon": "🔗",
+            "value": spy_tlt if spy_tlt is not None else "N/A",
+            "status": spy_tlt_status,
+            "meaning": (
+                "Stocks and bonds normally move in opposite directions "
+                "(negative correlation). When both fall together (positive "
+                "correlation), portfolio diversification breaks down and "
+                "total risk spikes — the 'nowhere to hide' scenario."
+            ),
+        },
+        {
+            "id": "cboe_skew",
+            "name": "CBOE Skew Index",
+            "icon": "📐",
+            "value": skew_val if skew_val is not None else "N/A",
+            "status": skew_status,
+            "meaning": (
+                "Measures how much institutional money is buying tail-risk "
+                "hedges (deep OTM puts). Above 145 means smart money is "
+                "quietly insuring against a crash, even if the surface looks "
+                "calm."
+            ),
+        },
+        {
+            "id": "liquidity",
+            "name": "Market Liquidity",
+            "icon": "💧",
+            "value": liq_status,
+            "status": liq_status,
+            "meaning": (
+                "Based on SPY volume relative to its 30-day average. Thin "
+                "liquidity means wider bid-ask spreads, worse fills, and "
+                "higher slippage risk on entries and exits."
+            ),
+        },
+    ]
+
+    # ── REGIME NARRATIVE ─────────────────────────────────────────
+    # Dynamic weather report that combines all signals
+    parts = []
+
+    # Opening sentence based on regime
+    if regime == "CRITICAL":
+        parts.append(
+            f"Market fragility is at CRITICAL levels ({fragility_index}/100). "
+            "Multiple structural stress indicators are flashing simultaneously."
+        )
+    elif regime == "HIGH STRESS":
+        parts.append(
+            f"The market environment shows HIGH STRESS ({fragility_index}/100). "
+            "Structural cracks are visible beneath the surface."
+        )
+    elif regime == "ELEVATED":
+        parts.append(
+            f"Fragility is ELEVATED ({fragility_index}/100). "
+            "Conditions are not yet dangerous, but warrant heightened vigilance."
+        )
+    elif regime == "NORMAL":
+        parts.append(
+            f"Market structure is NORMAL ({fragility_index}/100). "
+            "No significant systemic risk detected across monitored indicators."
+        )
+    else:  # LOW RISK
+        parts.append(
+            f"Conditions are LOW RISK ({fragility_index}/100). "
+            "All systemic indicators signal a stable, liquid environment."
+        )
+
+    # Condition-specific sentences
+    conditions = []
+    if vix_ratio_status == "BACKWARDATION":
+        conditions.append(
+            "The VIX term structure is inverted, meaning near-term implied "
+            "volatility exceeds medium-term — traders are paying a premium "
+            "for immediate protection."
+        )
+    if hyg_status in ("BREAKDOWN", "WEAKENING"):
+        severity = "aggressively widening" if hyg_status == "BREAKDOWN" else "beginning to widen"
+        conditions.append(
+            f"Credit spreads are {severity}. High-yield bonds are "
+            "underperforming treasuries, suggesting institutional risk "
+            "aversion is rising."
+        )
+    if corr.get("spy_tlt_flip"):
+        conditions.append(
+            "Stocks and bonds are falling together — the traditional "
+            "diversification hedge has broken down, leaving portfolios "
+            "fully exposed."
+        )
+    elif spy_tlt is not None and spy_tlt > 0.2:
+        conditions.append(
+            "SPY/TLT correlation is trending positive, which reduces the "
+            "effectiveness of bond hedges in a selloff."
+        )
+    if skew_status in ("CRITICAL", "ELEVATED"):
+        conditions.append(
+            "Institutional tail-risk hedging activity is elevated, suggesting "
+            "smart money sees downside risk that surface-level metrics may "
+            "not reflect."
+        )
+    if liq_status == "THIN":
+        conditions.append(
+            "Liquidity depth is below normal — position sizing should be "
+            "reduced and limit orders preferred over market orders."
+        )
+
+    if conditions:
+        parts.append(" ".join(conditions))
+    elif regime in ("NORMAL", "LOW RISK"):
+        parts.append(
+            "Volatility is well-contained, credit markets are stable, "
+            "and cross-asset correlations are behaving normally. "
+            "Conditions are favorable for premium-selling strategies."
+        )
+
+    # Posture recommendation
+    if fragility_index >= 80:
+        parts.append(
+            "Recommended posture: DEFENSIVE. Halt new entries, tighten stops "
+            "to 2x credit, and consider adding volatility longs as portfolio "
+            "insurance."
+        )
+    elif fragility_index >= 60:
+        parts.append(
+            "Recommended posture: CAUTIOUS. Reduce position sizing by 50%, "
+            "widen strike selection, and avoid short-dated trades until "
+            "conditions stabilize."
+        )
+    elif fragility_index >= 40:
+        parts.append(
+            "Recommended posture: VIGILANT. Standard position sizing is "
+            "acceptable, but monitor credit and correlation signals for "
+            "deterioration."
+        )
+    else:
+        parts.append(
+            "Recommended posture: FULL DEPLOYMENT. Environment supports "
+            "standard premium-selling with normal position sizing and "
+            "strike selection."
+        )
+
+    return {
+        "glossary": glossary,
+        "regime_narrative": " ".join(parts),
+    }
+
+
+# ══════════════════════════════════════════════════════════════════
+# 4b. SYNTHESIS & RISK OVERLAY (Fragility Index 0–100)
 # ══════════════════════════════════════════════════════════════════
 
 def _synthesize(vol, corr, credit):
@@ -393,6 +606,9 @@ def _synthesize(vol, corr, credit):
     if not report_parts[1:]:
         report_parts.append("All systemic indicators are within normal parameters. No structural fragility detected.")
 
+    # Build Narrative Intelligence layer
+    narrative = _build_narrative_logic(vol, corr, credit, fragility_index, regime)
+
     return {
         "fragility_index": fragility_index,
         "regime": regime,
@@ -413,6 +629,7 @@ def _synthesize(vol, corr, credit):
             "correlation": 0.20,
             "liquidity": 0.20,
         },
+        "narrative_logic": narrative,
     }
 
 

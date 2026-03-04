@@ -721,6 +721,7 @@ function App() {
   const [tradeJournal, setTradeJournal] = useState([])
   const [fragility, setFragility] = useState(null)
   const [fragilityLoading, setFragilityLoading] = useState(false)
+  const [decoderOpen, setDecoderOpen] = useState({})  // accordion toggle state for Market Decoder
   const [activeTab, setActiveTab] = useState('dashboard')  // 'dashboard' | 'journal' | 'fragility'
   const [chatOpen, setChatOpen] = useState(false)
   const [apiBase, setApiBase] = useState('http://localhost:5005')
@@ -1687,7 +1688,7 @@ function App() {
                     <div style={{
                       background: 'rgba(0,0,0,0.15)', padding: '0.4rem 0.6rem', borderRadius: '6px',
                       borderLeft: `3px solid ${fragility.credit?.hyg_iei_trend === 'BREAKDOWN' ? '#ef4444'
-                          : fragility.credit?.hyg_iei_trend === 'WEAKENING' ? '#eab308' : '#10b981'
+                        : fragility.credit?.hyg_iei_trend === 'WEAKENING' ? '#eab308' : '#10b981'
                         }`,
                     }}>
                       <div style={{ fontSize: '0.6rem', color: '#64748b' }}>Credit Trend</div>
@@ -1700,7 +1701,7 @@ function App() {
                     <div style={{
                       background: 'rgba(0,0,0,0.15)', padding: '0.4rem 0.6rem', borderRadius: '6px',
                       borderLeft: `3px solid ${fragility.credit?.liquidity_status === 'THIN' ? '#ef4444'
-                          : fragility.credit?.liquidity_status === 'ELEVATED' ? '#eab308' : '#10b981'
+                        : fragility.credit?.liquidity_status === 'ELEVATED' ? '#eab308' : '#10b981'
                         }`,
                     }}>
                       <div style={{ fontSize: '0.6rem', color: '#64748b' }}>Liquidity</div>
@@ -1839,6 +1840,185 @@ function App() {
                       lineHeight: 1.4,
                     }}>{a}</div>
                   ))}
+                </div>
+              )}
+
+              {/* ── MARKET DECODER (Glossary) ── */}
+              {fragility.synthesis?.narrative_logic?.glossary && (
+                <div style={{
+                  marginTop: '1.5rem', padding: '1rem',
+                  background: 'rgba(59,130,246,0.03)',
+                  border: '1px solid rgba(59,130,246,0.12)',
+                  borderRadius: '10px',
+                }}>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#60a5fa', letterSpacing: '0.04em', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    🧠 MARKET DECODER
+                    <span style={{ fontSize: '0.6rem', fontWeight: 400, color: '#475569', marginLeft: '0.5rem' }}>What each indicator means in plain English</span>
+                  </div>
+                  <div style={{ display: 'grid', gap: '0.5rem' }}>
+                    {fragility.synthesis.narrative_logic.glossary.map(item => {
+                      const isOpen = decoderOpen[item.id];
+                      const statusColor = (
+                        ['BACKWARDATION', 'BREAKDOWN', 'BROKEN', 'CRITICAL', 'THIN'].includes(item.status) ? '#ef4444' :
+                          ['WEAKENING', 'WARNING', 'ELEVATED'].includes(item.status) ? '#eab308' :
+                            ['CONTANGO', 'STABLE', 'HEALTHY', 'NORMAL', 'LOW', 'STRENGTHENING'].includes(item.status) ? '#10b981' :
+                              '#64748b'
+                      );
+                      return (
+                        <div key={item.id} style={{
+                          background: 'rgba(0,0,0,0.2)',
+                          border: `1px solid ${statusColor}33`,
+                          borderLeft: `3px solid ${statusColor}`,
+                          borderRadius: '8px',
+                          overflow: 'hidden',
+                          transition: 'all 0.2s',
+                        }}>
+                          <button
+                            onClick={() => setDecoderOpen(prev => ({ ...prev, [item.id]: !prev[item.id] }))}
+                            style={{
+                              width: '100%', padding: '0.6rem 0.75rem',
+                              background: 'transparent', border: 'none',
+                              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                              cursor: 'pointer', color: '#e2e8f0',
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <span style={{ fontSize: '0.9rem' }}>{item.icon}</span>
+                              <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>{item.name}</span>
+                              <span style={{
+                                fontSize: '0.72rem', fontWeight: 700, fontFamily: 'monospace',
+                                color: '#e2e8f0', marginLeft: '0.25rem',
+                              }}>{typeof item.value === 'number' ? item.value.toFixed ? item.value.toFixed(3) : item.value : item.value}</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <span style={{
+                                fontSize: '0.6rem', fontWeight: 600, padding: '2px 8px',
+                                borderRadius: '4px', background: `${statusColor}22`,
+                                color: statusColor, border: `1px solid ${statusColor}44`,
+                              }}>{item.status}</span>
+                              <span style={{ fontSize: '0.7rem', color: '#64748b', transition: 'transform 0.2s', transform: isOpen ? 'rotate(180deg)' : 'rotate(0)' }}>▼</span>
+                            </div>
+                          </button>
+                          {isOpen && (
+                            <div style={{
+                              padding: '0 0.75rem 0.65rem 2.2rem',
+                              fontSize: '0.72rem', color: '#94a3b8', lineHeight: 1.6,
+                              borderTop: '1px solid rgba(255,255,255,0.04)',
+                            }}>
+                              <div style={{ paddingTop: '0.5rem' }}>
+                                <span style={{ color: '#60a5fa', fontWeight: 600, fontSize: '0.65rem', letterSpacing: '0.03em' }}>WHAT THIS MEANS: </span>
+                                {item.meaning}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* ── STRATEGIC CONCLUSION & TRADE IMPACT ── */}
+              {(fragility.synthesis?.narrative_logic?.regime_narrative || fragility.trade_impact) && (
+                <div style={{
+                  marginTop: '1.5rem', padding: '1.25rem',
+                  background: `linear-gradient(135deg, ${fragility.synthesis?.regime_color || '#3b82f6'}08, rgba(15,23,42,0.6))`,
+                  border: `1px solid ${fragility.synthesis?.regime_color || '#3b82f6'}33`,
+                  borderRadius: '12px',
+                  position: 'relative', overflow: 'hidden',
+                }}>
+                  <div style={{
+                    position: 'absolute', top: '-40%', right: '-15%', width: '250px', height: '250px',
+                    background: `radial-gradient(circle, ${fragility.synthesis?.regime_color || '#3b82f6'}0a, transparent 70%)`,
+                    pointerEvents: 'none',
+                  }} />
+
+                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: fragility.synthesis?.regime_color || '#60a5fa', letterSpacing: '0.04em', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.4rem', position: 'relative' }}>
+                    📋 EXECUTIVE SUMMARY & TRADE IMPACT
+                  </div>
+
+                  {/* Regime Narrative */}
+                  {fragility.synthesis?.narrative_logic?.regime_narrative && (
+                    <div style={{
+                      fontSize: '0.78rem', color: '#cbd5e1', lineHeight: 1.7,
+                      marginBottom: '1.25rem', position: 'relative',
+                      padding: '0.75rem', background: 'rgba(0,0,0,0.15)',
+                      borderRadius: '8px', borderLeft: `3px solid ${fragility.synthesis?.regime_color || '#3b82f6'}`,
+                    }}>
+                      {fragility.synthesis.narrative_logic.regime_narrative}
+                    </div>
+                  )}
+
+                  {/* Trade Impact Section */}
+                  {fragility.trade_impact && (
+                    <div style={{ position: 'relative' }}>
+                      <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#94a3b8', letterSpacing: '0.04em', marginBottom: '0.5rem' }}>
+                        IMPACT ON ACTIVE POSITIONS
+                      </div>
+
+                      {/* Overall Assessment */}
+                      {(() => {
+                        const riskColorMap = { red: '#ef4444', yellow: '#eab308', green: '#10b981' };
+                        const riskColor = riskColorMap[fragility.trade_impact.overall_risk] || '#64748b';
+                        return (
+                          <div style={{
+                            padding: '0.65rem 0.75rem', borderRadius: '8px', marginBottom: '0.75rem',
+                            background: `${riskColor}10`, border: `1px solid ${riskColor}33`,
+                          }}>
+                            <div style={{ fontSize: '0.75rem', color: riskColor, fontWeight: 600, lineHeight: 1.5 }}>
+                              {fragility.trade_impact.overall_assessment}
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Per-Position Impact */}
+                      {fragility.trade_impact.position_impacts?.length > 0 && (
+                        <div style={{ display: 'grid', gap: '0.5rem' }}>
+                          {fragility.trade_impact.position_impacts.map((pos, i) => {
+                            const riskColorMap = { red: '#ef4444', yellow: '#eab308', green: '#10b981' };
+                            const posColor = riskColorMap[pos.risk_level] || '#64748b';
+                            return (
+                              <div key={i} style={{
+                                padding: '0.6rem 0.75rem', borderRadius: '8px',
+                                background: 'rgba(0,0,0,0.15)',
+                                borderLeft: `3px solid ${posColor}`,
+                              }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
+                                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#e2e8f0' }}>
+                                    {pos.ticker}
+                                    <span style={{ fontSize: '0.65rem', fontWeight: 400, color: '#64748b', marginLeft: '0.5rem' }}>
+                                      {pos.strikes?.short_put || '—'}/{pos.strikes?.short_call || '—'}
+                                    </span>
+                                  </div>
+                                  <span style={{
+                                    fontSize: '0.6rem', fontWeight: 600, padding: '2px 8px',
+                                    borderRadius: '4px', background: `${posColor}22`,
+                                    color: posColor, border: `1px solid ${posColor}44`,
+                                    textTransform: 'uppercase',
+                                  }}>{pos.risk_level}</span>
+                                </div>
+                                <div style={{ fontSize: '0.7rem', color: posColor, lineHeight: 1.4 }}>
+                                  {pos.recommendation}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {/* Warnings */}
+                      {fragility.trade_impact.warnings?.length > 0 && (
+                        <div style={{ marginTop: '0.75rem', padding: '0.5rem 0.75rem', borderRadius: '6px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
+                          {fragility.trade_impact.warnings.map((w, i) => (
+                            <div key={i} style={{ fontSize: '0.7rem', color: '#fca5a5', lineHeight: 1.4, paddingLeft: '0.5rem', borderLeft: '2px solid #ef4444', marginBottom: i < fragility.trade_impact.warnings.length - 1 ? '0.3rem' : 0 }}>
+                              ⚠️ {w}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </>

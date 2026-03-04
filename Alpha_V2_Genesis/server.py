@@ -240,11 +240,133 @@ except ImportError as e:
 
 @app.route('/api/fragility', methods=['GET'])
 def get_fragility():
-    """Returns the Fragility Index and all sub-module data."""
+    """Returns the Fragility Index, narrative intelligence, and trade impact analysis."""
     if not FRAGILITY_AVAILABLE:
         return jsonify({"error": "Fragility engine not available"}), 503
     try:
         result = compute_fragility()
+
+        # ── Trade Impact Analysis ──────────────────────────────────
+        # Cross-reference fragility with active ledger positions
+        trade_impact = {
+            "has_positions": False,
+            "overall_risk": "green",
+            "overall_assessment": "",
+            "position_impacts": [],
+            "warnings": [],
+        }
+
+        fidx = result.get("fragility_index", 0)
+
+        if LEDGER_AVAILABLE:
+            try:
+                state = load_state()
+                positions = state.get("positions", {})
+                active = {k: v for k, v in positions.items() if v.get("status") == "OPEN"}
+
+                if active:
+                    trade_impact["has_positions"] = True
+
+                    for ticker, pos in active.items():
+                        # All Iron Condor / credit spread positions are inherently
+                        # short-volatility = "Long Beta" exposure
+                        p_risk = "green"
+                        p_recommendation = ""
+
+                        if fidx >= 80:
+                            p_risk = "red"
+                            p_recommendation = (
+                                f"CRITICAL: Fragility at {fidx}/100 while holding short-vol on {ticker}. "
+                                "Immediately tighten stops to 2x credit received. "
+                                "Consider closing or hedging with VIX calls."
+                            )
+                        elif fidx >= 70:
+                            p_risk = "red"
+                            p_recommendation = (
+                                f"HIGH RISK: Fragility at {fidx}/100 with active {ticker} position. "
+                                "Consider tightening stops or adding protective puts. "
+                                "Avoid rolling into new short-vol exposure."
+                            )
+                        elif fidx >= 55:
+                            p_risk = "yellow"
+                            p_recommendation = (
+                                f"ELEVATED: Monitor {ticker} closely. "
+                                "Reduce position sizing on any new entries. "
+                                "Keep stops at 1.5x credit."
+                            )
+                        else:
+                            p_risk = "green"
+                            p_recommendation = (
+                                f"NORMAL: {ticker} position is within a favorable environment. "
+                                "Standard trade management applies."
+                            )
+
+                        trade_impact["position_impacts"].append({
+                            "ticker": ticker,
+                            "strikes": {
+                                "short_put": pos.get("short_put_strike"),
+                                "short_call": pos.get("short_call_strike"),
+                                "long_put": pos.get("long_put_strike"),
+                                "long_call": pos.get("long_call_strike"),
+                            },
+                            "risk_level": p_risk,
+                            "recommendation": p_recommendation,
+                        })
+
+                    # Overall assessment
+                    if fidx >= 80:
+                        trade_impact["overall_risk"] = "red"
+                        trade_impact["overall_assessment"] = (
+                            "🛑 CRITICAL FRAGILITY while holding short-volatility positions. "
+                            "Your Iron Condor/credit spread exposure is directly threatened by "
+                            "systemic stress. Defensive action recommended immediately."
+                        )
+                        trade_impact["warnings"].append(
+                            "High Fragility detected while holding Long Beta positions. "
+                            "Consider tightening stops or hedging with Volatility calls."
+                        )
+                    elif fidx >= 70:
+                        trade_impact["overall_risk"] = "red"
+                        trade_impact["overall_assessment"] = (
+                            "⚠️ HIGH FRAGILITY while holding short-vol exposure. "
+                            "Market stress levels suggest reducing risk. "
+                            "Review stop-loss levels and avoid new entries."
+                        )
+                        trade_impact["warnings"].append(
+                            "High Fragility detected while holding Long Beta positions. "
+                            "Consider tightening stops or hedging with Volatility calls."
+                        )
+                    elif fidx >= 55:
+                        trade_impact["overall_risk"] = "yellow"
+                        trade_impact["overall_assessment"] = (
+                            "⚡ ELEVATED FRAGILITY with active positions. "
+                            "Conditions are manageable but deteriorating. "
+                            "Monitor closely and reduce position sizing on new entries."
+                        )
+                    else:
+                        trade_impact["overall_risk"] = "green"
+                        trade_impact["overall_assessment"] = (
+                            "✅ Environment is favorable for current positions. "
+                            "Fragility levels are low and systemic risk is contained."
+                        )
+                else:
+                    trade_impact["overall_assessment"] = (
+                        "No active positions in the Strategy Ledger. "
+                        "Monitor fragility levels to time new entries optimally."
+                    )
+                    if fidx < 40:
+                        trade_impact["overall_assessment"] += (
+                            " Current low-fragility environment is favorable for "
+                            "premium-selling entries."
+                        )
+            except Exception as e:
+                trade_impact["overall_assessment"] = f"Ledger analysis unavailable: {e}"
+        else:
+            trade_impact["overall_assessment"] = (
+                "Strategy Ledger not available — trade impact analysis disabled."
+            )
+
+        result["trade_impact"] = trade_impact
         return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
