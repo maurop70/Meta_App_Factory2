@@ -471,6 +471,155 @@ function BuilderChat({ registry, onAtomizerUpdate, externalCommand, onBuildCompl
   );
 }
 
+// ── REFINE APP PANEL ───────────────────────────────────────
+function RefinePanel({ registry }) {
+  const [selectedApp, setSelectedApp] = useState('');
+  const [feedback, setFeedback] = useState('');
+  const [refining, setRefining] = useState(false);
+  const [log, setLog] = useState([]);
+  const logEndRef = useRef(null);
+
+  useEffect(() => {
+    logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [log]);
+
+  // Auto-select first active app
+  useEffect(() => {
+    if (!selectedApp && registry.length) {
+      const active = registry.find(a => a.status === 'active');
+      setSelectedApp(active?.name || registry[0].name);
+    }
+  }, [registry, selectedApp]);
+
+  const stepIcon = (step) => {
+    const icons = {
+      DISCOVER: '📂', ASSETS: '🖼️', DIAGNOSE: '🔬',
+      ANALYZE: '🧠', GENERATE: '⚡', PARSE: '🔍',
+      WRITE: '✅', COMPLETE: '🎉', ERROR: '❌', TIMEOUT: '⏰',
+    };
+    return icons[step] || '•';
+  };
+
+  const stepClass = (step) => {
+    const classes = {
+      DISCOVER: 'step-discover', ASSETS: 'step-discover',
+      DIAGNOSE: 'step-diagnose',
+      ANALYZE: 'step-generate', GENERATE: 'step-generate',
+      PARSE: 'step-generate',
+      WRITE: 'step-write', COMPLETE: 'step-complete',
+      ERROR: 'step-error', TIMEOUT: 'step-error',
+    };
+    return classes[step] || '';
+  };
+
+  const submitRefinement = async () => {
+    if (!selectedApp || !feedback.trim() || refining) return;
+    setRefining(true);
+    setLog([]);
+
+    try {
+      const res = await fetch(`${API_BASE}/api/refine/apply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ app_name: selectedApp, feedback: feedback.trim() }),
+      });
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const event = JSON.parse(line.slice(6));
+            if (event.done) break;
+            if (event.step && event.text) {
+              setLog(prev => [...prev, { step: event.step, text: event.text, ts: new Date().toLocaleTimeString() }]);
+            }
+          } catch { /* skip */ }
+        }
+      }
+    } catch (err) {
+      setLog(prev => [...prev, { step: 'ERROR', text: `Connection failed: ${err.message}`, ts: new Date().toLocaleTimeString() }]);
+    } finally {
+      setRefining(false);
+    }
+  };
+
+  const isComplete = log.some(l => l.step === 'COMPLETE');
+  const hasError = log.some(l => l.step === 'ERROR');
+
+  return (
+    <div className="refine-panel">
+      <div className="refine-header">
+        <h3>🔧 Refine App — Self-Healing Engine V2</h3>
+        <p className="refine-subtitle">Submit feedback to automatically analyze, modify, and write fixes to any registered app.</p>
+      </div>
+
+      <div className="refine-controls">
+        <div className="refine-field">
+          <label>Target App</label>
+          <select
+            value={selectedApp}
+            onChange={e => setSelectedApp(e.target.value)}
+            disabled={refining}
+            className="refine-select"
+          >
+            {registry.map(app => (
+              <option key={app.name} value={app.name}>
+                {app.name} — {app.type} {app.status === 'active' ? '🟢' : '⚪'}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="refine-field">
+          <label>Refinement Feedback</label>
+          <textarea
+            value={feedback}
+            onChange={e => setFeedback(e.target.value)}
+            disabled={refining}
+            placeholder="Describe changes, fixes, or improvements... e.g. 'Add responsive mobile layout with collapsible sidebar below 768px'"
+            rows={5}
+            className="refine-textarea"
+          />
+        </div>
+
+        <button
+          className={`refine-submit ${refining ? 'refining' : ''} ${isComplete ? 'complete' : ''}`}
+          onClick={submitRefinement}
+          disabled={refining || !feedback.trim()}
+        >
+          {refining ? '⚙️ Refining...' : isComplete ? '🎉 Complete — Submit Again' : '🚀 Apply Refinement'}
+        </button>
+      </div>
+
+      {log.length > 0 && (
+        <div className="refine-log">
+          <h4>Pipeline Log</h4>
+          <div className="refine-log-entries">
+            {log.map((entry, i) => (
+              <div key={i} className={`refine-step ${stepClass(entry.step)} ${entry.step === 'COMPLETE' ? 'highlight' : ''}`}>
+                <span className="step-badge">{entry.step}</span>
+                <span className="step-text">{entry.text}</span>
+                <span className="step-time">{entry.ts}</span>
+              </div>
+            ))}
+            <div ref={logEndRef} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── MAIN APP ────────────────────────────────────────────────
 function App() {
   const [activeView, setActiveView] = useState('builder');
@@ -508,6 +657,7 @@ function App() {
     { icon: '📦', label: 'App Registry', view: 'registry' },
     { icon: '🎮', label: 'Command Palette', view: 'commands' },
     { icon: '🧠', label: 'Agent Status', view: 'agents' },
+    { icon: '🔧', label: 'Refine App', view: 'refine' },
     { icon: '⚛️', label: 'Atomizer', view: 'atomizer' },
     { icon: '📊', label: 'Telemetry', view: 'telemetry', badge: 'Beta' },
   ];
@@ -610,6 +760,11 @@ function App() {
         {/* Command Palette */}
         {activeView === 'commands' && (
           <CommandPalette onCommand={handleCommand} />
+        )}
+
+        {/* Refine App */}
+        {activeView === 'refine' && (
+          <RefinePanel registry={registry} />
         )}
 
         {/* Agent Status */}

@@ -34,7 +34,7 @@ echo [3/4] Installing frontend (first run only)...
 if exist resonance_ui\package.json (
     if not exist resonance_ui\node_modules (
         cd resonance_ui
-        npm install
+        npm.cmd install
         cd ..
     )
 )
@@ -51,11 +51,11 @@ start "Resonance Backend" /min "%PYTHON%" server.py
 
 REM Start frontend
 cd resonance_ui
-start "Resonance Frontend" cmd /c "npx vite --host --port 5173"
+start "Resonance Frontend" cmd /k "npm.cmd run dev -- --host --port 5173"
 cd ..
 
 REM Open browser
-timeout /t 3 /nobreak >nul
+ping 127.0.0.1 -n 5 >nul
 start http://localhost:5173
 
 echo  Resonance is running!

@@ -220,6 +220,55 @@ async def refine_app(req: RefineRequest):
         return {"status": "error", "message": "Streaming not available"}
 
 
+class RefineApplyRequest(BaseModel):
+    app_name: str
+    feedback: str
+
+
+@app.post("/api/refine/apply")
+async def refine_apply(req: RefineApplyRequest):
+    """Self-healing endpoint: reads app source, sends to Gemini, writes modifications back."""
+    import threading
+    import queue as queue_module
+
+    # Resolve app directory
+    gdrive = os.path.join(os.path.expanduser("~"), "My Drive", "Antigravity-AI Agents", "Meta_App_Factory")
+    app_dir = os.path.join(gdrive, req.app_name) if os.path.isdir(os.path.join(gdrive, req.app_name)) else os.path.join(SCRIPT_DIR, req.app_name)
+
+    if not os.path.isdir(app_dir):
+        return JSONResponse({"error": f"App directory not found: {app_dir}"}, status_code=404)
+
+    progress_queue = queue_module.Queue()
+
+    def run_refinement():
+        try:
+            sys.path.insert(0, SCRIPT_DIR)
+            from refine_engine import refine_and_apply
+            for event in refine_and_apply(req.app_name, app_dir, req.feedback):
+                progress_queue.put(event)
+        except Exception as e:
+            progress_queue.put({"step": "ERROR", "text": f"❌ Refinement engine error: {str(e)}"})
+        finally:
+            progress_queue.put(None)  # Sentinel
+
+    thread = threading.Thread(target=run_refinement, daemon=True)
+    thread.start()
+
+    def generate():
+        while True:
+            try:
+                item = progress_queue.get(timeout=300)
+                if item is None:
+                    break
+                yield f"data: {json.dumps(item)}\n\n"
+            except Exception:
+                yield f"data: {json.dumps({'step': 'TIMEOUT', 'text': 'Refinement timed out.'})}\n\n"
+                break
+        yield f"data: {json.dumps({'done': True})}\n\n"
+
+    return StreamingResponse(generate(), media_type="text/event-stream")
+
+
 @app.get("/api/commands")
 def get_commands():
     """Return the command palette from commands.json."""

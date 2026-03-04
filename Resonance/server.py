@@ -8,15 +8,20 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
+from dotenv import load_dotenv # Added
+
+# Load .env variables
+load_dotenv() # Added
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [Resonance] %(message)s")
 logger = logging.getLogger("Resonance")
 
 app = FastAPI(title="Resonance API", version="3.0")
 
+# Widen CORS origins for Vite port jumping (5173-5180)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:5174", "http://localhost:5175"],
+    allow_origins=[f"http://localhost:{p}" for p in range(5173, 5181)], # Modified
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
