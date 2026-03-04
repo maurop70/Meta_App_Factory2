@@ -609,7 +609,19 @@ def load_state():
     if os.path.exists(STATE_PATH):
         try:
             with open(STATE_PATH, "r", encoding="utf-8") as f:
-                return json.load(f)
+                state = json.load(f)
+            # Auto-heal: ensure every position with trade data has a status
+            healed = 0
+            for tid, pdata in state.get("positions", {}).items():
+                if "status" not in pdata and "original_thesis" in pdata:
+                    pdata["status"] = "OPEN"
+                    healed += 1
+                    logger.info(f"[AutoHeal] Position '{tid}' missing status — set to OPEN")
+            if healed > 0:
+                with open(STATE_PATH, "w", encoding="utf-8") as f:
+                    json.dump(state, f, indent=2, default=str)
+                logger.info(f"[AutoHeal] Healed {healed} position(s) in ledger_state.json")
+            return state
         except Exception:
             pass
     return {"version": "2.0", "positions": {}, "last_run": None}
@@ -623,6 +635,15 @@ def save_state(state):
 
 def load_portfolio():
     try:
+        if not os.path.exists(PORTFOLIO_PATH):
+            logger.warning("portfolio.json not found")
+            return []
+        # Backup before reading (recoverable if file gets corrupted/emptied)
+        bak_path = PORTFOLIO_PATH + ".bak"
+        size = os.path.getsize(PORTFOLIO_PATH)
+        if size > 10:  # Only backup non-empty files
+            import shutil
+            shutil.copy2(PORTFOLIO_PATH, bak_path)
         with open(PORTFOLIO_PATH, "r", encoding="utf-8") as f:
             data = json.load(f)
         if "positions" in data:
@@ -630,6 +651,17 @@ def load_portfolio():
         return []
     except Exception as e:
         logger.error(f"Portfolio load failed: {e}")
+        # Attempt recovery from backup
+        bak_path = PORTFOLIO_PATH + ".bak"
+        if os.path.exists(bak_path):
+            try:
+                with open(bak_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                logger.info("Recovered portfolio from .bak file")
+                if "positions" in data:
+                    return [p for p in data["positions"] if p.get("status") == "OPEN"]
+            except Exception:
+                pass
         return []
 
 

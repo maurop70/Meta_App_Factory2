@@ -135,6 +135,29 @@ def check_port_available(port):
         return [("WARN", f"Port {port} already in use (existing instance?)")]
 
 
+def ensure_junction(junction_path, target_dir):
+    """
+    Ensures a Windows junction exists at junction_path → target_dir.
+    Auto-creates it if missing. Prevents Vite path-with-spaces failures.
+    """
+    if sys.platform != "win32":
+        return [("PASS", f"Junction check skipped (non-Windows)")]
+    if os.path.exists(junction_path):
+        return [("PASS", f"Junction exists: {junction_path}")]
+    try:
+        import subprocess
+        result = subprocess.run(
+            ["cmd", "/c", "mklink", "/J", junction_path, target_dir],
+            capture_output=True, text=True, timeout=10
+        )
+        if result.returncode == 0:
+            return [("PASS", f"Junction auto-created: {junction_path} → {target_dir}")]
+        else:
+            return [("WARN", f"Junction creation failed: {result.stderr.strip()}")]
+    except Exception as e:
+        return [("WARN", f"Junction creation error: {e}")]
+
+
 # ── Preflight Profiles ──────────────────────────────────────────
 
 PROFILES = {
@@ -142,11 +165,12 @@ PROFILES = {
         "name": "Alpha V2 Genesis",
         "env_keys": ["NGROK_AUTH_TOKEN", "N8N_API_KEY", "WEBHOOK_URL"],
         "check_docker": False,
-        "check_port": 5005,
+        "check_port": 5008,
         "critical_files": [
             ("server.py", "server.py"),
             ("n8n_lifecycle.py", "n8n_lifecycle.py"),
         ],
+        "junction": ("C:\\AlphaV2", SCRIPT_DIR),
     },
     "meta": {
         "name": "Meta App Factory",
@@ -225,6 +249,13 @@ def run_preflight(profile_name="generic", app_dir=None):
     if profile.get("check_port"):
         section_results = check_port_available(profile["check_port"])
         sections.append(("Network", section_results))
+        all_results.extend(section_results)
+
+    # 7. Junction Check (auto-create if missing)
+    if profile.get("junction"):
+        jp, td = profile["junction"]
+        section_results = ensure_junction(jp, td)
+        sections.append(("Windows Junction", section_results))
         all_results.extend(section_results)
 
     # ── Print Report ────────────────────────────────────────────

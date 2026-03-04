@@ -57,7 +57,7 @@ app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 # --- CONFIGURATION FROM .ENV ---
-PORT = 5005 
+PORT = 5008 
 NGROK_TOKEN = get_secret("NGROK_AUTH_TOKEN")
 N8N_API_KEY = get_secret("N8N_API_KEY")
 N8N_WORKFLOW_ID = "VkE0dmwynRPMIyjdmiONL"
@@ -527,8 +527,10 @@ def warm_up_system():
         print("⚠️ Warm-up Skipped: Loki Engine not found.")
 
 if __name__ == '__main__':
+    public_url = None
+
     if not NGROK_TOKEN:
-        print("❌ CRITICAL: NGROK_AUTH_TOKEN missing from vault/.env")
+        print("⚠️ WARNING: NGROK_AUTH_TOKEN missing from vault/.env — running in LOCAL-ONLY mode.")
     else:
         print("Initializing Ngrok Tunnel...")
         try:
@@ -583,20 +585,21 @@ if __name__ == '__main__':
             except Exception:
                 print("⚠️ Tunnel verification timed out — continuing anyway")
 
-            # PERFORM WARM-UP
-            warm_up_system()
-
-            # Register graceful shutdown hook (deactivates N8N even on force-close)
-            try:
-                from n8n_lifecycle import register_shutdown_hook
-                register_shutdown_hook('alpha')
-            except Exception as e:
-                print(f"⚠️ Shutdown hook registration failed: {e}")
-
-            # Run Server
-            print(f"🤖 Alpha Server listening on Port {PORT}...")
-            app.run(host='0.0.0.0', port=PORT, use_reloader=False)
-
         except Exception as e:
-            print(f"❌ Tunnel Initialization Failed: {e}")
-            sys.exit(1)
+            print(f"⚠️ Ngrok tunnel failed: {e}")
+            print("   Continuing in LOCAL-ONLY mode (no remote access).")
+
+    # PERFORM WARM-UP (runs regardless of ngrok status)
+    warm_up_system()
+
+    # Register graceful shutdown hook (deactivates N8N even on force-close)
+    try:
+        from n8n_lifecycle import register_shutdown_hook
+        register_shutdown_hook('alpha')
+    except Exception as e:
+        print(f"⚠️ Shutdown hook registration failed: {e}")
+
+    # Run Server
+    print(f"🤖 Alpha Server listening on Port {PORT}...")
+    app.run(host='0.0.0.0', port=PORT, use_reloader=False)
+

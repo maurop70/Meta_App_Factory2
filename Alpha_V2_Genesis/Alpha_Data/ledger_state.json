@@ -2,6 +2,7 @@
   "version": "2.0",
   "positions": {
     "spx_ic_20260223_02": {
+      "status": "OPEN",
       "original_thesis": {
         "trade_id": "spx_ic_20260223_02",
         "entry_date": "2026-02-23",
