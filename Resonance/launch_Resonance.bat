@@ -43,7 +43,7 @@ REM === [4/4] Launch Backend + Frontend ===
 echo [4/4] Starting Resonance...
 echo.
 echo    Backend:  http://localhost:5006
-echo    Frontend: http://localhost:5173
+echo    Frontend: http://localhost:5174
 echo.
 
 REM Start backend in background
@@ -51,12 +51,12 @@ start "Resonance Backend" /min "%PYTHON%" server.py
 
 REM Start frontend
 cd resonance_ui
-start "Resonance Frontend" cmd /k "npm.cmd run dev -- --host --port 5173"
+start "Resonance Frontend" cmd /k "npm.cmd run dev -- --host --port 5174"
 cd ..
 
 REM Open browser
 ping 127.0.0.1 -n 5 >nul
-start http://localhost:5173
+start http://localhost:5174
 
 echo  Resonance is running!
 echo  Press any key to SHUTDOWN...
