@@ -7,11 +7,12 @@ echo    META APP FACTORY V3 - Launching...
 echo  ===================================================
 echo.
 
-:: ── Auto-Detect Google Drive Path ──────────────────────────
-:: Google Drive Stream mounts at: %USERPROFILE%\My Drive
-:: Google Drive Mirror mounts at: %USERPROFILE%\Google Drive
-:: Some setups use: G:\My Drive
+:: ── Auto-Detect Google Drive Path (Non-blocking GOTO) ──────
 set "GDRIVE="
+if exist "%USERPROFILE%\My Drive (maurotgs@gmail.com)\Antigravity-AI Agents\Meta_App_Factory" (
+    set "GDRIVE=%USERPROFILE%\My Drive (maurotgs@gmail.com)"
+    goto :GDRIVE_FOUND
+)
 if exist "%USERPROFILE%\My Drive\Antigravity-AI Agents\Meta_App_Factory" (
     set "GDRIVE=%USERPROFILE%\My Drive"
     goto :GDRIVE_FOUND
@@ -21,11 +22,16 @@ if exist "%USERPROFILE%\Google Drive\Antigravity-AI Agents\Meta_App_Factory" (
     goto :GDRIVE_FOUND
 )
 for %%d in (G H I D E F) do (
+    if exist "%%d:\My Drive (maurotgs@gmail.com)\Antigravity-AI Agents\Meta_App_Factory" (
+        set "GDRIVE=%%d:\My Drive (maurotgs@gmail.com)"
+        goto :GDRIVE_FOUND
+    )
     if exist "%%d:\My Drive\Antigravity-AI Agents\Meta_App_Factory" (
         set "GDRIVE=%%d:\My Drive"
         goto :GDRIVE_FOUND
     )
 )
+
 echo  [FATAL] Google Drive not found! Make sure Google Drive is installed
 echo          and the Antigravity-AI Agents folder is synced.
 pause
@@ -38,6 +44,12 @@ echo  [OK] Factory Dir:  %FACTORY_DIR%
 echo.
 
 cd /d "%FACTORY_DIR%"
+
+:: ── Step 0: Cleanup Stale Processes ────────────────────────
+echo  [0/3] Clearing Port 5173 (Alpha/Vite) for a clean start...
+taskkill /f /im python.exe /t 2>nul
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":5173" 2^>nul') do taskkill /f /PID %%a 2>nul
+timeout /t 2 /nobreak >nul
 
 :: ── Bootstrap Environment (Python, Node, .env) ────────────
 if exist bootstrap_env.bat (
@@ -54,10 +66,7 @@ start "Meta Factory Backend" /min "%PYTHON%" api.py
 :: ── Start Frontend UI (port 5173) ─────────────────────────
 echo  [2/3] Starting Factory UI on port 5173...
 cd factory_ui
-if not exist node_modules (
-    echo        Installing dependencies (first run)...
-    npm.cmd install
-)
+if not exist node_modules npm.cmd install
 start "Meta Factory UI" /min cmd /k "npm.cmd run dev -- --host --port 5173"
 cd ..
 

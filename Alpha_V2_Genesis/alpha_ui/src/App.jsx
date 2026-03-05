@@ -247,7 +247,7 @@ const LedgerCard = ({ ledger }) => {
         <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
           Last run: {ledger.last_run ? new Date(ledger.last_run).toLocaleTimeString() : 'Never'}
         </span>
-        <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Lead Quant Architect v2.1</span>
+        <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Lead Quant Architect v2.5</span>
       </div>
 
       {Object.entries(ledger.positions).map(([tid, pstate]) => {

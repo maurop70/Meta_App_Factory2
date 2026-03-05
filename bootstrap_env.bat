@@ -95,8 +95,19 @@ if %ERRORLEVEL% EQU 0 (
     echo  [WARN] Node.js not found. UI features may not work.
 )
 
+:: ── 6. Portable Shortcut Synchronization ─────────────────────
+:: Since Google Drive paths differ (PC1: "My Drive", PC2: "My Drive (email)"),
+:: we re-apply the desktop shortcut on EVERY launch to ensure it works.
+if exist "%PROJECT_ROOT%\setup_desktop_icon.bat" (
+    echo  [SYNC] Refreshing Portable Desktop Shortcut...
+    :: Run silently in background to avoid double-pause
+    powershell -ExecutionPolicy Bypass -File "%PROJECT_ROOT%\create_shortcut.ps1" >nul 2>&1
+    echo  [OK] Shortcut updated for this PC's path.
+)
+
 echo.
 echo  ────────────────────────────────────────────────────
 echo   Environment Ready [%ALPHA_MACHINE_ID%]
 echo  ────────────────────────────────────────────────────
 echo.
+
