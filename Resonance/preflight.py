@@ -9,11 +9,15 @@ Usage:
 Returns exit code 0 if all checks pass, 1 if critical failures found.
 """
 import os, sys, json, importlib
+from dotenv import load_dotenv # Added
 
 sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Load .env variables at startup
+load_dotenv(os.path.join(SCRIPT_DIR, ".env")) # Added
 
 # ── Check Definitions ───────────────────────────────────────────
 # Each check returns (status, message) where status is PASS/WARN/FAIL
@@ -21,23 +25,9 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 def check_env_keys(required_keys, env_path=None):
     """Verify required .env keys are present and non-empty."""
     results = []
-    if env_path:
-        # Manual parse if dotenv not loaded yet
-        env_vars = {}
-        if os.path.exists(env_path):
-            with open(env_path, "r") as f:
-                for line in f:
-                    line = line.strip()
-                    if line and not line.startswith("#") and "=" in line:
-                        k, v = line.split("=", 1)
-                        env_vars[k.strip()] = v.strip()
-        else:
-            return [("FAIL", f".env file not found: {env_path}")]
-    else:
-        env_vars = dict(os.environ)
-
+    # os.getenv will now correctly read from .env due to load_dotenv() call
     for key in required_keys:
-        val = env_vars.get(key, "") or os.getenv(key, "")
+        val = os.getenv(key, "")
         if not val or val.startswith("${"):
             results.append(("FAIL", f"Missing or empty: {key}"))
         elif val in ("YOUR_KEY_HERE", "YOUR_WEBHOOK_URL_HERE", "PLACEHOLDER"):
@@ -196,14 +186,8 @@ def run_preflight(profile_name="generic", app_dir=None):
     all_results.extend(section_results)
 
     # 3. N8N Connectivity
-    # Load API key from .env
-    api_key = None
-    if os.path.exists(env_path):
-        with open(env_path, "r") as f:
-            for line in f:
-                if line.strip().startswith("N8N_API_KEY="):
-                    api_key = line.strip().split("=", 1)[1]
-    api_key = api_key or os.getenv("N8N_API_KEY")
+    # API key is now loaded by load_dotenv at the top
+    api_key = os.getenv("N8N_API_KEY")
     section_results = check_n8n_connectivity(api_key)
     sections.append(("N8N Connectivity", section_results))
     all_results.extend(section_results)

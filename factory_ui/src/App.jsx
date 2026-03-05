@@ -495,7 +495,7 @@ function RefinePanel({ registry }) {
     const icons = {
       DISCOVER: '📂', ASSETS: '🖼️', DIAGNOSE: '🔬',
       ANALYZE: '🧠', GENERATE: '⚡', PARSE: '🔍',
-      WRITE: '✅', COMPLETE: '🎉', ERROR: '❌', TIMEOUT: '⏰',
+      WRITE: '✅', LINT: '🔎', COMPLETE: '🎉', ERROR: '❌', TIMEOUT: '⏰',
     };
     return icons[step] || '•';
   };
@@ -505,7 +505,7 @@ function RefinePanel({ registry }) {
       DISCOVER: 'step-discover', ASSETS: 'step-discover',
       DIAGNOSE: 'step-diagnose',
       ANALYZE: 'step-generate', GENERATE: 'step-generate',
-      PARSE: 'step-generate',
+      PARSE: 'step-generate', LINT: 'step-write',
       WRITE: 'step-write', COMPLETE: 'step-complete',
       ERROR: 'step-error', TIMEOUT: 'step-error',
     };

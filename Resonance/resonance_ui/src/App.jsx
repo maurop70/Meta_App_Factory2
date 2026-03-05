@@ -28,10 +28,21 @@ function Message({ message, showAvatarAndName }) {
   const { role, text, timestamp } = message;
   const name = role === 'user' ? 'You' : 'Alex';
   const userAvatarBg = '#4CAF50'; // Green for user
+  const alexAvatarSrc = "/alex_avatar.png"; // Asset path for Alex's avatar
 
   const renderMarkdown = useCallback((markdownText) => {
     return { __html: DOMPurify.sanitize(marked.parse(markdownText || '')) };
   }, []);
+
+  if (role === 'system') { // New condition for system messages
+    return (
+      <div className="message-item system">
+        <div className="message-content system-message">
+          <p><i>{text}</i></p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`message-item group ${role === 'user' ? 'self-end' : 'self-start'}`}>
@@ -39,14 +50,13 @@ function Message({ message, showAvatarAndName }) {
         <div className="message-header">
           <div className="avatar-container">
             {role === 'user' ? (
-              <div className="avatar" style={{ background: userAvatarBg }}>Y</div>
+              <div className="avatar user-avatar" style={{ background: userAvatarBg }}>Y</div>
             ) : (
-              <img src="/alex_avatar.png" alt="Alex's avatar" className="avatar alex-avatar" width="32" height="32" />
+              <img src={alexAvatarSrc} alt="Alex's avatar" className="avatar alex-avatar" width="32" height="32" />
             )}
             {role === 'assistant' && <div className="online-status-dot"></div>}
           </div>
           <span className="username">{name}</span>
-          {/* Removed BOT badge as per refinement request */}
           <span className="timestamp">{formatTimestamp(timestamp)}</span>
         </div>
       )}
@@ -57,10 +67,11 @@ function Message({ message, showAvatarAndName }) {
 
 // Typing Indicator Component
 function TypingIndicator() {
+  const alexAvatarSrc = "/alex_avatar.png"; // Asset path for Alex's avatar
   return (
     <div className="typing-indicator">
       <div className="avatar-container">
-        <img src="/alex_avatar.png" alt="Alex's avatar" className="avatar alex-avatar" width="32" height="32" />
+        <img src={alexAvatarSrc} alt="Alex's avatar" className="avatar alex-avatar" width="32" height="32" />
         <div className="online-status-dot"></div>
       </div>
       <div className="typing-bubble">
@@ -80,18 +91,106 @@ export default function App() {
   const [input, setInput] = useState('');
   const [streaming, setStreaming] = useState(false);
   const [typing, setTyping] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState([]); // [{ filename, type, uploaded_at, text_length }]
+  const [showFilesPanel, setShowFilesPanel] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
   const endRef = useRef(null);
+  const fileInputRef = useRef(null); // Ref for the hidden file input
 
   const currentChannel = CHANNELS.find(c => c.id === activeChannel);
   const messages = chatHistory[activeChannel] || [];
+  const alexAvatarSrc = "/alex_avatar.png"; // Asset path for Alex's avatar
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, typing]);
 
+  // Fetch uploaded files on component mount and whenever the panel might need refreshing
+  useEffect(() => {
+    fetchUploadedFiles();
+  }, []);
+
+  const fetchUploadedFiles = async () => {
+    try {
+      const res = await fetch(`${API}/api/uploads`);
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+      const data = await res.json();
+      setUploadedFiles(data.files || []);
+    } catch (e) {
+      console.error("Failed to fetch uploaded files:", e);
+    }
+  };
+
+  const handleFileChange = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch(`${API}/api/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.detail || `HTTP error! status: ${res.status}`);
+      }
+
+      const data = await res.json();
+      const systemMessage = { role: 'system', text: `📎 File uploaded: ${data.filename}`, timestamp: new Date().toISOString() };
+      setChatHistory(prev => ({
+        ...prev,
+        [activeChannel]: [...(prev[activeChannel] || []), systemMessage]
+      }));
+      fetchUploadedFiles(); // Refresh the list of uploaded files
+    } catch (e) {
+      console.error("File upload failed:", e);
+      const errorMessage = { role: 'system', text: `❌ File upload failed: ${e.message}`, timestamp: new Date().toISOString() };
+      setChatHistory(prev => ({
+        ...prev,
+        [activeChannel]: [...(prev[activeChannel] || []), errorMessage]
+      }));
+    } finally {
+      setUploading(false);
+      event.target.value = null; // Clear the input so same file can be uploaded again
+    }
+  };
+
+  const deleteFile = async (filename) => {
+    if (!window.confirm(`Are you sure you want to delete "${filename}"?`)) return;
+    try {
+      const res = await fetch(`${API}/api/uploads/${filename}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.detail || `HTTP error! status: ${res.status}`);
+      }
+      const systemMessage = { role: 'system', text: `🗑️ File deleted: ${filename}`, timestamp: new Date().toISOString() };
+      setChatHistory(prev => ({
+        ...prev,
+        [activeChannel]: [...(prev[activeChannel] || []), systemMessage]
+      }));
+      fetchUploadedFiles(); // Refresh the list
+    } catch (e) {
+      console.error("Failed to delete file:", e);
+      const errorMessage = { role: 'system', text: `❌ Failed to delete file: ${e.message}`, timestamp: new Date().toISOString() };
+      setChatHistory(prev => ({
+        ...prev,
+        [activeChannel]: [...(prev[activeChannel] || []), errorMessage]
+      }));
+    }
+  };
+
+
   const send = async () => {
     const p = input.trim();
-    if (!p || streaming) return;
+    if (!p || streaming || uploading) return; // Disable send if uploading
 
     setStreaming(true); // Set streaming state to true BEFORE initiating fetch
     setInput('');
@@ -125,6 +224,19 @@ export default function App() {
       while (true) {
         const { done, value } = await reader.read();
         if (done) {
+          // Final cleanup pass for emoji rendering after streaming completes
+          setChatHistory(prev => {
+            const currentChannelHistory = [...(prev[activeChannel] || [])];
+            const lastMessageIndex = currentChannelHistory.length - 1;
+            if (lastMessageIndex >= 0 && currentChannelHistory[lastMessageIndex].role === 'assistant') {
+              const rawText = currentChannelHistory[lastMessageIndex].text;
+              // Re-encode and re-decode to fix potential UTF-8 fragmentation issues
+              const fixedText = new TextDecoder('utf-8').decode(new TextEncoder().encode(rawText));
+              currentChannelHistory[lastMessageIndex].text = fixedText;
+            }
+            return { ...prev, [activeChannel]: currentChannelHistory };
+          });
+
           setTyping(false);
           setStreaming(false);
           break; // Break cleanly on event.done
@@ -155,6 +267,9 @@ export default function App() {
               return; // Exit function on error
             }
             if (event.done) {
+              // This 'done' inside the loop is usually redundant if the outer 'done' handles the final state.
+              // However, if the server sends a 'done' event mid-stream, we should handle it.
+              // The outer 'done' will still perform the final cleanup.
               setTyping(false);
               setStreaming(false);
               break; // Break from inner loop if done signal received
@@ -231,7 +346,7 @@ export default function App() {
         </nav>
         <div className="user-panel">
           <div className="avatar-container">
-            <div className="avatar" style={{ background: '#4CAF50' }}>Y</div>
+            <div className="avatar user-avatar" style={{ background: '#4CAF50' }}>Y</div>
             <div className="online-status-dot"></div>
           </div>
           <span className="username">You</span>
@@ -245,15 +360,40 @@ export default function App() {
             <span className="channel-icon">{currentChannel.icon}</span>
             <h2 className="channel-name">#{currentChannel.name}</h2>
             <span className="channel-description">{currentChannel.description}</span>
+            {uploadedFiles.length > 0 && (
+              <button className="files-badge" onClick={() => setShowFilesPanel(!showFilesPanel)}>
+                📎 Files ({uploadedFiles.length})
+              </button>
+            )}
           </div>
           <button className="clear-chat-button" onClick={clearChatHistory}>Clear Chat</button>
         </header>
+
+        {showFilesPanel && (
+          <div className="files-panel">
+            <h3>Uploaded Files</h3>
+            {uploadedFiles.length === 0 ? (
+              <p>No files uploaded yet.</p>
+            ) : (
+              <ul>
+                {uploadedFiles.map(file => (
+                  <li key={file.filename} className="file-list-item">
+                    <span>{file.filename} ({file.type}, {file.text_length} chars)</span>
+                    <button onClick={() => deleteFile(file.filename)} className="delete-file-button">
+                      🗑️
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
 
         <div className="message-list-container">
           {messages.length === 0 && (
             <div className="welcome-banner">
               <div className="welcome-avatar-glow">
-                <img src="/alex_avatar.png" alt="Alex's avatar" className="welcome-avatar alex-avatar" width="80" height="80" />
+                <img src={alexAvatarSrc} alt="Alex's avatar" className="welcome-avatar alex-avatar" width="80" height="80" />
               </div>
               <h1>Welcome to #{currentChannel.name}!</h1>
               <p>{getWelcomeMessage(activeChannel)}</p>
@@ -271,14 +411,30 @@ export default function App() {
 
         <div className="chat-input-area">
           <input
+            type="file"
+            ref={fileInputRef}
+            style={{ display: 'none' }}
+            accept=".txt,.pdf,.docx,.csv,.md,.png,.jpg,.jpeg"
+            onChange={handleFileChange}
+          />
+          <button
+            className="upload-button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading || streaming}
+            aria-label="Upload file"
+          >
+            {uploading ? '...' : '📎'}
+          </button>
+          <input
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && send()}
             placeholder={`Message #${currentChannel.name}`}
-            disabled={streaming}
+            disabled={streaming || uploading}
             className="chat-input"
+            aria-label={`Message #${currentChannel.name}`}
           />
-          <button onClick={send} disabled={streaming || !input.trim()} className="send-button">
+          <button onClick={send} disabled={streaming || uploading || !input.trim()} className="send-button">
             ↑
           </button>
         </div>

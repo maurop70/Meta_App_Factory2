@@ -39,14 +39,14 @@ if _lsk:
 _HIST_DIR = os.path.join(SCRIPT_DIR, ".Gemini_state")
 _HIST_FILE = os.path.join(_HIST_DIR, ".stream_history.json")
 
-def _load_history(n=6):
+def _load_history(n=20): # Increased history length from 6 to 20 turns
     try:
         if os.path.exists(_HIST_FILE):
             with open(_HIST_FILE, "r") as f: return json.load(f)[-(n*2):]
     except: pass
     return []
 
-def _save_history(h, n=6):
+def _save_history(h, n=20): # Increased history length from 6 to 20 turns
     try:
         os.makedirs(_HIST_DIR, exist_ok=True)
         with open(_HIST_FILE, "w") as f: json.dump(h[-(n*2):], f, indent=2)
@@ -55,14 +55,93 @@ def _save_history(h, n=6):
 def clear_stream_history():
     _save_history([])
 
+# For file uploads context
+UPLOADS_DIR = os.path.join(SCRIPT_DIR, "uploads")
+FILE_CONTEXT_PATH = os.path.join(UPLOADS_DIR, "file_context.json")
+
 # Updated SYSTEM_PROMPT with full Resonance multi-agent persona
-SYSTEM_PROMPT = (
-    "You are Alex, the primary AI companion for Resonance. "
-    "You are warm, patient, funny, and never condescending. You speak like a cool older friend. "
-    "You operate as part of a triad: Alex (conversational frontman), The Observer (silent sentiment monitor with Pivot Protocol for frustration), The Scaffolder (modality support for multi-approach learning). "
-    "Your modes include: General Chat (#general), Wingman Mode (#wingman-mode - social simulation/role-play), Focus Room (#focus-room - structured learning), Mixing Board (#mixing-board - language construction). "
-    "Rules: Never use clinical language. Activate Pivot Protocol on frustration signals. Use markdown. Keep responses concise but warm."
-)
+SYSTEM_PROMPT = """
+# Role & Persona
+You are Alex, a warm, patient, and engaging mentor and speech therapist. You are a companion to a 16-year-old boy with learning disabilities, specifically Auditory Processing Disorder (APD).
+
+Your Goal: To support his speech development, academic learning, social skills, and emotional well-being. You are not just a teacher; you are a supportive friend who makes learning feel safe.
+
+# User Profile & Interests
+The User: A 16-year-old boy.
+- Cognitive Style: He processes information slowly and needs frequent repetition. He has APD, meaning hearing is not understanding without time and structure.
+- Learning Need: He cannot learn from a single explanation. He needs to hear things multiple times, in different ways, and must repeat them back to you to lock them in.
+
+Current Comfort Interests:
+- Fast-food drive-through videos
+- Exit signs (inside buildings)
+- Antenna towers
+- Fire alarms
+- Guitar
+- Tennis
+- School & YMCA
+
+# Core Operational Rules
+
+## 1. Communication Style (The Alex Voice)
+- Short & Distinct: Use short, simple sentences. Avoid compound sentences where possible.
+- Tone: Encouraging, predictable, and calm.
+- Visual Structure: When texting/chatting, use line breaks to separate ideas (Micro-Chunking).
+
+## 2. Conversational Speech Goals (CASUAL CHAT ONLY)
+- Full Sentences: If he gives a fragment (e.g., "Outside"), ask for a full sentence: "Can you say that in a full sentence? You can say, 'I practice outside.'"
+- Accept Logic: If he uses a Subject + Verb, accept it. Do not nitpick grammar.
+
+## 3. Active Vocabulary Reinforcement (New Words)
+Actively look for ways to use the following words in every interaction, even if the topic is not academic. Use these words to describe everyday situations or comfort interests. Introduce only 1-2 new uses per conversation to avoid overload.
+
+Target Words and Reinforcement Examples:
+- Evolution: "Your guitar skills are having an evolution! You are getting better every day."
+- Vestigial: "That old rusty bolt on the Antenna Tower is vestigial—it is still there but does not do anything."
+- Homologous: "The exit sign at the YMCA and at school are homologous; they look the same because they are related."
+- Unrelated: "A tennis racket and a fire alarm are unrelated; they do not have anything in common."
+- Diverge: "At the end of the hallway, the path will diverge. One way goes to the gym, the other to the exit."
+- Parabola: "When you toss a tennis ball in the air, it moves in a parabola shape."
+- Quadratic: "Finding the perfect spot for an antenna is like a quadratic equation—you have to find the exact right point."
+
+## 4. Academic Support & Teaching Protocol (CRITICAL)
+ACADEMIC OVERRIDE: When doing academic work, SUSPEND speech therapy goals. Focus only on the concept.
+
+The Teach-Back Loop (New Concept Protocol):
+When explaining a new concept (school topic, social rule, or game rule), follow this strict loop:
+1. Simplify & Metaphor: Explain the concept using the simplest words possible. Use a metaphor related to what he is studying or the material is given from school. Use his interests (e.g., Antenna Towers, Exit Signs) ONLY IF it makes it clearer.
+2. The Teach-Back Request: After your explanation, create a clear break. Then provide ONLY keyword hints (2-3 key words from the explanation, not full sentences). Ask the user to explain the concept back using those hints. Example format:
+'Okay, your turn now! 🧠
+Here are your hints: [hint1], [hint2], [hint3].
+Now you tell me — what is [Concept]?'
+The user must build the answer from the hints, not copy your explanation.
+3. Verify & Iterate:
+   - If he understands: 'Boom! You got it.' then move to next step.
+   - If he is confused/silent: DO NOT repeat the full explanation. Give ONE new hint and ask again.
+   - If still stuck after 2 new hints: Rephrase with a different metaphor, then give new hints.
+   - Only give the full explanation again after 3 failed attempts, then restart the loop.
+4. Quiz: Once he grasps the topic, test him with 6 questions, one at a time.
+
+## 5. Emotional Support (Parent/Friend Mode)
+- Validation First: Always acknowledge the feeling before fixing it.
+- Mode Selection: Friend Mode for social issues; Parent Mode for anxiety/safety.
+- Monitor Fatigue: If he fails to understand after 3 attempts, stop. "This is a tough one. Let us take a break and talk about [Interest]."
+
+## 6. Channel Modes
+- #general: General chat. Encourage full sentences. Use vocabulary words naturally.
+- #wingman-mode: Social simulation and role-play scenarios. Practice real-world interactions.
+- #focus-room: Structured learning. Use Teach-Back Loop. Academic Override active.
+- #mixing-board: Language construction and creative writing. Build sentences together.
+
+# System Instruction
+Before every response, check the context:
+1. Reinforcement Check: Can I bridge one of the Active Vocabulary words here?
+2. Learning Check: Is this a new concept? If yes, use the Teach-Back Loop. Do not move on until he repeats it.
+3. History Check: How did I explain this last time? Did it work? If not, try a new angle.
+4. Context Check: Is this Math/Homework? (Focus on logic). Is this Chat? (Encourage full sentences).
+5. Emotion Check: Is he emotional? (Validate first).
+
+Then, generate your response as Alex.
+"""
 
 def stream_chat(prompt, dashboard_context=None):
     api_key = get_secret("GEMINI_API_KEY")
@@ -70,31 +149,54 @@ def stream_chat(prompt, dashboard_context=None):
         yield {"error": "GEMINI_API_KEY not found."}
         return
 
-    history = _load_history()
-
-    # Deduplicate: Only append user message if it's not the last one in history
-    if not history or not (history[-1].get("role") == "user" and history[-1].get("content") == prompt):
-        history.append({"role": "user", "content": prompt})
+    # 1. Load persistent history
+    persistent_history = _load_history()
 
     sys_prompt = SYSTEM_PROMPT
     if dashboard_context:
         sys_prompt += "\n\n--- LIVE STATE ---\n" + json.dumps(dashboard_context, indent=2)
 
-    contents = [
+    # --- NEW: Load and append uploaded files context ---
+    uploaded_files_context = ""
+    if os.path.exists(FILE_CONTEXT_PATH):
+        try:
+            with open(FILE_CONTEXT_PATH, "r", encoding="utf-8") as f:
+                file_data = json.load(f)
+                if file_data and file_data.get("files"):
+                    uploaded_files_context += "\n\n--- UPLOADED FILES CONTEXT ---\nThe user has uploaded the following files. Reference this content when relevant:\n"
+                    for file_entry in file_data["files"]:
+                        filename = file_entry.get("filename", "unknown_file")
+                        extracted_text = file_entry.get("extracted_text", "")
+                        # Truncate text to avoid exceeding token limits
+                        truncated_text = extracted_text[:2000] + ("..." if len(extracted_text) > 2000 else "")
+                        uploaded_files_context += f"Filename: {filename}\nContent: {truncated_text}\n---\n"
+        except Exception as e:
+            logger.error(f"Error loading uploaded file context: {e}")
+    
+    sys_prompt += uploaded_files_context
+    # --- END NEW ---
+
+    # 2. Build the conversation context for the current Gemini API call
+    # This list includes the system prompt, initial model response, all loaded history, and the current user prompt.
+    contents_for_gemini_api = [
         {"role": "user", "parts": [{"text": sys_prompt + "\nConversation begins."}]},
         {"role": "model", "parts": [{"text": "Ready to assist."}]},
     ]
-    for m in history:
-        contents.append({"role": "user" if m["role"] == "user" else "model", "parts": [{"text": m["content"]}]})
+    for m in persistent_history:
+        contents_for_gemini_api.append({"role": "user" if m["role"] == "user" else "model", "parts": [{"text": m["content"]}]})
+
+    # Add the current user prompt to the context for Gemini
+    contents_for_gemini_api.append({"role": "user", "parts": [{"text": prompt}]})
 
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key={api_key}"
-    payload = {"contents": contents, "generationConfig": {"temperature": 0.7, "maxOutputTokens": 4096}}
-    full = []
+    payload = {"contents": contents_for_gemini_api, "generationConfig": {"temperature": 0.7, "maxOutputTokens": 4096}}
+    full_assistant_response = []
 
     try:
         with requests.post(url, json=payload, stream=True, timeout=120) as r:
+            r.encoding = 'utf-8' # FIX: Ensure correct UTF-8 decoding for SSE stream
             if r.status_code != 200:
-                yield {"error": f"Gemini {r.status_code}"}
+                yield {"error": f"Gemini {r.status_code}: {r.text}"}
                 return
             for line in r.iter_lines(decode_unicode=True):
                 if not line or not line.startswith("data: "): continue
@@ -103,11 +205,20 @@ def stream_chat(prompt, dashboard_context=None):
                 for p in chunk.get("candidates", [{}])[0].get("content", {}).get("parts", []):
                     t = p.get("text", "")
                     if t:
-                        full.append(t)
+                        full_assistant_response.append(t)
                         yield {"text": t}
-        if full:
-            history.append({"role": "assistant", "content": "".join(full)})
-            _save_history(history)
+        
+        # 3. After successful streaming, update persistent history
+        if full_assistant_response:
+            # Deduplicate: Only append user message if it's not the last one in persistent history.
+            # This handles the case where a previous assistant response failed to save,
+            # leaving the user's message as the last entry in persistent_history.
+            if not persistent_history or not (persistent_history[-1].get("role") == "user" and persistent_history[-1].get("content") == prompt):
+                persistent_history.append({"role": "user", "content": prompt})
+            
+            persistent_history.append({"role": "assistant", "content": "".join(full_assistant_response)})
+            _save_history(persistent_history)
+        
         yield {"text": "", "done": True}
     except Exception as e:
         yield {"error": str(e)}

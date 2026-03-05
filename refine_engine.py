@@ -18,7 +18,9 @@ import json
 import logging
 import requests
 import re
-from typing import Generator, Dict, List, Optional
+import subprocess
+import shutil
+from typing import Generator, Dict, List, Optional, Tuple
 
 logger = logging.getLogger("RefineEngine")
 
@@ -155,6 +157,20 @@ def static_analysis(source_files: Dict[str, str]) -> List[str]:
                     f"Consider adding sanitization for production security."
                 )
 
+            # Check: React.StrictMode + SSE streaming conflict
+            if "StrictMode" in content and rel_path.endswith(("main.jsx", "main.tsx", "index.jsx", "index.tsx")):
+                for other_path, other_content in source_files.items():
+                    if other_path == rel_path:
+                        continue
+                    if "getReader()" in other_content or "EventSource" in other_content or "text/event-stream" in other_content:
+                        diagnostics.append(
+                            f"⚠️ {rel_path}: Uses React.StrictMode, but {other_path} uses SSE streaming. "
+                            f"StrictMode double-invokes effects and callbacks in dev mode, causing streamed "
+                            f"text to appear duplicated. Remove StrictMode or wrap SSE logic in a ref-guarded "
+                            f"useEffect to prevent double-invocation."
+                        )
+                        break  # One warning is enough
+
         # --- Python backend checks ---
         if rel_path.endswith(".py"):
             # Check: response accumulator not cleared
@@ -236,6 +252,166 @@ def parse_file_modifications(gemini_response: str) -> Dict[str, str]:
     return modifications
 
 
+# ── Post-Write Lint Validation ───────────────────────────────
+
+def _lint_file(full_path: str, rel_path: str, app_dir: str) -> List[str]:
+    """
+    Validate syntax of a written file. Returns list of error strings (empty = passed).
+    JSX/TSX: tries @babel/parser via Node subprocess, falls back to Python heuristics.
+    Python: uses compile().
+    """
+    _, ext = os.path.splitext(rel_path)
+    errors = []
+
+    if ext in {".jsx", ".tsx", ".js", ".ts"}:
+        errors = _lint_jsx_node(full_path, rel_path, app_dir)
+        if errors is None:
+            # Node/Babel not available — fall back to heuristic
+            errors = _lint_jsx_heuristic(full_path, rel_path)
+    elif ext == ".py":
+        errors = _lint_python(full_path, rel_path)
+
+    return errors
+
+
+def _lint_jsx_node(full_path: str, rel_path: str, app_dir: str) -> Optional[List[str]]:
+    """
+    Try to parse JSX/TSX using @babel/parser from the project's node_modules.
+    Returns list of errors, or None if Node/Babel is not available.
+    """
+    # Find node_modules — check app_dir and subdirectories
+    node_modules = None
+    for root, dirs, _ in os.walk(app_dir):
+        dirs[:] = [d for d in dirs if d != "__pycache__" and d != ".git"]
+        if "node_modules" in dirs:
+            candidate = os.path.join(root, "node_modules", "@babel", "parser")
+            if os.path.isdir(candidate):
+                node_modules = os.path.join(root, "node_modules")
+                break
+
+    if not node_modules:
+        return None  # Signal to use fallback
+
+    # Determine parser plugins based on extension
+    _, ext = os.path.splitext(rel_path)
+    plugins = ["jsx"]
+    if ext in {".tsx", ".ts"}:
+        plugins.append("typescript")
+
+    # Build a tiny Node script to parse the file
+    script = f"""
+const parser = require('{node_modules.replace(os.sep, "/")}/@babel/parser');
+const fs = require('fs');
+try {{
+    const code = fs.readFileSync('{full_path.replace(os.sep, "/")}', 'utf8');
+    parser.parse(code, {{
+        sourceType: 'module',
+        plugins: {json.dumps(plugins)},
+    }});
+    process.stdout.write('OK');
+}} catch (e) {{
+    process.stdout.write('PARSE_ERROR: ' + e.message);
+}}
+"""
+    node_cmd = shutil.which("node") or shutil.which("node.exe")
+    if not node_cmd:
+        return None
+
+    try:
+        result = subprocess.run(
+            [node_cmd, "-e", script],
+            capture_output=True, text=True, timeout=15,
+            cwd=app_dir,
+        )
+        output = (result.stdout + result.stderr).strip()
+        if output.startswith("PARSE_ERROR:"):
+            return [f"{rel_path}: {output}"]
+        elif output == "OK":
+            return []
+        else:
+            # Something unexpected — don't block
+            logger.warning(f"Unexpected lint output for {rel_path}: {output}")
+            return []
+    except Exception as e:
+        logger.warning(f"Node lint failed for {rel_path}: {e}")
+        return None  # Fall back to heuristic
+
+
+def _lint_jsx_heuristic(full_path: str, rel_path: str) -> List[str]:
+    """
+    Pure-Python heuristic checks for common JSX syntax errors.
+    Catches the most common Gemini mistakes without requiring Node.
+    """
+    errors = []
+    try:
+        with open(full_path, "r", encoding="utf-8", errors="replace") as f:
+            content = f.read()
+            lines = content.split("\n")
+    except Exception:
+        return [f"{rel_path}: Could not read file for lint check"]
+
+    # 1. Bracket/brace/paren balance
+    stack = []
+    bracket_map = {")": "(", "]": "[", "}": "{"}
+    in_string = None
+    in_template = False
+    for i, char in enumerate(content):
+        # Basic string tracking (doesn't handle all edge cases but catches most)
+        if char in ('"', "'", "`"):
+            if in_string == char:
+                in_string = None
+            elif in_string is None:
+                in_string = char
+            continue
+        if in_string:
+            continue
+
+        if char in ("(", "[", "{"):
+            stack.append(char)
+        elif char in (")", "]", "}"):
+            if not stack or stack[-1] != bracket_map[char]:
+                line_num = content[:i].count("\n") + 1
+                errors.append(f"{rel_path}:{line_num}: Unmatched '{char}'")
+                break
+            stack.pop()
+
+    if stack and not errors:
+        errors.append(f"{rel_path}: Unclosed brackets/braces — {len(stack)} unmatched opening bracket(s)")
+
+    # 2. JSX comment inside tag attribute list (the exact bug Gemini introduced)
+    tag_attr_comment = re.compile(
+        r'<\w[^>]*\{/\*.*?\*/\}[^>]*(?:/>|>)',
+        re.DOTALL
+    )
+    for i, line in enumerate(lines, 1):
+        # Simpler per-line check: attribute-like context followed by {/* */}
+        if re.search(r'=\{[^}]*\}\s*\{/\*', line):
+            errors.append(
+                f"{rel_path}:{i}: JSX comment inside tag attribute list — "
+                f"'{{/* ... */}}' cannot appear between attributes. Move the comment above or below the tag."
+            )
+
+    # 3. Unclosed template literals (common Gemini mistake)
+    backtick_count = content.count("`")
+    if backtick_count % 2 != 0:
+        errors.append(f"{rel_path}: Odd number of backticks ({backtick_count}) — likely an unclosed template literal")
+
+    return errors
+
+
+def _lint_python(full_path: str, rel_path: str) -> List[str]:
+    """Validate Python syntax using compile()."""
+    try:
+        with open(full_path, "r", encoding="utf-8", errors="replace") as f:
+            source = f.read()
+        compile(source, rel_path, "exec")
+        return []
+    except SyntaxError as e:
+        return [f"{rel_path}:{e.lineno}: {e.msg}"]
+    except Exception as e:
+        return [f"{rel_path}: Lint error — {e}"]
+
+
 # ── System Prompt (V2: Production Quality) ───────────────────
 
 REFINE_SYSTEM_PROMPT = """You are the Meta App Factory Self-Healing Architect V2. You are an elite full-stack production engineer.
@@ -267,6 +443,10 @@ Your job: Read the child app's current source code, static analysis diagnostics,
 - NEVER show technical labels (BOT, AI, SYSTEM) next to persona names. AI entities must appear as native.
 - Ensure all UI transitions are smooth (use CSS transition properties).
 - Forms/inputs must set proper disabled states during async operations.
+- NEVER place JSX comments `{/* */}` between HTML/JSX tag attributes. Comments must go above or below the tag, never inside `< />` between attributes. This causes Babel parse errors.
+
+### React.StrictMode
+- If the app uses SSE streaming (getReader, EventSource, text/event-stream), do NOT wrap components in React.StrictMode. StrictMode double-invokes callbacks in dev mode, causing streamed text to appear duplicated.
 
 ### Deduplication & State Management
 - In React SSE streaming: ALWAYS set the streaming/loading state to `true` BEFORE initiating the fetch, not just after.
@@ -368,8 +548,47 @@ def refine_and_apply(app_name: str, app_dir: str, feedback: str) -> Generator:
         except Exception as e:
             yield {"step": "ERROR", "text": f"❌ Failed to write {rel_path}: {e}"}
 
+    # Phase 6.5: Post-write lint check
+    reverted = []
+    if written:
+        yield {"step": "LINT", "text": "🔎 Running post-write syntax validation..."}
+        lint_errors = []
+        reverted = []
+        for rel_path in written:
+            full_path = os.path.join(app_dir, rel_path)
+            errors = _lint_file(full_path, rel_path, app_dir)
+            if errors:
+                lint_errors.extend(errors)
+                # Revert to pre-modification version if we have it
+                if rel_path in source_files:
+                    try:
+                        with open(full_path, "w", encoding="utf-8", newline="\n") as f:
+                            f.write(source_files[rel_path])
+                        reverted.append(rel_path)
+                        yield {"step": "LINT", "text": f"⏪ Reverted: {rel_path} (syntax errors detected)"}
+                    except Exception as e:
+                        yield {"step": "LINT", "text": f"⚠️ Could not revert {rel_path}: {e}"}
+                else:
+                    yield {"step": "LINT", "text": f"⚠️ {rel_path} has syntax errors but no original to revert to"}
+
+        if lint_errors:
+            for err in lint_errors:
+                yield {"step": "LINT", "text": f"❌ {err}"}
+            good_files = [f for f in written if f not in reverted]
+            if reverted:
+                yield {"step": "LINT", "text": f"🔧 Reverted {len(reverted)} file(s) with syntax errors: {', '.join(reverted)}"}
+            if good_files:
+                yield {"step": "LINT", "text": f"✅ {len(good_files)} file(s) passed validation: {', '.join(good_files)}"}
+        else:
+            yield {"step": "LINT", "text": f"✅ All {len(written)} file(s) passed syntax validation."}
+
+        # Update written list to exclude reverted files
+        written = [f for f in written if f not in reverted]
+
     # Phase 7: Summary
     if written:
         yield {"step": "COMPLETE", "text": f"🎉 Self-healing applied! Modified {len(written)} files in {app_name}: {', '.join(written)}"}
+    elif reverted:
+        yield {"step": "ERROR", "text": f"⚠️ All modified files had syntax errors and were reverted. The AI-generated code needs manual review."}
     else:
         yield {"step": "ERROR", "text": "⚠️ No files were written. Check the Gemini response format."}
