@@ -1,6 +1,6 @@
 # 🛠️ Alpha V2 Genesis: Installation Guide
 
-> **Version**: 2.4 — Production Release | **Last Updated**: 2026-02-26
+> **Version**: 2.5 — Production Release | **Last Updated**: 2026-03-05
 
 ---
 
@@ -89,12 +89,12 @@ The system requires the following n8n workflows to be active:
 To import:
 
 1. Log in to [app.n8n.cloud](https://app.n8n.cloud)
-2. Navigate to the **Alpha Architect** project (workflows are organized into 7 domain projects as of v2.4)
+2. Navigate to the **Alpha Architect** project (workflows are organized into 7 domain projects as of v2.5)
 3. Click **"New Workflow"** → **"Import from JSON"**
 4. Upload the `n8n_blueprint.json` file from this project (if provided by your vendor)
 5. **Activate** each workflow using the toggle in the top-right corner of the workflow editor
 
-> **Note (v2.4)**: N8N workflows are now organized into team projects. Alpha-related workflows belong in the **Alpha Architect** project. See `CHANGELOG.md` for the full 7-project mapping.
+> **Note (v2.5)**: N8N workflows are now organized into team projects. Alpha-related workflows belong in the **Alpha Architect** project. See `CHANGELOG.md` for the full 7-project mapping.
 
 > **Critical**: Both research workflows must be in **Active** state. Inactive workflows will cause the system to fall back to cached data indefinitely.
 
@@ -114,7 +114,7 @@ Watch the console for:
 ✅ Tunnel Verification: SUCCESS
 ✅ Antigravity: n8n Workflow '...' successfully synced.
 ✅ Warm-up Complete: portfolio.json and market_memo.md initialized.
-🤖 Alpha Server listening on Port 5005...
+🤖 Alpha Server listening on Port 5008...
 ```
 
 Then open [http://localhost:5173](http://localhost:5173) in your browser.
@@ -123,7 +123,7 @@ Then open [http://localhost:5173](http://localhost:5173) in your browser.
 
 ## ✅ Post-Install Verification Checklist
 
-- [ ] `http://localhost:5005` returns `{"status": "online"}`
+- [ ] `http://localhost:5008` returns `{"status": "online"}`
 - [ ] `http://localhost:5173` loads the Glassmorphic dashboard
 - [ ] The **Market Data** card shows a live SPX price (not 0.00)
 - [ ] At least one position is visible in the **Active Trade** card (if `portfolio.json` is populated)

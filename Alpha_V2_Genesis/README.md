@@ -1,6 +1,6 @@
 # 🦅 Alpha V2 Genesis: Professional Trading Intelligence Suite
 
-> **Version**: 2.4 — Production Release | **Last Updated**: 2026-02-26
+> **Version**: 2.5 — Production Release | **Last Updated**: 2026-03-05
 
 Alpha V2 Genesis is an autonomous trading companion designed to synthesize real-time market data, AI-driven sentiment, and macroeconomic research into actionable SPX options strategies. It operates as a fully self-healing, budget-gated intelligence system backed by an n8n cloud research brain and a local Glassmorphic dashboard.
 
@@ -29,7 +29,7 @@ Double-click or run the master launch script from the project root:
 This orchestrates a full boot sequence:
 
 1. **Kills** any stale `python`, `node`, and `ngrok` processes.
-2. **Starts** the Flask backend on **Port 5005** (with ngrok self-healing tunnel).
+2. **Starts** the Flask backend on **Port 5008** (with ngrok self-healing tunnel).
 3. **Waits** 10 seconds for the tunnel and n8n sync to complete.
 4. **Launches** the React UI on **Port 5173**.
 
@@ -74,7 +74,7 @@ The system operates on a **Dual-Strategy** framework:
 
 ### N8N Project Organization
 
-As of v2.4, the n8n workspace is organized into **7 domain-grouped team projects** (62 workflows total):
+As of v2.5, the n8n workspace is organized into **7 domain-grouped team projects** (62 workflows total):
 
 | Project | Workflows | Purpose |
 | :--- | :--- | :--- |
@@ -110,10 +110,6 @@ As of v2.4, the n8n workspace is organized into **7 domain-grouped team projects
 
 All modules are inherited by every new app created via `factory.py`.
 
-### GitHub Integration (Planned)
-
-A `git_deployer.py` module is planned to auto-push apps to GitHub after creation. This will add: PAT vault storage → auto-commit → push to remote → log repo URL to INVENTORY. Not yet active — awaiting GitHub PAT configuration.
-
 ---
 
 ## ⚙️ Configuration
@@ -144,9 +140,9 @@ SENTRY_DSN=<optional_sentry_dsn_for_error_tracking>
 
 | Service | Default Port | Override Location |
 | :--- | :--- | :--- |
-| Flask Backend | **5005** | `server.py` → `PORT` variable |
+| Flask Backend | **5008** | `server.py` → `PORT` variable |
 | React UI | **5173** | `alpha_ui/vite.config.js` |
-| API Base URL | `http://localhost:5005` | `alpha_ui/public/config.json` |
+| API Base URL | `http://localhost:5008` | `alpha_ui/public/config.json` |
 
 ---
 
@@ -155,7 +151,7 @@ SENTRY_DSN=<optional_sentry_dsn_for_error_tracking>
 | Symptom | Likely Cause | Fix |
 | :--- | :--- | :--- |
 | **"Empty Outlook"** cards | `upcoming_events.json` missing or stale | Run on Mon/Tue to trigger n8n poll; or manually populate the JSON |
-| **"Is Server Running?"** UI error | Flask not started or port mismatch | Check `server.py` is running on Port 5005 |
+| **"Is Server Running?"** UI error | Flask not started or port mismatch | Check `server.py` is running on Port 5008 |
 | **n8n sync fails on boot** | Expired `N8N_API_KEY` or invalid Workflow ID | Regenerate key in n8n Cloud settings |
 | **ngrok tunnel error** | Stale processes or expired auth token | `taskkill /f /im ngrok.exe` then relaunch |
 | **Macro events not updating** | N8N Macro Event Tracker disabled | Verify workflow is active in n8n Cloud |
@@ -178,4 +174,4 @@ This software is proprietary. Redistribution or commercial use requires an expli
 
 ---
 
-*Alpha V2 Genesis v2.4 — Lead Quant Architect + Stability Suite + N8N Multi-Project Architecture*
+*Alpha V2 Genesis v2.5 — Lead Quant Architect + Stability Suite + N8N Multi-Project Architecture*
