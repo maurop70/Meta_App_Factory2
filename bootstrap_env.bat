@@ -74,7 +74,7 @@ if not exist "%PROJECT_ROOT%\.env" (
         echo.
         echo  [SETUP] No .env found. Creating from template...
         copy "%PROJECT_ROOT%\env.template" "%PROJECT_ROOT%\.env" >nul
-        echo  [SETUP] Created %PROJECT_ROOT%\.env
+        echo  [SETUP] Created "%PROJECT_ROOT%\.env"
         echo  [SETUP] *** IMPORTANT: Edit .env and add your API keys! ***
     )
 )
