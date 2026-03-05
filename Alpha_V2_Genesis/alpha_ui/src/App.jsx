@@ -2166,6 +2166,23 @@ function App() {
               }));
             }
 
+            // ── Active Tab (so LLM knows what the user is looking at) ──
+            ctx.active_tab = activeTab || 'dashboard';
+
+            // ── Fragility Index ──
+            if (fragility) {
+              ctx.fragility = {
+                fragility_index: fragility.fragility_index ?? null,
+                regime: fragility.regime ?? null,
+                label: fragility.label ?? null,
+                components: fragility.components ?? null,
+                narrative: fragility.narrative ?? null,
+                market_decoder: fragility.market_decoder ?? null,
+                executive_summary: fragility.executive_summary ?? null,
+                trade_impact: fragility.trade_impact ?? null,
+              };
+            }
+
             ctx.fetch_timestamp = new Date().toISOString();
             return Object.keys(ctx).length > 1 ? ctx : null;
           } catch (e) {
