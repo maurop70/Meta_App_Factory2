@@ -230,6 +230,71 @@ def get_journal():
         return jsonify({"error": str(e)}), 500
 
 
+# ── Trade Execution & Uploads (Priority 6) ────────────────────────
+EXECUTIONS_DIR = os.path.join(script_dir, "Alpha_Data", "executions")
+os.makedirs(EXECUTIONS_DIR, exist_ok=True)
+
+@app.route('/api/executions/upload', methods=['POST'])
+def upload_execution():
+    """Handles trade execution logs and screenshot uploads."""
+    try:
+        # Check for image file
+        file = request.files.get('screenshot')
+        metadata = request.form.get('metadata')
+        
+        if not metadata:
+            return jsonify({"error": "Missing metadata"}), 400
+            
+        entry = json.loads(metadata)
+        entry_id = f"exec_{int(time.time())}"
+        entry['id'] = entry_id
+        entry['timestamp'] = datetime.now().isoformat()
+        
+        # Save screenshot if present
+        if file:
+            filename = f"{entry_id}_{file.filename}"
+            filepath = os.path.join(EXECUTIONS_DIR, filename)
+            file.save(filepath)
+            entry['screenshot_path'] = filepath
+            
+        # Save metadata to log
+        log_path = os.path.join(EXECUTIONS_DIR, "execution_history.json")
+        history = []
+        if os.path.exists(log_path):
+            with open(log_path, "r", encoding="utf-8") as f:
+                history = json.load(f)
+        
+        history.append(entry)
+        with open(log_path, "w", encoding="utf-8") as f:
+            json.dump(history, f, indent=4)
+            
+        return jsonify({"status": "success", "id": entry_id})
+    except Exception as e:
+        print(f"❌ Upload failed: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/executions', methods=['GET'])
+def get_executions():
+    """Returns the history of recorded trade executions."""
+    log_path = os.path.join(EXECUTIONS_DIR, "execution_history.json")
+    try:
+        if not os.path.exists(log_path):
+            return jsonify({"status": "ok", "executions": []})
+        with open(log_path, "r", encoding="utf-8") as f:
+            history = json.load(f)
+        # Newest first
+        history.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+        return jsonify({"status": "ok", "executions": history})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/executions/images/<path:filename>')
+def get_execution_image(filename):
+    """Serves uploaded execution screenshots."""
+    from flask import send_from_directory
+    return send_from_directory(EXECUTIONS_DIR, filename)
+
+
 # ── Fragility Index Engine ──────────────────────────────────────
 try:
     from fragility_engine import compute_fragility
