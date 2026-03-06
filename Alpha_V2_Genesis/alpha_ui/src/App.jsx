@@ -714,20 +714,17 @@ const ExecutionTab = ({ apiBase }) => {
   const [executions, setExecutions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [formData, setFormData] = useState({
-    ticker: 'SPX',
-    action: 'OPEN',
-    strategy: 'Credit Put Vertical',
-    strikes: '',
-    credit_debit: '',
-    notes: ''
-  });
+  const emptyForm = { ticker: 'SPX', action: 'OPEN', strategy: '', strikes: '', credit_debit: '', notes: '' };
+  const [formData, setFormData] = useState(emptyForm);
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [ocrLoading, setOcrLoading] = useState(false);
+  const [pendingTrades, setPendingTrades] = useState([]);
+  const [ocrStatus, setOcrStatus] = useState(null);
 
   const runOCR = async (blob) => {
     setOcrLoading(true);
+    setOcrStatus(null);
     try {
       const fd = new FormData();
       fd.append('screenshot', blob);
@@ -736,16 +733,46 @@ const ExecutionTab = ({ apiBase }) => {
         body: fd
       });
       const result = await res.json();
-      if (result.status === 'success' && result.data) {
-        setFormData(prev => ({
-          ...prev,
-          ...result.data
-        }));
+      if (!res.ok) {
+        setOcrStatus({ type: 'error', msg: result.error || `Server error ${res.status}` });
+        return;
+      }
+      if (result.status === 'success' && result.data && result.data.trades && result.data.trades.length > 0) {
+        const newTrades = result.data.trades;
+        // APPEND to existing queue
+        setPendingTrades(prev => {
+          const updated = [...prev, ...newTrades];
+          return updated;
+        });
+        // Force-replace form with first new trade's data (full replace, not merge)
+        const firstTrade = newTrades[0];
+        setFormData({
+          ticker: firstTrade.ticker || 'SPX',
+          action: firstTrade.action || 'OPEN',
+          strategy: firstTrade.strategy || '',
+          strikes: firstTrade.strikes || '',
+          credit_debit: firstTrade.credit_debit || '',
+          notes: ''
+        });
+        setOcrStatus({ type: 'success', msg: `✅ Extracted ${newTrades.length} trade(s) — form updated` });
+      } else {
+        setOcrStatus({ type: 'error', msg: 'OCR returned no trade data' });
       }
     } catch (e) {
       console.error('OCR failed:', e);
+      setOcrStatus({ type: 'error', msg: `OCR failed: ${e.message}` });
     } finally {
       setOcrLoading(false);
+    }
+  };
+
+  const deleteExecution = async (id) => {
+    if (!confirm('Permanently delete this execution?')) return;
+    try {
+      const res = await fetch(`${apiBase}/api/executions/${id}`, { method: 'DELETE' });
+      if (res.ok) fetchExecutions();
+    } catch (e) {
+      console.error('Delete failed:', e);
     }
   };
 
@@ -792,28 +819,47 @@ const ExecutionTab = ({ apiBase }) => {
     }
   };
 
+  const commitSingleTrade = async (tradeData, screenshot) => {
+    const fd = new FormData();
+    if (screenshot) fd.append('screenshot', screenshot);
+    fd.append('metadata', JSON.stringify(tradeData));
+    const res = await fetch(`${apiBase}/api/executions/upload`, { method: 'POST', body: fd });
+    return await res.json();
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setUploading(true);
     try {
-      const formDataToSend = new FormData();
-      if (file) formDataToSend.append('screenshot', file);
-      formDataToSend.append('metadata', JSON.stringify(formData));
-
-      const res = await fetch(`${apiBase}/api/executions/upload`, {
-        method: 'POST',
-        body: formDataToSend
-      });
-      const data = await res.json();
+      const data = await commitSingleTrade(formData, file);
       if (data.status === 'success') {
-        alert('Execution recorded!');
+        // Remove committed trade from pending queue
+        setPendingTrades(prev => prev.filter(t => t.strikes !== formData.strikes || t.action !== formData.action));
+        setFormData(emptyForm);
         setFile(null);
         setPreview(null);
-        setFormData({ ticker: 'SPX', action: 'OPEN', strategy: 'Credit Put Vertical', strikes: '', credit_debit: '', notes: '' });
+        setOcrStatus(null);
         fetchExecutions();
       }
     } catch (e) {
       alert('Upload failed: ' + e.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const commitAll = async () => {
+    setUploading(true);
+    try {
+      for (const t of pendingTrades) {
+        await commitSingleTrade({ ...t, timestamp: new Date().toISOString(), id: `exec_${Date.now()}_${Math.random().toString(36).slice(2,6)}` }, null);
+      }
+      setPendingTrades([]);
+      setFormData(emptyForm);
+      setOcrStatus({ type: 'success', msg: `Committed ${pendingTrades.length} trade(s) to ledger` });
+      fetchExecutions();
+    } catch (e) {
+      alert('Batch commit failed: ' + e.message);
     } finally {
       setUploading(false);
     }
@@ -834,13 +880,70 @@ const ExecutionTab = ({ apiBase }) => {
           padding: '1.5rem', borderRadius: '14px',
           background: 'rgba(15,23,42,0.4)', border: '1px solid rgba(255,255,255,0.06)'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
-            <span style={{ fontSize: '1.5rem' }}>🚀</span>
-            <div>
-              <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#fff' }}>TRADE EXECUTION PORTAL</div>
-              <div style={{ fontSize: '0.65rem', color: '#475569' }}>Commit actual broker fills to the strategy ledger</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <span style={{ fontSize: '1.5rem' }}>🚀</span>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#fff' }}>TRADE EXECUTION PORTAL</div>
+                <div style={{ fontSize: '0.65rem', color: '#475569' }}>Commit actual broker fills to the strategy ledger</div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '0.4rem' }}>
+              {pendingTrades.length > 0 && (
+                <button
+                  onClick={() => { setPendingTrades([]); setOcrStatus(null); }}
+                  style={{ background: 'rgba(239,68,68,0.2)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', padding: '0.35rem 0.6rem', borderRadius: '6px', fontSize: '0.65rem', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  Clear Queue
+                </button>
+              )}
+              {pendingTrades.length >= 1 && (
+                <button
+                  onClick={commitAll}
+                  disabled={uploading}
+                  style={{ background: '#22c55e', color: '#fff', border: 'none', padding: '0.35rem 0.7rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', opacity: uploading ? 0.5 : 1 }}
+                >
+                  ✅ Commit All ({pendingTrades.length})
+                </button>
+              )}
             </div>
           </div>
+
+          {/* Draft Cards */}
+          {pendingTrades.length > 0 && (
+            <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
+              {pendingTrades.map((t, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => setFormData({ ticker: t.ticker || 'SPX', action: t.action || 'OPEN', strategy: t.strategy || '', strikes: t.strikes || '', credit_debit: t.credit_debit || '', notes: '' })}
+                  style={{
+                    flexShrink: 0, padding: '0.6rem 0.8rem',
+                    background: formData.strikes === t.strikes && formData.action === t.action ? 'rgba(59,130,246,0.2)' : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${formData.strikes === t.strikes && formData.action === t.action ? '#3b82f6' : 'rgba(255,255,255,0.1)'}`,
+                    borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s', minWidth: '120px'
+                  }}
+                >
+                  <div style={{ fontSize: '0.6rem', color: '#94a3b8', fontWeight: 800, letterSpacing: '0.05em' }}>DRAFT {idx + 1}</div>
+                  <div style={{ fontSize: '0.75rem', color: '#fff', fontWeight: 700 }}>{t.ticker} {t.action}</div>
+                  <div style={{ fontSize: '0.65rem', color: '#94a3b8' }}>{t.strategy}</div>
+                  <div style={{ fontSize: '0.7rem', color: t.credit_debit?.startsWith('+') ? '#10b981' : '#ef4444', fontWeight: 700, fontFamily: 'monospace' }}>{t.credit_debit}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {ocrStatus && (
+            <div style={{
+              marginBottom: '1rem', padding: '0.6rem 1rem', borderRadius: '8px',
+              background: ocrStatus.type === 'success' ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
+              border: `1px solid ${ocrStatus.type === 'success' ? '#10b981' : '#ef4444'}`,
+              color: ocrStatus.type === 'success' ? '#10b981' : '#ef4444',
+              fontSize: '0.75rem', fontWeight: 600
+            }}>
+              {ocrStatus.msg}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '1.25rem' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div>
@@ -966,7 +1069,16 @@ const ExecutionTab = ({ apiBase }) => {
                         <span style={{ color: ex.action === 'OPEN' ? '#10b981' : ex.action === 'CLOSE' ? '#ef4444' : '#3b82f6', marginRight: '0.4rem' }}>●</span>
                         {ex.ticker} {ex.action}
                       </div>
-                      <span style={{ color: '#475569', fontSize: '0.6rem' }}>{new Date(ex.timestamp).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
+                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                        <span style={{ color: '#475569', fontSize: '0.6rem' }}>{new Date(ex.timestamp).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); deleteExecution(ex.id); }}
+                          style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.8rem', cursor: 'pointer', padding: '0 4px', opacity: 0.5 }}
+                          title="Delete"
+                        >
+                          🗑️
+                        </button>
+                      </div>
                     </div>
                     <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginBottom: '0.5rem' }}>{ex.strategy}</div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

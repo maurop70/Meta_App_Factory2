@@ -1,6 +1,6 @@
 # 🦅 Alpha V2 Genesis: Professional Trading Intelligence Suite
 
-> **Version**: 2.5 — Production Release | **Last Updated**: 2026-03-05
+> **Version**: 2.6 — Production Release | **Last Updated**: 2026-03-06
 
 Alpha V2 Genesis is an autonomous trading companion designed to synthesize real-time market data, AI-driven sentiment, and macroeconomic research into actionable SPX options strategies. It operates as a fully self-healing, budget-gated intelligence system backed by an n8n cloud research brain and a local Glassmorphic dashboard.
 
@@ -55,10 +55,12 @@ The system operates on a **Dual-Strategy** framework:
 | **Loki Engine** | `skills/loki/loki.py` | Orchestrates data fetching, strategy synthesis, memo generation |
 | **Flask Backend** | `server.py` | Unified API layer, ngrok tunnel manager, hot-update receiver |
 | **React Dashboard** | `alpha_ui/` | Glassmorphic UI for real-time monitoring |
+| **Trade Entry Portal** | `alpha_ui/` + `server.py` | OCR-powered trade capture with batch commit & portfolio sync |
 | **Strategy Ledger** | `strategy_ledger.py` | Daily thesis drift auditing, Greek decomposition, challenger scanning |
 | **Alert Manager** | `alert_manager.py` | Windows toast + ntfy.sh mobile + email push alerts |
 | **Infrastructure Supervisor** | `infrastructure_supervisor.py` | Background sentinel for n8n and server health |
 | **Volatility Sentry** | `volatility_sentry.py` | Real-time VIX regime monitor |
+| **N8N Health Guard** | `server.py` | Auto-activates deactivated N8N workflows on every boot |
 | **N8N Research Brain** | Cloud (n8n) | `alpha-research-v3` webhook; macro polling and sentiment |
 
 ### N8N Workflows (Alpha Architect Project)
@@ -110,6 +112,34 @@ As of v2.5, the n8n workspace is organized into **7 domain-grouped team projects
 
 All modules are inherited by every new app created via `factory.py`.
 
+### N8N Health Guard (v2.6)
+
+On every server boot, the system automatically checks all critical Alpha N8N workflows and **re-activates any that have gone offline**. This prevents the "all intelligence sources offline" issue.
+
+- Protected workflows: Genesis v3, Research v2 Robust, Macro Event Tracker, Ledger Daily Cron
+- Uses `POST /api/v1/workflows/{id}/activate` endpoint
+- Zero-intervention — fully automatic
+
+---
+
+## 📸 Trade Entry Portal (v2.6)
+
+The **Trade Execution Portal** provides OCR-powered trade capture from broker screenshots:
+
+1. **Paste or upload** a broker screenshot into the Broker Evidence area
+2. **Gemini 2.5 Flash Vision** extracts ticker, strategy, strikes, and credit/debit
+3. **Draft Cards** appear for each detected trade (supports multi-trade screenshots)
+4. Click **"Commit All"** to batch-upload, or review/edit individual drafts
+5. Trades auto-sync to `portfolio.json`, `trade_journal.json`, and trigger a Strategy Ledger refresh
+
+| Feature | Description |
+| :--- | :--- |
+| **OCR Engine** | Gemini 2.5 Flash — extracts Iron Condors, verticals, and multi-leg spreads |
+| **Batch Queue** | Upload multiple screenshots; drafts accumulate until committed |
+| **Portfolio Sync** | Commits auto-update `portfolio.json` (OPEN/CLOSE) and `trade_journal.json` |
+| **Delete Entries** | 🗑️ icon on each log entry to remove test/incorrect trades |
+| **Evidence Storage** | Screenshots saved to `Alpha_Data/executions/` with unique IDs |
+
 ---
 
 ## ⚙️ Configuration
@@ -132,7 +162,9 @@ SENTRY_DSN=<optional_sentry_dsn_for_error_tracking>
 
 | File | Purpose |
 | :--- | :--- |
-| `portfolio.json` | Live position overrides, cost basis, IV Rank history |
+| `portfolio.json` | Live position data — auto-synced by Trade Entry Portal |
+| `trade_journal.json` | Closed + open trade archive — auto-synced by Trade Entry Portal |
+| `executions/execution_history.json` | Full execution log with evidence links |
 | `upcoming_events.json` | Local cache of macroeconomic calendar (populated by n8n) |
 | `connection_info.json` | Auto-generated ngrok tunnel metadata |
 
@@ -174,4 +206,4 @@ This software is proprietary. Redistribution or commercial use requires an expli
 
 ---
 
-*Alpha V2 Genesis v2.5 — Lead Quant Architect + Stability Suite + N8N Multi-Project Architecture*
+*Alpha V2 Genesis v2.6 — Lead Quant Architect + OCR Trade Entry + N8N Health Guard + Stability Suite*

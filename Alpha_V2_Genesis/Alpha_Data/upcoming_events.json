@@ -1,22 +1,12 @@
 [
     {
-        "event": "Consumer Price Index (CPI)",
+        "event": "CPI Data Release",
         "impact": "HIGH",
-        "days_until": 5
+        "days_until": 1
     },
     {
-        "event": "Job Openings (JOLTS)",
-        "impact": "MED",
-        "days_until": 6
-    },
-    {
-        "event": "Personal Income and Outlays (PCE)",
-        "impact": "HIGH",
-        "days_until": 7
-    },
-    {
-        "event": "FOMC Meeting (Start)",
-        "impact": "HIGH",
-        "days_until": 11
+        "event": "Fed Official Speech",
+        "impact": "MEDIUM",
+        "days_until": 1
     }
 ]
