@@ -724,6 +724,45 @@ const ExecutionTab = ({ apiBase }) => {
   });
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
+  const [ocrLoading, setOcrLoading] = useState(false);
+
+  const runOCR = async (blob) => {
+    setOcrLoading(true);
+    try {
+      const fd = new FormData();
+      fd.append('screenshot', blob);
+      const res = await fetch(`${apiBase}/api/executions/ocr`, {
+        method: 'POST',
+        body: fd
+      });
+      const result = await res.json();
+      if (result.status === 'success' && result.data) {
+        setFormData(prev => ({
+          ...prev,
+          ...result.data
+        }));
+      }
+    } catch (e) {
+      console.error('OCR failed:', e);
+    } finally {
+      setOcrLoading(false);
+    }
+  };
+
+  const handlePaste = async (e) => {
+    const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+    for (const item of items) {
+      if (item.type.indexOf('image') !== -1) {
+        const blob = item.getAsFile();
+        setFile(blob);
+        const reader = new FileReader();
+        reader.onloadend = () => setPreview(reader.result);
+        reader.readAsDataURL(blob);
+        runOCR(blob);
+        break;
+      }
+    }
+  };
 
   const fetchExecutions = async () => {
     setLoading(true);
@@ -749,6 +788,7 @@ const ExecutionTab = ({ apiBase }) => {
       const reader = new FileReader();
       reader.onloadend = () => setPreview(reader.result);
       reader.readAsDataURL(f);
+      runOCR(f);
     }
   };
 
@@ -837,10 +877,24 @@ const ExecutionTab = ({ apiBase }) => {
                   border: '2px dashed #475569', borderRadius: '10px', padding: '1.5rem', textAlign: 'center',
                   background: preview ? 'transparent' : 'rgba(255,255,255,0.01)', cursor: 'pointer',
                   transition: 'all 0.2s ease', borderStyle: preview ? 'solid' : 'dashed',
-                  borderColor: preview ? '#3b82f6' : '#475569'
+                  borderColor: ocrLoading ? '#3b82f6' : (preview ? '#10b981' : '#475569'),
+                  position: 'relative'
                 }}
                 onClick={() => document.getElementById('exec-file-input').click()}
+                onPaste={handlePaste}
               >
+                {ocrLoading && (
+                  <div style={{
+                    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(15,23,42,0.8)', borderRadius: '10px',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    zIndex: 10, backdropFilter: 'blur(2px)'
+                  }}>
+                    <div className="spinner" style={{ marginBottom: '1rem' }} />
+                    <div style={{ fontSize: '0.75rem', color: '#60a5fa', fontWeight: 800 }}>GEMINI VISION ANALYZING...</div>
+                    <div style={{ fontSize: '0.6rem', color: '#94a3b8', marginTop: '0.2rem' }}>Extracting trade details</div>
+                  </div>
+                )}
                 {preview ? (
                   <div style={{ position: 'relative' }}>
                     <img src={preview} style={{ maxWidth: '100%', maxHeight: '180px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)' }} alt="Preview" />
@@ -849,8 +903,8 @@ const ExecutionTab = ({ apiBase }) => {
                 ) : (
                   <div style={{ padding: '1rem 0' }}>
                     <div style={{ fontSize: '1.8rem', marginBottom: '0.75rem', opacity: 0.5 }}>📸</div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 500 }}>Select Broker Execution Screenshot</div>
-                    <div style={{ fontSize: '0.6rem', color: '#475569', marginTop: '0.25rem' }}>Drag & drop also supported</div>
+                    <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 500 }}>Paste Screenshot or Click to Upload</div>
+                    <div style={{ fontSize: '0.6rem', color: '#475569', marginTop: '0.25rem' }}>Automated OCR powered by Gemini 2.0</div>
                   </div>
                 )}
                 <input id="exec-file-input" type="file" hidden accept="image/*" onChange={handleFileChange} />
@@ -934,8 +988,8 @@ const ExecutionTab = ({ apiBase }) => {
             )}
           </div>
         </div>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 };
 

@@ -2,6 +2,8 @@ import os
 import json
 import requests
 import sys
+import base64
+from datetime import datetime
 
 # Force UTF-8 output on Windows (cp1252 can't handle emojis, crashes server)
 sys.stdout.reconfigure(encoding='utf-8', errors='replace')
@@ -293,6 +295,81 @@ def get_execution_image(filename):
     """Serves uploaded execution screenshots."""
     from flask import send_from_directory
     return send_from_directory(EXECUTIONS_DIR, filename)
+
+@app.route('/api/executions/ocr', methods=['POST'])
+def ocr_execution():
+    """Uses Gemini 2.0 Flash Vision to extract trade details from a screenshot."""
+    try:
+        file = request.files.get('screenshot')
+        if not file:
+            return jsonify({"error": "No image provided"}), 400
+            
+        # Read image data
+        image_data = file.read()
+        image_b64 = base64.b64encode(image_data).decode('utf-8')
+        mime_type = file.content_type or 'image/png'
+        
+        # Prepare Gemini Vision Request
+        api_key = get_secret("GEMINI_API_KEY")
+        if not api_key:
+            return jsonify({"error": "Gemini API key missing"}), 500
+            
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
+        
+        prompt = """
+        Extract trade execution details from this screenshot. 
+        Return ONLY a valid JSON object with exactly these fields:
+        {
+          "ticker": "Ticker symbol (e.g. SPX)",
+          "action": "OPEN, CLOSE, or ROLL",
+          "strategy": "Full strategy name (e.g. 7 DTE Tactical Put Credit Spread)",
+          "strikes": "Strike configuration (e.g. 6650 P / 6630 P)",
+          "credit_debit": "The net fill price with + or - prefix (e.g. +$1.45)"
+        }
+        Return ONLY the raw JSON string. No markdown, no prose.
+        """
+        
+        payload = {
+            "contents": [
+                {
+                    "parts": [
+                        {"text": prompt},
+                        {
+                            "inline_data": {
+                                "mime_type": mime_type,
+                                "data": image_b64
+                            }
+                        }
+                    ]
+                }
+            ],
+            "generationConfig": {
+                "temperature": 0.1,
+                "topP": 1,
+                "maxOutputTokens": 1024
+            }
+        }
+        
+        res = requests.post(url, json=payload, timeout=30)
+        res_data = res.json()
+        
+        if res.status_code != 200:
+            return jsonify({"error": f"Gemini error: {res_data.get('error', {}).get('message', 'Unknown error')}"}), 500
+            
+        # Parse Gemini JSON response
+        try:
+            text_response = res_data['candidates'][0]['content']['parts'][0]['text']
+            # Remove potential markdown formatting
+            clean_json = text_response.replace('```json', '').replace('```', '').strip()
+            trade_data = json.loads(clean_json)
+            return jsonify({"status": "success", "data": trade_data})
+        except Exception as e:
+            print(f"❌ OCR Parsing Failed: {e}\nRaw Response: {text_response}")
+            return jsonify({"error": "Failed to parse trade details from image"}), 500
+            
+    except Exception as e:
+        print(f"❌ OCR Endpoint Failed: {e}")
+        return jsonify({"error": str(e)}), 500
 
 
 # ── Fragility Index Engine ──────────────────────────────────────
