@@ -109,3 +109,16 @@ body {
   padding-left: 1rem;
   margin-top: 1rem;
 }
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(59,130,246,0.3);
+  border-radius: 50%;
+  border-top-color: #3b82f6;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
