@@ -92,7 +92,7 @@ As of v2.5, the n8n workspace is organized into **7 domain-grouped team projects
 
 ### Budget Guard
 
-- **Execution Window**: Live AI research is triggered **ONLY** on **Monday and Tuesday** between **9:00 AM – 4:00 PM EST**.
+- **Execution Window**: Live AI research is triggered **ONLY** on **Monday to Friday** between **9:00 AM – 4:00 PM EST**.
 - **Standby Mode**: Outside these hours, the system bypasses cloud calls and uses local cached data (`Alpha_Data/upcoming_events.json`) to remain fully operational at zero cost.
 - **Throttled Pings**: Infrastructure health checks are limited to **5-minute intervals**.
 
@@ -150,7 +150,7 @@ SENTRY_DSN=<optional_sentry_dsn_for_error_tracking>
 
 | Symptom | Likely Cause | Fix |
 | :--- | :--- | :--- |
-| **"Empty Outlook"** cards | `upcoming_events.json` missing or stale | Run on Mon/Tue to trigger n8n poll; or manually populate the JSON |
+| **"Empty Outlook"** cards | `upcoming_events.json` missing or stale | Run on Mon-Fri to trigger n8n poll; or manually populate the JSON |
 | **"Is Server Running?"** UI error | Flask not started or port mismatch | Check `server.py` is running on Port 5008 |
 | **n8n sync fails on boot** | Expired `N8N_API_KEY` or invalid Workflow ID | Regenerate key in n8n Cloud settings |
 | **ngrok tunnel error** | Stale processes or expired auth token | `taskkill /f /im ngrok.exe` then relaunch |

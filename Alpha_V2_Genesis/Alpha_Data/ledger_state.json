@@ -7,152 +7,145 @@
         "trade_id": "spx_ic_20260223_02",
         "entry_date": "2026-02-23",
         "expiry": "2026-04-10",
-        "dte_at_report": 36,
+        "dte_at_report": 35,
         "credit_opened": 9.3,
-        "put_dist_pct": 6.35,
-        "call_dist_pct": 4.21,
-        "put_breach_days": 9,
-        "call_breach_days": 6,
-        "rating": "MARGINAL",
-        "score": 2,
+        "put_dist_pct": 4.75,
+        "call_dist_pct": 5.99,
+        "put_breach_days": 7,
+        "call_breach_days": 9,
+        "rating": "GOOD ENTRY",
+        "score": 5,
         "pros": [
-          "IV-HV spread +10.4pp: market significantly over-pricing vol vs realized \u2014 strong seller edge",
-          "Short put 6.3% OTM (435 pts) \u2014 requires 9 consecutive avg-size down days to breach",
-          "36 DTE: optimal theta/gamma ratio for Core Income strategy"
+          "IV Rank 31%: moderate \u2014 acceptable premium for 45-DTE",
+          "IV-HV spread +15.8pp: market significantly over-pricing vol vs realized \u2014 strong seller edge",
+          "Short put 4.8% OTM \u2014 adequate buffer",
+          "Short call 6.0% OTM (404 pts) \u2014 upside well protected",
+          "35 DTE: optimal theta/gamma ratio for Core Income strategy"
         ],
         "cons": [
-          "IV Rank 18%: below median \u2014 premium is thin for the risk taken",
-          "Short call 4.2% OTM \u2014 call side needs monitoring on rallies",
           "VIX trending UP (3-day) \u2014 short-term headwind; mark-to-market may go negative before recovering"
         ],
         "upcoming_events": [
-          {
-            "date": "2026-03-05",
-            "event": "ISM Services PMI",
-            "impact": "MED",
-            "note": "Economy health",
-            "days_away": 0
-          },
           {
             "date": "2026-03-07",
             "event": "Nonfarm Payrolls",
             "impact": "HIGH",
             "note": "Biggest monthly vol event",
-            "days_away": 2
+            "days_away": 1
           },
           {
             "date": "2026-03-11",
             "event": "CPI (Feb 2026)",
             "impact": "HIGH",
             "note": "Inflation print \u2014 VIX spike risk",
-            "days_away": 6
+            "days_away": 5
           },
           {
             "date": "2026-03-12",
             "event": "PPI (Feb 2026)",
             "impact": "MED",
             "note": "Producer price feed-through",
-            "days_away": 7
+            "days_away": 6
           },
           {
             "date": "2026-03-14",
             "event": "Michigan Consumer Sentiment",
             "impact": "MED",
             "note": "Inflation expectations",
-            "days_away": 9
+            "days_away": 8
           },
           {
             "date": "2026-03-18",
             "event": "FOMC Meeting (Day 1)",
             "impact": "HIGH",
             "note": "Rate decision \u2014 highest vol event",
-            "days_away": 13
+            "days_away": 12
           },
           {
             "date": "2026-03-19",
             "event": "FOMC Decision + Press Conference",
             "impact": "HIGH",
             "note": "Powell presser = VIX spike guaranted",
-            "days_away": 14
+            "days_away": 13
           }
         ],
         "snapshot_at_report": {
-          "timestamp": "2026-03-05T10:03:54.732636",
-          "spx": 6860.91,
-          "vix": 22.05,
-          "iv_rank": 18.5,
-          "iv_pctile": 83.7,
-          "hv30": 11.6,
-          "iv_hv_spread": 10.4,
+          "timestamp": "2026-03-06T10:16:32.342310",
+          "spx": 6745.76,
+          "vix": 27.87,
+          "iv_rank": 31.0,
+          "iv_pctile": 94.0,
+          "hv30": 12.1,
+          "iv_hv_spread": 15.8,
           "vix_hi_52w": 60.1,
           "vix_lo_52w": 13.4,
           "vix_median": 17.3,
           "vix_mean": 19.1,
           "vix_trend": "RISING",
-          "vix_3d_chg": 0.61,
-          "trend_5d": -0.69,
-          "trend_30d": -1.66,
-          "avg_daily_move": 0.64
+          "vix_3d_chg": 4.3,
+          "trend_5d": -1.94,
+          "trend_30d": -2.49,
+          "avg_daily_move": 0.66
         }
       },
       "entry_snapshot": {
-        "timestamp": "2026-03-05T10:03:54.732636",
-        "spx": 6860.91,
-        "vix": 22.05,
-        "iv_rank": 18.5,
-        "iv_pctile": 83.7,
-        "hv30": 11.6,
-        "iv_hv_spread": 10.4,
+        "timestamp": "2026-03-06T10:16:32.342310",
+        "spx": 6745.76,
+        "vix": 27.87,
+        "iv_rank": 31.0,
+        "iv_pctile": 94.0,
+        "hv30": 12.1,
+        "iv_hv_spread": 15.8,
         "vix_hi_52w": 60.1,
         "vix_lo_52w": 13.4,
         "vix_median": 17.3,
         "vix_mean": 19.1,
         "vix_trend": "RISING",
-        "vix_3d_chg": 0.61,
-        "trend_5d": -0.69,
-        "trend_30d": -1.66,
-        "avg_daily_move": 0.64
+        "vix_3d_chg": 4.3,
+        "trend_5d": -1.94,
+        "trend_30d": -2.49,
+        "avg_daily_move": 0.66
       },
-      "first_seen": "2026-03-05T10:03:54.733262",
+      "first_seen": "2026-03-06T10:16:32.343055",
       "drift": {
         "drift_score": 2,
         "status": "THESIS INTACT",
         "flags": [
           "STABLE: SPX has moved only +0.0% \u2014 original thesis intact",
-          "EDGE: IV-HV spread remains +10.4pp \u2014 seller advantage intact"
+          "EDGE: IV-HV spread remains +15.8pp \u2014 seller advantage intact"
         ],
         "spx_delta_pct": 0.0,
         "vix_delta": 0.0,
-        "updated_at": "2026-03-05T10:03:54.733354"
+        "updated_at": "2026-03-06T10:16:32.343685"
       },
-      "current_mark": 7.1,
+      "current_mark": 8.35,
       "challenger": {
         "available": true,
         "expiry": "2026-04-17",
         "strikes": {
-          "short_put": 6175,
-          "long_put": 6150,
-          "short_call": 7580,
-          "long_call": 7605
+          "short_put": 6070,
+          "long_put": 6045,
+          "short_call": 7455,
+          "long_call": 7480
         },
-        "net_credit": 1.52,
-        "put_margin_pct": 10.0,
-        "call_margin_pct": 10.48,
+        "net_credit": 3.36,
+        "put_margin_pct": 10.02,
+        "call_margin_pct": 10.51,
         "active_credit": 9.3,
-        "active_put_pct": 6.35,
+        "active_put_pct": 4.75,
         "pivot_warranted": false,
         "pivot_rationale": "HOLD CURRENT: Existing position is competitive or superior. No pivot justified.",
         "leg_detail": [
           {
             "label": "Long Put",
-            "strike": 6150,
+            "strike": 6045,
             "type": "put",
             "sign": -1,
-            "bid": 36.5,
-            "ask": 37.0,
-            "mark": 36.75,
-            "iv_pct": 26.88,
-            "iv_dec": 0.26877,
+            "bid": 54.7,
+            "ask": 55.4,
+            "mark": 55.05,
+            "iv_pct": 31.29,
+            "iv_dec": 0.31292,
             "delta": 0.0,
             "gamma": 0.0,
             "theta": 0.0,
@@ -161,14 +154,14 @@
           },
           {
             "label": "Short Put",
-            "strike": 6175,
+            "strike": 6070,
             "type": "put",
             "sign": 1,
-            "bid": 37.9,
-            "ask": 38.5,
-            "mark": 38.2,
-            "iv_pct": 26.47,
-            "iv_dec": 0.2647,
+            "bid": 57.9,
+            "ask": 58.4,
+            "mark": 58.15,
+            "iv_pct": 30.88,
+            "iv_dec": 0.30883,
             "delta": 0.0,
             "gamma": 0.0,
             "theta": 0.0,
@@ -177,14 +170,14 @@
           },
           {
             "label": "Short Call",
-            "strike": 7580,
+            "strike": 7455,
             "type": "call",
             "sign": 1,
-            "bid": 0.55,
-            "ask": 0.95,
-            "mark": 0.75,
-            "iv_pct": 12.27,
-            "iv_dec": 0.12266,
+            "bid": 1.2,
+            "ask": 1.55,
+            "mark": 1.38,
+            "iv_pct": 13.31,
+            "iv_dec": 0.13305,
             "delta": 0.0,
             "gamma": 0.0,
             "theta": 0.0,
@@ -193,14 +186,14 @@
           },
           {
             "label": "Long Call",
-            "strike": 7605,
+            "strike": 7480,
             "type": "call",
             "sign": -1,
-            "bid": 0.55,
-            "ask": 0.8,
-            "mark": 0.68,
-            "iv_pct": 12.35,
-            "iv_dec": 0.12351,
+            "bid": 1.0,
+            "ask": 1.25,
+            "mark": 1.12,
+            "iv_pct": 13.37,
+            "iv_dec": 0.13371,
             "delta": 0.0,
             "gamma": 0.0,
             "theta": 0.0,
@@ -210,14 +203,6 @@
         ]
       },
       "daily_updates": [
-        {
-          "date": "2026-02-23 16:05",
-          "spx": 6837.75,
-          "vix": 21.42,
-          "drift_status": "THESIS INTACT",
-          "drift_score": 2,
-          "current_mark": 9.05
-        },
         {
           "date": "2026-02-23 16:36",
           "spx": 6837.75,
@@ -569,21 +554,29 @@
           "drift_status": "THESIS INTACT",
           "drift_score": 2,
           "current_mark": 7.1
+        },
+        {
+          "date": "2026-03-06 10:16",
+          "spx": 6745.76,
+          "vix": 27.87,
+          "drift_status": "THESIS INTACT",
+          "drift_score": 2,
+          "current_mark": 8.35
         }
       ],
       "position_greeks": {
-        "net_delta_per_pt": 2.26,
-        "net_theta_per_day": -17.33,
-        "net_vega_per_pp": 80.38,
-        "net_gamma": 0.000106,
+        "net_delta_per_pt": 0.97,
+        "net_theta_per_day": -18.82,
+        "net_vega_per_pp": 75.27,
+        "net_gamma": 9.4e-05,
         "interpretation": {
-          "theta": "$17.33/day income from time decay",
-          "vega": "$80.38 P&L change per 1pp VIX move (gain on vol expansion)",
-          "delta": "Position is near delta-neutral ($2.26/pt)"
+          "theta": "$18.82/day income from time decay",
+          "vega": "$75.27 P&L change per 1pp VIX move (gain on vol expansion)",
+          "delta": "Position is near delta-neutral ($0.97/pt)"
         }
       },
       "alerts_sent": {}
     }
   },
-  "last_run": "2026-03-05T10:03:56.325577"
+  "last_run": "2026-03-06T10:16:33.635560"
 }

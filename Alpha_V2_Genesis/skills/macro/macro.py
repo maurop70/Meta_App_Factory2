@@ -5,23 +5,25 @@ class MacroAgent:
     def analyze_calendar(self, n8n_events=None):
         """
         Returns macro risk analysis. 
-        If n8n_events is provided, uses that real-time data.
-        Otherwise, defaults to a safe/empty state (no stale data).
+        If n8n_events is provided (even if empty list), uses that real-time data.
+        Otherwise, defaults to a safe/empty state.
         """
-        if n8n_events:
-            # We have real data from the AI
-            # Determine max impact
+        if n8n_events is not None:
+            # We have real data (or a confirmed empty list)
             risk = "LOW"
-            for e in n8n_events:
-                if e.get('impact') == 'HIGH' and e.get('days_until', 99) <= 3:
-                    risk = "HIGH"
-                elif e.get('impact') == 'MED' and e.get('days_until', 99) <= 1 and risk != "HIGH":
-                     risk = "MEDIUM"
-            
-            high_impact = [e.get('event') for e in n8n_events if e.get('impact') == 'HIGH']
-            description = f"Analysis based on {len(n8n_events)} upcoming events."
-            if high_impact:
-                description += f" HIGH IMPACT: {', '.join(high_impact)}"
+            if isinstance(n8n_events, list):
+                for e in n8n_events:
+                    if e.get('impact') == 'HIGH' and e.get('days_until', 99) <= 3:
+                        risk = "HIGH"
+                    elif e.get('impact') == 'MED' and e.get('days_until', 99) <= 1 and risk != "HIGH":
+                         risk = "MEDIUM"
+                
+                high_impact = [e.get('event') for e in n8n_events if e.get('impact') == 'HIGH']
+                description = f"Analysis based on {len(n8n_events)} upcoming events."
+                if high_impact:
+                    description += f" HIGH IMPACT: {', '.join(high_impact)}"
+            else:
+                description = "Macro data format invalid."
             
             return {
                 "risk_level": risk,
