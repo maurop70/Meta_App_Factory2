@@ -1,1 +1,22 @@
-[]
+[
+    {
+        "event": "Consumer Price Index (CPI)",
+        "impact": "HIGH",
+        "days_until": 5
+    },
+    {
+        "event": "Job Openings (JOLTS)",
+        "impact": "MED",
+        "days_until": 6
+    },
+    {
+        "event": "Personal Income and Outlays (PCE)",
+        "impact": "HIGH",
+        "days_until": 7
+    },
+    {
+        "event": "FOMC Meeting (Start)",
+        "impact": "HIGH",
+        "days_until": 11
+    }
+]

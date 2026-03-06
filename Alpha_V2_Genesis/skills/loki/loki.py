@@ -218,20 +218,15 @@ class Loki:
             # Import Heritage Bridge
             from utils.n8n_bridge import N8NBridge
             
-            # BUDGET GUARD: Limit N8N executions to Mon-Tue, 9am-4pm
+            # BUDGET GUARD: Limit N8N executions to Mon-Fri, 9am-4pm
             import datetime
             now = datetime.datetime.now()
-            is_window = (now.weekday() < 2) and (9 <= now.hour < 16)
+            is_window = (now.weekday() < 5) and (9 <= now.hour < 16)
             
             if not is_window:
-                logger.info("Outside N8N Window (Mon-Tue, 9am-4pm). Returning cached intelligence.")
-                return {
-                    "forecast": "NEUTRAL",
-                    "commentary": "N8N Cloud Brain is in Standby Mode (Outside Mon-Tue 9am-4pm window). Using local macro sensors.",
-                    "risk_mode": "HOLD_RISK",
-                    "n8n_live": False,
-                    "events": []
-                }
+                logger.info("Outside N8N Window (Mon-Fri, 9am-4pm). Shifting to Gemini Direct (Priority 6).")
+                # Priority 6 Fallback is 0 N8N executions, so it's safe to run anytime.
+                return self._gemini_direct_fallback(snapshot)
 
             # Step 1: Strategic Forecast (N8N Genesis Brain)
             # PRIMARY: Genesis v3 (structured JSON, self-healing, dynamic dates)
@@ -513,16 +508,26 @@ class Loki:
             logger.error(f"Gemini Direct fallback failed: {e}")
             return self._offline_stub()
 
-    @staticmethod
-    def _offline_stub() -> dict:
+    def _offline_stub(self) -> dict:
         """Last-resort stub when ALL intelligence sources are unavailable."""
+        cached_events = []
+        try:
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            event_file = os.path.join(project_root, "Alpha_Data", "upcoming_events.json")
+            if os.path.exists(event_file):
+                with open(event_file, 'r') as f:
+                    cached_events = json.load(f)
+                    if not isinstance(cached_events, list): cached_events = []
+        except Exception:
+            pass
+
         return {
             "forecast": "NEUTRAL",
-            "commentary": "All intelligence sources offline (N8N + Gemini). Using local sensors only.",
+            "commentary": "All intelligence sources offline (N8N + Gemini). Using local sensors and cached events.",
             "risk_mode": "HOLD_RISK",
             "n8n_live": False,
             "n8n_source": "OFFLINE",
-            "events": []
+            "events": cached_events
         }
 
     def generate_system_report(self, strategy_type, vix_level, delta_selection):
@@ -776,22 +781,22 @@ class Loki:
                 
             macro_result['details'] = f"N8N Risk Mode: {n8n_risk} | Events: {len(n8n_events)}"
             
-            # Persist Events to Alpha_Data
-            try:
-                # Use current file location as anchor
-                # loki.py is in skills/loki/loki.py
-                # root is 3 levels up: skills/loki -> skills -> Alpha_V2_Genesis
-                project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-                data_dir = os.path.join(project_root, "Alpha_Data")
-                
-                if not os.path.exists(data_dir):
-                    os.makedirs(data_dir, exist_ok=True)
-                event_file = os.path.join(data_dir, "upcoming_events.json")
-                with open(event_file, "w") as f:
-                    json.dump(n8n_events, f, indent=4)
-                logger.info(f"Persisted {len(n8n_events)} events to {event_file}")
-            except Exception as e:
-                logger.error(f"Failed to persist events: {e}")
+            # Persist Events to Alpha_Data (Only if we have fresh data)
+            if n8n_events:
+                try:
+                    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+                    data_dir = os.path.join(project_root, "Alpha_Data")
+                    
+                    if not os.path.exists(data_dir):
+                        os.makedirs(data_dir, exist_ok=True)
+                    event_file = os.path.join(data_dir, "upcoming_events.json")
+                    with open(event_file, "w") as f:
+                        json.dump(n8n_events, f, indent=4)
+                    logger.info(f"Persisted {len(n8n_events)} actual events to {event_file}")
+                except Exception as e:
+                    logger.error(f"Failed to persist events: {e}")
+            else:
+                logger.info("No fresh events to persist (keeping existing cache).")
         
         # Watchdog (Defense)
         # Note: We rely on Default Portfolio data in Watchdog if not passed
