@@ -1,0 +1,20 @@
+[
+    {
+        "action": "OPEN",
+        "credit_debit": "+10.00",
+        "strategy": "Iron Condor (24 APR 26)",
+        "strikes": "7100/7125/6275/6250",
+        "ticker": "SPX",
+        "timestamp": "2026-03-06T12:50:15.336390",
+        "id": "exec_1772819415"
+    },
+    {
+        "action": "CLOSE",
+        "credit_debit": "-7.30",
+        "strategy": "Iron Condor (10 APR 26)",
+        "strikes": "7150/7175/6425/6400",
+        "ticker": "SPX",
+        "timestamp": "2026-03-06T12:50:15.603042",
+        "id": "exec_1772819415"
+    }
+]

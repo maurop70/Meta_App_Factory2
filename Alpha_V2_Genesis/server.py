@@ -226,7 +226,7 @@ def get_journal():
         with open(journal_path, "r", encoding="utf-8") as f:
             trades = json.load(f)
         # Sort newest close date first
-        trades.sort(key=lambda t: t.get("close_date", ""), reverse=True)
+        trades.sort(key=lambda t: t.get("close_date") or "", reverse=True)
         return jsonify({"status": "ok", "trades": trades, "count": len(trades)})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -270,10 +270,103 @@ def upload_execution():
         with open(log_path, "w", encoding="utf-8") as f:
             json.dump(history, f, indent=4)
             
+        # Sync to Portfolio if Action is OPEN or CLOSE
+        sync_to_portfolio(entry)
+            
         return jsonify({"status": "success", "id": entry_id})
     except Exception as e:
         print(f"❌ Upload failed: {e}")
         return jsonify({"error": str(e)}), 500
+
+def sync_to_portfolio(entry):
+    """Bridges Execution Log to live Portfolio.json."""
+    port_path = os.path.join(script_dir, "Alpha_Data", "portfolio.json")
+    try:
+        if not os.path.exists(port_path):
+            with open(port_path, "w") as f: json.dump({"positions": []}, f)
+            
+        with open(port_path, "r") as f:
+            port = json.load(f)
+            
+        # Basic parsing of strikes for common SPX Iron Condor format (e.g. 7100/7125/6275/6250)
+        strikes = re.findall(r"(\d{4})", entry.get('strikes', ''))
+        
+        if entry.get('action') == "OPEN":
+            new_pos = {
+                "id": f"exec_{int(time.time())}",
+                "status": "OPEN",
+                "strategy": entry.get('strategy', 'IRON_CONDOR'),
+                "open_date": datetime.now().strftime("%Y-%m-%d"),
+                "expiration_date": entry.get('strategy', '').split('(')[-1].split(')')[0] if '(' in entry.get('strategy', '') else "2026-04-10",
+                "credit_received": float(re.findall(r"[\d.]+", entry.get('credit_debit', '0'))[0] or 0),
+            }
+            # Map strikes if we found 4 (standard IC)
+            if len(strikes) == 4:
+                new_pos.update({
+                    "short_call_strike": int(strikes[0]),
+                    "long_call_strike": int(strikes[1]),
+                    "short_put_strike": int(strikes[2]),
+                    "long_put_strike": int(strikes[3])
+                })
+            port['positions'].append(new_pos)
+            
+        elif entry.get('action') == "CLOSE":
+            # Simple matching: find by ticker and strategy if possible
+            # For now, just mark last matching strategy as CLOSED
+            for p in reversed(port['positions']):
+                if p.get('status') == 'OPEN' and (entry.get('ticker') in p.get('strategy', '') or entry.get('ticker') == 'SPX'):
+                    p['status'] = 'CLOSED'
+                    break
+        
+        with open(port_path, "w") as f:
+            json.dump(port, f, indent=4)
+        
+        # Also sync to Trade Journal
+        journal_path = os.path.join(script_dir, "Alpha_Data", "trade_journal.json")
+        journal = []
+        if os.path.exists(journal_path):
+            try:
+                with open(journal_path, "r") as f:
+                    journal = json.load(f)
+            except: pass
+        
+        journal_entry = {
+            "trade_id": entry.get('id', f"exec_{int(time.time())}"),
+            "strategy": entry.get('strategy', 'Unknown'),
+            "entry_date": datetime.now().strftime("%Y-%m-%d"),
+            "close_date": datetime.now().strftime("%Y-%m-%d") if entry.get('action') == 'CLOSE' else None,
+            "expiry": entry.get('strategy', '').split('(')[-1].split(')')[0] if '(' in entry.get('strategy', '') else "",
+            "credit_received": float(re.findall(r"[\d.]+", entry.get('credit_debit', '0'))[0] or 0),
+            "close_mark": 0,
+            "realized_pnl": 0,
+            "realized_pnl_pct": 0,
+            "days_held": 0,
+            "entry_rating": "OPEN" if entry.get('action') == 'OPEN' else "CLOSED",
+            "entry_score": 0,
+            "strikes": {},
+            "closes_at": datetime.now().isoformat() if entry.get('action') == 'CLOSE' else None,
+        }
+        
+        if len(strikes) == 4:
+            journal_entry["strikes"] = {
+                "short_call": int(strikes[0]),
+                "long_call": int(strikes[1]),
+                "short_put": int(strikes[2]),
+                "long_put": int(strikes[3])
+            }
+        
+        journal.append(journal_entry)
+        with open(journal_path, "w") as f:
+            json.dump(journal, f, indent=2, default=str)
+            
+        # Trigger Ledger Refresh to update Risk Radar
+        if LEDGER_AVAILABLE:
+            _threading.Thread(target=run_ledger, kwargs={"force_full": True}, daemon=True).start()
+            print(f"✅ Sync complete: Portfolio + Journal updated & Ledger refresh triggered for {entry.get('id')}")
+        
+    except Exception as e:
+        print(f"⚠️ Sync to Portfolio failed: {e}")
+
 
 @app.route('/api/executions', methods=['GET'])
 def get_executions():
@@ -287,6 +380,29 @@ def get_executions():
         # Newest first
         history.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
         return jsonify({"status": "ok", "executions": history})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/executions/<execution_id>', methods=['DELETE'])
+def delete_execution(execution_id):
+    """Deletes a specific trade execution from the log."""
+    log_path = os.path.join(EXECUTIONS_DIR, "execution_history.json")
+    try:
+        if not os.path.exists(log_path):
+            return jsonify({"error": "No history found"}), 404
+            
+        with open(log_path, "r", encoding="utf-8") as f:
+            history = json.load(f)
+            
+        new_history = [ex for ex in history if ex.get('id') != execution_id]
+        
+        if len(new_history) == len(history):
+            return jsonify({"error": "Execution not found"}), 404
+            
+        with open(log_path, "w", encoding="utf-8") as f:
+            json.dump(new_history, f, indent=4)
+            
+        return jsonify({"status": "success", "message": "Execution deleted"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -314,17 +430,31 @@ def ocr_execution():
         if not api_key:
             return jsonify({"error": "Gemini API key missing"}), 500
             
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
         
         prompt = """
-        Extract trade execution details from this screenshot. 
-        Return ONLY a valid JSON object with exactly these fields:
+        Extract ALL trade execution details from this screenshot. 
+        Detect if there are multiple orders or fills listed.
+        Return ONLY a valid JSON object containing an array of objects under the key 'trades'.
+        
+        Example Output Format:
         {
-          "ticker": "Ticker symbol (e.g. SPX)",
-          "action": "OPEN, CLOSE, or ROLL",
-          "strategy": "Full strategy name (e.g. 7 DTE Tactical Put Credit Spread)",
-          "strikes": "Strike configuration (e.g. 6650 P / 6630 P)",
-          "credit_debit": "The net fill price with + or - prefix (e.g. +$1.45)"
+          "trades": [
+            {
+              "ticker": "SPX",
+              "action": "OPEN",
+              "strategy": "Iron Condor (24 APR 26)",
+              "strikes": "7100/7125/6275/6250",
+              "credit_debit": "+10.00"
+            },
+            {
+              "ticker": "SPX",
+              "action": "CLOSE",
+              "strategy": "Iron Condor (10 APR 26)",
+              "strikes": "7150/7175/6425/6400",
+              "credit_debit": "-7.30"
+            }
+          ]
         }
         Return ONLY the raw JSON string. No markdown, no prose.
         """
@@ -346,7 +476,7 @@ def ocr_execution():
             "generationConfig": {
                 "temperature": 0.1,
                 "topP": 1,
-                "maxOutputTokens": 1024
+                "maxOutputTokens": 4096
             }
         }
         
@@ -358,14 +488,73 @@ def ocr_execution():
             
         # Parse Gemini JSON response
         try:
-            text_response = res_data['candidates'][0]['content']['parts'][0]['text']
+            # Find the text part (skip any thought parts from thinking models)
+            text_response = ""
+            for part in res_data['candidates'][0]['content']['parts']:
+                if 'text' in part and not part.get('thought'):
+                    text_response = part['text']
+            
+            if not text_response:
+                text_response = res_data['candidates'][0]['content']['parts'][0]['text']
+            
             # Remove potential markdown formatting
             clean_json = text_response.replace('```json', '').replace('```', '').strip()
-            trade_data = json.loads(clean_json)
-            return jsonify({"status": "success", "data": trade_data})
+            raw_data = json.loads(clean_json)
+            
+            # Normalize the response into our expected format
+            trades = []
+            items = raw_data if isinstance(raw_data, list) else raw_data.get('trades', [raw_data])
+            
+            for item in items:
+                # Map Gemini's complex response to our flat format
+                trade = {
+                    "ticker": item.get("ticker", item.get("symbol", "SPX")),
+                    "action": "OPEN" if "open" in str(item.get("action", item.get("side", ""))).lower() or "sell to open" in str(item).lower() else "CLOSE",
+                    "strategy": item.get("strategy", item.get("spread", "Unknown")),
+                    "strikes": item.get("strikes", ""),
+                    "credit_debit": item.get("credit_debit", ""),
+                }
+                
+                # Handle nested legs format from Gemini 2.5
+                legs = item.get("legs", [])
+                if legs and not trade["strikes"]:
+                    strike_parts = []
+                    for leg in legs:
+                        s = leg.get("strike", leg.get("strike_price", ""))
+                        strike_parts.append(str(s))
+                    trade["strikes"] = " / ".join(strike_parts)
+                
+                # Handle nested price format
+                net_price = item.get("net_price", {})
+                if isinstance(net_price, dict) and not trade["credit_debit"]:
+                    val = net_price.get("value", 0)
+                    ptype = net_price.get("type", "").upper()
+                    trade["credit_debit"] = f"+{val}" if ptype == "CREDIT" else f"-{val}"
+                elif not trade["credit_debit"]:
+                    trade["credit_debit"] = str(item.get("price", item.get("net_credit", item.get("net_debit", "0"))))
+                
+                # Build strategy name from spread type + expiration
+                if trade["strategy"] in ("Unknown", "") and item.get("spread"):
+                    exp = item.get("expiration", item.get("exp_date", ""))
+                    trade["strategy"] = f"{item['spread']} ({exp})" if exp else item['spread']
+                
+                # Detect action from leg sides
+                if legs:
+                    actions = [l.get("side", "").upper() for l in legs]
+                    if all("OPEN" in a or "SELL" in a for a in actions):
+                        trade["action"] = "OPEN"
+                    elif all("CLOSE" in a or "BUY" in a for a in actions):
+                        trade["action"] = "CLOSE"
+                
+                trades.append(trade)
+            
+            print(f"✅ OCR extracted {len(trades)} trade(s): {json.dumps(trades, indent=2)}")
+            return jsonify({"status": "success", "data": {"trades": trades}})
+                
         except Exception as e:
             print(f"❌ OCR Parsing Failed: {e}\nRaw Response: {text_response}")
-            return jsonify({"error": "Failed to parse trade details from image"}), 500
+            return jsonify({"error": f"Failed to parse trade details: {str(e)}"}), 500
+
             
     except Exception as e:
         print(f"❌ OCR Endpoint Failed: {e}")
@@ -668,6 +857,59 @@ def warm_up_system():
     else:
         print("⚠️ Warm-up Skipped: Loki Engine not found.")
 
+# ── N8N Workflow Health Guard ─────────────────────────────────
+# Critical Alpha workflow IDs that must be active for intelligence
+ALPHA_N8N_WORKFLOWS = {
+    "Q36ImsxRy4by47kw": "Alpha Architect - Genesis (v3)",
+    "S8KVkRMA56B21MXs": "Alpha Architect - Research (v2 Robust)",
+    "VkE0dmwynRPMIyjdmiONL": "Alpha_V2_Macro_Event_Tracker",
+    "tbQnSD6n9JHHvZ3D": "Alpha Ledger Daily Cron",
+}
+
+def ensure_n8n_workflows_active():
+    """Auto-activates any deactivated Alpha N8N workflows on startup."""
+    if not N8N_API_KEY:
+        print("⚠️ N8N Health Guard: No API key — skipping workflow check.")
+        return
+    
+    headers = {"X-N8N-API-KEY": N8N_API_KEY}
+    base = "https://humanresource.app.n8n.cloud/api/v1"
+    activated = 0
+    already_ok = 0
+    failed = 0
+    
+    for wid, name in ALPHA_N8N_WORKFLOWS.items():
+        try:
+            # Check current status
+            r = requests.get(f"{base}/workflows/{wid}", headers=headers, timeout=10)
+            if r.status_code != 200:
+                print(f"  [N8N Guard] Could not check {name}: HTTP {r.status_code}")
+                failed += 1
+                continue
+            
+            wf = r.json()
+            if wf.get("active"):
+                already_ok += 1
+                continue
+            
+            # Activate it
+            r = requests.post(f"{base}/workflows/{wid}/activate", headers=headers, timeout=10)
+            if r.status_code == 200:
+                print(f"  [N8N Guard] Re-activated: {name}")
+                activated += 1
+            else:
+                print(f"  [N8N Guard] Failed to activate {name}: {r.status_code}")
+                failed += 1
+        except Exception as e:
+            print(f"  [N8N Guard] Error checking {name}: {e}")
+            failed += 1
+    
+    if activated > 0:
+        print(f"🛡️ N8N Health Guard: {activated} workflow(s) re-activated, {already_ok} already online, {failed} failed.")
+    else:
+        print(f"🛡️ N8N Health Guard: All {already_ok} Alpha workflows online.")
+
+
 if __name__ == '__main__':
     public_url = None
 
@@ -730,6 +972,9 @@ if __name__ == '__main__':
         except Exception as e:
             print(f"⚠️ Ngrok tunnel failed: {e}")
             print("   Continuing in LOCAL-ONLY mode (no remote access).")
+
+    # CHECK N8N WORKFLOW HEALTH (auto-activate any offline workflows)
+    ensure_n8n_workflows_active()
 
     # PERFORM WARM-UP (runs regardless of ngrok status)
     warm_up_system()

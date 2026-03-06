@@ -1,24 +1,48 @@
 [
   {
-    "trade_id": "spx_ic_20260223_02",
-    "strategy": "IRON_CONDOR",
+    "trade_id": "exec_close_10apr",
+    "strategy": "Iron Condor (10 APR 26)",
     "entry_date": "2026-02-23",
-    "close_date": "2026-03-02",
+    "close_date": "2026-03-06",
     "expiry": "2026-04-10",
     "credit_received": 9.3,
-    "close_mark": 8.25,
-    "realized_pnl": 1.05,
-    "realized_pnl_pct": 11.3,
-    "days_held": 7,
-    "entry_rating": "MARGINAL",
-    "entry_score": 3,
-    "worst_drift_score": 2,
-    "max_drawdown_pct": 11.3,
-    "closes_at": "2026-03-02T14:53:02.950607",
+    "close_mark": 7.30,
+    "realized_pnl": 2.00,
+    "realized_pnl_pct": 21.5,
+    "days_held": 11,
+    "entry_rating": "GOOD ENTRY",
+    "entry_score": 5,
+    "worst_drift_score": 0,
+    "max_drawdown_pct": 0,
+    "closes_at": "2026-03-06T12:50:15.603042",
     "strikes": {
-      "long_put": 6.6,
-      "short_put": 6.6,
-      "short_call": 3.94
+      "long_put": 6400,
+      "short_put": 6425,
+      "short_call": 7150,
+      "long_call": 7175
+    }
+  },
+  {
+    "trade_id": "exec_open_24apr",
+    "strategy": "Iron Condor (24 APR 26)",
+    "entry_date": "2026-03-06",
+    "close_date": null,
+    "expiry": "2026-04-24",
+    "credit_received": 10.00,
+    "close_mark": 0,
+    "realized_pnl": 0,
+    "realized_pnl_pct": 0,
+    "days_held": 0,
+    "entry_rating": "OPEN",
+    "entry_score": 0,
+    "worst_drift_score": 0,
+    "max_drawdown_pct": 0,
+    "closes_at": null,
+    "strikes": {
+      "long_put": 6250,
+      "short_put": 6275,
+      "short_call": 7100,
+      "long_call": 7125
     }
   }
 ]
