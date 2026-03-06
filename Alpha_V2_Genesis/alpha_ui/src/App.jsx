@@ -710,6 +710,236 @@ const ChatPanel = ({ isOpen, onToggle, apiBase, getContext }) => {
 };
 
 
+const ExecutionTab = ({ apiBase }) => {
+  const [executions, setExecutions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [formData, setFormData] = useState({
+    ticker: 'SPX',
+    action: 'OPEN',
+    strategy: 'Credit Put Vertical',
+    strikes: '',
+    credit_debit: '',
+    notes: ''
+  });
+  const [file, setFile] = useState(null);
+  const [preview, setPreview] = useState(null);
+
+  const fetchExecutions = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${apiBase}/api/executions`);
+      const data = await res.json();
+      if (data.status === 'ok') setExecutions(data.executions);
+    } catch (e) {
+      console.error('Failed to fetch executions:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchExecutions();
+  }, [apiBase]);
+
+  const handleFileChange = (e) => {
+    const f = e.target.files[0];
+    if (f) {
+      setFile(f);
+      const reader = new FileReader();
+      reader.onloadend = () => setPreview(reader.result);
+      reader.readAsDataURL(f);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setUploading(true);
+    try {
+      const formDataToSend = new FormData();
+      if (file) formDataToSend.append('screenshot', file);
+      formDataToSend.append('metadata', JSON.stringify(formData));
+
+      const res = await fetch(`${apiBase}/api/executions/upload`, {
+        method: 'POST',
+        body: formDataToSend
+      });
+      const data = await res.json();
+      if (data.status === 'success') {
+        alert('Execution recorded!');
+        setFile(null);
+        setPreview(null);
+        setFormData({ ticker: 'SPX', action: 'OPEN', strategy: 'Credit Put Vertical', strikes: '', credit_debit: '', notes: '' });
+        fetchExecutions();
+      }
+    } catch (e) {
+      alert('Upload failed: ' + e.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div style={{
+      margin: '0 1rem 2rem',
+      background: 'rgba(255,255,255,0.02)',
+      border: '1px solid rgba(255,255,255,0.08)',
+      borderTop: 'none',
+      borderRadius: '0 0 14px 14px',
+      padding: '1.5rem',
+    }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '1.5rem' }}>
+        {/* Left: Entry Form */}
+        <div style={{
+          padding: '1.5rem', borderRadius: '14px',
+          background: 'rgba(15,23,42,0.4)', border: '1px solid rgba(255,255,255,0.06)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+            <span style={{ fontSize: '1.5rem' }}>🚀</span>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#fff' }}>TRADE EXECUTION PORTAL</div>
+              <div style={{ fontSize: '0.65rem', color: '#475569' }}>Commit actual broker fills to the strategy ledger</div>
+            </div>
+          </div>
+          <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '1.25rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div>
+                <label style={{ fontSize: '0.65rem', color: '#94a3b8', display: 'block', marginBottom: '0.4rem', fontWeight: 600 }}>TICKER</label>
+                <input style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid #334155', borderRadius: '8px', padding: '0.6rem', color: '#fff', fontSize: '0.8rem' }} value={formData.ticker} onChange={e => setFormData({ ...formData, ticker: e.target.value })} />
+              </div>
+              <div>
+                <label style={{ fontSize: '0.65rem', color: '#94a3b8', display: 'block', marginBottom: '0.4rem', fontWeight: 600 }}>ACTION TYPE</label>
+                <select style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid #334155', borderRadius: '8px', padding: '0.6rem', color: '#fff', fontSize: '0.8rem' }} value={formData.action} onChange={e => setFormData({ ...formData, action: e.target.value })}>
+                  <option value="OPEN">OPEN (NEW POSITION)</option>
+                  <option value="CLOSE">CLOSE (EXIT)</option>
+                  <option value="ROLL">ROLL (POSITION MGMT)</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label style={{ fontSize: '0.65rem', color: '#94a3b8', display: 'block', marginBottom: '0.4rem', fontWeight: 600 }}>STRATEGY DESCRIPTION</label>
+              <input style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid #334155', borderRadius: '8px', padding: '0.6rem', color: '#fff', fontSize: '0.8rem' }} value={formData.strategy} onChange={e => setFormData({ ...formData, strategy: e.target.value })} placeholder="e.g. 7 DTE Tactical Put Credit Spread" />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '1rem' }}>
+              <div>
+                <label style={{ fontSize: '0.65rem', color: '#94a3b8', display: 'block', marginBottom: '0.4rem', fontWeight: 600 }}>STRIKE CONFIGURATION</label>
+                <input style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid #334155', borderRadius: '8px', padding: '0.6rem', color: '#fff', fontSize: '0.8rem', fontFamily: 'monospace' }} value={formData.strikes} onChange={e => setFormData({ ...formData, strikes: e.target.value })} placeholder="6650 PUT / 6630 PUT" />
+              </div>
+              <div>
+                <label style={{ fontSize: '0.65rem', color: '#94a3b8', display: 'block', marginBottom: '0.4rem', fontWeight: 600 }}>FILL PRICE (NET)</label>
+                <input style={{ width: '100%', background: 'rgba(0,0,0,0.3)', border: '1px solid #334155', borderRadius: '8px', padding: '0.6rem', color: '#fff', fontSize: '0.8rem', fontFamily: 'monospace' }} value={formData.credit_debit} onChange={e => setFormData({ ...formData, credit_debit: e.target.value })} placeholder="+ $1.45" />
+              </div>
+            </div>
+            <div>
+              <label style={{ fontSize: '0.65rem', color: '#94a3b8', display: 'block', marginBottom: '0.4rem', fontWeight: 600 }}>BROKER EVIDENCE (SCREENSHOT)</label>
+              <div
+                style={{
+                  border: '2px dashed #475569', borderRadius: '10px', padding: '1.5rem', textAlign: 'center',
+                  background: preview ? 'transparent' : 'rgba(255,255,255,0.01)', cursor: 'pointer',
+                  transition: 'all 0.2s ease', borderStyle: preview ? 'solid' : 'dashed',
+                  borderColor: preview ? '#3b82f6' : '#475569'
+                }}
+                onClick={() => document.getElementById('exec-file-input').click()}
+              >
+                {preview ? (
+                  <div style={{ position: 'relative' }}>
+                    <img src={preview} style={{ maxWidth: '100%', maxHeight: '180px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)' }} alt="Preview" />
+                    <div style={{ position: 'absolute', top: 5, right: 5, background: 'rgba(0,0,0,0.7)', borderRadius: '50%', width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); setPreview(null); setFile(null); }}>×</div>
+                  </div>
+                ) : (
+                  <div style={{ padding: '1rem 0' }}>
+                    <div style={{ fontSize: '1.8rem', marginBottom: '0.75rem', opacity: 0.5 }}>📸</div>
+                    <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 500 }}>Select Broker Execution Screenshot</div>
+                    <div style={{ fontSize: '0.6rem', color: '#475569', marginTop: '0.25rem' }}>Drag & drop also supported</div>
+                  </div>
+                )}
+                <input id="exec-file-input" type="file" hidden accept="image/*" onChange={handleFileChange} />
+              </div>
+            </div>
+            <button
+              type="submit"
+              disabled={uploading}
+              style={{
+                padding: '0.9rem', borderRadius: '10px', background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                color: '#fff', border: 'none', fontWeight: 800, fontSize: '0.85rem',
+                cursor: uploading ? 'wait' : 'pointer', marginTop: '0.5rem',
+                boxShadow: '0 4px 12px rgba(37,99,235,0.2)'
+              }}
+            >
+              {uploading ? '📡 Committing...' : '✅ Commit to Strategy Ledger'}
+            </button>
+          </form>
+        </div>
+
+        {/* Right: Execution History */}
+        <div style={{
+          padding: '1.5rem', borderRadius: '14px',
+          background: 'rgba(15,23,42,0.4)', border: '1px solid rgba(255,255,255,0.06)',
+          display: 'flex', flexDirection: 'column'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <span style={{ fontSize: '1.2rem' }}>📜</span>
+              <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#e2e8f0' }}>VERIFIED EXECUTION LOG</div>
+            </div>
+            <button onClick={fetchExecutions} style={{
+              background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)',
+              color: '#60a5fa', cursor: 'pointer', fontSize: '0.65rem', padding: '0.25rem 0.6rem',
+              borderRadius: '4px'
+            }}>↻ Sync</button>
+          </div>
+          <div style={{ flex: 1, overflowY: 'auto', maxHeight: '550px', paddingRight: '0.5rem' }}>
+            {loading ? (
+              <div style={{ color: '#475569', fontSize: '0.75rem', textAlign: 'center', padding: '2rem' }}>Loading entries...</div>
+            ) : executions.length === 0 ? (
+              <div style={{
+                color: '#475569', fontSize: '0.75rem', fontStyle: 'italic',
+                textAlign: 'center', padding: '4rem 1rem', background: 'rgba(0,0,0,0.1)', borderRadius: '10px'
+              }}>
+                No executions recorded yet.<br />Your verified fills will appear here.
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: '0.75rem' }}>
+                {executions.map(ex => (
+                  <div key={ex.id} style={{
+                    padding: '0.85rem', background: 'rgba(0,0,0,0.25)',
+                    borderLeft: `4px solid ${ex.action === 'OPEN' ? '#10b981' : ex.action === 'CLOSE' ? '#ef4444' : '#3b82f6'}`,
+                    borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)',
+                    borderLeftWidth: '4px'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.4rem' }}>
+                      <div style={{ fontWeight: 800, fontSize: '0.8rem', color: '#e2e8f0' }}>
+                        <span style={{ color: ex.action === 'OPEN' ? '#10b981' : ex.action === 'CLOSE' ? '#ef4444' : '#3b82f6', marginRight: '0.4rem' }}>●</span>
+                        {ex.ticker} {ex.action}
+                      </div>
+                      <span style={{ color: '#475569', fontSize: '0.6rem' }}>{new Date(ex.timestamp).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginBottom: '0.5rem' }}>{ex.strategy}</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ fontSize: '0.7rem', color: '#cbd5e1', fontFamily: 'monospace', background: 'rgba(0,0,0,0.3)', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
+                        {ex.strikes} | <span style={{ color: ex.credit_debit.includes('+') ? '#10b981' : '#ef4444' }}>{ex.credit_debit}</span>
+                      </div>
+                      {ex.screenshot_path && (
+                        <button
+                          onClick={() => window.open(`${apiBase}/api/executions/images/${ex.screenshot_path.split(/[/\\]/).pop()}`)}
+                          style={{ background: 'none', border: 'none', color: '#60a5fa', fontSize: '0.65rem', cursor: 'pointer', textDecoration: 'underline' }}
+                        >
+                          View Evidence
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
 function App() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -1361,6 +1591,7 @@ function App() {
         {[
           { id: 'dashboard', label: '📊 Dashboard' },
           { id: 'journal', label: `📘 Trade Journal${tradeJournal.length > 0 ? ` (${tradeJournal.length})` : ''}` },
+          { id: 'execution', label: '🚀 Trade Entry' },
           { id: 'fragility', label: `⚡ Fragility Index${fragility ? ` (${fragility.fragility_index})` : ''}` },
         ].map(tab => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
@@ -1473,6 +1704,11 @@ function App() {
             </>
           )}
         </div>
+      )}
+
+      {/* ══ TAB: TRADE ENTRY ══════════════════════════════════ */}
+      {activeTab === 'execution' && (
+        <ExecutionTab apiBase={apiBase} />
       )}
 
       {/* ══ TAB: FRAGILITY INDEX ══════════════════════════════════ */}
