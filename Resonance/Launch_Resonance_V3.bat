@@ -64,6 +64,12 @@ if not exist node_modules (
 start "Resonance Frontend" /min cmd /k "npm.cmd run dev -- --host --port 5174"
 cd ..
 
+:: ── Sync Desktop Shortcut (portable across PCs) ──────────
+if exist "%APP_DIR%\create_resonance_shortcut.ps1" (
+    echo  [SYNC] Refreshing desktop shortcut for this PC...
+    powershell -ExecutionPolicy Bypass -File "%APP_DIR%\create_resonance_shortcut.ps1" >nul 2>&1
+)
+
 :: ── Open Browser ──────────────────────────────────────────
 echo  [3/3] Opening browser...
 ping 127.0.0.1 -n 5 >nul

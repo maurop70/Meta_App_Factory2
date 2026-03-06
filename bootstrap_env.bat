@@ -9,13 +9,21 @@
 set "PYTHON="
 
 :: Strategy: Try common install locations, then fall back to PATH
-:: This covers: Microsoft Store, python.org, custom installs
+:: This covers: python.org, custom installs. Skip the MS Store alias.
 for /f "delims=" %%p in ('where python 2^>nul') do (
-    set "PYTHON=%%p"
-    goto :PYTHON_FOUND
+    echo "%%p" | findstr /I "WindowsApps" >nul
+    if errorlevel 1 (
+        set "PYTHON=%%p"
+        goto :PYTHON_FOUND
+    )
 )
 
-:: Manual scan of common locations (if 'where' fails due to Store alias)
+:: Manual scan of common locations
+:: Check %LOCALAPPDATA%\Python\bin (common on some installs)
+if exist "%LOCALAPPDATA%\Python\bin\python.exe" (
+    set "PYTHON=%LOCALAPPDATA%\Python\bin\python.exe"
+    goto :PYTHON_FOUND
+)
 for /d %%d in ("%LOCALAPPDATA%\Python\pythoncore-*") do (
     if exist "%%d\python.exe" (
         set "PYTHON=%%d\python.exe"
