@@ -98,6 +98,40 @@ async def _extract_text_from_file(file_path: str, file_type: str) -> str:
         extracted_text = f"[Error extracting text: {e}]"
     return extracted_text
 
+# ── Parent Configuration ────────────────────────────────
+PARENT_CONFIG_PATH = os.path.join(SCRIPT_DIR, "parent_config.json")
+DEFAULT_PARENT_CONFIG = {
+    "pin": "1234",
+    "instructions": "",
+    "focus_topics": [],
+    "vocabulary": [],
+    "progress_log": []
+}
+
+def _load_parent_config():
+    """Loads the parent configuration from parent_config.json, creating it if it doesn't exist."""
+    if not os.path.exists(PARENT_CONFIG_PATH):
+        _save_parent_config(DEFAULT_PARENT_CONFIG)
+        logger.info(f"Created default parent_config.json at {PARENT_CONFIG_PATH}")
+    try:
+        with open(PARENT_CONFIG_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except json.JSONDecodeError:
+        logger.error(f"Error decoding {PARENT_CONFIG_PATH}. Resetting to default config.")
+        _save_parent_config(DEFAULT_PARENT_CONFIG)
+        return DEFAULT_PARENT_CONFIG
+    except Exception as e:
+        logger.error(f"Error loading parent_config.json: {e}. Resetting to default config.")
+        _save_parent_config(DEFAULT_PARENT_CONFIG)
+        return DEFAULT_PARENT_CONFIG
+
+def _save_parent_config(config):
+    """Saves the parent configuration to parent_config.json."""
+    os.makedirs(os.path.dirname(PARENT_CONFIG_PATH), exist_ok=True) # Ensure directory exists
+    with open(PARENT_CONFIG_PATH, "w", encoding="utf-8") as f:
+        json.dump(config, f, indent=2)
+    logger.info(f"Parent configuration saved to {PARENT_CONFIG_PATH}")
+
 # ── Import V3 Streaming Engine ───────────────────────────
 try:
     from app_stream import stream_chat, clear_stream_history
@@ -107,9 +141,18 @@ except ImportError:
     STREAMING = False
     logger.warning("Streaming engine not available.")
 
+# Pydantic models for request bodies
 class ChatRequest(BaseModel):
     prompt: str
     dashboard_context: dict | None = None
+
+class ParentConfigRequest(BaseModel):
+    instructions: str | None = None
+    focus_topics: list[str] | None = None
+    vocabulary: list[dict] | None = None # Assuming vocabulary items are dicts like {"word": "...", "definition": "...", "example": "..."}
+
+class PinVerifyRequest(BaseModel):
+    pin: str
 
 @app.get("/")
 def root():
@@ -207,6 +250,42 @@ async def delete_upload(filename: str):
     except Exception as e:
         logger.error(f"Could not delete file {filename}: {e}")
         raise HTTPException(status_code=500, detail=f"Could not delete file: {e}")
+
+# ── Parent Configuration API Endpoints ──────────────────
+
+@app.get("/api/parent/config")
+async def get_parent_config():
+    """Returns the current parent configuration (excluding the PIN)."""
+    config = _load_parent_config()
+    display_config = config.copy()
+    display_config.pop("pin", None) # Remove pin for security
+    return JSONResponse(display_config)
+
+@app.post("/api/parent/config")
+async def update_parent_config(req: ParentConfigRequest):
+    """Updates the parent configuration with provided fields."""
+    config = _load_parent_config()
+    if req.instructions is not None:
+        config["instructions"] = req.instructions
+    if req.focus_topics is not None:
+        config["focus_topics"] = req.focus_topics
+    if req.vocabulary is not None:
+        config["vocabulary"] = req.vocabulary
+    _save_parent_config(config)
+    return JSONResponse({"status": "ok"})
+
+@app.post("/api/parent/verify-pin")
+async def verify_parent_pin(req: PinVerifyRequest):
+    """Verifies the provided PIN against the stored parent PIN."""
+    config = _load_parent_config()
+    is_valid = (req.pin == config.get("pin"))
+    return JSONResponse({"valid": is_valid})
+
+@app.get("/api/parent/progress")
+async def get_parent_progress_log():
+    """Returns the progress log from the parent configuration."""
+    config = _load_parent_config()
+    return JSONResponse(config.get("progress_log", []))
 
 if __name__ == "__main__":
     import uvicorn

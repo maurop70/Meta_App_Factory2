@@ -1,0 +1,24 @@
+{
+  "pin": "1234",
+  "instructions": "Focus on biology vocabulary this week. Practice describing school events using full sentences.",
+  "focus_topics": [
+    "Biology - Evolution",
+    "Math - Quadratics"
+  ],
+  "vocabulary": [
+    {
+      "word": "Photosynthesis",
+      "example": "The tree uses photosynthesis to grow tall.",
+      "definition": "How plants make food from sunlight"
+    }
+  ],
+  "progress_log": [
+    {
+      "timestamp": "2026-03-05T22:25:58.208600",
+      "channel": "general",
+      "user_words": 4,
+      "alex_words": 70,
+      "session_duration_estimate": "short"
+    }
+  ]
+}
