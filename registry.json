@@ -55,7 +55,58 @@
             "type": "Data Pipeline",
             "port": null,
             "blueprint": "file_factory"
+        },
+        "Project_Aether": {
+            "status": "active",
+            "type": "Agent Infrastructure",
+            "port": null,
+            "blueprint": "elite_council",
+            "n8n_project": "Specialist Agents",
+            "path": "Meta_App_Factory/Project_Aether",
+            "isolation": {
+                "boundary": "Project_Aether",
+                "separated_from": [
+                    "Resonance"
+                ],
+                "no_code_dependencies": true
+            },
+            "capabilities": [
+                "executive delegation",
+                "fiscal modeling",
+                "web mining",
+                "quality audit",
+                "compliance",
+                "data architecture",
+                "index synchronization"
+            ],
+            "agents": {
+                "active": [
+                    "CEO",
+                    "CFO",
+                    "CTO",
+                    "Deep_Crawler",
+                    "The_Librarian",
+                    "The_Critic",
+                    "Compliance_Officer",
+                    "Data_Architect"
+                ],
+                "placeholder": [
+                    "CMO",
+                    "Researcher",
+                    "Graphic_Designer",
+                    "Presentation_Expert",
+                    "CX_Strategist"
+                ]
+            },
+            "infrastructure": {
+                "C-Suite_Active_Logic": "13 agent configs",
+                "Boardroom_Exchange": "Inter-agent reports",
+                "Ingestion_Chamber": "Professional report intake",
+                "Compliance_Vault": "Secure data storage",
+                "Aether_System_Map": "Pipeline configuration"
+            },
+            "last_build": "2026-03-07T04:26:00.000000"
         }
     },
-    "last_updated": "2026-03-02T22:35:00.000000"
+    "last_updated": "2026-03-07T04:26:00.000000"
 }

@@ -1,0 +1,30 @@
+{
+    "positions": [
+        {
+            "id": "spx_ic_20260223_02",
+            "status": "CLOSED",
+            "strategy": "IRON_CONDOR",
+            "open_date": "2026-02-23",
+            "expiration_date": "2026-04-10",
+            "short_put_strike": 6425,
+            "long_put_strike": 6400,
+            "short_call_strike": 7150,
+            "long_call_strike": 7175,
+            "credit_received": 9.3,
+            "open_price": 9.3
+        },
+        {
+            "id": "exec_1772819415_open",
+            "status": "OPEN",
+            "strategy": "Iron Condor (24 APR 26)",
+            "open_date": "2026-03-06",
+            "expiration_date": "2026-04-24",
+            "short_call_strike": 7100,
+            "long_call_strike": 7125,
+            "short_put_strike": 6275,
+            "long_put_strike": 6250,
+            "credit_received": 10.00,
+            "open_price": 10.00
+        }
+    ]
+}

@@ -1,0 +1,26 @@
+{
+    "name": "Presentation Expert",
+    "role": "Strategic Narrative & Boardroom-Ready Decks",
+    "version": "1.1.0",
+    "created": "2026-03-07",
+    "relocated": "2026-03-07",
+    "project": "Aether",
+    "model": "claude-sonnet-4-20250514",
+    "temperature": 0.5,
+    "max_tokens": 8192,
+    "system_prompt": "You are the Presentation Expert of Antigravity-AI Creative Studio.\nSTATUS: PLACEHOLDER — Awaiting full activation.",
+    "tools": [
+        "produce_document",
+        "google_workspace"
+    ],
+    "reports_to": "CEO",
+    "division": "Creative_Studio",
+    "status": "placeholder",
+    "boardroom_channel": "../../Boardroom_Exchange/",
+    "isolation": {
+        "boundary": "Project_Aether",
+        "forbidden_references": [
+            "Resonance"
+        ]
+    }
+}

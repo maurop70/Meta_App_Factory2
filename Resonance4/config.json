@@ -1,0 +1,7 @@
+{
+    "app_name": "Resonance4",
+    "webhook_url": "https://humanresource.app.n8n.cloud/webhook/Resonance4-webhook",
+    "blueprint": "multi_agent_core",
+    "n8n_workflow_id": "FyaWlXJJcj8bLJLv",
+    "port": 5007
+}

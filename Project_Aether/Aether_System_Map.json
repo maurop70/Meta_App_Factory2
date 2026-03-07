@@ -1,0 +1,163 @@
+{
+    "schema_version": "1.0.0",
+    "name": "Aether System Map",
+    "description": "Canonical mapping of Parent Portal inputs to C-Suite decision-making logic. Maintained by the Data Architect.",
+    "created": "2026-03-07",
+    "last_updated": "2026-03-07",
+    "maintained_by": "Data_Architect",
+    "isolation_boundary": "Project_Aether",
+    "data_sources": {
+        "parent_portal": {
+            "description": "Parent-provided instructions, vocabulary, focus topics, and progress reports",
+            "origin_app": "Resonance (READ-ONLY reference — no code dependency)",
+            "data_flow": "INBOUND → Ingestion_Chamber → Compliance_Vault",
+            "fields": [
+                {
+                    "name": "parent_instructions",
+                    "type": "text",
+                    "description": "Custom instructions from parents about child's needs",
+                    "sensitivity": "HIGH",
+                    "storage": "Compliance_Vault"
+                },
+                {
+                    "name": "focus_topics",
+                    "type": "array<string>",
+                    "description": "Topics the parent wants the AI to emphasize",
+                    "sensitivity": "MEDIUM",
+                    "storage": "Ingestion_Chamber"
+                },
+                {
+                    "name": "vocabulary_targets",
+                    "type": "array<string>",
+                    "description": "Specific words/phrases to reinforce",
+                    "sensitivity": "LOW",
+                    "storage": "Ingestion_Chamber"
+                },
+                {
+                    "name": "progress_reports",
+                    "type": "array<object>",
+                    "description": "Session summaries and milestone tracking",
+                    "sensitivity": "HIGH",
+                    "storage": "Compliance_Vault"
+                }
+            ]
+        },
+        "professional_reports": {
+            "description": "Clinical, educational, and behavioral reports uploaded via the Intelligence Pipeline",
+            "data_flow": "INBOUND → Ingestion_Chamber → (Compliance Review) → Compliance_Vault",
+            "fields": [
+                {
+                    "name": "clinical_reports",
+                    "type": "file (PDF/DOCX)",
+                    "description": "Medical, psychological, and developmental assessments",
+                    "sensitivity": "CRITICAL",
+                    "storage": "Compliance_Vault",
+                    "compliance_gate": "Compliance_Officer"
+                },
+                {
+                    "name": "educational_reports",
+                    "type": "file (PDF/DOCX)",
+                    "description": "IEP documents, school evaluations, teacher reports",
+                    "sensitivity": "HIGH",
+                    "storage": "Compliance_Vault",
+                    "compliance_gate": "Compliance_Officer"
+                },
+                {
+                    "name": "behavioral_reports",
+                    "type": "file (PDF/DOCX)",
+                    "description": "ABA data, behavioral intervention plans",
+                    "sensitivity": "CRITICAL",
+                    "storage": "Compliance_Vault",
+                    "compliance_gate": "Compliance_Officer"
+                }
+            ]
+        }
+    },
+    "processing_pipeline": {
+        "stage_1_intake": {
+            "handler": "Ingestion_Chamber",
+            "action": "Receive and validate incoming data",
+            "output": "Structured JSON intake record"
+        },
+        "stage_2_compliance_review": {
+            "handler": "Compliance_Officer",
+            "action": "Review sensitivity classification, apply access controls, encrypt PII",
+            "output": "Compliance-cleared data package"
+        },
+        "stage_3_archival": {
+            "handler": "Compliance_Vault",
+            "action": "Secure storage with audit trail",
+            "output": "Vaulted record with retrieval key"
+        },
+        "stage_4_intelligence_extraction": {
+            "handler": "Data_Architect + The_Librarian",
+            "action": "Extract actionable intelligence (diagnoses, accommodations, triggers)",
+            "output": "Structured intelligence brief → CEO"
+        },
+        "stage_5_decision_routing": {
+            "handler": "CEO",
+            "action": "Route intelligence to appropriate agent for action",
+            "output": "Delegated task with context"
+        }
+    },
+    "agent_data_access": {
+        "CEO": {
+            "read": [
+                "all"
+            ],
+            "write": [
+                "Boardroom_Exchange"
+            ]
+        },
+        "CFO": {
+            "read": [
+                "progress_reports",
+                "focus_topics"
+            ],
+            "write": [
+                "financial_models"
+            ]
+        },
+        "Data_Architect": {
+            "read": [
+                "all"
+            ],
+            "write": [
+                "Aether_System_Map",
+                "Ingestion_Chamber"
+            ]
+        },
+        "Compliance_Officer": {
+            "read": [
+                "all"
+            ],
+            "write": [
+                "Compliance_Vault"
+            ]
+        },
+        "The_Librarian": {
+            "read": [
+                "all"
+            ],
+            "write": [
+                "MASTER_INDEX"
+            ]
+        },
+        "The_Critic": {
+            "read": [
+                "all"
+            ],
+            "write": [
+                "audit_reports"
+            ]
+        },
+        "Deep_Crawler": {
+            "read": [
+                "focus_topics"
+            ],
+            "write": [
+                "Ingestion_Chamber"
+            ]
+        }
+    }
+}

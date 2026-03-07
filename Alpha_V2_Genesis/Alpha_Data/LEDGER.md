@@ -1,5 +1,5 @@
 # ALPHA V2 GENESIS - STRATEGY LEDGER
-**Generated:** 2026-03-06 13:05:52  |  **Engine:** Lead Quant Architect v2.0
+**Generated:** 2026-03-06 14:15:00  |  **Engine:** Lead Quant Architect v2.0
 
 ---
 
@@ -9,10 +9,10 @@
 | :--- | :--- |
 | **Portfolio Health** | GREEN |
 | **Open Positions** | 1 |
-| **SPX Spot** | 6,750.63 |
-| **VIX** | 26.75 (RISING) |
-| **IV Rank (52W)** | 28.6% |
-| **IV-HV Spread** | +14.7pp (Seller Edge) |
+| **SPX Spot** | 6,764.69 |
+| **VIX** | 27.01 (RISING) |
+| **IV Rank (52W)** | 29.2% |
+| **IV-HV Spread** | +15.1pp (Seller Edge) |
 | **N8N System Health** | UNKNOWN (0 failures in log) |
 | **Last Hot Updates** | 0 n8n pushes detected |
 
@@ -34,8 +34,8 @@
 | **Opened** | 2026-03-06 |
 | **Expires** | 2026-04-24 (49 DTE remaining) |
 | **Credit Received** | $10.00 |
-| **Current Mark** | $6.7 |
-| **P&L So Far** | +$3.30 (33.0% of max profit) |
+| **Current Mark** | $6.8 |
+| **P&L So Far** | +$3.20 (32.0% of max profit) |
 | **50% Profit Target** | $5.00 mark |
 | **21-DTE Exit Date** | 2026-04-03 |
 | **Strikes** | 6250/6275 Put · 7100/7125 Call |
@@ -45,9 +45,9 @@
 | Greek | Value | Meaning |
 | :--- | :---: | :--- |
 | **Theta** (θ) | `+$-17.26/day` | $17.26/day income from time decay |
-| **Vega** (ν) | `$70.84/pp` | $70.84 P&L change per 1pp VIX move (gain on vol expansion) |
-| **Delta** (δ) | `+1.25/pt` | Position is near delta-neutral ($1.25/pt) |
-| **Gamma** (γ) | `0.0000472` | Convexity risk per $1 SPX move |
+| **Vega** (ν) | `$69.47/pp` | $69.47 P&L change per 1pp VIX move (gain on vol expansion) |
+| **Delta** (δ) | `+1.31/pt` | Position is near delta-neutral ($1.31/pt) |
+| **Gamma** (γ) | `0.0000446` | Convexity risk per $1 SPX move |
 
 **Entry Rating at Open: [A] GOOD ENTRY** (Score: 4/9)
 
@@ -65,17 +65,17 @@
 
 **Daily Thesis Update: [OK] THESIS INTACT** (Drift Score: +2)
 
-- STABLE: SPX has moved only +0.0% — original thesis intact
-- EDGE: IV-HV spread remains +14.7pp — seller advantage intact
+- STABLE: SPX has moved only +0.2% — original thesis intact
+- EDGE: IV-HV spread remains +15.1pp — seller advantage intact
 
 **Challenger Scan: HOLD CURRENT**
 
 | | Current | Challenger |
 | :--- | :---: | :---: |
-| Short Put | 6275 | 6075 |
-| Short Call | 7100 | 7460 |
-| Credit | $10.00 | $2.35 |
-| Put Margin | 7.05% | 10.01% |
+| Short Put | 6275 | 6090 |
+| Short Call | 7100 | 7475 |
+| Credit | $10.00 | $3.08 |
+| Put Margin | 7.05% | 9.97% |
 | Expiry | 2026-04-24 | 2026-04-17 |
 
 > HOLD CURRENT: Existing position is competitive or superior. No pivot justified.

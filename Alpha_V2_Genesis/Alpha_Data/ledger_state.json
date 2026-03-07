@@ -110,23 +110,23 @@
         "drift_score": 2,
         "status": "THESIS INTACT",
         "flags": [
-          "STABLE: SPX has moved only +0.0% \u2014 original thesis intact",
-          "EDGE: IV-HV spread remains +14.7pp \u2014 seller advantage intact"
+          "STABLE: SPX has moved only +0.2% \u2014 original thesis intact",
+          "EDGE: IV-HV spread remains +15.1pp \u2014 seller advantage intact"
         ],
-        "spx_delta_pct": 0.0,
-        "vix_delta": 0.0,
-        "updated_at": "2026-03-06T13:05:51.796809"
+        "spx_delta_pct": 0.21,
+        "vix_delta": 0.26,
+        "updated_at": "2026-03-06T14:15:00.132247"
       },
-      "current_mark": 6.7,
+      "current_mark": 6.8,
       "position_greeks": {
-        "net_delta_per_pt": 1.25,
+        "net_delta_per_pt": 1.31,
         "net_theta_per_day": -17.26,
-        "net_vega_per_pp": 70.84,
-        "net_gamma": 4.72e-05,
+        "net_vega_per_pp": 69.47,
+        "net_gamma": 4.46e-05,
         "interpretation": {
           "theta": "$17.26/day income from time decay",
-          "vega": "$70.84 P&L change per 1pp VIX move (gain on vol expansion)",
-          "delta": "Position is near delta-neutral ($1.25/pt)"
+          "vega": "$69.47 P&L change per 1pp VIX move (gain on vol expansion)",
+          "delta": "Position is near delta-neutral ($1.31/pt)"
         }
       },
       "alerts_sent": {},
@@ -134,29 +134,29 @@
         "available": true,
         "expiry": "2026-04-17",
         "strikes": {
-          "short_put": 6075,
-          "long_put": 6050,
-          "short_call": 7460,
-          "long_call": 7485
+          "short_put": 6090,
+          "long_put": 6065,
+          "short_call": 7475,
+          "long_call": 7500
         },
-        "net_credit": 2.35,
-        "put_margin_pct": 10.01,
-        "call_margin_pct": 10.51,
+        "net_credit": 3.08,
+        "put_margin_pct": 9.97,
+        "call_margin_pct": 10.5,
         "active_credit": 10.0,
-        "active_put_pct": 7.05,
+        "active_put_pct": 7.24,
         "pivot_warranted": false,
         "pivot_rationale": "HOLD CURRENT: Existing position is competitive or superior. No pivot justified.",
         "leg_detail": [
           {
             "label": "Long Put",
-            "strike": 6050,
+            "strike": 6065,
             "type": "put",
             "sign": -1,
-            "bid": 48.0,
-            "ask": 48.4,
-            "mark": 48.2,
-            "iv_pct": 30.03,
-            "iv_dec": 0.3003,
+            "bid": 49.6,
+            "ask": 50.2,
+            "mark": 49.9,
+            "iv_pct": 30.13,
+            "iv_dec": 0.30128,
             "delta": 0.0,
             "gamma": 0.0,
             "theta": 0.0,
@@ -165,14 +165,14 @@
           },
           {
             "label": "Short Put",
-            "strike": 6075,
+            "strike": 6090,
             "type": "put",
             "sign": 1,
-            "bid": 50.2,
-            "ask": 50.8,
-            "mark": 50.5,
+            "bid": 52.4,
+            "ask": 53.0,
+            "mark": 52.7,
             "iv_pct": 29.72,
-            "iv_dec": 0.29718,
+            "iv_dec": 0.29719,
             "delta": 0.0,
             "gamma": 0.0,
             "theta": 0.0,
@@ -181,14 +181,14 @@
           },
           {
             "label": "Short Call",
-            "strike": 7460,
+            "strike": 7475,
             "type": "call",
             "sign": 1,
-            "bid": 1.05,
-            "ask": 1.4,
-            "mark": 1.23,
+            "bid": 1.1,
+            "ask": 1.25,
+            "mark": 1.18,
             "iv_pct": 13.0,
-            "iv_dec": 0.13003,
+            "iv_dec": 0.12997,
             "delta": 0.0,
             "gamma": 0.0,
             "theta": 0.0,
@@ -197,14 +197,14 @@
           },
           {
             "label": "Long Call",
-            "strike": 7485,
+            "strike": 7500,
             "type": "call",
             "sign": -1,
-            "bid": 1.1,
-            "ask": 1.25,
-            "mark": 1.18,
-            "iv_pct": 13.1,
-            "iv_dec": 0.13104,
+            "bid": 0.85,
+            "ask": 0.95,
+            "mark": 0.9,
+            "iv_pct": 12.91,
+            "iv_dec": 0.12907,
             "delta": 0.0,
             "gamma": 0.0,
             "theta": 0.0,
@@ -229,10 +229,18 @@
           "drift_status": "THESIS INTACT",
           "drift_score": 2,
           "current_mark": 6.7
+        },
+        {
+          "date": "2026-03-06 14:15",
+          "spx": 6764.69,
+          "vix": 27.01,
+          "drift_status": "THESIS INTACT",
+          "drift_score": 2,
+          "current_mark": 6.8
         }
       ],
       "status": "OPEN"
     }
   },
-  "last_run": "2026-03-06T13:05:52.351059"
+  "last_run": "2026-03-06T14:15:00.766929"
 }

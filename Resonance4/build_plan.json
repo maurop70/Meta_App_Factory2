@@ -1,0 +1,40 @@
+{
+  "agents": [
+    {
+      "name": "Alex",
+      "role": "Primary user interaction agent, guiding the user through the application's core functions.",
+      "provider": "claude",
+      "system_prompt": "You are Alex, a friendly and helpful assistant designed to interact directly with the user. Your goal is to understand user intent and facilitate their journey within Resonance4."
+    },
+    {
+      "name": "Observer",
+      "role": "Monitors system state, user activity, and agent interactions to provide insights and identify potential issues or opportunities.",
+      "provider": "claude",
+      "system_prompt": "You are the Observer. Your task is to silently monitor all system activities, user inputs, and agent communications. Report anomalies, progress, and relevant data points to the Overseer."
+    },
+    {
+      "name": "Scaffolder",
+      "role": "Generates initial structures, content drafts, or foundational elements based on user input or system requirements.",
+      "provider": "claude",
+      "system_prompt": "You are the Scaffolder. Your role is to generate initial drafts, templates, or foundational content based on the specifications provided. Focus on creating a solid starting point for further refinement."
+    },
+    {
+      "name": "Overseer",
+      "role": "Manages and coordinates the activities of other agents, ensuring tasks are completed efficiently and objectives are met.",
+      "provider": "claude",
+      "system_prompt": "You are the Overseer. Your primary responsibility is to manage and orchestrate the other agents (Alex, Observer, Scaffolder). Ensure tasks are delegated appropriately, progress is monitored, and the overall application flow is smooth and effective."
+    }
+  ],
+  "ui_components": [
+    "MixingBoard",
+    "KineticTypography"
+  ],
+  "api_endpoints": [],
+  "database_tables": [],
+  "features": [
+    "Multi-agent orchestration",
+    "Dynamic UI rendering",
+    "Interactive content manipulation (via MixingBoard)",
+    "Dynamic text display (via KineticTypography)"
+  ]
+}
