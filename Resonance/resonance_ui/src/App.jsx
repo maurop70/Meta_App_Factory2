@@ -137,6 +137,76 @@ function PinGate({ onUnlock, onCancel, pinInput, setPinInput, pinError, isUnlock
   );
 }
 
+// ── Guided Interview Constants ──────────────────────────
+const HOBBY_PRESETS = ['Art', 'Sports', 'Gaming', 'Music', 'Technology', 'Nature', 'Social Media', 'Reading', 'Cooking'];
+const SOCIAL_LEVELS = [
+  { value: '', label: 'Not set' },
+  { value: 'isolated', label: 'Prefers solo activities' },
+  { value: 'small_group', label: 'Comfortable in small groups (2-3)' },
+  { value: 'social', label: 'Enjoys group activities' },
+  { value: 'leader', label: 'Takes initiative in groups' },
+];
+const STRESS_OPTIONS = ['Academic Pressure', 'Social Anxiety', 'Test Anxiety', 'Homework Overload', 'Time Management', 'Peer Conflicts'];
+const LEARNING_STYLES = ['Visual', 'Auditory', 'Kinesthetic', 'Reading/Writing'];
+const SEVERITY_OPTIONS = ['low', 'medium', 'high'];
+const TIMEOUT_OPTIONS = [
+  { value: 0, label: 'Never' },
+  { value: 15, label: '15 minutes' },
+  { value: 30, label: '30 minutes' },
+  { value: 60, label: '60 minutes' },
+];
+
+// Section Upload Component — contextual document upload per profile section
+function SectionUpload({ sectionTag, onUploadComplete }) {
+  const fileInputRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadCount, setUploadCount] = useState(0);
+
+  // Fetch count on mount
+  useEffect(() => {
+    fetch(`${API}/api/uploads/by-section/${sectionTag}`)
+      .then(r => r.json())
+      .then(data => setUploadCount((data.files || []).length))
+      .catch(() => { });
+  }, [sectionTag]);
+
+  const handleUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch(`${API}/api/upload?section_tag=${sectionTag}`, {
+        method: 'POST',
+        body: formData,
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setUploadCount(prev => prev + 1);
+      if (onUploadComplete) onUploadComplete();
+    } catch (err) {
+      console.error('Upload error:', err);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  return (
+    <span className="section-upload">
+      <button className="section-upload-button" onClick={() => fileInputRef.current?.click()}
+        disabled={uploading}
+        title="Upload vocabulary lists, teacher feedback, or interest-based articles to customize the Council's focus."
+      >
+        {uploading ? '⏳' : '📎'}
+        {uploadCount > 0 && <span className="upload-count-badge">{uploadCount}</span>}
+      </button>
+      <input ref={fileInputRef} type="file" accept=".pdf,.docx,.txt,.csv,.md"
+        style={{ display: 'none' }} onChange={handleUpload} />
+    </span>
+  );
+}
+
 // ParentPanel Component
 function ParentPanel({ onLockAndReturn, parentConfig, saveParentConfig, parentProgress, fetchParentProgress }) {
   const [activeTab, setActiveTab] = useState('instructions');
@@ -148,14 +218,62 @@ function ParentPanel({ onLockAndReturn, parentConfig, saveParentConfig, parentPr
   const [saveFeedback, setSaveFeedback] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
+  // Student Profile state
+  const profile = parentConfig.student_profile || {};
+  const [selectedHobbies, setSelectedHobbies] = useState(profile.hobbies_interests || []);
+  const [customHobby, setCustomHobby] = useState('');
+  const [socialLevel, setSocialLevel] = useState(profile.social_level || '');
+  const [academicAreas, setAcademicAreas] = useState(profile.academic_weak_areas || []);
+  const [newSubject, setNewSubject] = useState('');
+  const [newSpecificArea, setNewSpecificArea] = useState('');
+  const [newSeverity, setNewSeverity] = useState('medium');
+  const [selectedStressors, setSelectedStressors] = useState(profile.stress_indicators || []);
+  const [selectedLearningStyles, setSelectedLearningStyles] = useState(profile.learning_style_preferences || []);
+
+  // Council state
+  const [councilStatus, setCouncilStatus] = useState(null);
+  const [councilLoading, setCouncilLoading] = useState(false);
+  const [showPromptPreview, setShowPromptPreview] = useState(false);
+
+  // Settings state
+  const settings = parentConfig.settings || { council_intensity: 'supportive', session_timeout_minutes: 30 };
+  const [intensity, setIntensity] = useState(settings.council_intensity || 'supportive');
+  const [sessionTimeout, setSessionTimeout] = useState(settings.session_timeout_minutes ?? 30);
+  const [currentPin, setCurrentPin] = useState('');
+  const [newPin, setNewPin] = useState('');
+  const [pinFeedback, setPinFeedback] = useState('');
+  const [allUploads, setAllUploads] = useState([]);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [resetPin, setResetPin] = useState('');
+  const [resetFeedback, setResetFeedback] = useState('');
+  const [betaFeedback, setBetaFeedback] = useState('');
+
+  // Reports state
+  const reportIntel = parentConfig.report_intelligence || { enabled: true, reports: [] };
+  const [reportUploading, setReportUploading] = useState(null); // category being uploaded
+  const [reportFeedback, setReportFeedback] = useState('');
+  const [digestData, setDigestData] = useState(null);
+  const [showDigest, setShowDigest] = useState(false);
+  const [intelligenceEnabled, setIntelligenceEnabled] = useState(reportIntel.enabled !== false);
+
   useEffect(() => {
     setInstructionsInput(parentConfig.instructions || '');
   }, [parentConfig.instructions]);
 
   useEffect(() => {
-    if (activeTab === 'progress') {
-      fetchParentProgress();
-    }
+    const p = parentConfig.student_profile || {};
+    setSelectedHobbies(p.hobbies_interests || []);
+    setSocialLevel(p.social_level || '');
+    setAcademicAreas(p.academic_weak_areas || []);
+    setSelectedStressors(p.stress_indicators || []);
+    setSelectedLearningStyles(p.learning_style_preferences || []);
+  }, [parentConfig.student_profile]);
+
+  useEffect(() => {
+    if (activeTab === 'progress') fetchParentProgress();
+    if (activeTab === 'council') fetchCouncilPreview();
+    if (activeTab === 'settings') { fetchAllUploads(); fetchDigest(); }
+    if (activeTab === 'reports') fetchDigest();
   }, [activeTab, fetchParentProgress]);
 
   const handleSave = async (field, value) => {
@@ -173,6 +291,222 @@ function ParentPanel({ onLockAndReturn, parentConfig, saveParentConfig, parentPr
     }
   };
 
+  // ── Student Profile Handlers ──────────────────────────
+  const toggleChip = (item, list, setter) => {
+    setter(prev => prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item]);
+  };
+
+  const addCustomHobby = () => {
+    if (customHobby.trim() && !selectedHobbies.includes(customHobby.trim())) {
+      setSelectedHobbies(prev => [...prev, customHobby.trim()]);
+      setCustomHobby('');
+    }
+  };
+
+  const addAcademicArea = () => {
+    if (newSubject.trim() && newSpecificArea.trim()) {
+      setAcademicAreas(prev => [...prev, { subject: newSubject.trim(), specific_area: newSpecificArea.trim(), severity: newSeverity }]);
+      setNewSubject('');
+      setNewSpecificArea('');
+      setNewSeverity('medium');
+    }
+  };
+
+  const removeAcademicArea = (index) => {
+    setAcademicAreas(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const saveStudentProfile = async () => {
+    setIsSaving(true);
+    setSaveFeedback('');
+    try {
+      const res = await fetch(`${API}/api/parent/profile`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          hobbies_interests: selectedHobbies,
+          social_level: socialLevel,
+          academic_weak_areas: academicAreas,
+          stress_indicators: selectedStressors,
+          learning_style_preferences: selectedLearningStyles,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || `HTTP ${res.status}`);
+      }
+      setSaveFeedback('Student profile saved! Council will update.');
+      // Refresh parent config to reflect new profile
+      const configRes = await fetch(`${API}/api/parent/config`);
+      if (configRes.ok) {
+        const data = await configRes.json();
+        // Update parent config in parent component state via saveParentConfig
+      }
+    } catch (e) {
+      setSaveFeedback(`Error: ${e.message}`);
+    } finally {
+      setIsSaving(false);
+      setTimeout(() => setSaveFeedback(''), 3000);
+    }
+  };
+
+  // ── Council Handlers ──────────────────────────────────
+  const fetchCouncilPreview = async () => {
+    setCouncilLoading(true);
+    try {
+      const res = await fetch(`${API}/api/parent/council-preview`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setCouncilStatus(data);
+    } catch (e) {
+      console.error('Failed to fetch council preview:', e);
+    } finally {
+      setCouncilLoading(false);
+    }
+  };
+
+  const togglePersona = async (personaKey, currentlyDisabled) => {
+    const overrides = parentConfig.council_overrides || { active_strategies: [], disabled_personas: [] };
+    let newDisabled = [...(overrides.disabled_personas || [])];
+    if (currentlyDisabled) {
+      newDisabled = newDisabled.filter(k => k !== personaKey);
+    } else {
+      newDisabled.push(personaKey);
+    }
+    try {
+      await fetch(`${API}/api/parent/council-overrides`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ disabled_personas: newDisabled }),
+      });
+      fetchCouncilPreview(); // Refresh
+    } catch (e) {
+      console.error('Failed to toggle persona:', e);
+    }
+  };
+
+  // ── Settings Handlers ─────────────────────────────────
+  const saveSettings = async (field, value) => {
+    try {
+      const res = await fetch(`${API}/api/parent/settings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [field]: value }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setSaveFeedback('Settings saved!');
+      setTimeout(() => setSaveFeedback(''), 3000);
+    } catch (e) {
+      console.error('Failed to save settings:', e);
+    }
+  };
+
+  const handlePinReset = async () => {
+    setPinFeedback('');
+    try {
+      const res = await fetch(`${API}/api/parent/pin-reset`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ current_pin: currentPin, new_pin: newPin }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+      setPinFeedback('✅ PIN updated!');
+      setCurrentPin('');
+      setNewPin('');
+    } catch (e) {
+      setPinFeedback(`❌ ${e.message}`);
+    }
+  };
+
+  const fetchAllUploads = async () => {
+    try {
+      const res = await fetch(`${API}/api/uploads`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setAllUploads(data.files || []);
+    } catch (e) {
+      console.error('Failed to fetch uploads:', e);
+    }
+  };
+
+  const deleteUpload = async (filename) => {
+    try {
+      await fetch(`${API}/api/uploads/${filename}`, { method: 'DELETE' });
+      fetchAllUploads();
+    } catch (e) {
+      console.error('Failed to delete upload:', e);
+    }
+  };
+
+  // ── Report Handlers ──────────────────────────────────
+  const uploadReport = async (file, category) => {
+    setReportUploading(category);
+    setReportFeedback('');
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch(`${API}/api/parent/report-upload?category=${category}`, {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+      setReportFeedback(`✅ ${data.filename} processed (${data.insights_count} insights extracted)`);
+      fetchDigest();
+    } catch (e) {
+      setReportFeedback(`❌ Upload failed: ${e.message}`);
+    } finally {
+      setReportUploading(null);
+      setTimeout(() => setReportFeedback(''), 5000);
+    }
+  };
+
+  const fetchDigest = async () => {
+    try {
+      const res = await fetch(`${API}/api/parent/report-digest`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setDigestData(data);
+    } catch (e) {
+      console.error('Failed to fetch digest:', e);
+    }
+  };
+
+  const toggleIntelligence = async (enabled) => {
+    setIntelligenceEnabled(enabled);
+    try {
+      await fetch(`${API}/api/parent/report-settings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled }),
+      });
+      setSaveFeedback(enabled ? 'Intelligence enabled.' : 'Intelligence disabled.');
+      setTimeout(() => setSaveFeedback(''), 3000);
+    } catch (e) {
+      console.error('Failed to toggle intelligence:', e);
+    }
+  };
+
+  const handleResetProfile = async () => {
+    setResetFeedback('');
+    try {
+      const res = await fetch(`${API}/api/parent/reset-profile`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: resetPin }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+      setResetFeedback('✅ Profile reset to defaults.');
+      setShowResetConfirm(false);
+      setResetPin('');
+    } catch (e) {
+      setResetFeedback(`❌ ${e.message}`);
+    }
+  };
+
+  // ── Original Handlers ─────────────────────────────────
   const addTopic = () => {
     if (newTopicInput.trim() && !parentConfig.focus_topics.includes(newTopicInput.trim())) {
       const updatedTopics = [...parentConfig.focus_topics, newTopicInput.trim()];
@@ -210,7 +544,6 @@ function ParentPanel({ onLockAndReturn, parentConfig, saveParentConfig, parentPr
   const totalSessions = parentProgress.length;
   const totalWords = parentProgress.reduce((sum, entry) => sum + entry.user_words + entry.alex_words, 0);
   const averageSessionLength = totalSessions > 0 ? (totalWords / totalSessions).toFixed(0) : 0;
-
   const channelCounts = parentProgress.reduce((acc, entry) => {
     acc[entry.channel] = (acc[entry.channel] || 0) + 1;
     return acc;
@@ -227,13 +560,184 @@ function ParentPanel({ onLockAndReturn, parentConfig, saveParentConfig, parentPr
       </header>
 
       <nav className="parent-tab-nav">
+        <button className={`parent-tab-button ${activeTab === 'student_profile' ? 'active' : ''}`} onClick={() => setActiveTab('student_profile')}>📋 Student Profile</button>
+        <button className={`parent-tab-button ${activeTab === 'council' ? 'active' : ''}`} onClick={() => setActiveTab('council')}>🧠 Council</button>
         <button className={`parent-tab-button ${activeTab === 'instructions' ? 'active' : ''}`} onClick={() => setActiveTab('instructions')}>Instructions</button>
         <button className={`parent-tab-button ${activeTab === 'focus_topics' ? 'active' : ''}`} onClick={() => setActiveTab('focus_topics')}>Focus Topics</button>
         <button className={`parent-tab-button ${activeTab === 'vocabulary' ? 'active' : ''}`} onClick={() => setActiveTab('vocabulary')}>Vocabulary</button>
         <button className={`parent-tab-button ${activeTab === 'progress' ? 'active' : ''}`} onClick={() => setActiveTab('progress')}>Progress</button>
+        <button className={`parent-tab-button ${activeTab === 'reports' ? 'active' : ''}`} onClick={() => setActiveTab('reports')}>🏥 Reports</button>
+        <button className={`parent-tab-button ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>⚙️ Settings</button>
       </nav>
 
       <div className="parent-tab-content">
+
+        {/* ── STUDENT PROFILE (GUIDED INTERVIEW) ────────── */}
+        {activeTab === 'student_profile' && (
+          <div className="guided-interview">
+            <h3>🎯 Guided Student Interview</h3>
+            <p className="text-muted">Tell us about your child so Alex's Council of Therapists can personalize their approach.</p>
+
+            {/* Hobbies & Interests */}
+            <div className="interview-section">
+              <h4>Hobbies & Interests <SectionUpload sectionTag="hobbies" /></h4>
+              <p className="text-muted">Select all that apply, or add your own.</p>
+              <div className="chip-grid">
+                {HOBBY_PRESETS.map(hobby => (
+                  <button key={hobby}
+                    className={`chip ${selectedHobbies.includes(hobby) ? 'chip-active' : ''}`}
+                    onClick={() => toggleChip(hobby, selectedHobbies, setSelectedHobbies)}
+                    disabled={isSaving}
+                  >{hobby}</button>
+                ))}
+                {selectedHobbies.filter(h => !HOBBY_PRESETS.includes(h)).map(hobby => (
+                  <button key={hobby}
+                    className="chip chip-active chip-custom"
+                    onClick={() => toggleChip(hobby, selectedHobbies, setSelectedHobbies)}
+                    disabled={isSaving}
+                  >{hobby} ✕</button>
+                ))}
+              </div>
+              <div className="add-topic-form" style={{ marginTop: '8px' }}>
+                <input type="text" value={customHobby} onChange={e => setCustomHobby(e.target.value)}
+                  placeholder="Add custom interest" className="add-topic-input" disabled={isSaving}
+                  onKeyDown={e => e.key === 'Enter' && addCustomHobby()}
+                />
+                <button onClick={addCustomHobby} disabled={!customHobby.trim() || isSaving} className="save-button">Add</button>
+              </div>
+            </div>
+
+            {/* Social Level */}
+            <div className="interview-section">
+              <h4>Social Engagement Level <SectionUpload sectionTag="social" /></h4>
+              <p className="text-muted">How does your child interact socially?</p>
+              <select value={socialLevel} onChange={e => setSocialLevel(e.target.value)}
+                className="social-level-select" disabled={isSaving}>
+                {SOCIAL_LEVELS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Academic Weak Areas */}
+            <div className="interview-section">
+              <h4>Academic Weak Areas <SectionUpload sectionTag="academic" /></h4>
+              <p className="text-muted">Specific subjects and topics needing support (from assignment trackers, report cards, etc.).</p>
+              {academicAreas.map((area, idx) => (
+                <div key={idx} className="academic-area-card">
+                  <span className={`severity-badge severity-${area.severity}`}>{area.severity.toUpperCase()}</span>
+                  <strong>{area.subject}</strong> — {area.specific_area}
+                  <button onClick={() => removeAcademicArea(idx)} className="remove-tag-button" disabled={isSaving}>✕</button>
+                </div>
+              ))}
+              <div className="academic-area-form">
+                <input type="text" value={newSubject} onChange={e => setNewSubject(e.target.value)}
+                  placeholder="Subject (e.g., Biology)" disabled={isSaving} />
+                <input type="text" value={newSpecificArea} onChange={e => setNewSpecificArea(e.target.value)}
+                  placeholder="Specific area (e.g., Evolution concepts)" disabled={isSaving} />
+                <select value={newSeverity} onChange={e => setNewSeverity(e.target.value)} disabled={isSaving}>
+                  {SEVERITY_OPTIONS.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+                </select>
+                <button onClick={addAcademicArea} disabled={!newSubject.trim() || !newSpecificArea.trim() || isSaving} className="save-button">Add Area</button>
+              </div>
+            </div>
+
+            {/* Stress Indicators */}
+            <div className="interview-section">
+              <h4>Current Stress Factors</h4>
+              <p className="text-muted">Select any that currently apply.</p>
+              <div className="chip-grid">
+                {STRESS_OPTIONS.map(stress => (
+                  <button key={stress}
+                    className={`chip chip-stress ${selectedStressors.includes(stress) ? 'chip-active' : ''}`}
+                    onClick={() => toggleChip(stress, selectedStressors, setSelectedStressors)}
+                    disabled={isSaving}
+                  >{stress}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* Learning Style */}
+            <div className="interview-section">
+              <h4>Learning Style Preferences</h4>
+              <p className="text-muted">How does your child learn best?</p>
+              <div className="chip-grid">
+                {LEARNING_STYLES.map(style => (
+                  <button key={style}
+                    className={`chip chip-learn ${selectedLearningStyles.includes(style) ? 'chip-active' : ''}`}
+                    onClick={() => toggleChip(style, selectedLearningStyles, setSelectedLearningStyles)}
+                    disabled={isSaving}
+                  >{style}</button>
+                ))}
+              </div>
+            </div>
+
+            <button onClick={saveStudentProfile} disabled={isSaving} className="save-button save-profile-button">
+              {isSaving ? 'Saving Profile...' : '💾 Save Student Profile'}
+            </button>
+            {saveFeedback && <span className="save-feedback">{saveFeedback}</span>}
+          </div>
+        )}
+
+        {/* ── COUNCIL OF THERAPISTS ──────────────────── */}
+        {activeTab === 'council' && (
+          <div className="council-tab">
+            <h3>🧠 Council of Therapists</h3>
+            <p className="text-muted">These therapeutic perspectives shape how Alex interacts, based on the Student Profile.</p>
+
+            {councilLoading ? (
+              <p className="text-muted">Loading council status...</p>
+            ) : councilStatus ? (
+              <>
+                <div className="council-persona-grid">
+                  {councilStatus.personas.map(persona => (
+                    <div key={persona.key} className={`council-persona-card ${persona.active ? 'persona-active' : 'persona-inactive'}`}>
+                      <div className="persona-card-header">
+                        <span className="persona-icon">{persona.icon}</span>
+                        <h4>{persona.name}</h4>
+                        <span className={`persona-badge ${persona.active ? 'badge-active' : 'badge-inactive'}`}>
+                          {persona.active ? '● ACTIVE' : '○ INACTIVE'}
+                        </span>
+                      </div>
+                      <p className="persona-description">{persona.description}</p>
+                      <div className="persona-controls">
+                        {persona.always_active ? (
+                          <span className="text-muted" style={{ fontSize: '0.75rem' }}>Core persona — always active</span>
+                        ) : (
+                          <button
+                            className={`persona-toggle ${persona.disabled_by_parent ? 'toggle-disabled' : ''}`}
+                            onClick={() => togglePersona(persona.key, persona.disabled_by_parent)}
+                          >
+                            {persona.disabled_by_parent ? 'Enable' : 'Disable'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="council-strategies">
+                  <h4>Active Study Strategies</h4>
+                  <div className="chip-grid">
+                    {(councilStatus.active_strategies || []).map(s => (
+                      <span key={s} className="chip chip-active">✅ {s}</span>
+                    ))}
+                  </div>
+                </div>
+
+                <button className="save-button" onClick={() => setShowPromptPreview(!showPromptPreview)} style={{ marginTop: '16px' }}>
+                  {showPromptPreview ? 'Hide' : '👁️ Preview'} Council Prompt
+                </button>
+                {showPromptPreview && (
+                  <pre className="council-prompt-preview">{councilStatus.generated_prompt || 'No council prompt generated. Fill out the Student Profile first.'}</pre>
+                )}
+              </>
+            ) : (
+              <p className="text-muted">Fill out the Student Profile tab first to activate the Council.</p>
+            )}
+          </div>
+        )}
+
         {activeTab === 'instructions' && (
           <div>
             <h3>General Instructions for Alex</h3>
@@ -376,6 +880,272 @@ function ParentPanel({ onLockAndReturn, parentConfig, saveParentConfig, parentPr
                 </tbody>
               </table>
             )}
+          </div>
+        )}
+
+        {/* ── PROFESSIONAL REPORTS ─────────────────────── */}
+        {activeTab === 'reports' && (
+          <div className="reports-tab">
+            <h3>🏥 Professional & Clinical Reports</h3>
+            <p className="text-muted">Upload medical, educational, and behavioral reports. The Council will extract key insights and adapt Alex's interaction style automatically.</p>
+
+            <div className="report-category-grid">
+              {[
+                { key: 'medical', icon: '🩺', title: 'Medical / Clinical', desc: 'Doctor reports, therapist evaluations, neuropsych assessments' },
+                { key: 'educational', icon: '🏫', title: 'Educational', desc: 'School reports, IEPs, teacher evaluations, progress reports' },
+                { key: 'behavioral', icon: '🧩', title: 'Behavioral', desc: 'Specialist assessments, social worker notes, behavioral plans' },
+              ].map(cat => (
+                <div key={cat.key} className={`report-category-card ${reportUploading === cat.key ? 'report-processing' : ''}`}>
+                  <div className="report-category-header">
+                    <span className="report-category-icon">{cat.icon}</span>
+                    <div>
+                      <h4>{cat.title}</h4>
+                      <p className="text-muted" style={{ fontSize: '0.8rem', margin: 0 }}>{cat.desc}</p>
+                    </div>
+                  </div>
+                  {reportUploading === cat.key ? (
+                    <div className="report-processing-indicator">
+                      <span className="processing-spinner">⏳</span> Analyzing report... The Council is extracting insights.
+                    </div>
+                  ) : (
+                    <label className="report-upload-zone">
+                      <input type="file" accept=".pdf,.docx,.txt" style={{ display: 'none' }}
+                        onChange={e => { if (e.target.files[0]) uploadReport(e.target.files[0], cat.key); e.target.value = ''; }} />
+                      <span>📄 Drop or click to upload</span>
+                    </label>
+                  )}
+                  {reportIntel.reports?.filter(r => r.category === cat.key).map((r, i) => (
+                    <div key={i} className="report-entry">
+                      <span>{r.filename}</span>
+                      <span className={`severity-badge severity-${r.status === 'processed' ? 'low' : 'high'}`}>
+                        {r.status === 'processed' ? 'ANALYZED' : 'ERROR'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+
+            {reportFeedback && <div className="save-feedback" style={{ marginTop: '12px' }}>{reportFeedback}</div>}
+
+            {digestData && digestData.total_insights > 0 && (
+              <div className="digest-preview">
+                <h4>🧠 Council Intelligence Summary ({digestData.total_insights} insights)</h4>
+                <div className="digest-grid">
+                  {digestData.diagnoses?.length > 0 && (
+                    <div className="digest-card">
+                      <h5>🏥 Conditions</h5>
+                      {digestData.diagnoses.map((d, i) => <p key={i}>• {d}</p>)}
+                    </div>
+                  )}
+                  {digestData.accommodations?.length > 0 && (
+                    <div className="digest-card">
+                      <h5>✅ Accommodations</h5>
+                      {digestData.accommodations.map((a, i) => <p key={i}>→ {a}</p>)}
+                    </div>
+                  )}
+                  {digestData.triggers?.length > 0 && (
+                    <div className="digest-card">
+                      <h5>⚠️ Triggers</h5>
+                      {digestData.triggers.map((t, i) => <p key={i}>⚠️ {t}</p>)}
+                    </div>
+                  )}
+                  {digestData.strengths?.length > 0 && (
+                    <div className="digest-card">
+                      <h5>🌟 Strengths</h5>
+                      {digestData.strengths.map((s, i) => <p key={i}>✨ {s}</p>)}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── SETTINGS ────────────────────────────────── */}
+        {activeTab === 'settings' && (
+          <div className="settings-tab">
+            <h3>⚙️ Settings</h3>
+
+            {/* The Council */}
+            <div className="settings-section">
+              <h4>🧠 The Council</h4>
+              <div className="settings-row">
+                <label>Feedback Intensity</label>
+                <div className="intensity-toggle">
+                  <button className={`intensity-btn ${intensity === 'supportive' ? 'intensity-active' : ''}`}
+                    onClick={() => { setIntensity('supportive'); saveSettings('council_intensity', 'supportive'); }}>
+                    💛 Supportive
+                  </button>
+                  <button className={`intensity-btn intensity-challenging ${intensity === 'challenging' ? 'intensity-active' : ''}`}
+                    onClick={() => { setIntensity('challenging'); saveSettings('council_intensity', 'challenging'); }}>
+                    🔥 Challenging
+                  </button>
+                </div>
+                <p className="text-muted" style={{ marginTop: '8px', fontSize: '0.8rem' }}>
+                  {intensity === 'supportive'
+                    ? 'Alex uses gentle, encouraging language and celebrates small wins.'
+                    : 'Alex pushes with follow-up questions and raises the bar incrementally.'}
+                </p>
+              </div>
+              {saveFeedback && <span className="save-feedback">{saveFeedback}</span>}
+            </div>
+
+            {/* Intelligence Sync */}
+            <div className="settings-section">
+              <h4>🧠 Intelligence Sync</h4>
+              <div className="settings-row">
+                <label>Professional Report Context</label>
+                <div className="intensity-toggle">
+                  <button className={`intensity-btn ${intelligenceEnabled ? 'intensity-active' : ''}`}
+                    onClick={() => toggleIntelligence(true)}>
+                    ✅ Enabled
+                  </button>
+                  <button className={`intensity-btn ${!intelligenceEnabled ? 'intensity-active' : ''}`}
+                    onClick={() => toggleIntelligence(false)}>
+                    ❌ Disabled
+                  </button>
+                </div>
+                <p className="text-muted" style={{ marginTop: '8px', fontSize: '0.8rem' }}>
+                  {intelligenceEnabled
+                    ? 'Clinical insights from uploaded reports are actively guiding the Council.'
+                    : 'Report insights are stored but NOT being used in conversations.'}
+                </p>
+              </div>
+              {digestData && digestData.total_insights > 0 && (
+                <div className="settings-row">
+                  <label>What the Council Learned ({digestData.total_insights} insights)</label>
+                  <button className="save-button" onClick={() => setShowDigest(!showDigest)}>
+                    {showDigest ? 'Hide Summary' : '🔍 View What Council Learned'}
+                  </button>
+                  {showDigest && (
+                    <div className="digest-preview" style={{ marginTop: '12px' }}>
+                      <div className="digest-grid">
+                        {digestData.diagnoses?.length > 0 && (
+                          <div className="digest-card"><h5>🏥 Conditions</h5>{digestData.diagnoses.map((d, i) => <p key={i}>• {d}</p>)}</div>
+                        )}
+                        {digestData.accommodations?.length > 0 && (
+                          <div className="digest-card"><h5>✅ Accommodations</h5>{digestData.accommodations.map((a, i) => <p key={i}>→ {a}</p>)}</div>
+                        )}
+                        {digestData.triggers?.length > 0 && (
+                          <div className="digest-card"><h5>⚠️ Triggers</h5>{digestData.triggers.map((t, i) => <p key={i}>⚠️ {t}</p>)}</div>
+                        )}
+                        {digestData.strengths?.length > 0 && (
+                          <div className="digest-card"><h5>🌟 Strengths</h5>{digestData.strengths.map((s, i) => <p key={i}>✨ {s}</p>)}</div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Security */}
+            <div className="settings-section">
+              <h4>🔒 Security</h4>
+              <div className="settings-row">
+                <label>PIN Reset</label>
+                <div className="pin-reset-form">
+                  <input type="password" value={currentPin} onChange={e => setCurrentPin(e.target.value)}
+                    placeholder="Current PIN" maxLength={8} />
+                  <input type="password" value={newPin} onChange={e => setNewPin(e.target.value)}
+                    placeholder="New PIN (min 4 chars)" maxLength={8} />
+                  <button className="save-button" onClick={handlePinReset}
+                    disabled={!currentPin || newPin.length < 4}>Reset PIN</button>
+                </div>
+                {pinFeedback && <span className="save-feedback">{pinFeedback}</span>}
+              </div>
+              <div className="settings-row">
+                <label>Session Timeout</label>
+                <select value={sessionTimeout} onChange={e => {
+                  const val = parseInt(e.target.value);
+                  setSessionTimeout(val);
+                  saveSettings('session_timeout_minutes', val);
+                }} className="social-level-select">
+                  {TIMEOUT_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+                <p className="text-muted" style={{ marginTop: '4px', fontSize: '0.8rem' }}>
+                  Auto-lock the Parent Portal after inactivity.
+                </p>
+              </div>
+            </div>
+
+            {/* Data Sync */}
+            <div className="settings-section">
+              <h4>📁 Data Sync</h4>
+              <div className="settings-row">
+                <label>Document Library ({allUploads.length} files)</label>
+                {allUploads.length === 0 ? (
+                  <p className="text-muted">No documents uploaded yet. Use the 📎 icons in Student Profile to add files.</p>
+                ) : (
+                  <table className="progress-table" style={{ marginTop: '8px' }}>
+                    <thead>
+                      <tr>
+                        <th>Filename</th>
+                        <th>Section</th>
+                        <th>Type</th>
+                        <th>Size</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {allUploads.map((file, idx) => (
+                        <tr key={idx}>
+                          <td>{file.filename}</td>
+                          <td><span className="chip chip-active" style={{ fontSize: '0.7rem', padding: '2px 8px' }}>{file.section_tag}</span></td>
+                          <td>.{file.type}</td>
+                          <td>{file.text_length} chars</td>
+                          <td>
+                            <button className="delete-file-button" onClick={() => deleteUpload(file.filename)}>🗑️</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+              <div className="settings-row settings-danger-zone">
+                <label>⚠️ Resonance Reset</label>
+                <p className="text-muted">Clear the current student profile, council settings, and all instructions to start fresh.</p>
+                {!showResetConfirm ? (
+                  <button className="reset-button" onClick={() => setShowResetConfirm(true)}>Reset Resonance Profile</button>
+                ) : (
+                  <div className="reset-confirm">
+                    <p style={{ color: '#E74C3C', fontWeight: 600 }}>This action cannot be undone. Enter your PIN to confirm:</p>
+                    <input type="password" value={resetPin} onChange={e => setResetPin(e.target.value)}
+                      placeholder="Enter PIN" maxLength={8} />
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                      <button className="reset-button" onClick={handleResetProfile} disabled={!resetPin}>Confirm Reset</button>
+                      <button className="save-button" onClick={() => { setShowResetConfirm(false); setResetPin(''); }}>Cancel</button>
+                    </div>
+                    {resetFeedback && <span className="save-feedback">{resetFeedback}</span>}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Commercial */}
+            <div className="settings-section">
+              <h4>📋 Commercial</h4>
+              <div className="settings-row">
+                <label>Beta Feedback</label>
+                <p className="text-muted">Report bugs, stability issues, or feature requests.</p>
+                <textarea className="instructions-textarea" style={{ minHeight: '80px' }}
+                  value={betaFeedback} onChange={e => setBetaFeedback(e.target.value)}
+                  placeholder="Describe any issues or suggestions..." />
+                <button className="save-button" onClick={() => {
+                  if (betaFeedback.trim()) {
+                    console.log('[Beta Feedback]', betaFeedback);
+                    setSaveFeedback('Feedback submitted! Thank you.');
+                    setBetaFeedback('');
+                    setTimeout(() => setSaveFeedback(''), 3000);
+                  }
+                }} disabled={!betaFeedback.trim()}>Submit Feedback</button>
+                {saveFeedback && <span className="save-feedback">{saveFeedback}</span>}
+              </div>
+            </div>
           </div>
         )}
       </div>
