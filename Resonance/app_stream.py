@@ -15,6 +15,26 @@ logger = logging.getLogger("ResonanceStream")
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, SCRIPT_DIR)
 
+# Sentinel Bridge (Council Engine)
+SENTINEL_DIR = os.path.join(SCRIPT_DIR, "Sentinel_Bridge")
+sys.path.insert(0, SENTINEL_DIR)
+try:
+    from council_engine import build_council_prompt
+    COUNCIL_ENGINE_LOADED = True
+    logger.info("Council of Therapists engine loaded for streaming.")
+except ImportError:
+    COUNCIL_ENGINE_LOADED = False
+    logger.warning("Council engine not available for streaming — using flat directives.")
+
+# Report Digest (Clinical Intelligence)
+try:
+    from report_digest import build_clinical_prompt
+    DIGEST_ENGINE_LOADED = True
+    logger.info("Report Digest engine loaded for streaming.")
+except ImportError:
+    DIGEST_ENGINE_LOADED = False
+    logger.warning("Report Digest engine not available for streaming.")
+
 # Vault
 _core = os.path.abspath(os.path.join(SCRIPT_DIR, "..", ".."))
 for vp in [os.path.join(SCRIPT_DIR, "..", "Alpha_V2_Genesis"), _core]:
@@ -204,10 +224,11 @@ def stream_chat(prompt, dashboard_context=None):
     sys_prompt += uploaded_files_context
     # --- END NEW ---
 
-    # --- NEW: Load and append parent configuration context ---
+    # --- Parent Configuration & Council of Therapists Injection ---
     try:
         parent_config = _load_parent_config_for_stream()
         if parent_config:
+            # 1. Flat parent instructions (always injected if present)
             if parent_config.get("instructions"):
                 sys_prompt += "\n\n--- PARENT INSTRUCTIONS (PRIORITY) ---\nThe parent/guardian has provided the following instructions. Treat these as high-priority directives:\n"
                 sys_prompt += parent_config["instructions"]
@@ -228,9 +249,22 @@ def stream_chat(prompt, dashboard_context=None):
                     vocab_items.append(f"- {word}: {definition} (Example: {example})")
                 sys_prompt += "\n".join(vocab_items)
                 sys_prompt += "\n"
+            
+            # 2. Council of Therapists dynamic injection
+            if COUNCIL_ENGINE_LOADED and parent_config.get("student_profile"):
+                council_prompt = build_council_prompt(parent_config)
+                if council_prompt:
+                    sys_prompt += council_prompt
+
+            # 3. Clinical & Educational Intelligence injection
+            report_intel = parent_config.get("report_intelligence", {})
+            if DIGEST_ENGINE_LOADED and report_intel.get("enabled", True):
+                clinical_prompt = build_clinical_prompt(parent_config)
+                if clinical_prompt:
+                    sys_prompt += clinical_prompt
     except Exception as e:
-        logger.error(f"Error injecting parent config into system prompt: {e}")
-    # --- END NEW ---
+        logger.error(f"Error injecting parent config / council into system prompt: {e}")
+    # --- END Parent/Council/Clinical Injection ---
 
     # 2. Build the conversation context for the current Gemini API call
     # This list includes the system prompt, initial model response, all loaded history, and the current user prompt.

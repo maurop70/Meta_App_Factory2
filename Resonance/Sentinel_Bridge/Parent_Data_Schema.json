@@ -1,0 +1,113 @@
+{
+    "schema_version": "1.0",
+    "description": "Canonical schema for the Resonance Guided Interview — structured parent input that drives the Council of Therapists persona engine.",
+    "student_profile": {
+        "hobbies_interests": {
+            "type": "multi_select",
+            "description": "Student's current comfort interests and hobbies",
+            "categories": [
+                "Art",
+                "Sports",
+                "Gaming",
+                "Music",
+                "Technology",
+                "Nature",
+                "Social Media",
+                "Reading",
+                "Cooking"
+            ],
+            "custom_allowed": true
+        },
+        "social_level": {
+            "type": "single_select",
+            "description": "Student's social engagement pattern",
+            "options": [
+                {
+                    "value": "isolated",
+                    "label": "Prefers solo activities",
+                    "council_signal": "social_skills_coach"
+                },
+                {
+                    "value": "small_group",
+                    "label": "Comfortable in small groups (2-3)",
+                    "council_signal": null
+                },
+                {
+                    "value": "social",
+                    "label": "Enjoys group activities",
+                    "council_signal": null
+                },
+                {
+                    "value": "leader",
+                    "label": "Takes initiative in groups",
+                    "council_signal": null
+                }
+            ]
+        },
+        "academic_weak_areas": {
+            "type": "structured_list",
+            "description": "Specific academic areas needing support (from trackers like Weekly Assignment Tracker)",
+            "fields": {
+                "subject": {
+                    "type": "string",
+                    "required": true
+                },
+                "specific_area": {
+                    "type": "string",
+                    "required": true
+                },
+                "severity": {
+                    "type": "enum",
+                    "options": [
+                        "low",
+                        "medium",
+                        "high"
+                    ],
+                    "required": true
+                }
+            }
+        },
+        "stress_indicators": {
+            "type": "multi_select",
+            "description": "Current stress factors affecting the student",
+            "options": [
+                "Academic Pressure",
+                "Social Anxiety",
+                "Test Anxiety",
+                "Homework Overload",
+                "Time Management",
+                "Peer Conflicts"
+            ],
+            "council_signal": "academic_stress_counselor"
+        },
+        "learning_style_preferences": {
+            "type": "multi_select",
+            "description": "How the student best absorbs information",
+            "options": [
+                "Visual",
+                "Auditory",
+                "Kinesthetic",
+                "Reading/Writing"
+            ]
+        }
+    },
+    "council_overrides": {
+        "description": "Manual parent controls for the Council of Therapists",
+        "active_strategies": {
+            "type": "multi_select",
+            "default": [
+                "Flashcards",
+                "Blurting",
+                "Spaced Repetition",
+                "Teach-Back",
+                "Mind Mapping"
+            ],
+            "description": "Active study strategies the Council should prioritize (Science of Learning)"
+        },
+        "disabled_personas": {
+            "type": "multi_select",
+            "default": [],
+            "description": "Personas the parent wants to disable (safety valve)"
+        }
+    }
+}

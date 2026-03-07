@@ -20,5 +20,35 @@
       "alex_words": 70,
       "session_duration_estimate": "short"
     }
-  ]
+  ],
+  "student_profile": {
+    "hobbies_interests": [
+      "Gaming",
+      "Music"
+    ],
+    "social_level": "social",
+    "academic_weak_areas": [
+      {
+        "subject": "Biology",
+        "specific_area": "Evolution concepts",
+        "severity": "high"
+      }
+    ],
+    "stress_indicators": [
+      "Academic Pressure",
+      "Test Anxiety",
+      "Homework Overload"
+    ],
+    "learning_style_preferences": [
+      "Visual",
+      "Kinesthetic"
+    ]
+  },
+  "report_intelligence": {
+    "enabled": true,
+    "reports": []
+  },
+  "settings": {
+    "council_intensity": "supportive"
+  }
 }
