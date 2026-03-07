@@ -56,3 +56,20 @@
   - MOD: `App.jsx` (Reports tab with 3 categories, Intelligence Sync in Settings)
   - MOD: `index.css` (report cards, upload zones, processing indicators, digest panels)
 - **Status:** DEPLOYED
+
+## PROJECT_GENESIS
+- **Timestamp:** 2026-03-07 01:09:00
+- **App:** Project Aether → Delegate AI
+- **Reason:** Established Project_Genesis infrastructure — consolidated all Genesis/Delegate AI files from Boardroom_Exchange into dedicated project folder. Created project-specific dashboard for pilot tracking.
+- **Changes:**
+  - NEW: `Project_Aether/Project_Genesis/` (root directory)
+  - NEW: `Project_Genesis/Boardroom/` (project-scoped reports)
+  - NEW: `Project_Genesis/Assets/` (product assets)
+  - NEW: `Project_Genesis/delegate_ai_dashboard.gs` (5-tab pilot dashboard)
+  - MOVED: `DEEP_CRAWLER_GENESIS_SCAN.md` → `Project_Genesis/Boardroom/`
+  - MOVED: `CRITIC_GENESIS_VALIDATION.md` → `Project_Genesis/Boardroom/`
+  - MOVED: `CFO_PILOT_AGENT_BUDGET.md` → `Project_Genesis/Boardroom/`
+  - MOVED: `DELEGATE_AI_TECH_STACK.md` → `Project_Genesis/Boardroom/`
+  - MOVED: `PRIVACY_SHIELD_REPORT.md` → `Project_Genesis/Boardroom/`
+  - MOVED: `BETA_FIRM_TARGET_LIST.md` → `Project_Genesis/Boardroom/`
+- **Status:** INFRASTRUCTURE ESTABLISHED

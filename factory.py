@@ -27,9 +27,17 @@ from ui_designer import UIDesigner
 
 # n8n API config for project creation
 N8N_API_BASE = "https://humanresource.app.n8n.cloud/api/v1"
-N8N_API_KEY = os.getenv("N8N_API_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1ZGM3MWNiMy0yZWRkLTRmMWItODQwMS00MGQ4M2FkOTBmMWIiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzY4NTE1NDM5fQ.RibOEnSDVDwlwVJGuac_BTfmZdnpx7SL0-QhxUn4xns")
+# Load from .env — no hardcoded fallback (COMPLIANCE-CRED-001 remediation)
+try:
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
+except ImportError:
+    pass  # dotenv not installed; relies on system env vars
+N8N_API_KEY = os.getenv("N8N_API_KEY", "")
+if not N8N_API_KEY:
+    print("⚠️ WARNING: N8N_API_KEY not set. n8n operations will fail.", flush=True)
 N8N_HEADERS = {"X-N8N-API-KEY": N8N_API_KEY, "Content-Type": "application/json"}
-DEFAULT_PROJECT_ID = "boV7btArBtpvCiXm"  # Specialist Agents (fallback)
+DEFAULT_PROJECT_ID = os.getenv("N8N_DEFAULT_PROJECT_ID", "boV7btArBtpvCiXm")
 
 class MetaAppFactory:
     # Canonical app storage: Google Drive > local fallback

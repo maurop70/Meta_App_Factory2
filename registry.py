@@ -29,7 +29,14 @@ def _load_config():
 
 _CONFIG = _load_config()
 TABLE_ID = _CONFIG.get("inventory_table_id", "")
-API_KEY = os.getenv("N8N_API_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1ZGM3MWNiMy0yZWRkLTRmMWItODQwMS00MGQ4M2FkOTBmMWIiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzY4NTE1NDM5fQ.RibOEnSDVDwlwVJGuac_BTfmZdnpx7SL0-QhxUn4xns")
+# Load from .env — no hardcoded fallback (COMPLIANCE-CRED-001 remediation)
+try:
+    from dotenv import load_dotenv
+    _env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+    load_dotenv(_env_path)
+except ImportError:
+    pass  # dotenv not installed; relies on system env vars
+API_KEY = os.getenv("N8N_API_KEY", "")
 HEADERS = {"X-N8N-API-KEY": API_KEY, "Content-Type": "application/json"}
 
 # ── Legacy fallback ──

@@ -1,0 +1,115 @@
+{
+  "agents": [
+    {
+      "name": "Alex",
+      "role": "Main conversational agent, personalized tutor/companion, wingman. Engages users on core interests to improve communication skills.",
+      "provider": "claude",
+      "system_prompt": "You are Alex, a cool, supportive, and knowledgeable companion for a 16-year-old male. Engage him on topics like music, socializing, and dating to improve his auditory processing, speech, and logical sentence structuring. Provide read-along audio and dynamic vocabulary. Act as a wingman when requested."
+    },
+    {
+      "name": "Observer",
+      "role": "Sentiment analysis, frustration detection, user behavior monitoring.",
+      "provider": "gemini",
+      "system_prompt": "You are the Observer. Analyze user interactions for sentiment, frustration, and engagement. Report findings to the Overseer to inform the Pivot Protocol. Do not directly interact with the user."
+    },
+    {
+      "name": "Scaffolder",
+      "role": "UI generation and adaptation based on user progress and needs, leveraging the Antigravity framework.",
+      "provider": "internal/Antigravity",
+      "system_prompt": "You are the Scaffolder. Dynamically generate and adapt UI components and layouts using the Antigravity framework, based on user progress and system directives. Ensure a modern, sleek, dark-mode design with kinetic typography and fluid transitions."
+    },
+    {
+      "name": "Overseer",
+      "role": "Admin, orchestrator, pivot protocol activation, parent/educator dashboard management, compliance, monetization.",
+      "provider": "claude",
+      "system_prompt": "You are the Overseer. Monitor system state, activate the Pivot Protocol, manage the Level Up Engine, oversee the Parent/Educator Dashboard, ensure COPPA/GDPR compliance, and manage monetization. Orchestrate backend processes, often via n8n."
+    }
+  ],
+  "ui_components": [
+    "KineticTypography",
+    "MixingBoard",
+    "ChatInterface",
+    "ParentEducatorDashboard",
+    "LevelUpProgressDisplay",
+    "SettingsAndComplianceUI"
+  ],
+  "api_endpoints": [
+    "/api/chat/message",
+    "/api/audio/tts",
+    "/api/mixing-board/control",
+    "/api/mode/wingman",
+    "/api/vocab/update",
+    "/api/user/sentiment",
+    "/api/system/pivot",
+    "/api/user/progress",
+    "/api/admin/dashboard/data",
+    "/api/admin/settings",
+    "/api/auth/login",
+    "/api/auth/register"
+  ],
+  "database_tables": [
+    "users",
+    "conversations",
+    "user_progress",
+    "vocabulary_items",
+    "audio_assets",
+    "admin_profiles",
+    "app_configurations",
+    "sentiment_logs",
+    "monetization_subscriptions"
+  ],
+  "features": [
+    "Read-Along Audio (TTS implementation)",
+    "Mixing Board Functionality",
+    "Wingman Mode (contextual agent behavior)",
+    "Dynamic Vocabulary Injection",
+    "Frustration Detection & Pivot Protocol",
+    "Parent/Educator Dashboard ('The Control Room')",
+    "Level Up Engine (3 phases, auto-difficulty)",
+    "COPPA/GDPR Compliance",
+    "Monetization Schema (e.g., subscription, in-app purchases)",
+    "Dark Mode UI",
+    "Kinetic Typography UI",
+    "Fluid State Transitions UI",
+    "Server-Sent Events (SSE) for real-time updates",
+    "Vector Database Integration (pgvector for context/semantic search)"
+  ],
+  "n8n_workflows": [
+    {
+      "name": "Auth Bridge",
+      "description": "Handles user authentication flows, potentially integrating with external identity providers or managing Supabase auth."
+    },
+    {
+      "name": "Database Sync & Backup",
+      "description": "Automates regular synchronization, backups, and data integrity checks for Supabase."
+    },
+    {
+      "name": "Error & Anomaly Aggregator",
+      "description": "Collects, categorizes, and alerts on system errors or unusual user behavior."
+    },
+    {
+      "name": "Compliance & Data Retention Manager",
+      "description": "Automates COPPA/GDPR compliance tasks, such as data access requests, deletion, and retention policies."
+    },
+    {
+      "name": "Monetization & Billing Processor",
+      "description": "Manages subscriptions, payment processing, and usage-based billing."
+    },
+    {
+      "name": "Level Up Engine Orchestrator",
+      "description": "Triggers and manages the progression through the Level Up Engine phases, adjusting difficulty and content."
+    },
+    {
+      "name": "Pivot Protocol Automation",
+      "description": "Executes predefined actions when the Overseer triggers a pivot, e.g., changing agent behavior, UI adjustments."
+    },
+    {
+      "name": "Parent/Educator Reporting",
+      "description": "Generates and delivers periodic reports to parents/educators based on 'The Control Room' data."
+    },
+    {
+      "name": "Dynamic Content & Vocabulary Update",
+      "description": "Manages the injection and updating of dynamic vocabulary and content based on user progress or external sources."
+    }
+  ]
+}
