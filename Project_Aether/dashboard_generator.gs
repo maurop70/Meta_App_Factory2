@@ -391,6 +391,7 @@ function buildBoardroomFeed(ss) {
     ["PRIVACY_SHIELD_REPORT.md", "Compliance Officer", "Privacy Audit", "✅ CLEARED", "2026-03-07", "5-layer privilege safeguards, pilot approved"],
     ["BETA_FIRM_TARGET_LIST.md", "CEO + CMO", "Market Outreach", "✅ FILED", "2026-03-07", "10 beta firms, 3-phase outreach plan"],
     ["COMPLIANCE_CLEARANCE_v2.md", "Compliance Officer", "Universal Clearance", "✅ CLEARED", "2026-03-07", "All remediations confirmed, 10 creds secured"],
+    ["COMPLIANCE_CLEARANCE_v3.md", "Compliance Officer", "Skills Clearance", "✅ GREEN", "2026-03-07", "Credential exposure GREEN, skills router approved"],
     ["AETHER_DASHBOARD_LINK.md", "Data Architect", "Dashboard", "Published", "2026-03-07", "Master Dashboard deploy guide"],
   ];
   
@@ -450,6 +451,7 @@ function buildSystemHealth(ss) {
     ["Google Drive Sync", "Multi-PC", "✅ Active", new Date().toISOString(), "SYNC_TEST + PC2_CONNECTED verified"],
     ["Sentry (Debug)", "sentry.io", "✅ Configured", "—", "DSN present in registry"],
     ["Aether Runtime", "localhost:8001*", "✅ Active", new Date().toISOString(), "v1.0.0 — ConfigLoader + Router + CriticGate + BoardroomLogger"],
+    ["Agent Skills Router", "localhost:8001", "✅ Active", new Date().toISOString(), "13 agents as independent callable API endpoints"],
   ];
   
   services.forEach((row, i) => {
@@ -471,7 +473,7 @@ function buildSystemHealth(ss) {
     .setFontWeight("bold").setHorizontalAlignment("center");
   
   const security = [
-    ["Credential Exposure", "✅ REMEDIATED", "Compliance Officer", "JWT moved to .env — CLEARED"],
+    ["Credential Exposure", "✅ GREEN", "Compliance Officer", "COMPLIANCE-CLEARANCE-v3: all hardcoded keys removed"],
     ["Isolation Boundary", "✅ Enforced", "All agents", "forbidden_references verified"],
     ["Vault Encryption", "✅ Fernet AES-128", "Compliance Officer", "Chain-hashed audit trail active"],
     ["Aether Runtime", "✅ Phase 1-2 Built", "CTO", "Config Loader + Router + Critic Gate"],
