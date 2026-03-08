@@ -16,7 +16,7 @@
 const CONFIG = {
   sheetName: "Project Aether Master Dashboard",
   refreshInterval: 15, // minutes
-  version: "1.0.0",
+  version: "1.2.0",
   colors: {
     headerBg: "#1a1a2e",
     headerText: "#e0e0ff",
@@ -33,6 +33,14 @@ const CONFIG = {
     sectionText: "#ffffff",
   }
 };
+
+// ── Timezone-Aware Timestamp Helpers (GMT-5 / America/New_York) ──
+function localTimestamp() {
+  return Utilities.formatDate(new Date(), "America/New_York", "yyyy-MM-dd'T'HH:mm:ssXXX");
+}
+function localDate() {
+  return Utilities.formatDate(new Date(), "America/New_York", "yyyy-MM-dd");
+}
 
 // ── Agent Registry (mirrors Aether_System_Map.json) ──
 const AGENT_REGISTRY = [
@@ -118,7 +126,7 @@ function buildCommandCenter(ss) {
     .setFontSize(16).setFontWeight("bold").setHorizontalAlignment("center");
   
   sheet.getRange("A2:H2").merge()
-    .setValue("Last Refresh: " + new Date().toISOString() + " | v" + CONFIG.version)
+    .setValue("Last Refresh: " + localTimestamp() + " | v" + CONFIG.version)
     .setBackground(CONFIG.colors.accentBg).setFontColor(CONFIG.colors.accentText)
     .setFontSize(9).setHorizontalAlignment("center");
   
@@ -207,7 +215,7 @@ function buildFiscalOversight(ss) {
     .setFontSize(16).setFontWeight("bold").setHorizontalAlignment("center");
   
   sheet.getRange("A2:G2").merge()
-    .setValue("Maintained by: CFO + Data Architect | Last Sync: " + new Date().toISOString())
+    .setValue("Maintained by: CFO + Data Architect | Last Sync: " + localTimestamp())
     .setBackground(CONFIG.colors.accentBg).setFontColor(CONFIG.colors.accentText)
     .setFontSize(9).setHorizontalAlignment("center");
   
@@ -296,7 +304,7 @@ function buildProjectIndex(ss) {
     .setFontSize(16).setFontWeight("bold").setHorizontalAlignment("center");
   
   sheet.getRange("A2:F2").merge()
-    .setValue("Maintained by: The Librarian | Source: MASTER_INDEX.md | Sync: " + new Date().toISOString())
+    .setValue("Maintained by: The Librarian | Source: MASTER_INDEX.md | Sync: " + localTimestamp())
     .setBackground(CONFIG.colors.accentBg).setFontColor(CONFIG.colors.accentText)
     .setFontSize(9).setHorizontalAlignment("center");
   
@@ -312,7 +320,7 @@ function buildProjectIndex(ss) {
     sheet.getRange(row, 3).setValue(proj.type);
     sheet.getRange(row, 4).setValue(proj.port || "N/A");
     sheet.getRange(row, 5).setValue(proj.path);
-    sheet.getRange(row, 6).setValue(new Date().toISOString().split("T")[0]);
+    sheet.getRange(row, 6).setValue(localDate());
     
     // Color-code by status
     if (proj.status.includes("Active") || proj.status.includes("STABLE")) {
@@ -329,8 +337,10 @@ function buildProjectIndex(ss) {
     .setFontWeight("bold").setHorizontalAlignment("center");
   
   const infra = [
-    ["C-Suite Active Logic", "13 agent configs", "Active", "Project_Aether/C-Suite_Active_Logic/"],
-    ["Boardroom Exchange", "5 reports filed", "Active", "Project_Aether/Boardroom_Exchange/"],
+    ["C-Suite Active Logic", "13 agent configs (8 active, 5 placeholder)", "Active", "Project_Aether/C-Suite_Active_Logic/"],
+    ["Boardroom Exchange", "9+ reports filed", "Active", "Project_Aether/Boardroom_Exchange/"],
+    ["Aether Runtime", "ConfigLoader + Router + CriticGate + BoardroomLogger", "Active", "Project_Aether/aether_runtime.py"],
+    ["Agent Skills Router", "13 agents as callable API endpoints (v1.0.0)", "Active", "Project_Aether/agent_skills_router.py"],
     ["Ingestion Chamber", "Active Watcher (watcher.py)", "Active", "Project_Aether/Ingestion_Chamber/"],
     ["Compliance Vault", "Active Watcher (vault_engine.py)", "Active", "Project_Aether/Compliance_Vault/"],
     ["Aether System Map", "5-stage pipeline schema", "Initialized", "Project_Aether/Aether_System_Map.json"],
@@ -368,7 +378,7 @@ function buildBoardroomFeed(ss) {
     .setFontSize(16).setFontWeight("bold").setHorizontalAlignment("center");
   
   sheet.getRange("A2:F2").merge()
-    .setValue("Source: Project_Aether/Boardroom_Exchange/ | Sync: " + new Date().toISOString())
+    .setValue("Source: Project_Aether/Boardroom_Exchange/ | Sync: " + localTimestamp())
     .setBackground(CONFIG.colors.accentBg).setFontColor(CONFIG.colors.accentText)
     .setFontSize(9).setHorizontalAlignment("center");
   
@@ -434,7 +444,7 @@ function buildSystemHealth(ss) {
     .setFontSize(16).setFontWeight("bold").setHorizontalAlignment("center");
   
   sheet.getRange("A2:E2").merge()
-    .setValue("Sync: " + new Date().toISOString())
+    .setValue("Sync: " + localTimestamp())
     .setBackground(CONFIG.colors.accentBg).setFontColor(CONFIG.colors.accentText)
     .setFontSize(9).setHorizontalAlignment("center");
   
@@ -444,14 +454,14 @@ function buildSystemHealth(ss) {
     .setFontWeight("bold");
   
   const services = [
-    ["n8n Cloud", "humanresource.app.n8n.cloud", "✅ Connected", new Date().toISOString(), "28 workflows, ANTIGRAVITY_INVENTORY active"],
+    ["n8n Cloud", "humanresource.app.n8n.cloud", "✅ Connected", localTimestamp(), "28 workflows, ANTIGRAVITY_INVENTORY active"],
     ["Meta_App_Factory API", "localhost:8000", "⏸️ Not Running", "—", "Start with Launch_Meta_App_Factory_V3.bat"],
     ["Resonance", "localhost:5006", "⏸️ Not Running", "—", "Start with Launch_Resonance_V3.bat"],
     ["Alpha_V2_Genesis", "localhost:5005", "⏸️ Not Running", "—", "Trading dashboard"],
-    ["Google Drive Sync", "Multi-PC", "✅ Active", new Date().toISOString(), "SYNC_TEST + PC2_CONNECTED verified"],
+    ["Google Drive Sync", "Multi-PC", "✅ Active", localTimestamp(), "SYNC_TEST + PC2_CONNECTED verified"],
     ["Sentry (Debug)", "sentry.io", "✅ Configured", "—", "DSN present in registry"],
-    ["Aether Runtime", "localhost:8001*", "✅ Active", new Date().toISOString(), "v1.0.0 — ConfigLoader + Router + CriticGate + BoardroomLogger"],
-    ["Agent Skills Router", "localhost:8001", "✅ Active", new Date().toISOString(), "13 agents as independent callable API endpoints"],
+    ["Aether Runtime", "localhost:8001*", "✅ Active", localTimestamp(), "v1.0.0 — ConfigLoader + Router + CriticGate + BoardroomLogger"],
+    ["Agent Skills Router", "localhost:8001", "✅ Active", localTimestamp(), "13 agents as independent callable API endpoints"],
   ];
   
   services.forEach((row, i) => {
@@ -530,7 +540,7 @@ function buildDelegateAI(ss) {
     .setFontSize(16).setFontWeight("bold").setHorizontalAlignment("center");
   
   sheet.getRange("A2:H2").merge()
-    .setValue("Product Lead: CTO | Compliance: CLEARED | Budget: APPROVED | " + new Date().toISOString())
+    .setValue("Product Lead: CTO | Compliance: CLEARED | Budget: APPROVED | " + localTimestamp())
     .setBackground(CONFIG.colors.accentBg).setFontColor(CONFIG.colors.accentText)
     .setFontSize(9).setHorizontalAlignment("center");
   
@@ -609,10 +619,12 @@ function buildDelegateAI(ss) {
     ["Deep Crawler Scan", "✅ Complete", "Deep Crawler", "7 friction zones mapped"],
     ["Critic Validation", "✅ Complete", "The Critic", "L1 + S1 approved"],
     ["CFO Budget", "✅ Approved", "CFO", "$1.4K-$2.7K allocated"],
-    ["CTO Architecture Brief", "⏳ Pending", "CTO", "Due within 48 hours"],
-    ["Compliance Data Review", "⏳ Pending", "Compliance Officer", "Attorney-client privilege check"],
-    ["Pilot Build", "🔲 Not Started", "CTO + Data Architect", "Awaiting architecture brief"],
-    ["Beta Firm Outreach", "🔲 Not Started", "CEO + CMO", "5-10 firms targeted"],
+    ["CTO Architecture Brief", "✅ Complete", "CTO", "DELEGATE_AI_TECH_STACK.md — 10-day MVP plan filed"],
+    ["Compliance Data Review", "✅ Cleared", "Compliance Officer", "PRIVACY_SHIELD_REPORT.md + COMPLIANCE_CLEARANCE_v3"],
+    ["Pitch Deck + Brochure", "✅ Complete", "Creative Studio", "Critic scores: 8.6/10 + 9.0/10"],
+    ["Pilot Build (Phases 1-5)", "✅ Complete", "CTO + Data Architect", "Schema, API, Routing, n8n, Frontend — 11/11 tests"],
+    ["Phase 6: Stress & Security Audit", "✅ Complete", "CTO + Compliance Officer", "API Load Test + RLS Cross-Tenant Validation PASSED"],
+    ["Beta Firm Outreach", "🔲 Not Started", "CEO + CMO", "10 firm segments, 3-phase outreach"],
   ];
   
   sheet.getRange(pipeRow + 1, 1, 1, 4).setValues([["Phase", "Status", "Owner", "Notes"]])

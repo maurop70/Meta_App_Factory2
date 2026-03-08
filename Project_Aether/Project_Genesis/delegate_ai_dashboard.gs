@@ -12,7 +12,7 @@
 
 const DAI_CONFIG = {
   sheetName: "Delegate AI — Pilot Dashboard",
-  version: "1.0.0",
+  version: "1.1.0",
   colors: {
     headerBg: "#1b5e20",
     headerText: "#e8f5e9",
@@ -81,12 +81,12 @@ function buildPilotOverview(ss) {
   
   // KPIs
   const kpis = [
-    ["Build Progress", "0%", "Phase 1 of 5", "CTO"],
+    ["Build Progress", "100%", "All 5 phases complete", "CTO"],
     ["Beta Firms Signed", "0 / 10", "Outreach pending", "CEO + CMO"],
     ["Compliance Status", "✅ CLEARED", "Privacy Shield active", "Compliance Officer"],
     ["Budget Spent", "$0 / $2,725", "Approved, not yet deployed", "CFO"],
-    ["Days to MVP", "10", "CTO timeline", "CTO"],
-    ["Pilot Duration", "90 days", "Starting on build completion", "CEO"],
+    ["Days to MVP", "0", "✅ MVP Complete — 2026-03-08", "CTO"],
+    ["Pilot Duration", "90 days", "Ready to launch", "CEO"],
   ];
   
   sheet.getRange("A4:D4").setValues([["Metric", "Value", "Detail", "Owner"]])
@@ -157,11 +157,12 @@ function buildBuildTracker(ss) {
     .setFontWeight("bold");
   
   const phases = [
-    ["Phase 1: Schema + API", "Day 1-2", "Supabase tables, FastAPI endpoints", "🔲 Not Started", "CTO", "None"],
-    ["Phase 2: Runtime Extension", "Day 3-4", "Legal intent patterns, delegation routing", "🔲 Not Started", "CTO", "Depends on Phase 1"],
-    ["Phase 3: n8n Workflow", "Day 5", "legal-delegation-router workflow", "🔲 Not Started", "CTO", "Depends on Phase 2"],
-    ["Phase 4: Frontend Shell", "Day 6-8", "React app with task board UI", "🔲 Not Started", "CTO + Data Architect", "Depends on Phase 1"],
-    ["Phase 5: Integration Test", "Day 9-10", "End-to-end flow with test firm", "🔲 Not Started", "CTO + Compliance", "All phases complete"],
+    ["Phase 1: Schema + API", "Day 1-2", "Supabase tables, FastAPI endpoints", "✅ Complete", "CTO", "4 tables + seed, httpx REST client, 11/11 tests"],
+    ["Phase 2: Runtime Extension", "Day 3-4", "Legal intent patterns, delegation routing", "✅ Complete", "CTO", "delegation_router.py + Boardroom logging"],
+    ["Phase 3: n8n Workflow", "Day 5", "legal-delegation-router workflow", "✅ Complete", "CTO", "6-node n8n workflow with escalation"],
+    ["Phase 4: Frontend Shell", "Day 6-8", "Task board UI + delegation form", "✅ Complete", "CTO", "Dark mode SPA at localhost:8002/app"],
+    ["Phase 5: Integration Test", "Day 9-10", "End-to-end flow with test firm", "✅ Complete", "CTO + Compliance", "14 tasks in Supabase, full routing verified"],
+    ["Phase 6: Stress & Security Audit", "Day 10", "API Load Testing + RLS Cross-Tenant Validation", "✅ Complete", "CTO + Compliance Officer", "11/11 endpoints verified, Supabase RLS active"],
   ];
   
   phases.forEach((row, i) => {
@@ -177,14 +178,14 @@ function buildBuildTracker(ss) {
     .setFontWeight("bold").setHorizontalAlignment("center");
   
   const stack = [
-    ["Frontend", "React + Vite", "Same as Resonance"],
-    ["API", "FastAPI (Python)", "Existing factory pattern"],
-    ["AI Engine", "Aether Runtime", "Claude Sonnet 4"],
-    ["Database", "Supabase (PostgreSQL)", "Free tier"],
-    ["Workflow", "n8n Cloud (Pro)", "Existing sub"],
+    ["Frontend", "Vanilla JS SPA", "Dark mode glassmorphism UI"],
+    ["API", "FastAPI + httpx", "Port 8002, /delegate/ endpoints"],
+    ["AI Engine", "Aether Runtime", "Legal Intent Classifier v1 (11 categories)"],
+    ["Database", "Supabase (PostgreSQL)", "4 tables + RLS policies"],
+    ["Workflow", "n8n Cloud (Pro)", "legal-delegation-router workflow"],
     ["Encryption", "Fernet AES-128", "Compliance Vault"],
-    ["Auth", "Supabase Auth", "Email/password"],
-    ["Hosting", "Vercel + Railway", "Free/hobby tier"],
+    ["Auth", "Supabase Auth", "Email/password + RLS"],
+    ["Hosting", "Local (Port 8002)", "localhost:8002/app"],
   ];
   
   sheet.getRange(techRow + 1, 1, 1, 3).setValues([["Layer", "Technology", "Notes"]])

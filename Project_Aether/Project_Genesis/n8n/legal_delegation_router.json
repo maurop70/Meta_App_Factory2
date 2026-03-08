@@ -1,0 +1,175 @@
+{
+    "name": "legal-delegation-router",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "delegate-task",
+                "responseMode": "lastNode",
+                "options": {}
+            },
+            "id": "webhook-trigger",
+            "name": "Webhook Trigger",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                240,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "// Extract delegation data from webhook\nconst body = $input.first().json.body;\nconst prompt = body.prompt || '';\nconst category = body.category || 'OTHER';\nconst priority = body.priority || 'NORMAL';\nconst taskId = body.task_id || '';\nconst firmId = body.firm_id || '';\n\n// Route to appropriate agent based on category\nconst ROUTES = {\n  'MOTION': 'CTO',\n  'DISCOVERY': 'Deep_Crawler',\n  'CLIENT_INTAKE': 'CX_Strategist',\n  'BILLING': 'CFO',\n  'RESEARCH': 'Researcher',\n  'FILING': 'Compliance_Officer',\n  'CORRESPONDENCE': 'CMO',\n  'REVIEW': 'The_Critic',\n  'CONTRACT': 'CTO',\n  'COMPLIANCE': 'Compliance_Officer',\n  'OTHER': 'CEO'\n};\n\nconst targetAgent = ROUTES[category] || 'CEO';\n\n// SLA mapping\nconst SLA = {\n  'URGENT': 4,\n  'HIGH': 24,\n  'NORMAL': 72,\n  'LOW': 168\n};\n\nreturn [{\n  json: {\n    task_id: taskId,\n    firm_id: firmId,\n    prompt: prompt,\n    category: category,\n    priority: priority,\n    target_agent: targetAgent,\n    sla_hours: SLA[priority] || 72,\n    escalate_to_ceo: priority === 'URGENT',\n    routed_at: new Date().toISOString()\n  }\n}];"
+            },
+            "id": "classify-route",
+            "name": "Classify & Route",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 1,
+            "position": [
+                460,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "boolean": [
+                        {
+                            "value1": "={{ $json.escalate_to_ceo }}",
+                            "value2": true
+                        }
+                    ]
+                }
+            },
+            "id": "check-escalation",
+            "name": "Needs Escalation?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 1,
+            "position": [
+                680,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "// Log urgent escalation to CEO\nconst data = $input.first().json;\nreturn [{\n  json: {\n    ...data,\n    escalation: {\n      type: 'URGENT_CEO_COPY',\n      reason: `Urgent ${data.category} task requires CEO visibility`,\n      notified: ['CEO', data.target_agent],\n      escalated_at: new Date().toISOString()\n    }\n  }\n}];"
+            },
+            "id": "escalation-handler",
+            "name": "CEO Escalation",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 1,
+            "position": [
+                900,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "// Standard routing - no escalation needed\nconst data = $input.first().json;\nreturn [{\n  json: {\n    ...data,\n    escalation: null,\n    routing_status: 'DIRECT'\n  }\n}];"
+            },
+            "id": "standard-route",
+            "name": "Standard Route",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 1,
+            "position": [
+                900,
+                400
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "// Merge and finalize routing decision\nconst data = $input.first().json;\n\nconst result = {\n  status: 'routed',\n  task_id: data.task_id,\n  assigned_agent: data.target_agent,\n  category: data.category,\n  priority: data.priority,\n  sla_hours: data.sla_hours,\n  escalation: data.escalation,\n  workflow: 'legal-delegation-router',\n  completed_at: new Date().toISOString()\n};\n\nreturn [{ json: result }];"
+            },
+            "id": "finalize",
+            "name": "Finalize Routing",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 1,
+            "position": [
+                1120,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "Webhook Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Classify & Route",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Classify & Route": {
+            "main": [
+                [
+                    {
+                        "node": "Needs Escalation?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Needs Escalation?": {
+            "main": [
+                [
+                    {
+                        "node": "CEO Escalation",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Standard Route",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "CEO Escalation": {
+            "main": [
+                [
+                    {
+                        "node": "Finalize Routing",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Standard Route": {
+            "main": [
+                [
+                    {
+                        "node": "Finalize Routing",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1"
+    },
+    "meta": {
+        "instanceId": "delegate-ai-genesis",
+        "templateCredsSetupCompleted": true
+    },
+    "tags": [
+        {
+            "name": "delegate-ai"
+        },
+        {
+            "name": "project-genesis"
+        },
+        {
+            "name": "legal"
+        }
+    ]
+}

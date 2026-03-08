@@ -1,0 +1,8 @@
+# Delegate AI — Requirements
+# Project Genesis | Phase 1 Dependencies
+# No C++ build tools needed — uses httpx for Supabase REST API
+
+fastapi>=0.100.0
+uvicorn>=0.23.0
+python-dotenv>=1.0.0
+httpx>=0.24.0
