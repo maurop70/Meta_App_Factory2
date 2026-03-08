@@ -125,40 +125,46 @@ def auto_commit_ledger(
     if not branch_ok:
         return {"success": False, "detail": f"Could not ensure '{AUDIT_BRANCH}' branch."}
 
-    # Stash current work so we can switch branches safely
-    _git(["stash", "--include-untracked", "-q"])
+    # ── SAFETY: Never use git stash --include-untracked on Google Drive repos ──
+    # Instead, we commit the audit snapshot to a dedicated audit directory on
+    # the CURRENT branch. This avoids branch switching entirely, which is the
+    # root cause of the mass-trash incident (git stash -u removes files from
+    # the working tree, triggering Google Drive trash operations).
 
-    try:
-        ok, out = _git(["checkout", AUDIT_BRANCH])
-        if not ok:
-            return {"success": False, "detail": f"checkout failed: {out}"}
+    # Get current branch name
+    ok, current_branch = _git(["branch", "--show-current"])
+    if not ok:
+        return {"success": False, "detail": f"Could not determine current branch: {current_branch}"}
 
-        audit_file = os.path.join(FACTORY_ROOT, f"audit_{ts[:10]}.md")
-        with open(audit_file, "w", encoding="utf-8") as f:
-            f.write(f"# LEDGER Audit Snapshot\n")
-            f.write(f"**Timestamp**: {ts}\n")
-            f.write(f"**Hash**: {h}\n\n")
-            f.write(section)
+    # Create audit directory on current branch (safe — no file removals)
+    audit_dir = os.path.join(FACTORY_ROOT, ".audit_snapshots")
+    os.makedirs(audit_dir, exist_ok=True)
 
-        _git(["add", os.path.basename(audit_file)])
-        commit_msg = message or f"audit: SECURITY_INTERCEPTIONS snapshot [{h}] @ {ts}"
-        ok, commit_out = _git(["commit", "-m", commit_msg])
-        if not ok and "nothing to commit" not in commit_out:
-            return {"success": False, "detail": f"commit failed: {commit_out}"}
+    audit_file = os.path.join(audit_dir, f"audit_{ts[:10]}_{h}.md")
+    with open(audit_file, "w", encoding="utf-8") as f:
+        f.write(f"# LEDGER Audit Snapshot\n")
+        f.write(f"**Timestamp**: {ts}\n")
+        f.write(f"**Hash**: {h}\n")
+        f.write(f"**Branch**: {current_branch}\n\n")
+        f.write(section)
 
-        ok, hash_out = _git(["rev-parse", "--short", "HEAD"])
-        commit_hash = hash_out if ok else "unknown"
+    _git(["add", audit_file])
+    commit_msg = message or f"audit: SECURITY_INTERCEPTIONS snapshot [{h}] @ {ts}"
+    ok, commit_out = _git(["commit", "-m", commit_msg])
+    if not ok and "nothing to commit" not in commit_out:
+        return {"success": False, "detail": f"commit failed: {commit_out}"}
 
-        return {
-            "success": True,
-            "commit_hash": commit_hash,
-            "branch": AUDIT_BRANCH,
-            "message": commit_msg,
-            "detail": f"Snapshot committed: {audit_file}",
-        }
-    finally:
-        _git(["checkout", "-"])
-        _git(["stash", "pop", "-q"])
+    ok, hash_out = _git(["rev-parse", "--short", "HEAD"])
+    commit_hash = hash_out if ok else "unknown"
+
+    return {
+        "success": True,
+        "commit_hash": commit_hash,
+        "branch": current_branch,
+        "message": commit_msg,
+        "detail": f"Snapshot committed: {audit_file}",
+    }
+
 
 # ── Watch Mode ──────────────────────────────────────────
 
