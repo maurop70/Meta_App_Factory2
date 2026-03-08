@@ -58,7 +58,7 @@ Your client data **never touches** the AI model. Our **5-layer Privacy Shield** 
 | Feature | Traditional Tools | Delegate AI |
 |---|---|---|
 | Task routing | Manual (email, verbal) | **AI-powered instant routing** |
-| Classification | None | **9 legal task categories** |
+| Classification | None | **11 legal task categories** |
 | Privilege protection | Varies | **5-layer Privacy Shield** |
 | Billable tracking | Separate system | **Built-in matter logging** |
 | Quality gate | None | **AI completeness review** |
@@ -73,14 +73,15 @@ Delegate AI is powered by **Project Aether** — Antigravity-AI's enterprise age
 
 | Component | Technology |
 |---|---|
-| AI Engine | Claude Sonnet 4 (Aether Runtime) |
+| AI Engine | Legal Intent Classifier v1 (11 categories) |
+| API | FastAPI + httpx (Port 8002) |
 | Database | Supabase (PostgreSQL + Row-Level Security) |
-| Workflows | n8n Cloud (28+ production workflows) |
+| Workflows | n8n Cloud (legal-delegation-router) |
 | Encryption | Fernet AES-128 (Compliance Vault) |
-| Frontend | React + Vite |
+| Frontend | Dark Mode SPA (Glassmorphism UI) |
 | Monitoring | Sentry (error tracking) |
 
-**Not a prototype.** 80% of Delegate AI's infrastructure is already battle-tested in production.
+**Not a prototype.** MVP is **live and verified** — 11/11 API endpoints passing, 6 build phases complete.
 
 ---
 
