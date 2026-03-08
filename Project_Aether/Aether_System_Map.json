@@ -1,9 +1,9 @@
 {
-    "schema_version": "1.0.0",
+    "schema_version": "2.0.0",
     "name": "Aether System Map",
     "description": "Canonical mapping of Parent Portal inputs to C-Suite decision-making logic. Maintained by the Data Architect.",
     "created": "2026-03-07",
-    "last_updated": "2026-03-07",
+    "last_updated": "2026-03-08",
     "maintained_by": "Data_Architect",
     "isolation_boundary": "Project_Aether",
     "data_sources": {
@@ -158,6 +158,126 @@
             "write": [
                 "Ingestion_Chamber"
             ]
+        }
+    },
+    "oversight_mode": "DIRECT",
+    "oversight_config": {
+        "description": "Aether holds DIRECT oversight over all Factory Dev Agents. Can pause agents that deviate from MASTER_INDEX.md roadmap.",
+        "authority": "CEO + CTO",
+        "actions": [
+            "PAUSE",
+            "RESUME",
+            "REDIRECT",
+            "AUDIT"
+        ],
+        "compliance_gate": "MASTER_INDEX.md",
+        "enforcement": "Automatic — agents are paused if build targets diverge from roadmap"
+    },
+    "factory_dev_agents": {
+        "description": "Meta App Factory Dev Agents promoted to C-Suite visibility",
+        "agents": {
+            "factory_stream": {
+                "service": "Factory Stream (Build Engine)",
+                "file": "factory_stream.py",
+                "access": [
+                    "MASTER_INDEX.md",
+                    "LEDGER.md"
+                ],
+                "status": "ACTIVE"
+            },
+            "refine_engine": {
+                "service": "Refine Engine (Self-Healing)",
+                "file": "refine_engine.py",
+                "access": [
+                    "MASTER_INDEX.md",
+                    "LEDGER.md"
+                ],
+                "status": "ACTIVE"
+            },
+            "ip_strategist_hook": {
+                "service": "IP Strategist Hook (Filing API)",
+                "file": "ip_strategist_hook.py",
+                "access": [
+                    "MASTER_INDEX.md",
+                    "LEDGER.md",
+                    "registry.json"
+                ],
+                "status": "ACTIVE"
+            },
+            "memory_service": {
+                "service": "Memory Service (Supabase Vector DB)",
+                "file": "memory_service.py",
+                "access": [
+                    "MASTER_INDEX.md",
+                    "LEDGER.md"
+                ],
+                "status": "ACTIVE"
+            }
+        }
+    },
+    "ntfy_watchdog": {
+        "description": "Real-time security alerts via ntfy.sh",
+        "service": "leak_monitor.py",
+        "topic": "antigravity-security",
+        "events": [
+            "LEAK_BLOCKED",
+            "IP_MILESTONE"
+        ],
+        "mirror": "LEDGER.md ## SECURITY_INTERCEPTIONS"
+    },
+    "asynchronous_swarming": {
+        "enabled": true,
+        "description": "Allows Project Aether to dispatch multiple Factory sub-agents simultaneously within a single build cycle.",
+        "authority": "CEO + CTO",
+        "swarm_lanes": {
+            "frontend": {
+                "agents": [
+                    "factory_stream"
+                ],
+                "priority": "HIGH",
+                "max_parallel": 2,
+                "gate": "UI component tasks"
+            },
+            "backend": {
+                "agents": [
+                    "factory_stream",
+                    "refine_engine"
+                ],
+                "priority": "HIGH",
+                "max_parallel": 2,
+                "gate": "API, router, and service layer tasks"
+            },
+            "ip_validation": {
+                "agents": [
+                    "ip_strategist_hook"
+                ],
+                "priority": "MEDIUM",
+                "max_parallel": 1,
+                "gate": "Runs in background during Design_Phase"
+            }
+        },
+        "pre_flight_required": true,
+        "pre_flight_threshold": 0.85,
+        "swarm_rules": [
+            "Each lane runs independently — no shared write locks",
+            "IP validation lane never blocks frontend or backend lanes",
+            "If pre_flight_check returns IMPORT_REFACTOR, skip generation in that lane",
+            "Swarm results merge via memory_service.commit_pattern after build"
+        ]
+    },
+    "project_identity": {
+        "aether_dashboard": {
+            "name": "Project Aether — Master Dashboard",
+            "project_id": "AETHER-2026-9B2D4C",
+            "sheet_id": "1eLDXYA2oZPFwQLt7QqSNl8IYm_aN5JbK6WTDVDkG",
+            "script": "dashboard_generator.gs"
+        },
+        "delegate_ai_dashboard": {
+            "name": "Delegate AI — Operational Command",
+            "project_id": "DAI-2026-A1F3E7",
+            "sheet_id": "12szwDzRHlF3-C7ooDi0ffWYIm3gc4nN2rw9EtSaPlUU",
+            "script": "Project_Genesis/delegate_ai_dashboard.gs",
+            "parent": "PROJECT_AETHER"
         }
     }
 }
