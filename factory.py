@@ -19,11 +19,22 @@ if not os.path.exists(SKILL_PATH):
     SKILL_PATH = os.path.join(FACTORY_DIR, "Alpha_V2_Genesis", "skills")  # playground fallback
 sys.path.append(SKILL_PATH)
 
-from n8n_architect.architect import N8NArchitect
-from registry import Librarian
-from utils.critic import ArtisanCritic
-from scribe import Scribe
-from ui_designer import UIDesigner
+# Lazy imports — these are only needed for the `create` command
+# CLI commands (status, build, launch, tunnels) work without them
+_SKILLS_LOADED = False
+N8NArchitect = Librarian = ArtisanCritic = Scribe = UIDesigner = None
+
+def _load_skills():
+    global _SKILLS_LOADED, N8NArchitect, Librarian, ArtisanCritic, Scribe, UIDesigner
+    if _SKILLS_LOADED:
+        return
+    from n8n_architect.architect import N8NArchitect as _A
+    from registry import Librarian as _L
+    from utils.critic import ArtisanCritic as _C
+    from scribe import Scribe as _S
+    from ui_designer import UIDesigner as _U
+    N8NArchitect, Librarian, ArtisanCritic, Scribe, UIDesigner = _A, _L, _C, _S, _U
+    _SKILLS_LOADED = True
 
 # n8n API config for project creation
 N8N_API_BASE = "https://humanresource.app.n8n.cloud/api/v1"
@@ -44,6 +55,7 @@ class MetaAppFactory:
     GDRIVE_PATH = os.path.join(os.path.expanduser("~"), "My Drive", "Antigravity-AI Agents", "Meta_App_Factory")
 
     def __init__(self):
+        _load_skills()
         self.architect = N8NArchitect()
         self.librarian = Librarian()
         self.critic = ArtisanCritic()
@@ -1186,19 +1198,178 @@ def get_info():
         print(f"  >> Skill registered: skills/{skill_name}/ (SKILL.md + __init__.py)")
 
 
+# ═══════════════════════════════════════════════════════════════════
+#  CLI — Extended Commands (build / launch / status / tunnels / create)
+# ═══════════════════════════════════════════════════════════════════
+
+def _load_registry():
+    reg_path = os.path.join(FACTORY_DIR, "registry.json")
+    with open(reg_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _resolve_app_dir(app_name, reg=None):
+    """Resolve app directory from registry or filesystem."""
+    if reg is None:
+        reg = _load_registry()
+    app = reg.get("apps", {}).get(app_name, {})
+    if app.get("path"):
+        p = os.path.join(os.path.dirname(FACTORY_DIR), app["path"])
+        if os.path.isdir(p):
+            return p
+    direct = os.path.join(FACTORY_DIR, app_name)
+    if os.path.isdir(direct):
+        return direct
+    for child in os.listdir(FACTORY_DIR):
+        full = os.path.join(FACTORY_DIR, child)
+        if os.path.isdir(full) and child.replace(" ", "_").replace("-", "_") == app_name:
+            return full
+    return None
+
+
+def cmd_status(_args):
+    """Show all registered apps."""
+    reg = _load_registry()
+    apps = reg.get("apps", {})
+    print("\n🏭 Meta App Factory — Registry Status")
+    print("=" * 60)
+    for name, info in apps.items():
+        status = info.get("status", "unknown")
+        port = info.get("port", "-")
+        app_type = info.get("type", "")
+        icon = "🟢" if status == "active" else "🔴"
+        app_dir = _resolve_app_dir(name, reg)
+        has_dir = "✓" if app_dir else "✗"
+        has_reqs = "📦" if app_dir and os.path.exists(os.path.join(app_dir, "requirements.txt")) else "  "
+        caps = ", ".join(info.get("capabilities", [])[:3])
+        print(f"  {icon} {name:<30} port:{str(port):<6} {app_type}")
+        print(f"       {has_reqs} dir:{has_dir}  caps: {caps}")
+    print(f"\n  📋 Total: {len(apps)}   "
+          f"🟢 Active: {sum(1 for a in apps.values() if a.get('status') == 'active')}")
+    print(f"  📅 Last updated: {reg.get('last_updated', 'unknown')}\n")
+
+
+def cmd_build(args):
+    """Install deps + run preflight for an app."""
+    import subprocess as _sp
+    app_name = args.app_name
+    reg = _load_registry()
+    app_dir = _resolve_app_dir(app_name, reg)
+    if not app_dir:
+        print(f"❌ App '{app_name}' not found"); return
+    print(f"\n🔧 Building {app_name}\n   Dir: {app_dir}")
+    print("=" * 50)
+    req = os.path.join(app_dir, "requirements.txt")
+    if os.path.exists(req):
+        print("\n📦 Installing dependencies...")
+        r = _sp.run([sys.executable, "-m", "pip", "install", "-r", req, "-q"],
+                     capture_output=True, text=True, encoding="utf-8", errors="replace")
+        print("   ✅ Done" if r.returncode == 0 else f"   ❌ Failed:\n{r.stderr[:300]}")
+    else:
+        print("   ⓘ No requirements.txt")
+    for script in ["preflight.py", "sentinel_config.py", "setup.py"]:
+        sp = os.path.join(app_dir, script)
+        if os.path.exists(sp):
+            print(f"\n🔑 Running {script}...")
+            _sp.run([sys.executable, sp, "--check"], cwd=app_dir,
+                    capture_output=True, text=True, encoding="utf-8", errors="replace")
+            break
+    if app_name in reg.get("apps", {}):
+        reg["apps"][app_name]["last_build"] = datetime.utcnow().isoformat() + "Z"
+        reg_path = os.path.join(FACTORY_DIR, "registry.json")
+        with open(reg_path, "w", encoding="utf-8") as f:
+            json.dump(reg, f, indent=4)
+    print(f"\n✅ {app_name} built!\n")
+
+
+def cmd_launch(args):
+    """Build then launch an app's server."""
+    app_name = args.app_name
+    reg = _load_registry()
+    app_dir = _resolve_app_dir(app_name, reg)
+    if not app_dir:
+        print(f"❌ App '{app_name}' not found"); return
+    cmd_build(args)
+    for s in ["sentinel_server.py", "server.py", "app.py", "main.py"]:
+        sp = os.path.join(app_dir, s)
+        if os.path.exists(sp):
+            port = reg.get("apps", {}).get(app_name, {}).get("port", "?")
+            print(f"\n🚀 Launching {app_name} on port {port}")
+            os.execv(sys.executable, [sys.executable, sp])
+    print(f"❌ No server script found in {app_dir}")
+
+
+def cmd_tunnels(_args):
+    """Show active ngrok tunnels."""
+    print("\n🔗 Active ngrok Tunnels")
+    print("=" * 50)
+    try:
+        from pyngrok import ngrok as _ngrok
+        tunnels = _ngrok.get_tunnels()
+        if not tunnels:
+            print("   No active tunnels")
+        for t in tunnels:
+            print(f"   {t.public_url}  →  {t.config.get('addr', '?')}")
+    except Exception as e:
+        print(f"   ⚠️ {e}")
+    print()
+
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Meta App Factory Orchestrator")
-    parser.add_argument("--name", required=True, help="Name of the app to create")
-    parser.add_argument("--blueprint", default="gemini_reasoner", help="Blueprint to use")
-    parser.add_argument("--desc", default="", help="Description of the app")
-    parser.add_argument("--system_prompt", help="Custom system prompt for refinement")
-    
-    args = parser.parse_args()
-    
-    factory = MetaAppFactory()
-    factory.create_app(
-        app_name=args.name, 
-        blueprint_name=args.blueprint, 
-        description=args.desc,
-        system_prompt=args.system_prompt
+    # Force UTF-8 on Windows
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+
+    parser = argparse.ArgumentParser(
+        description="🏭 Meta App Factory — Orchestrator & CLI",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python factory.py create  --name MyApp --blueprint gemini_reasoner
+  python factory.py status
+  python factory.py build   Sentinel_Bridge
+  python factory.py launch  Sentinel_Bridge
+  python factory.py tunnels
+        """,
     )
+    sub = parser.add_subparsers(dest="command")
+
+    # Legacy create mode
+    p_create = sub.add_parser("create", help="Create a new app from blueprint")
+    p_create.add_argument("--name", required=True, help="App name")
+    p_create.add_argument("--blueprint", default="gemini_reasoner")
+    p_create.add_argument("--desc", default="")
+    p_create.add_argument("--system_prompt", default=None)
+
+    # New commands
+    sub.add_parser("status", help="Show all registered apps")
+    p_build = sub.add_parser("build", help="Install deps + init for an app")
+    p_build.add_argument("app_name", help="App name from registry")
+    p_launch = sub.add_parser("launch", help="Build and launch an app")
+    p_launch.add_argument("app_name", help="App name from registry")
+    sub.add_parser("tunnels", help="Show active ngrok tunnels")
+
+    args = parser.parse_args()
+
+    # Legacy fallback: if --name used without subcommand
+    if args.command is None and hasattr(args, 'name') and args.name:
+        args.command = "create"
+
+    if args.command == "create":
+        factory = MetaAppFactory()
+        factory.create_app(
+            app_name=args.name,
+            blueprint_name=args.blueprint,
+            description=args.desc,
+            system_prompt=args.system_prompt,
+        )
+    elif args.command == "status":
+        cmd_status(args)
+    elif args.command == "build":
+        cmd_build(args)
+    elif args.command == "launch":
+        cmd_launch(args)
+    elif args.command == "tunnels":
+        cmd_tunnels(args)
+    else:
+        parser.print_help()
