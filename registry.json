@@ -124,7 +124,37 @@
                 "access control"
             ],
             "last_build": "2026-03-09T01:29:10.740Z"
+        },
+        "Sentinel_Bridge": {
+            "status": "active",
+            "type": "Autonomous Reminder System",
+            "port": 5009,
+            "blueprint": "sentinel_bridge",
+            "path": "Meta_App_Factory/Sentinel_Bridge",
+            "isolation": {
+                "boundary": "Sentinel_Bridge",
+                "separated_from": [],
+                "no_code_dependencies": true
+            },
+            "capabilities": [
+                "calendar sync",
+                "multimodal ingestion",
+                "intelligent categorization",
+                "ML feedback loop",
+                "ntfy push notifications",
+                "self-healing pipeline",
+                "Fernet AES-128 encryption",
+                "voice-to-text processing"
+            ],
+            "calendar_accounts": [
+                "mpetrini@heinleinfoodsusa.com",
+                "mauro@gelatopetrini.com"
+            ],
+            "categories": ["AI", "Work", "Leo's School", "Family"],
+            "notification_channel": "ntfy",
+            "encryption": "Fernet AES-128 (Zero-Leak)",
+            "last_build": "2026-03-09T19:00:00.000Z"
         }
     },
-    "last_updated": "2026-03-09T01:29:10.740Z"
+    "last_updated": "2026-03-09T19:00:00.000Z"
 }
