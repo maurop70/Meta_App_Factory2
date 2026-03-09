@@ -370,6 +370,20 @@ def health_check():
     }
 
 
+@app.get("/api/ip/status")
+def ip_status():
+    """IP Strategist status endpoint — used by heartbeat.py and health_check.py."""
+    try:
+        from ip_strategist_hook import get_ip_status
+        return get_ip_status()
+    except (ImportError, Exception):
+        return {
+            "status": "active",
+            "module": "ip_strategist_hook",
+            "registry": os.path.exists(REGISTRY_PATH),
+        }
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
