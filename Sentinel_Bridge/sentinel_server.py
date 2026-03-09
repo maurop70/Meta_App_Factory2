@@ -35,6 +35,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 # ── Local imports ────────────────────────────────────────────────────
 sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent.parent))  # Factory root for utils
 
 from fernet_vault import FernetVault
 from calendar_poller import CalendarPoller
@@ -43,6 +44,8 @@ from categorization_engine import CategorizationEngine
 from notification_dispatcher import NotificationDispatcher
 from intent_extractor import IntentExtractor
 from self_heal import SelfHealEngine
+from utils.google_auth import GoogleAuth
+from utils.tunnel_manager import TunnelManager
 
 # ── Config ───────────────────────────────────────────────────────────
 PORT = int(os.environ.get("SENTINEL_PORT", 5009))
@@ -65,6 +68,19 @@ categorizer = CategorizationEngine()
 dispatcher = NotificationDispatcher(vault=vault)
 extractor = IntentExtractor()
 healer = SelfHealEngine()
+
+# ── Factory-level shared modules ─────────────────────────────────────
+google_auth = GoogleAuth(
+    vault=vault,
+    client_id_key="google_client_id",
+    client_secret_key="google_client_secret",
+    scopes=[
+        "https://www.googleapis.com/auth/calendar.readonly",
+        "https://www.googleapis.com/auth/calendar.events",
+    ],
+    redirect_uri=f"http://localhost:{PORT}/api/auth/google/callback",
+)
+tunnel_mgr = TunnelManager()
 
 # ── Scheduler ────────────────────────────────────────────────────────
 scheduler = AsyncIOScheduler()
@@ -255,21 +271,12 @@ async def lifespan(app: FastAPI):
                       run_date=datetime.now(timezone.utc))
     scheduler.start()
 
-    # ── ngrok tunnel for mobile access ──
-    ngrok_url = None
-    try:
-        ngrok_token = os.environ.get("NGROK_AUTH_TOKEN", "")
-        if ngrok_token:
-            from pyngrok import ngrok
-            ngrok.set_auth_token(ngrok_token)
-            tunnel = ngrok.connect(PORT, "http")
-            ngrok_url = tunnel.public_url
-            logger.info("📱 Mobile access: %s/dashboard", ngrok_url)
-            logger.info("🔗 ngrok URL: %s", ngrok_url)
-        else:
-            logger.warning("⚠️ NGROK_AUTH_TOKEN not set — local-only mode")
-    except Exception as exc:
-        logger.warning("⚠️ ngrok tunnel failed: %s — local-only mode", exc)
+    # ── ngrok tunnel for mobile access (via factory TunnelManager) ──
+    ngrok_url = tunnel_mgr.open(port=PORT, app_name="Sentinel_Bridge")
+    if ngrok_url:
+        logger.info("📱 Mobile access: %s/dashboard", ngrok_url)
+    else:
+        logger.warning("⚠️ ngrok unavailable — local-only mode")
 
     # Store ngrok URL for API access
     app.state.ngrok_url = ngrok_url
@@ -277,11 +284,7 @@ async def lifespan(app: FastAPI):
     yield
 
     # Cleanup
-    try:
-        from pyngrok import ngrok as _ng
-        _ng.disconnect(ngrok_url)
-    except Exception:
-        pass
+    tunnel_mgr.close("Sentinel_Bridge")
     scheduler.shutdown()
     save_reminders(reminders_store)
     logger.info("🛡️ Sentinel Bridge shut down cleanly.")
@@ -516,46 +519,22 @@ async def trigger_poll():
     return {"status": "poll_complete"}
 
 
-# ── Google OAuth2 Web Flow ───────────────────────────────────────────
-GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
-GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
-GOOGLE_SCOPES = [
-    "https://www.googleapis.com/auth/calendar.readonly",
-    "https://www.googleapis.com/auth/calendar.events",  # read + write events
-]
-
-
+# ── Google OAuth2 Web Flow (via factory GoogleAuth) ──────────────────
 @app.get("/api/auth/google")
 async def google_auth_start(account: str = Query("work")):
     """
-    Start Google OAuth2 flow. Redirects to Google consent screen.
+    Start Google OAuth2 flow via factory-level GoogleAuth module.
     
     Usage:
         Open in browser: http://localhost:5009/api/auth/google?account=work
         Or:               http://localhost:5009/api/auth/google?account=personal
     """
-    client_id = vault.retrieve("google_client_id")
-    if not client_id:
+    if not google_auth.client_id:
         raise HTTPException(status_code=500,
                             detail="Google client_id not in vault")
 
-    redirect_uri = f"http://localhost:{PORT}/api/auth/google/callback"
-    scope = " ".join(GOOGLE_SCOPES)
-
-    # Include account ID in state so callback knows which account to store for
-    auth_url = (
-        f"{GOOGLE_AUTH_URL}"
-        f"?client_id={client_id}"
-        f"&redirect_uri={redirect_uri}"
-        f"&response_type=code"
-        f"&scope={scope}"
-        f"&access_type=offline"
-        f"&prompt=consent"
-        f"&state={account}"
-    )
-
+    auth_url = google_auth.get_auth_url(account)
     from fastapi.responses import RedirectResponse
-    logger.info("🔑 OAuth: Redirecting to Google for '%s' account", account)
     return RedirectResponse(url=auth_url)
 
 
@@ -563,56 +542,17 @@ async def google_auth_start(account: str = Query("work")):
 async def google_auth_callback(code: str = Query(...),
                                  state: str = Query("work")):
     """
-    OAuth2 callback — exchanges auth code for tokens and stores in vault.
+    OAuth2 callback — delegates to factory GoogleAuth for token exchange.
     """
-    client_id = vault.retrieve("google_client_id")
-    client_secret = vault.retrieve("google_client_secret")
-    redirect_uri = f"http://localhost:{PORT}/api/auth/google/callback"
-
-    # Exchange code for tokens
-    import httpx as _httpx
-    logger.info("🔑 Token exchange: client_id=%s..., redirect_uri=%s",
-                client_id[:20], redirect_uri)
-    async with _httpx.AsyncClient(timeout=15) as client:
-        resp = await client.post(GOOGLE_TOKEN_URL, data={
-            "code": code,
-            "client_id": client_id,
-            "client_secret": client_secret,
-            "redirect_uri": redirect_uri,
-            "grant_type": "authorization_code",
-        })
-
-    if resp.status_code != 200:
-        full_error = resp.text
-        logger.error("❌ OAuth token exchange failed (HTTP %d): %s",
-                      resp.status_code, full_error)
-        try:
-            error_json = resp.json()
-            error_detail = error_json.get("error_description",
-                           error_json.get("error", full_error))
-        except Exception:
-            error_detail = full_error
+    try:
+        await google_auth.exchange_code(code, state)
+    except RuntimeError as exc:
         return HTMLResponse(
             content=f"<h2>Authorization Failed</h2>"
-                    f"<p><b>Error:</b> {error_detail}</p>"
-                    f"<p><b>HTTP Status:</b> {resp.status_code}</p>"
-                    f"<p><b>Redirect URI sent:</b> {redirect_uri}</p>"
-                    f"<p>Make sure this exact URI is in your Google Cloud Console "
-                    f"under Authorized redirect URIs.</p>"
+                    f"<p>{exc}</p>"
                     f"<p><a href='/api/auth/google?account={state}'>Try again</a></p>",
             status_code=400,
         )
-
-    tokens = resp.json()
-    access_token = tokens.get("access_token", "")
-    refresh_token = tokens.get("refresh_token", "")
-
-    # Store tokens in vault
-    vault.store(f"google_token_{state}", access_token)
-    if refresh_token:
-        vault.store(f"google_refresh_{state}", refresh_token)
-
-    logger.info("✅ OAuth: '%s' account authorized successfully!", state)
 
     # Find account email
     account_email = state
@@ -646,17 +586,9 @@ async def google_auth_callback(code: str = Query(...),
 
 @app.get("/api/auth/status")
 async def auth_status():
-    """Check authorization status for all calendar accounts."""
-    statuses = {}
-    for acc in poller.get_active_accounts():
-        token = vault.retrieve(f"google_token_{acc['id']}")
-        refresh = vault.retrieve(f"google_refresh_{acc['id']}")
-        statuses[acc["id"]] = {
-            "email": acc["email"],
-            "authorized": token is not None,
-            "has_refresh_token": refresh is not None,
-        }
-    return {"accounts": statuses}
+    """Check authorization status via factory GoogleAuth module."""
+    accounts = poller.get_active_accounts()
+    return google_auth.get_status(accounts)
 
 
 # ── Notifications ────────────────────────────────────────────────────
