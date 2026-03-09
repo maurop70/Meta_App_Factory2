@@ -1,0 +1,7 @@
+{
+    "app_name": "Delegate AI Beta-Agreement Vault",
+    "webhook_url": "https://humanresource.app.n8n.cloud/webhook/Delegate AI Beta-Agreement Vault-webhook",
+    "blueprint": "multi_agent_core",
+    "n8n_workflow_id": "3LLDh6MN2b86wvC2",
+    "port": 5007
+}
