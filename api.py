@@ -33,6 +33,34 @@ app.add_middleware(
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 REGISTRY_PATH = os.path.join(SCRIPT_DIR, "registry.json")
 
+
+def _update_registry(app_name: str, blueprint: str, description: str = ""):
+    """Write a new app entry to registry.json after a successful build."""
+    from datetime import datetime, timezone
+    try:
+        with open(REGISTRY_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        data = {"services": {}, "apps": {}, "last_updated": ""}
+
+    if "apps" not in data:
+        data["apps"] = {}
+
+    now = datetime.now(timezone.utc).isoformat()
+    data["apps"][app_name] = {
+        "status": "scaffolding",
+        "type": description or "App",
+        "port": None,
+        "blueprint": blueprint,
+        "capabilities": [],
+        "last_build": now,
+    }
+    data["last_updated"] = now
+
+    with open(REGISTRY_PATH, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4)
+    logger.info(f"Registry updated: '{app_name}' added to {REGISTRY_PATH}")
+
 # ── Stream Bridge Import ──────────────────────────────────────
 try:
     from factory_stream import stream_chat, clear_stream_history, MEMORY_AVAILABLE
@@ -116,6 +144,8 @@ async def build_stream(req: BuildRequest):
                 description=req.description,
                 system_prompt=req.system_prompt,
             )
+            _update_registry(req.app_name, req.blueprint, req.description)
+            progress_queue.put({"step": "REGISTRY", "text": f"📋 '{req.app_name}' registered in registry.json"})
             progress_queue.put({"step": "COMPLETE", "text": f"✅ App '{req.app_name}' built successfully!"})
         except Exception as e:
             progress_queue.put({"step": "ERROR", "text": f"❌ Build failed: {str(e)}"})
@@ -164,7 +194,8 @@ def build_direct(req: BuildRequest):
             system_prompt=req.system_prompt,
         )
         output = buffer.getvalue()
-        return {"status": "success", "app_name": req.app_name, "log": output}
+        _update_registry(req.app_name, req.blueprint, req.description)
+        return {"status": "success", "app_name": req.app_name, "log": output, "registered": True}
     except Exception as e:
         output = buffer.getvalue()
         return {"status": "error", "message": str(e), "log": output}
