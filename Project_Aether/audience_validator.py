@@ -128,10 +128,68 @@ class AudienceValidator:
         result = validator.validate_conversation(messages, "teen_learner")
     """
 
+    # ── Audience Intent Detection Patterns ─────────────────────
+    # Fast keyword/regex patterns — NO API call, runs instantly
+    AUDIENCE_PATTERNS = [
+        # Direct audience mentions
+        (r'\b(?:for|aimed at|designed for|target(?:ing|ed)?(?:\s+at)?)\s+(.{5,60}?)(?:\.|,|!|\?|$)', 0.9),
+        (r'\b(?:target|intended)\s+audience\s+(?:is|are|will be|:)\s*(.{5,60}?)(?:\.|,|!|\?|$)', 0.95),
+        (r'\b(?:users?|customers?|clients?|readers?|viewers?|listeners?)\s+(?:are|will be|include)\s+(.{5,60}?)(?:\.|,|!|\?|$)', 0.85),
+        (r'\b(?:building|creating|making|developing)\s+(?:an?\s+)?(?:app|product|platform|tool|site|website|presentation|pitch|brochure|book)\s+for\s+(.{5,60}?)(?:\.|,|!|\?|$)', 0.95),
+        (r'\b(?:present(?:ing|ation)?|pitch(?:ing)?)\s+(?:to|for)\s+(.{5,60}?)(?:\.|,|!|\?|$)', 0.85),
+        (r'\b(?:audience|demographic|market\s+segment)\s+(?:is|:|—)\s*(.{5,60}?)(?:\.|,|!|\?|$)', 0.9),
+        (r'\bwritten\s+for\s+(.{5,60}?)(?:\.|,|!|\?|$)', 0.85),
+        (r'\b(?:appealing?|cater(?:ing)?)\s+to\s+(.{5,60}?)(?:\.|,|!|\?|$)', 0.85),
+        (r'\b(?:teenagers?|teens?|kids?|children|parents?|seniors?|professionals?|students?|teachers?|investors?|traders?)\b', 0.7),
+    ]
+
     def __init__(self, api_key: str = None):
         self.profiles: Dict[str, AudienceProfile] = {}
         self._api_key = api_key or os.getenv("GEMINI_API_KEY")
         self._load_profiles()
+
+    # ══════════════════════════════════════════════════════════════
+    #  AUDIENCE INTENT DETECTION — Fast, No API Call
+    # ══════════════════════════════════════════════════════════════
+
+    @staticmethod
+    def detect_audience_intent(text: str) -> dict:
+        """
+        Detect if text mentions a target audience. Runs instantly (no API call).
+
+        Returns:
+            {
+                "detected": bool,
+                "audience_hint": str,   # extracted audience description
+                "confidence": float,    # 0.0-1.0
+                "trigger_phrase": str,   # the matched text
+            }
+        """
+        import re
+        if not text or len(text) < 10:
+            return {"detected": False, "audience_hint": "", "confidence": 0.0, "trigger_phrase": ""}
+
+        text_lower = text.lower().strip()
+        best_match = {"detected": False, "audience_hint": "", "confidence": 0.0, "trigger_phrase": ""}
+
+        for pattern, confidence in AudienceValidator.AUDIENCE_PATTERNS:
+            match = re.search(pattern, text_lower, re.IGNORECASE)
+            if match and confidence > best_match["confidence"]:
+                # Extract audience hint from capture group if available
+                hint = match.group(1).strip() if match.lastindex else match.group(0).strip()
+                # Clean up the hint
+                hint = re.sub(r'^(an?|the|some|many|all)\s+', '', hint)
+                hint = hint.rstrip('.,!?;:')
+                if len(hint) < 3:
+                    continue
+                best_match = {
+                    "detected": True,
+                    "audience_hint": hint,
+                    "confidence": confidence,
+                    "trigger_phrase": match.group(0).strip(),
+                }
+
+        return best_match
 
     def _load_profiles(self):
         """Load all audience profiles from the profiles directory."""

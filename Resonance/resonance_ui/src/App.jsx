@@ -1241,6 +1241,8 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false); // Drawer menu — hidden by default
   const [chipGlow, setChipGlow] = useState(false); // Pulse glow for quick-action chips
   const [chipLoading, setChipLoading] = useState(null); // 'mindmap' | 'summary' | null
+  const [audienceDetected, setAudienceDetected] = useState(null);
+  const [generatingProfile, setGeneratingProfile] = useState(false);
 
   // ── Aural Bridge: Voice Mode ──────────────────────────
   const [voiceMode, setVoiceMode] = useState(() => localStorage.getItem('resonance_voiceMode') === 'true');
@@ -1510,6 +1512,21 @@ export default function App() {
     setStreaming(true);
     setInput('');
     setTyping(true);
+
+    // Audience detection (non-blocking, uses backend regex - no API call)
+    (async () => {
+      try {
+        const detectRes = await fetch(`${API}/api/audience/detect`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: p }),
+        });
+        const detectData = await detectRes.json();
+        if (detectData.detected && detectData.confidence >= 0.7) {
+          setAudienceDetected(detectData);
+        }
+      } catch { /* silent */ }
+    })();
 
     const userMessage = { role: 'user', text: p, timestamp: new Date().toISOString() };
     setChatHistory(prev => {
@@ -1827,6 +1844,47 @@ export default function App() {
     setParentProgress([]); // Clear progress data when exiting
   };
 
+  // ── Audience Profile Research (triggered by detection nudge) ──
+  const researchProfile = async () => {
+    if (!audienceDetected?.audience_hint || generatingProfile) return;
+    setGeneratingProfile(true);
+    const hint = audienceDetected.audience_hint;
+    setAudienceDetected(null);
+    // Alex announces the research
+    const announceMsg = { role: 'assistant', text: `Yo, I'm on it! 🔬 Researching "${hint}" to figure out what makes them tick... Hang tight!`, timestamp: new Date().toISOString() };
+    setChatHistory(prev => ({ ...prev, [activeChannel]: [...(prev[activeChannel] || []), announceMsg] }));
+    try {
+      const res = await fetch(`${API}/api/audience/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audience_description: hint, context: 'Resonance learning app' }),
+      });
+      const data = await res.json();
+      if (data.status === 'ok' && data.profile) {
+        const p = data.profile;
+        const profileMsg = {
+          role: 'assistant',
+          text: `Too easy! ✅ Here’s the profile I built for **${p.name}** (ages ${p.age_range}):\n\n` +
+            `📝 ${p.description}\n\n` +
+            `🎯 **Interests:** ${p.interests.join(', ')}\n` +
+            `🗣️ **Tone:** ${p.tone_keywords.join(', ')}\n` +
+            `🚫 **Deal-breakers:** ${p.deal_breakers.slice(0, 3).join('; ')}\n\n` +
+            `Profile saved as "${p.id}" — I'll keep this in mind for our convos!`,
+          timestamp: new Date().toISOString(),
+        };
+        setChatHistory(prev => ({ ...prev, [activeChannel]: [...(prev[activeChannel] || []), profileMsg] }));
+      } else {
+        const errMsg = { role: 'assistant', text: `Hmm, had a hiccup researching that profile. ⚠️ Try describing the audience again!`, timestamp: new Date().toISOString() };
+        setChatHistory(prev => ({ ...prev, [activeChannel]: [...(prev[activeChannel] || []), errMsg] }));
+      }
+    } catch (err) {
+      const errMsg = { role: 'assistant', text: `❌ Profile research hit a snag: ${err.message}`, timestamp: new Date().toISOString() };
+      setChatHistory(prev => ({ ...prev, [activeChannel]: [...(prev[activeChannel] || []), errMsg] }));
+    } finally {
+      setGeneratingProfile(false);
+    }
+  };
+
   return (
     <div className="app-container">
       {/* Drawer Overlay */}
@@ -2007,6 +2065,24 @@ export default function App() {
               >
                 {chipLoading === 'summary' ? '⏳ Summarizing...' : '📝 Summary'}
               </button>
+            </div>
+          )}
+
+          {/* Audience Detection Nudge */}
+          {audienceDetected && (
+            <div className="audience-nudge">
+              <span className="nudge-icon">🔬</span>
+              <span className="nudge-text">
+                Yo, sounds like you&apos;re working on something for <strong>{audienceDetected.audience_hint}</strong>! Want me to research what makes them tick?
+              </span>
+              <button
+                className="nudge-research-btn"
+                onClick={researchProfile}
+                disabled={generatingProfile}
+              >
+                {generatingProfile ? '⏳ Researching...' : '📊 Research Profile'}
+              </button>
+              <button className="nudge-dismiss" onClick={() => setAudienceDetected(null)}>✕</button>
             </div>
           )}
 
