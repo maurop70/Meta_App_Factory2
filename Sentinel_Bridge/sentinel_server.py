@@ -1,14 +1,16 @@
 """
-Sentinel Bridge — FastAPI Server
-==================================
+Sentinel Bridge — FastAPI Server  v2.0
+========================================
 Main application server providing:
-- REST API for reminder management
+- REST API for reminder management (CRUD + archive)
 - Calendar poll scheduling (APScheduler)
 - Manual reminder creation (text + voice)
 - Category override endpoint (ML feedback loop)
 - Self-healing wrapper on all pipeline stages
 - ntfy push delivery
 - Dashboard API for the web UI
+- Calendar visualization endpoint
+- ngrok heartbeat with dynamic URL notifications
 
 Port: 5009 (configurable via SENTINEL_PORT env)
 """
@@ -177,6 +179,14 @@ class ManualReminderInput(BaseModel):
     source: str = "manual"  # "manual" or "voice"
 
 
+class ReminderEdit(BaseModel):
+    activity: str | None = None
+    time: str | None = None
+    category: str | None = None
+    description: str | None = None
+    lock_category: bool = False  # if True, skip re-categorization
+
+
 class CategoryOverride(BaseModel):
     new_category: str
 
@@ -256,10 +266,41 @@ async def write_to_google_calendar(category: str, summary: str,
         return None
 
 
+# ── Tunnel heartbeat check ───────────────────────────────────────────
+async def tunnel_heartbeat():
+    """Check if ngrok URL changed; notify Mauro via ntfy if so."""
+    hb = tunnel_mgr.check_heartbeat("Sentinel_Bridge")
+    if not hb["alive"]:
+        logger.warning("📡 Tunnel dead — attempting force reconnect")
+        new_url = tunnel_mgr.force_reconnect(port=PORT, app_name="Sentinel_Bridge")
+        if new_url:
+            app.state.ngrok_url = new_url
+            # Notify Mauro of the new URL
+            await dispatcher.send_reminder(
+                category="AI",
+                activity="🔗 Sentinel Bridge URL Updated",
+                time_str=datetime.now(timezone.utc).strftime("%I:%M %p"),
+                priority="high",
+                extra_body=f"New link: {new_url}/dashboard\n"
+                           f"Update your mobile shortcut.",
+            )
+    elif hb["changed"]:
+        logger.info("📡 URL changed detected via heartbeat")
+        await dispatcher.send_reminder(
+            category="AI",
+            activity="🔗 Sentinel Bridge URL Changed",
+            time_str=datetime.now(timezone.utc).strftime("%I:%M %p"),
+            priority="high",
+            extra_body=f"New link: {hb['url']}/dashboard\n"
+                       f"Old link: {hb['old_url']}\n"
+                       f"Update your mobile shortcut.",
+        )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup/shutdown events."""
-    logger.info("🛡️ Sentinel Bridge starting on port %d…", PORT)
+    logger.info("🛡️ Sentinel Bridge v2.0 starting on port %d…", PORT)
     logger.info("📆 Calendar accounts: %s",
                 [a["email"] for a in poller.get_active_accounts()])
 
@@ -269,10 +310,17 @@ async def lifespan(app: FastAPI):
     # Also run immediately on startup
     scheduler.add_job(safe_calendar_pipeline, "date", id="startup_poll",
                       run_date=datetime.now(timezone.utc))
+
+    # Schedule tunnel heartbeat every 5 minutes
+    scheduler.add_job(tunnel_heartbeat, "interval", minutes=5,
+                      id="tunnel_heartbeat", replace_existing=True)
     scheduler.start()
 
-    # ── ngrok tunnel for mobile access (via factory TunnelManager) ──
-    ngrok_url = tunnel_mgr.open(port=PORT, app_name="Sentinel_Bridge")
+    # ── ngrok tunnel — force reconnect to kill stale endpoints ──
+    ngrok_url = tunnel_mgr.force_reconnect(port=PORT, app_name="Sentinel_Bridge")
+    if not ngrok_url:
+        # Fallback to regular open
+        ngrok_url = tunnel_mgr.open(port=PORT, app_name="Sentinel_Bridge")
     if ngrok_url:
         logger.info("📱 Mobile access: %s/dashboard", ngrok_url)
     else:
@@ -294,7 +342,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Sentinel Bridge",
     description="Autonomous Reminder System by Meta App Factory",
-    version="1.0.0",
+    version="2.0.0",
     lifespan=lifespan,
 )
 
@@ -322,15 +370,20 @@ async def root():
     """Health check / welcome."""
     return {
         "app": "Sentinel Bridge",
-        "version": "1.0.0",
+        "version": "2.0.0",
         "status": "active",
         "port": PORT,
         "dashboard": f"http://localhost:{PORT}/dashboard",
+        "ngrok_url": getattr(app.state, "ngrok_url", None),
         "uptime": datetime.now(timezone.utc).isoformat(),
         "endpoints": {
             "dashboard": "/dashboard",
             "reminders": "/api/reminders",
             "add_reminder": "/api/reminders (POST)",
+            "edit_reminder": "/api/reminders/{id} (PUT)",
+            "archive_reminder": "/api/reminders/{id}/archive (PUT)",
+            "calendar_events": "/api/calendar/events",
+            "tunnel_status": "/api/tunnel/status",
             "categories": "/api/categories",
             "telemetry": "/api/telemetry",
             "vault": "/api/vault/audit",
@@ -478,6 +531,65 @@ async def mark_done(reminder_id: str):
     return {"status": "done", "reminder_id": reminder_id}
 
 
+@app.put("/api/reminders/{reminder_id}")
+async def edit_reminder(reminder_id: str, edit: ReminderEdit):
+    """
+    Edit a reminder's fields. Re-runs Aether pipeline for consistency
+    unless lock_category is True.
+    """
+    reminder = next((r for r in reminders_store if r["id"] == reminder_id), None)
+    if not reminder:
+        raise HTTPException(status_code=404, detail="Reminder not found")
+
+    # Update fields
+    if edit.activity is not None:
+        reminder["activity"] = edit.activity
+    if edit.time is not None:
+        reminder["time"] = edit.time
+    if edit.description is not None:
+        reminder["description"] = edit.description
+
+    # Re-run Aether pipeline for consistency (unless category is locked)
+    if not edit.lock_category:
+        text = edit.activity or reminder.get("activity", "")
+        if edit.category:
+            # User explicitly chose a category
+            reminder["category"] = edit.category
+            reminder["confidence"] = 1.0
+            # Feed ML engine
+            categorizer.override_category(
+                reminder_id=reminder_id,
+                original_text=text,
+                old_category=reminder.get("category", ""),
+                new_category=edit.category,
+            )
+        else:
+            # Re-categorize through Aether
+            aether_input = aether.process_text(text, reminder.get("source", "manual"))
+            cat_result = categorizer.categorize(aether_input.raw_text)
+            reminder["category"] = cat_result["category"]
+            reminder["confidence"] = cat_result["confidence"]
+    elif edit.category:
+        reminder["category"] = edit.category
+
+    reminder["edited_at"] = datetime.now(timezone.utc).isoformat()
+    save_reminders(reminders_store)
+
+    return {"status": "updated", "reminder": reminder}
+
+
+@app.put("/api/reminders/{reminder_id}/archive")
+async def archive_reminder(reminder_id: str):
+    """Archive a reminder (swipe-to-archive from mobile)."""
+    reminder = next((r for r in reminders_store if r["id"] == reminder_id), None)
+    if not reminder:
+        raise HTTPException(status_code=404, detail="Reminder not found")
+    reminder["status"] = "archived"
+    reminder["archived_at"] = datetime.now(timezone.utc).isoformat()
+    save_reminders(reminders_store)
+    return {"status": "archived", "reminder_id": reminder_id}
+
+
 # ── Categories ───────────────────────────────────────────────────────
 @app.get("/api/categories")
 async def list_categories():
@@ -519,6 +631,67 @@ async def trigger_poll():
     return {"status": "poll_complete"}
 
 
+@app.get("/api/calendar/events")
+async def calendar_events(month: int = Query(None), year: int = Query(None)):
+    """
+    Get unified calendar events (reminders + calendar events) for the
+    calendar visualization tab. Color-coded by category.
+    """
+    now = datetime.now(timezone.utc)
+    target_month = month or now.month
+    target_year = year or now.year
+
+    # Category → color mapping for calendar view
+    cat_colors = {
+        "AI": "#7c3aed",         # Purple
+        "Work": "#2563eb",       # Blue
+        "Leo's School": "#eab308",  # Yellow
+        "Family": "#10b981",      # Green
+    }
+
+    events = []
+    for r in reminders_store:
+        if r.get("status") == "archived":
+            continue
+        # Parse the time
+        time_str = r.get("time", "")
+        try:
+            if "T" in str(time_str):
+                dt = datetime.fromisoformat(str(time_str).replace("Z", "+00:00"))
+            elif time_str:
+                dt = datetime.fromisoformat(str(time_str))
+            else:
+                continue
+        except Exception:
+            continue
+
+        if dt.month == target_month and dt.year == target_year:
+            cat = r.get("category", "Uncategorized")
+            events.append({
+                "id": r.get("id"),
+                "title": r.get("activity", "Untitled"),
+                "date": dt.strftime("%Y-%m-%d"),
+                "time": dt.strftime("%I:%M %p") if "T" in str(time_str) else "All day",
+                "datetime": dt.isoformat(),
+                "category": cat,
+                "color": cat_colors.get(cat, "#6b7280"),
+                "source": r.get("source", "manual"),
+                "status": r.get("status", "pending"),
+                "description": r.get("description", ""),
+            })
+
+    # Sort by datetime
+    events.sort(key=lambda e: e["datetime"])
+
+    return {
+        "month": target_month,
+        "year": target_year,
+        "events": events,
+        "total": len(events),
+        "category_colors": cat_colors,
+    }
+
+
 # ── Google OAuth2 Web Flow (via factory GoogleAuth) ──────────────────
 @app.get("/api/auth/google")
 async def google_auth_start(account: str = Query("work")):
@@ -543,7 +716,14 @@ async def google_auth_callback(code: str = Query(...),
                                  state: str = Query("work")):
     """
     OAuth2 callback — delegates to factory GoogleAuth for token exchange.
+    N8N_SKIP_AUTH_ON_OAUTH_CALLBACK: when set, bypass any n8n auth
+    middleware that might block the callback (fixes 401 errors).
     """
+    # N8N auth bypass guard
+    skip_n8n = os.environ.get("N8N_SKIP_AUTH_ON_OAUTH_CALLBACK", "true").lower()
+    if skip_n8n == "true":
+        logger.info("OAuth callback — N8N auth bypass active")
+
     try:
         await google_auth.exchange_code(code, state)
     except RuntimeError as exc:
@@ -619,19 +799,45 @@ async def vault_store(secret: VaultSecret):
     return {"status": "stored", "key": secret.key}
 
 
+# ── Tunnel Status ────────────────────────────────────────────────────
+@app.get("/api/tunnel/status")
+async def tunnel_status():
+    """Current ngrok tunnel status and URL."""
+    hb = tunnel_mgr.check_heartbeat("Sentinel_Bridge")
+    return {
+        "url": getattr(app.state, "ngrok_url", None) or hb.get("url"),
+        "alive": hb["alive"],
+        "changed": hb["changed"],
+        "old_url": hb.get("old_url"),
+        "checked_at": hb["checked_at"],
+    }
+
+
+@app.post("/api/tunnel/reconnect")
+async def tunnel_reconnect():
+    """Force-reconnect the ngrok tunnel."""
+    new_url = tunnel_mgr.force_reconnect(port=PORT, app_name="Sentinel_Bridge")
+    if new_url:
+        app.state.ngrok_url = new_url
+        return {"status": "reconnected", "url": new_url}
+    return {"status": "failed", "url": None}
+
+
 # ── Telemetry ────────────────────────────────────────────────────────
 @app.get("/api/telemetry")
 async def telemetry():
     """Unified telemetry dashboard data."""
     return {
         "app": "Sentinel Bridge",
-        "version": "1.0.0",
+        "version": "2.0.0",
         "timestamp": datetime.now(timezone.utc).isoformat(),
+        "ngrok_url": getattr(app.state, "ngrok_url", None),
         "reminders": {
             "total": len(reminders_store),
             "pending": sum(1 for r in reminders_store if r.get("status") == "pending"),
             "done": sum(1 for r in reminders_store if r.get("status") == "done"),
             "snoozed": sum(1 for r in reminders_store if r.get("status") == "snoozed"),
+            "archived": sum(1 for r in reminders_store if r.get("status") == "archived"),
         },
         "categorization": categorizer.get_stats(),
         "notifications": dispatcher.get_delivery_stats(),

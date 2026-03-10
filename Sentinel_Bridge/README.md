@@ -1,10 +1,12 @@
-# 🛡️ Sentinel Bridge — Autonomous Reminder System
+# 🛡️ Sentinel Bridge v2.0 — Autonomous Reminder System
 
 > **Owner:** Mauro Petrini  
 > **Parent:** Meta App Factory (Aether & Self-Healing Core)  
 > **Status:** Active  
+> **Version:** 2.0.0  
 > **Port:** 5009  
-> **Dashboard:** `http://localhost:5009/dashboard`
+> **Dashboard:** `http://localhost:5009/dashboard`  
+> **Mobile:** `https://marylee-unincreased-subgranularly.ngrok-free.dev/dashboard`
 
 ---
 
@@ -18,13 +20,15 @@ Sentinel Bridge is a fully autonomous reminder and notification system that:
 4. **Delivers** push notifications via [ntfy.sh](https://ntfy.sh) with professional formatting: `[Category] Activity Name - Time`.
 5. **Self-heals** — if any pipeline stage fails, the built-in diagnostic engine retries, patches config, and logs the fix.
 6. **Encrypts** all credentials and personal data with Fernet AES-128 (Zero-Leak protocol).
-7. **Mobile access** — ngrok tunnel auto-starts for phone/tablet access from anywhere.
+7. **Mobile access** — ngrok tunnel with reserved domain for persistent phone/tablet access.
+8. **Calendar visualization** — monthly calendar view with color-coded category events.
+9. **Tunnel heartbeat** — auto-reconnects ngrok and sends ntfy notification if URL changes.
 
 ## Architecture
 
 ```text
 ┌───────────────────────────────────────────────────────┐
-│                   Sentinel Bridge                      │
+│                 Sentinel Bridge v2.0                    │
 │                                                        │
 │   ┌──────────┐   ┌───────────┐   ┌────────────────┐  │
 │   │ Calendar  │──▶│ Aether    │──▶│ Categorization │  │
@@ -44,6 +48,11 @@ Sentinel Bridge is a fully autonomous reminder and notification system that:
 │   ┌─────────────┐    ┌──────────────────────────┐     │
 │   │ Self-Heal   │    │ Fernet Vault (AES-128)   │     │
 │   │ Engine      │    │ Zero-Leak Protocol       │     │
+│   └─────────────┘    └──────────────────────────┘     │
+│                                                        │
+│   ┌─────────────┐    ┌──────────────────────────┐     │
+│   │ Tunnel Mgr  │    │ Calendar Visualization   │     │
+│   │ + Heartbeat │    │ Monthly/Weekly Grid      │     │
 │   └─────────────┘    └──────────────────────────┘     │
 └───────────────────────────────────────────────────────┘
 ```
@@ -69,19 +78,27 @@ launch_sentinel.bat
 
 ## Dashboard Features
 
+### Reminders Tab
 - **Add Reminder** — text input or 🎙 voice (Web Speech API)
 - **Reminder List** — color-coded category badges, snooze/done actions
-- **Category Management** — add/remove categories, see calendar mapping
+- **Edit Modal** — click any card to edit activity, time, category, and description
+- **Swipe-to-Archive** — swipe left on mobile to archive reminders
 - **Category Override** — click any badge to reclassify (trains ML engine)
-- **Calendar Status** — see which accounts are authorized
-- **Quick Actions** — force poll, test notification, re-authorize
+- **Quick Actions** — force poll, test notification, reconnect tunnel, re-authorize
+
+### Calendar Tab
+- **Monthly Grid** — visual calendar with color-coded event dots and chips
+- **Category Colors** — AI (Purple), Work (Blue), Leo's School (Yellow), Family (Green)
+- **Day Detail** — click any day to see full event list below the grid
+- **Navigation** — Prev/Today/Next month buttons
+- **Unified View** — shows both Google Calendar events and manual/voice reminders
 
 ## Calendar Accounts & Auto-Assignment
 
-| Category | Calendar Account | Type |
-| --- | --- | --- |
-| Work, AI | `mpetrini@heinleinfoodsusa.com` | Work |
-| Leo's School, Family | `mauro@gelatopetrini.com` | Personal |
+| Category | Calendar Account | Type | Color |
+| --- | --- | --- | --- |
+| Work, AI | `mpetrini@heinleinfoodsusa.com` | Work | Blue / Purple |
+| Leo's School, Family | `mauro@gelatopetrini.com` | Personal | Yellow / Green |
 
 When you add a reminder, AI categorizes it and **writes it to the matching Google Calendar** automatically.
 
@@ -98,18 +115,29 @@ When you add a reminder, AI categorizes it and **writes it to the matching Googl
 
 | Method | Endpoint | Description |
 | --- | --- | --- |
-| GET | `/dashboard` | Web dashboard |
+| GET | `/dashboard` | Web dashboard (tabbed UI) |
 | GET | `/api/reminders` | List reminders |
 | POST | `/api/reminders` | Create reminder (text/voice) |
+| PUT | `/api/reminders/:id` | Edit reminder (activity, time, category) |
 | PUT | `/api/reminders/:id/category` | Override category |
+| PUT | `/api/reminders/:id/archive` | Archive reminder |
 | POST | `/api/reminders/:id/snooze` | Snooze 15 min |
 | POST | `/api/reminders/:id/done` | Mark complete |
 | GET | `/api/categories` | List categories |
 | POST | `/api/categories` | Add category |
+| GET | `/api/calendar/events` | Calendar events (by month) |
 | GET | `/api/auth/google?account=work` | OAuth flow |
 | GET | `/api/auth/status` | Auth status |
 | POST | `/api/calendar/poll` | Force poll |
+| GET | `/api/tunnel/status` | ngrok tunnel status + URL |
+| POST | `/api/tunnel/reconnect` | Force tunnel reconnect |
 | GET | `/api/telemetry` | Full telemetry |
+
+## Connectivity & Mobile Access
+
+- **Reserved Domain:** `marylee-unincreased-subgranularly.ngrok-free.dev`
+- **Heartbeat:** Every 5 minutes, checks if tunnel is alive. If dead, auto-reconnects and pushes ntfy notification with new URL.
+- **N8N Guard:** `N8N_SKIP_AUTH_ON_OAUTH_CALLBACK=true` env var ensures OAuth callbacks aren't blocked.
 
 ## File Structure
 
@@ -117,8 +145,8 @@ When you add a reminder, AI categorizes it and **writes it to the matching Googl
 Sentinel_Bridge/
 ├── README.md                  # This file
 ├── requirements.txt           # Python dependencies
-├── dashboard.html             # Web dashboard (single-page)
-├── sentinel_server.py         # FastAPI server (port 5009)
+├── dashboard.html             # Web dashboard (tabbed, single-page)
+├── sentinel_server.py         # FastAPI server v2.0 (port 5009)
 ├── sentinel_config.py         # Configuration wizard
 ├── calendar_poller.py         # Google Calendar sync (15 min)
 ├── aether_ingestion.py        # Multimodal input processing
