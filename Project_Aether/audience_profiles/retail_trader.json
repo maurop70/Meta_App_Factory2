@@ -1,0 +1,37 @@
+{
+    "id": "retail_trader",
+    "name": "Retail Trader",
+    "age_range": "25-45",
+    "description": "An active retail trader who monitors markets daily. Values speed, accuracy, and clean data visualization. Wants actionable intelligence, not fluff. Appreciates concise alerts and clear risk/reward communication.",
+    "interests": [
+        "stock market",
+        "options trading",
+        "technical analysis",
+        "economic news",
+        "portfolio management",
+        "risk management"
+    ],
+    "tone_keywords": [
+        "professional",
+        "concise",
+        "data-driven",
+        "actionable",
+        "confident",
+        "no-nonsense"
+    ],
+    "deal_breakers": [
+        "Vague or generic market commentary without data",
+        "Overly casual or unprofessional tone",
+        "Missing key financial metrics (P/L, risk scores)",
+        "Slow or laggy data updates",
+        "Unsolicited opinions without backing data",
+        "Cluttered or confusing UI layouts"
+    ],
+    "accessibility_needs": [
+        "High-contrast data visualizations",
+        "Quick-scan summaries for rapid decision-making",
+        "Mobile-friendly layouts for on-the-go monitoring",
+        "Clear status indicators (green/red/amber)"
+    ],
+    "evaluation_prompt": "A trader has seconds, not minutes, to make decisions. Every word must carry weight. If the interface wastes time with fluff or buries critical data, the trader will switch to a competitor."
+}

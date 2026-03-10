@@ -1,0 +1,40 @@
+{
+    "id": "teen_learner",
+    "name": "Teen Learner",
+    "age_range": "14-17",
+    "description": "A high school student who uses learning apps on their phone. Prefers casual, peer-like interactions over formal 'teacher' language. Gets bored fast if things feel like a textbook. Loves visual content, memes, and interactive elements.",
+    "interests": [
+        "social media",
+        "gaming",
+        "music",
+        "sports",
+        "YouTube",
+        "TikTok",
+        "hanging out with friends"
+    ],
+    "tone_keywords": [
+        "casual",
+        "energetic",
+        "friendly",
+        "peer-like",
+        "slang-friendly",
+        "encouraging",
+        "not preachy"
+    ],
+    "deal_breakers": [
+        "Sounds like a textbook or encyclopedia",
+        "Uses formal/corporate language (e.g., 'I'd be happy to assist you')",
+        "Talks down to the user or sounds condescending",
+        "Uses outdated slang or tries too hard to be cool",
+        "Breaks character by mentioning being an AI or language model",
+        "Long paragraphs with no visual breaks",
+        "Ignoring the user's interests or emotional state"
+    ],
+    "accessibility_needs": [
+        "Short, chunked responses (micro-chunking)",
+        "Visual structures (bullet points, emojis, line breaks)",
+        "Clear and simple vocabulary unless teaching a specific term",
+        "Interactive elements (buttons, options, choices)"
+    ],
+    "evaluation_prompt": "Pay special attention to: Does this feel like chatting with a smart friend, or does it feel like a homework help bot? A teenager would immediately close an app that sounds robotic. The AI should sound like someone you'd want to keep talking to — like your coolest, smartest friend who actually makes learning fun."
+}

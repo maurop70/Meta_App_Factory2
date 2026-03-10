@@ -916,6 +916,78 @@ Document:
         logger.error(f"Summary generation error: {e}")
         raise HTTPException(status_code=500, detail=f"Summary generation failed: {str(e)}")
 
+# ── Audience Validation (inherited from Aether) ─────────────────
+import sys
+FACTORY_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
+if FACTORY_DIR not in sys.path:
+    sys.path.insert(0, FACTORY_DIR)
+
+class AudienceValidateRequest(BaseModel):
+    messages: List[dict] = []
+    content: str = ""
+    profile_id: str = "teen_learner"
+
+class AudienceGenerateRequest(BaseModel):
+    audience_description: str
+    profile_id: Optional[str] = None
+    context: str = ""
+
+@app.get("/api/audience/profiles")
+async def list_audience_profiles():
+    """List available audience profiles."""
+    try:
+        from Project_Aether.audience_validator import AudienceValidator
+        validator = AudienceValidator()
+        return JSONResponse({"profiles": validator.list_profiles()})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/audience/validate")
+async def audience_validate(req: AudienceValidateRequest):
+    """Validate conversation or content against an audience profile."""
+    try:
+        from Project_Aether.audience_validator import AudienceValidator
+        validator = AudienceValidator()
+        if req.messages:
+            result = validator.validate_conversation(req.messages, req.profile_id, app_name="Resonance")
+        elif req.content:
+            result = validator.validate(req.content, req.profile_id, app_name="Resonance")
+        else:
+            raise HTTPException(status_code=400, detail="Provide 'messages' or 'content'")
+        return JSONResponse(result.to_dict())
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Audience validation error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/audience/generate")
+async def audience_generate(req: AudienceGenerateRequest):
+    """AI-generate a new audience profile from a description using Deep_Crawler + Gemini."""
+    try:
+        from Project_Aether.audience_validator import AudienceValidator
+        validator = AudienceValidator()
+        profile = validator.generate_profile(
+            audience_description=req.audience_description,
+            profile_id=req.profile_id,
+            context=req.context,
+        )
+        return JSONResponse({
+            "status": "ok",
+            "profile": {
+                "id": profile.id,
+                "name": profile.name,
+                "age_range": profile.age_range,
+                "description": profile.description,
+                "interests": profile.interests,
+                "tone_keywords": profile.tone_keywords,
+                "deal_breakers": profile.deal_breakers,
+            },
+        })
+    except Exception as e:
+        logger.error(f"Profile generation error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 if __name__ == "__main__":
     import uvicorn
