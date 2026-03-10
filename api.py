@@ -452,6 +452,55 @@ def ip_status():
             "registry": os.path.exists(REGISTRY_PATH),
         }
 
+# ── Audience Validation (inherited from Aether) ──────────────
+
+class AudienceDetectRequest(BaseModel):
+    text: str
+
+class AudienceGenRequest(BaseModel):
+    audience_description: str
+    profile_id: str | None = None
+    context: str = ""
+
+@app.post("/api/audience/detect")
+def audience_detect(req: AudienceDetectRequest):
+    """Instant audience intent detection — no API call, runs regex only."""
+    try:
+        sys.path.insert(0, SCRIPT_DIR)
+        from Project_Aether.audience_validator import AudienceValidator
+        result = AudienceValidator.detect_audience_intent(req.text)
+        return result
+    except Exception as e:
+        return {"detected": False, "audience_hint": "", "confidence": 0.0, "error": str(e)}
+
+@app.post("/api/audience/generate")
+def audience_generate(req: AudienceGenRequest):
+    """AI-generate an audience profile from description using Deep_Crawler + Gemini."""
+    try:
+        sys.path.insert(0, SCRIPT_DIR)
+        from Project_Aether.audience_validator import AudienceValidator
+        validator = AudienceValidator()
+        profile = validator.generate_profile(
+            audience_description=req.audience_description,
+            profile_id=req.profile_id,
+            context=req.context,
+        )
+        return {
+            "status": "ok",
+            "profile": {
+                "id": profile.id,
+                "name": profile.name,
+                "age_range": profile.age_range,
+                "description": profile.description,
+                "interests": profile.interests,
+                "tone_keywords": profile.tone_keywords,
+                "deal_breakers": profile.deal_breakers,
+            },
+        }
+    except Exception as e:
+        logger.error(f"Profile generation error: {e}")
+        return {"status": "error", "message": str(e)}
+
 
 if __name__ == "__main__":
     import uvicorn

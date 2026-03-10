@@ -1,0 +1,43 @@
+{
+  "id": "pet_owners_aged_2540",
+  "name": "Connected Pet Parent",
+  "age_range": "25-40",
+  "description": "This audience is deeply invested in their pet's well-being, seeking proactive and convenient ways to manage health and wellness. They are tech-savvy, value personalized insights, and often feel overwhelmed by conflicting information, desiring reliable, easy-to-access solutions that fit into their busy lives.",
+  "interests": [
+    "Pet nutrition and diet",
+    "Preventative pet care",
+    "Pet training and behavior",
+    "Wearable tech for pets",
+    "Sustainable pet products",
+    "Community and social connection with other pet owners",
+    "Convenient digital tools",
+    "Personalized health insights"
+  ],
+  "tone_keywords": [
+    "Empathetic",
+    "Trustworthy",
+    "Informative",
+    "Supportive",
+    "Modern",
+    "Reassuring",
+    "Actionable",
+    "Expert-backed"
+  ],
+  "deal_breakers": [
+    "Generic, one-size-fits-all advice that doesn't account for individual pet needs.",
+    "Overly complex or cluttered app interfaces that waste time.",
+    "Lack of clear sourcing or scientific backing for health recommendations.",
+    "Aggressive upselling or irrelevant advertisements.",
+    "Poor data privacy practices or insecure handling of personal information.",
+    "Unreliable notifications or inaccurate tracking features.",
+    "Difficult or non-intuitive navigation within the app."
+  ],
+  "accessibility_needs": [
+    "Clear, high-contrast visual design for readability.",
+    "Customizable font sizes and display options (e.g., dark mode).",
+    "Intuitive navigation with clear labels and consistent UI patterns.",
+    "Support for screen readers and voice input where applicable.",
+    "Concise, jargon-free language for easy comprehension."
+  ],
+  "evaluation_prompt": "When validating content for this audience, prioritize practical utility, emotional resonance, and trust. Assess if the solution offers clear, actionable insights that genuinely simplify pet care, while also fostering a sense of community and reassurance for busy, health-conscious pet owners."
+}

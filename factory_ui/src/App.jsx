@@ -152,9 +152,65 @@ function BuilderChat({ registry, onAtomizerUpdate, externalCommand, onBuildCompl
   const [streaming, setStreaming] = useState(false);
   const [building, setBuilding] = useState(false);
   const [lastPrompt, setLastPrompt] = useState('');
+  const [audienceDetected, setAudienceDetected] = useState(null);
+  const [generatingProfile, setGeneratingProfile] = useState(false);
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
   const fileRef = useRef(null);
+  const audienceTimerRef = useRef(null);
+
+  // ── Audience Detection ──────────────────────────────────
+  const checkAudienceIntent = async (text) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/audience/detect`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      const data = await res.json();
+      if (data.detected && data.confidence >= 0.7) {
+        setAudienceDetected(data);
+        if (audienceTimerRef.current) clearTimeout(audienceTimerRef.current);
+        audienceTimerRef.current = setTimeout(() => setAudienceDetected(null), 15000);
+      }
+    } catch { /* silent */ }
+  };
+
+  const researchProfile = async () => {
+    if (!audienceDetected?.audience_hint || generatingProfile) return;
+    setGeneratingProfile(true);
+    setAudienceDetected(null);
+    setMessages(prev => [...prev, { role: 'system', text: `🔬 Researching audience profile: "${audienceDetected.audience_hint}"...` }]);
+    try {
+      const res = await fetch(`${API_BASE}/api/audience/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          audience_description: audienceDetected.audience_hint,
+          context: 'Building an application in the Meta App Factory',
+        }),
+      });
+      const data = await res.json();
+      if (data.status === 'ok' && data.profile) {
+        const p = data.profile;
+        const profileCard =
+          `✅ **Audience Profile Generated: ${p.name}**\n` +
+          `📊 Age Range: ${p.age_range}\n` +
+          `📝 ${p.description}\n\n` +
+          `🎯 Interests: ${p.interests.join(', ')}\n` +
+          `🗣️ Tone: ${p.tone_keywords.join(', ')}\n` +
+          `🚫 Deal-breakers: ${p.deal_breakers.slice(0, 3).join('; ')}\n\n` +
+          `Profile saved as "${p.id}" — use \`python factory.py validate <app> --profile ${p.id}\` to score your app.`;
+        setMessages(prev => [...prev, { role: 'assistant', text: profileCard }]);
+      } else {
+        setMessages(prev => [...prev, { role: 'assistant', text: `⚠️ Profile generation failed: ${data.message || 'Unknown error'}` }]);
+      }
+    } catch (err) {
+      setMessages(prev => [...prev, { role: 'assistant', text: `❌ Profile research error: ${err.message}` }]);
+    } finally {
+      setGeneratingProfile(false);
+    }
+  };
 
   const triggerBuild = async (appName, blueprint = 'multi_agent_core', description = '', systemPrompt = null) => {
     setBuilding(true);
@@ -289,6 +345,9 @@ function BuilderChat({ registry, onAtomizerUpdate, externalCommand, onBuildCompl
     setInput('');
     setMessages(prev => [...prev, { role: 'user', text: prompt }]);
     setStreaming(true);
+
+    // Audience detection (async, non-blocking)
+    checkAudienceIntent(prompt);
     setMessages(prev => [...prev, { role: 'assistant', text: '' }]);
 
     try {
@@ -452,6 +511,24 @@ function BuilderChat({ registry, onAtomizerUpdate, externalCommand, onBuildCompl
         ))}
         <div ref={scrollRef} />
       </div>
+
+      {/* Audience Detection Chip */}
+      {audienceDetected && (
+        <div className="audience-detect-chip">
+          <span className="detect-icon">🔬</span>
+          <span className="detect-text">
+            Audience detected: <strong>{audienceDetected.audience_hint}</strong>
+          </span>
+          <button
+            className="detect-research-btn"
+            onClick={researchProfile}
+            disabled={generatingProfile}
+          >
+            {generatingProfile ? '⏳ Researching...' : '📊 Research Profile'}
+          </button>
+          <button className="detect-dismiss" onClick={() => setAudienceDetected(null)}>✕</button>
+        </div>
+      )}
 
       <div className="chat-input-bar">
         <textarea

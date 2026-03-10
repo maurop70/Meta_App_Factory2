@@ -1079,3 +1079,83 @@ body {
   margin: 0 auto;
   line-height: 1.5;
 }
+
+/* ══ AUDIENCE DETECTION CHIP ══════════════════════════ */
+.audience-detect-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 1rem;
+  margin: 0 1rem;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(124, 58, 237, 0.15));
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  border-radius: 10px;
+  animation: chipSlideIn 0.4s ease-out;
+}
+
+@keyframes chipSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.detect-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.detect-text {
+  flex: 1;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.detect-text strong {
+  color: var(--accent-hover);
+}
+
+.detect-research-btn {
+  background: linear-gradient(135deg, var(--accent), #7c3aed);
+  border: none;
+  color: white;
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-family: var(--font);
+  padding: 5px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.detect-research-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px var(--accent-glow);
+}
+
+.detect-research-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.detect-dismiss {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: color 0.2s;
+}
+
+.detect-dismiss:hover {
+  color: var(--danger);
+}

@@ -1,0 +1,37 @@
+{
+    "id": "enterprise_user",
+    "name": "Enterprise Professional",
+    "age_range": "30-55",
+    "description": "A business professional managing agreements, delegations, and compliance workflows. Values trust, security, and streamlined processes. Expects polished, reliable interfaces with minimal learning curve.",
+    "interests": [
+        "productivity",
+        "project management",
+        "compliance",
+        "workflow automation",
+        "data security",
+        "team coordination"
+    ],
+    "tone_keywords": [
+        "professional",
+        "trustworthy",
+        "clear",
+        "polished",
+        "efficient",
+        "structured"
+    ],
+    "deal_breakers": [
+        "Casual or unprofessional language in business contexts",
+        "Unclear security or data handling practices",
+        "Complex workflows with no guided onboarding",
+        "Missing audit trails or accountability features",
+        "Inconsistent or unreliable behavior",
+        "Poor error handling or confusing error messages"
+    ],
+    "accessibility_needs": [
+        "Clear navigation hierarchy",
+        "Consistent design patterns across all screens",
+        "Keyboard accessibility for power users",
+        "Proper role-based access control indicators"
+    ],
+    "evaluation_prompt": "An enterprise user trusts tools that look reliable and behave predictably. If the interface feels experimental or unpolished, they'll question the entire platform's credibility. Security and professionalism are non-negotiable."
+}
