@@ -1454,6 +1454,74 @@ def cmd_tunnels(_args):
     print()
 
 
+# ── Audience Validation ────────────────────────────────────────────
+APP_PROFILE_MAP = {
+    "Resonance": "teen_learner",
+    "Alpha_V2_Genesis": "retail_trader",
+    "Delegate_AI_Beta_Agreement_Vault": "enterprise_user",
+}
+
+def cmd_validate(args):
+    """Validate an app's content against its target audience profile."""
+    from Project_Aether.audience_validator import AudienceValidator
+
+    app_name = args.app_name
+    validator = AudienceValidator()
+
+    # ── Profile Resolution ────────────────────────────────────
+    # Priority: --generate > --profile > auto-detect from APP_PROFILE_MAP
+    if args.generate:
+        # AI-generate a new profile from description
+        context = args.context or f"Building/validating the {app_name} application"
+        profile = validator.generate_profile(
+            audience_description=args.generate,
+            context=context,
+        )
+        profile_id = profile.id
+    else:
+        profile_id = args.profile or APP_PROFILE_MAP.get(app_name)
+        if not profile_id:
+            print(f"❌ No audience profile mapped for '{app_name}'.")
+            print(f"   Use --profile <id> to specify one, or --generate \"<description>\" to create one.")
+            print(f"   Available profiles: {[p['id'] for p in validator.list_profiles()]}")
+            return
+        if not any(p["id"] == profile_id for p in validator.list_profiles()):
+            print(f"❌ Profile '{profile_id}' not found. Available: {[p['id'] for p in validator.list_profiles()]}")
+            return
+
+    # ── Content Collection ────────────────────────────────────
+    reg = _load_registry()
+    app_dir = _resolve_app_dir(app_name, reg)
+
+    sample_content = f"App: {app_name}\n"
+    # Try to load system prompt
+    for prompt_file in ["app_stream.py", "server.py"]:
+        prompt_path = os.path.join(app_dir, prompt_file)
+        if os.path.isfile(prompt_path):
+            with open(prompt_path, "r", encoding="utf-8", errors="replace") as f:
+                content = f.read()
+            if "SYSTEM_PROMPT" in content or "system_prompt" in content:
+                sample_content += f"\nSystem prompt excerpt from {prompt_file}:\n{content[:3000]}\n"
+                break
+
+    # Try to load welcome message from UI
+    app_jsx = os.path.join(app_dir, "resonance_ui", "src", "App.jsx")
+    if not os.path.isfile(app_jsx):
+        app_jsx = os.path.join(app_dir, "src", "App.jsx")
+    if os.path.isfile(app_jsx):
+        with open(app_jsx, "r", encoding="utf-8", errors="replace") as f:
+            ui_content = f.read()
+        sample_content += f"\nUI excerpt (first 2000 chars):\n{ui_content[:2000]}\n"
+
+    # ── Validate ──────────────────────────────────────────────
+    print(f"🎯 Validating {app_name} against profile: {profile_id}")
+    print(f"   Sending {len(sample_content)} chars to Gemini for evaluation...\n")
+
+    result = validator.validate(sample_content, profile_id, app_name=app_name)
+    print(result.summary())
+
+
+
 if __name__ == "__main__":
     # Force UTF-8 on Windows
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
@@ -1466,6 +1534,9 @@ if __name__ == "__main__":
 Examples:
   python factory.py create  --name MyApp --blueprint gemini_reasoner
   python factory.py status
+  python factory.py build   Sentinel_Bridge
+  python factory.py validate Resonance --profile teen_learner
+  python factory.py validate Resonance --generate "Teen students aged 14-17"
   python factory.py build   Sentinel_Bridge
   python factory.py launch  Sentinel_Bridge
   python factory.py tunnels
@@ -1487,6 +1558,11 @@ Examples:
     p_launch = sub.add_parser("launch", help="Build and launch an app")
     p_launch.add_argument("app_name", help="App name from registry")
     sub.add_parser("tunnels", help="Show active ngrok tunnels")
+    p_validate = sub.add_parser("validate", help="Validate app against target audience")
+    p_validate.add_argument("app_name", help="App name from registry")
+    p_validate.add_argument("--profile", default=None, help="Audience profile ID (auto-detected if not set)")
+    p_validate.add_argument("--generate", default=None, metavar='DESCRIPTION', help='AI-generate a new profile from description (e.g. "Pet owners aged 25-40")')
+    p_validate.add_argument("--context", default="", help="Product/content context for profile generation")
 
     args = parser.parse_args()
 
@@ -1510,5 +1586,7 @@ Examples:
         cmd_launch(args)
     elif args.command == "tunnels":
         cmd_tunnels(args)
+    elif args.command == "validate":
+        cmd_validate(args)
     else:
         parser.print_help()

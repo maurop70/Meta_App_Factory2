@@ -77,7 +77,9 @@
                 "quality audit",
                 "compliance",
                 "data architecture",
-                "index synchronization"
+                "index synchronization",
+                "audience validation",
+                "AI profile generation"
             ],
             "agents": {
                 "active": [
@@ -150,7 +152,12 @@
                 "mpetrini@heinleinfoodsusa.com",
                 "mauro@gelatopetrini.com"
             ],
-            "categories": ["AI", "Work", "Leo's School", "Family"],
+            "categories": [
+                "AI",
+                "Work",
+                "Leo's School",
+                "Family"
+            ],
             "notification_channel": "ntfy",
             "encryption": "Fernet AES-128 (Zero-Leak)",
             "last_build": "2026-03-09T19:00:00.000Z"
