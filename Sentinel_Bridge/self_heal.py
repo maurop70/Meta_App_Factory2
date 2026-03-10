@@ -88,6 +88,16 @@ class SelfHealEngine:
             {"action": "retry_notification", "description": "Retry notification push"},
             {"action": "queue_notification", "description": "Queue for later delivery"},
         ],
+        "scraper": [
+            {"action": "resolve_selectors", "description": "Use Gemini to find new CSS selectors"},
+            {"action": "retry_with_backoff", "description": "Retry scrape with backoff"},
+        ],
+        "selector": [
+            {"action": "resolve_selectors", "description": "Re-discover CSS selectors via AI"},
+        ],
+        "scraperror": [
+            {"action": "resolve_selectors", "description": "Auto-heal broken scraper selectors"},
+        ],
     }
 
     def __init__(self):
@@ -198,6 +208,37 @@ class SelfHealEngine:
 
             elif action == "retry_notification":
                 return True
+
+            elif action == "resolve_selectors":
+                # Trigger the ScraperHealer to find new CSS selectors
+                try:
+                    import sys
+                    from pathlib import Path
+                    alpha_dir = Path(__file__).parent.parent / "Alpha_V2_Genesis"
+                    sys.path.insert(0, str(alpha_dir))
+                    from scraper_healer import ScraperHealer
+                    healer = ScraperHealer()
+                    # Extract URL and selector from the error message
+                    error_str = str(exc)
+                    url = "https://finance.yahoo.com/quote/"
+                    old_selector = ""
+                    # Try to parse selector from error
+                    if "selector" in error_str.lower():
+                        parts = error_str.split("selector")
+                        if len(parts) > 1:
+                            old_selector = parts[1].strip().strip("':")
+                    result = healer.heal_scraper(url, old_selector, context=error_str)
+                    if result["status"] == "healed":
+                        logger.info("✅ ScraperHealer found new selector: %s",
+                                    result["new_selector"])
+                        return True
+                    else:
+                        logger.warning("ScraperHealer could not resolve: %s",
+                                       result["status"])
+                        return True  # still retry
+                except Exception as heal_exc:
+                    logger.error("ScraperHealer error: %s", heal_exc)
+                    return True
 
             elif action == "queue_notification":
                 # Save to a retry queue

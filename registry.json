@@ -17,6 +17,7 @@
         "Alpha_V2_Genesis": {
             "status": "active",
             "type": "Trading Dashboard",
+            "version": "2.6-hardened",
             "port": 5005,
             "workflow_id": "VkE0dmwynRPMIyjdmiONL",
             "webhook_url": "https://humanresource.app.n8n.cloud/webhook/alpha-macro-poll",

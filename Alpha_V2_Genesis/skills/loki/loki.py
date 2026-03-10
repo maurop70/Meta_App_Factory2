@@ -160,19 +160,21 @@ class Loki:
             gspc_ticker = yf.Ticker("^GSPC")
             vix_ticker = yf.Ticker("^VIX")
             
-            # Fetch history for more reliable price
+            # Fetch history for trend calculations
             spx_hist = gspc_ticker.history(period="1d")
             vix_hist = vix_ticker.history(period="1d")
             
-            current_spx = None
-            current_vix = None
+            # Live price: fast_info → intraday 1m → daily close
+            current_spx = self._get_live_price(gspc_ticker)
+            current_vix = self._get_live_price(vix_ticker)
 
-            if not spx_hist.empty:
+            # Fallback to daily close if live methods fail
+            if current_spx is None and not spx_hist.empty:
                 current_spx = spx_hist['Close'].iloc[-1]
-            if not vix_hist.empty:
+            if current_vix is None and not vix_hist.empty:
                 current_vix = vix_hist['Close'].iloc[-1]
             
-            # Fallback to info if history is somehow empty (rare but possible)
+            # Last resort: info dict
             if current_spx is None:
                 current_spx = gspc_ticker.info.get('regularMarketPrice')
             if current_vix is None:
@@ -702,9 +704,9 @@ class Loki:
         vol = opinions.get('volatility', {})
         iv_rank = vol.get('vix_rank_30d', 50)
         
-        # Integrate n8n Risk Score if available (Weighted Synthesis)
+        # Integrate n8n Risk Score: derive from risk_mode + confidence
         n8n_data = opinions.get('n8n') or {}
-        n8n_risk_score = n8n_data.get('risk_score', 50) if isinstance(n8n_data, dict) else 50 # 0 to 100
+        n8n_risk_score = self._derive_risk_score(n8n_data) if isinstance(n8n_data, dict) else 50
         
         # If n8n risk is high, we lower the confidence in aggressive strategies
         safe_multi = max(0, (100 - n8n_risk_score) / 100)
@@ -713,11 +715,20 @@ class Loki:
         score += vol_score
         details.append(f"Vol Rank: {iv_rank} (adj by Genesis Risk: {n8n_risk_score}) (+{round(vol_score,1)})")
 
-        # 4. History (25%) - Mock
-        # Assume history supports the Trade 70% of the time based on N8N
-        hist_score = 25 * 0.7 
+        # 4. History (25%) — Derived from N8N Confidence + Forecast
+        n8n_confidence = n8n_data.get('confidence', 0.5) if isinstance(n8n_data, dict) else 0.5
+        try:
+            n8n_confidence = float(n8n_confidence)
+        except (ValueError, TypeError):
+            n8n_confidence = 0.5
+        n8n_forecast = n8n_data.get('forecast', 'NEUTRAL') if isinstance(n8n_data, dict) else 'NEUTRAL'
+        # Confidence drives the base: higher confidence → higher history match
+        # Forecast adjusts: BULLISH +0.1, BEARISH −0.1, NEUTRAL ±0
+        forecast_adj = 0.1 if n8n_forecast == 'BULLISH' else (-0.1 if n8n_forecast == 'BEARISH' else 0)
+        hist_match = max(0, min(1, n8n_confidence + forecast_adj))
+        hist_score = 25 * hist_match
         score += hist_score
-        details.append(f"History Match: 70% (+{hist_score})")
+        details.append(f"History Match: {round(hist_match*100)}% (+{round(hist_score, 1)})")
         
         return {
             "score": round(score, 1),
@@ -739,6 +750,131 @@ class Loki:
             return "DANGER"
             
         return "STABLE"
+
+    # ══════════════════════════════════════════════════════════════════
+    # N8N Intelligence Derivation Helpers
+    # ══════════════════════════════════════════════════════════════════
+
+    @staticmethod
+    def _derive_risk_score(n8n_data: dict) -> int:
+        """
+        Derives a numeric risk score (0-100) from the N8N cloud brain response.
+
+        Inputs used:
+        - risk_score: direct numeric value if N8N provides it (rare)
+        - risk_mode: REDUCE_RISK (80) / HOLD_RISK (40) / INCREASE_RISK (15)
+        - confidence: 0.0-1.0 from Gemini (inverted: low confidence = higher risk)
+        - forecast: BEARISH adds +15, BULLISH subtracts -10
+        """
+        # If N8N explicitly returned a risk_score, use it
+        if 'risk_score' in n8n_data:
+            return int(n8n_data['risk_score'])
+
+        score = 50  # Neutral baseline
+
+        # Risk mode → primary driver
+        risk_mode = n8n_data.get('risk_mode', 'HOLD_RISK')
+        if risk_mode == 'REDUCE_RISK':
+            score = 80
+        elif risk_mode == 'INCREASE_RISK':
+            score = 15
+        elif risk_mode == 'HOLD_RISK':
+            score = 40
+
+        # Forecast adjustment
+        forecast = n8n_data.get('forecast', 'NEUTRAL')
+        if forecast == 'BEARISH':
+            score += 15
+        elif forecast == 'BULLISH':
+            score -= 10
+
+        # Confidence adjustment (low confidence = more risk)
+        confidence = n8n_data.get('confidence')
+        if confidence is not None:
+            try:
+                conf = float(confidence)
+                # confidence 0.8+ → risk -10, confidence 0.3- → risk +15
+                if conf >= 0.8:
+                    score -= 10
+                elif conf <= 0.3:
+                    score += 15
+            except (ValueError, TypeError):
+                pass
+
+        return max(0, min(100, score))
+
+    @staticmethod
+    def _derive_vol_forecast(n8n_data: dict, vix_level: float) -> str:
+        """
+        Derives a volatility forecast label from N8N intelligence + VIX level.
+
+        Returns: STABLE, VOLATILE, CAUTIOUS, or EXPANDING
+        """
+        if not n8n_data or not isinstance(n8n_data, dict):
+            # No cloud brain — fall back to VIX thresholds
+            if vix_level > 30:
+                return "VOLATILE"
+            elif vix_level > 20:
+                return "CAUTIOUS"
+            return "STABLE"
+
+        forecast = n8n_data.get('forecast', 'NEUTRAL')
+        risk_mode = n8n_data.get('risk_mode', 'HOLD_RISK')
+
+        # Map cloud brain forecast + VIX into a vol regime
+        if risk_mode == 'REDUCE_RISK' or forecast == 'BEARISH':
+            if vix_level > 25:
+                return "VOLATILE"
+            return "CAUTIOUS"
+        elif risk_mode == 'INCREASE_RISK' and forecast == 'BULLISH':
+            return "STABLE"
+        else:
+            # HOLD_RISK / NEUTRAL
+            if vix_level > 30:
+                return "EXPANDING"
+            elif vix_level > 22:
+                return "CAUTIOUS"
+            return "STABLE"
+
+    @staticmethod
+    def _derive_vol_signal(iv_rank: float, vix_level: float) -> str:
+        """
+        Derives a volatility signal (SELL/HOLD/WAIT) from IV Rank and VIX level.
+
+        SELL  = IV Rank > 30 AND VIX > 15 (premium is juicy, sell vol)
+        HOLD  = Already in position, conditions still acceptable
+        WAIT  = IV Rank too low for new entries
+        """
+        if iv_rank > 30 and vix_level > 15:
+            return "SELL"
+        elif iv_rank > 20:
+            return "HOLD"
+        else:
+            return "WAIT"
+
+    @staticmethod
+    def _get_live_price(ticker_obj):
+        """Get the most current price: fast_info → intraday 1m → daily close."""
+        try:
+            price = ticker_obj.fast_info.last_price
+            if price and price > 0:
+                return float(price)
+        except Exception:
+            pass
+        try:
+            h = ticker_obj.history(period="1d", interval="1m")
+            if not h.empty:
+                return float(h["Close"].iloc[-1])
+        except Exception:
+            pass
+        try:
+            h = ticker_obj.history(period="1d")
+            if not h.empty:
+                return float(h["Close"].iloc[-1])
+        except Exception:
+            pass
+        return None
+
 
     def run_strategy(self, availability=2000):
         logger.info(f"Loki Awakens... (Availability: ${availability})")
@@ -798,11 +934,16 @@ class Loki:
             else:
                 logger.info("No fresh events to persist (keeping existing cache).")
         
+        # Derive live volatility forecast from N8N cloud brain + VIX level
+        vix_now = snapshot.get('vix', 20.0)
+        iv_rank_now = snapshot.get('iv_rank', 50)
+        vol_forecast = self._derive_vol_forecast(n8n_result, vix_now)
+        vol_signal = self._derive_vol_signal(iv_rank_now, vix_now)
+
         # Watchdog (Defense)
-        # Note: We rely on Default Portfolio data in Watchdog if not passed
         watchdog_report = self.watchdog.monitor_position(
             snapshot['spx'], 
-            "STABLE", # volatility forecast simulation
+            vol_forecast,  # Live forecast from N8N, not hardcoded
             sent_result['bias']
         )
         
@@ -810,7 +951,11 @@ class Loki:
         expert_opinions = {
             "sentiment": sent_result,
             "watchdog": watchdog_report,
-            "volatility": {"signal": "SELL", "vix_rank_30d": snapshot.get('iv_rank', 50), "forecast": "STABLE"}, 
+            "volatility": {
+                "signal": vol_signal,
+                "vix_rank_30d": iv_rank_now,
+                "forecast": vol_forecast,
+            },
             "macro": macro_result,
             "n8n": n8n_result
         }
@@ -1034,6 +1179,9 @@ class Loki:
         n8n_source = n8n_result.get('n8n_source', 'Unknown') if n8n_result else 'OFFLINE'
         n8n_status_label = f"🟢 LIVE ({n8n_source})" if n8n_is_live else "🔴 STANDBY"
         
+        # Derive live risk score from N8N intelligence
+        derived_risk_score = self._derive_risk_score(n8n_result) if n8n_result and isinstance(n8n_result, dict) else 50
+
         final_decision = {
             "market_snapshot": snapshot,
             "expert_opinions": expert_opinions,
@@ -1043,12 +1191,12 @@ class Loki:
                 "strategy": verdict,
                 "rationale": rationale,
                 "confidence": confidence,
-                "risk_score": n8n_result.get('risk_score', 50) if n8n_result else 50
+                "risk_score": derived_risk_score
             },
             "risk_check": risk_check,
             "hot_update_widgets": n8n_result.get('hot_update_widgets', []) if n8n_result else [],
             "final_action": verdict if risk_check['approved'] else "WAIT",
-            "markdown_report": f"# System Report\n\n**Verdict**: {verdict}\n\n**Rationale**: {rationale}\n\n## N8N Intelligence ({n8n_status_label})\n- **SPX Risk Score**: {n8n_result.get('risk_score', 'N/A') if n8n_result else 'N/A'}/100\n- **Forecast**: {n8n_result.get('forecast', 'NEUTRAL') if n8n_result else 'NEUTRAL'}\n\n## Defense Logic\n- Hold Value: ${hold_value}\n- Roll Value: ${roll_value}\n- Net Impact: ${round(roll_value - hold_value, 2)}\n\n## Risk Check\n- Status: {'APPROVED' if risk_check['approved'] else 'VETOED'}\n- Reasons: {', '.join(risk_check.get('reasons', []))}{n8n_report_section}"
+            "markdown_report": f"# System Report\n\n**Verdict**: {verdict}\n\n**Rationale**: {rationale}\n\n## N8N Intelligence ({n8n_status_label})\n- **SPX Risk Score**: {derived_risk_score}/100\n- **Risk Mode**: {n8n_result.get('risk_mode', 'N/A') if n8n_result else 'N/A'}\n- **Forecast**: {n8n_result.get('forecast', 'NEUTRAL') if n8n_result else 'NEUTRAL'}\n\n## Defense Logic\n- Hold Value: ${hold_value}\n- Roll Value: ${roll_value}\n- Net Impact: ${round(roll_value - hold_value, 2)}\n\n## Risk Check\n- Status: {'APPROVED' if risk_check['approved'] else 'VETOED'}\n- Reasons: {', '.join(risk_check.get('reasons', []))}{n8n_report_section}"
         }
 
         # 5. Push to n8n (Phase 4)

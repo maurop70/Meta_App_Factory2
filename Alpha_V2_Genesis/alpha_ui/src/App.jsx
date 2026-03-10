@@ -1118,9 +1118,11 @@ function App() {
   const [fragility, setFragility] = useState(null)
   const [fragilityLoading, setFragilityLoading] = useState(false)
   const [decoderOpen, setDecoderOpen] = useState({})  // accordion toggle state for Market Decoder
-  const [activeTab, setActiveTab] = useState('dashboard')  // 'dashboard' | 'journal' | 'fragility'
+  const [activeTab, setActiveTab] = useState('dashboard')  // 'dashboard' | 'journal' | 'fragility' | 'news'
   const [chatOpen, setChatOpen] = useState(false)
   const [apiBase, setApiBase] = useState('http://localhost:5005')
+  const [newsReport, setNewsReport] = useState(null)
+  const [newsLoading, setNewsLoading] = useState(false)
 
   // Load API base URL from config
   useEffect(() => {
@@ -1308,7 +1310,7 @@ function App() {
               </div>
               <div style={{ textAlign: 'center', padding: '0 2rem', borderLeft: '1px solid rgba(255,255,255,0.1)', borderRight: '1px solid rgba(255,255,255,0.1)' }}>
                 <p style={{ color: '#94a3b8', fontSize: '0.875rem', margin: '0 0 0.5rem 0' }}>N8N Risk Score</p>
-                <RiskRadar score={loki_proposal.risk_score || 50} />
+                <RiskRadar score={loki_proposal.risk_score ?? null} />
                 <div style={{ fontSize: '0.7rem', marginTop: '4px', color: data.n8n_status?.includes('LIVE') ? '#4ade80' : '#f87171' }}>
                   {data.n8n_status || '🔴 STANDBY'}
                 </div>
@@ -1759,6 +1761,7 @@ function App() {
           { id: 'journal', label: `📘 Trade Journal${tradeJournal.length > 0 ? ` (${tradeJournal.length})` : ''}` },
           { id: 'execution', label: '🚀 Trade Entry' },
           { id: 'fragility', label: `⚡ Fragility Index${fragility ? ` (${fragility.fragility_index})` : ''}` },
+          { id: 'news', label: '📰 News Intelligence' },
         ].map(tab => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
             padding: '0.5rem 1.25rem',
@@ -1981,6 +1984,65 @@ function App() {
                   <div style={{ fontSize: '0.68rem', fontWeight: 600, color: '#94a3b8', marginBottom: '0.25rem', letterSpacing: '0.04em' }}>DAILY HEALTH REPORT</div>
                   <div style={{ fontSize: '0.78rem', color: '#cbd5e1', lineHeight: 1.5 }}>{fragility.synthesis?.health_report}</div>
                 </div>
+
+                {/* ── DATA CONFIDENCE BADGE ── */}
+                {(() => {
+                  const cs = fragility.confidence_score ?? null;
+                  const status = fragility.confidence_status || 'UNKNOWN';
+                  const details = fragility.confidence_details || {};
+                  if (cs === null) return null;
+                  const badgeColor = cs >= 70 ? '#10b981' : cs >= 40 ? '#eab308' : '#ef4444';
+                  const badgeBg = cs >= 70 ? 'rgba(16,185,129,0.1)' : cs >= 40 ? 'rgba(234,179,8,0.1)' : 'rgba(239,68,68,0.1)';
+                  const badgeIcon = cs >= 70 ? '✓' : cs >= 40 ? '⚠' : '🔴';
+                  const badgeLabel = cs >= 70 ? 'High Confidence'
+                    : cs >= 40 ? 'Reduced Confidence'
+                    : 'Low Confidence';
+                  const badgeDesc = cs >= 70 ? 'All data feeds healthy'
+                    : cs >= 40 ? 'Some data feeds delayed or unavailable'
+                    : 'Data may be unreliable — Yahoo connection issues';
+                  return (
+                    <div style={{
+                      marginTop: '0.75rem', padding: '0.6rem 0.75rem',
+                      background: badgeBg, border: `1px solid ${badgeColor}44`,
+                      borderLeft: `3px solid ${badgeColor}`,
+                      borderRadius: '8px',
+                      animation: cs < 40 ? 'pulse 2s infinite' : 'none',
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <span style={{ fontSize: '0.85rem' }}>{badgeIcon}</span>
+                          <span style={{
+                            fontSize: '0.72rem', fontWeight: 700, color: badgeColor,
+                          }}>{badgeLabel}</span>
+                          <span style={{
+                            fontSize: '0.65rem', fontWeight: 600, color: badgeColor,
+                            fontFamily: 'monospace', marginLeft: '0.3rem',
+                          }}>({cs}/100)</span>
+                        </div>
+                        <span style={{
+                          fontSize: '0.55rem', padding: '2px 6px', borderRadius: '4px',
+                          background: `${badgeColor}22`, color: badgeColor,
+                          fontWeight: 600, border: `1px solid ${badgeColor}44`,
+                        }}>{status}</span>
+                      </div>
+                      <div style={{
+                        fontSize: '0.68rem', color: '#94a3b8', marginTop: '0.3rem', lineHeight: 1.4,
+                      }}>
+                        {badgeDesc}
+                        {details.failed > 0 && (
+                          <span style={{ color: '#fca5a5', marginLeft: '0.3rem' }}>
+                            · {details.failed} feed{details.failed > 1 ? 's' : ''} failed
+                          </span>
+                        )}
+                        {details.stale > 0 && (
+                          <span style={{ color: '#fde68a', marginLeft: '0.3rem' }}>
+                            · {details.stale} feed{details.stale > 1 ? 's' : ''} stale
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* ── COMPONENT SCORES ── */}
@@ -2427,6 +2489,185 @@ function App() {
           )}
         </div>
       )}
+
+      {/* ══ TAB: NEWS INTELLIGENCE ═══════════════════════════════ */}
+      {activeTab === 'news' && (() => {
+        // Auto-fetch on first view
+        const fetchNews = (fresh = false) => {
+          setNewsLoading(true);
+          fetch(`${apiBase}/api/news-report`, { method: fresh ? 'POST' : 'GET' })
+            .then(r => r.json())
+            .then(d => { if (!d.error) setNewsReport(d); setNewsLoading(false); })
+            .catch(() => setNewsLoading(false));
+        };
+        if (!newsReport && !newsLoading) setTimeout(() => fetchNews(true), 0);
+        const nr = newsReport;
+
+        const severityColor = s => s === 'HIGH' ? '#ef4444' : s === 'MEDIUM' ? '#eab308' : '#10b981';
+        const severityIcon = s => s === 'HIGH' ? '🔴' : s === 'MEDIUM' ? '🟡' : '🟢';
+        const regimeColor = r => r === 'RISK-OFF' ? '#ef4444' : r === 'RISK-ON' ? '#10b981' : r === 'TRANSITIONING' ? '#eab308' : '#60a5fa';
+
+        return (
+          <div style={{ padding: '1.5rem 1rem', maxWidth: '1200px', margin: '0 auto' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <div>
+                <h2 style={{ margin: 0, color: '#f1f5f9', fontSize: '1.3rem' }}>📰 Market News Intelligence</h2>
+                <p style={{ margin: '0.25rem 0 0', color: '#64748b', fontSize: '0.75rem' }}>
+                  {nr?.generated_at ? `Last updated: ${new Date(nr.generated_at).toLocaleTimeString()}` : 'No report yet'}
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                {nr?.market_regime && (
+                  <span style={{
+                    padding: '4px 12px', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700,
+                    background: `${regimeColor(nr.market_regime)}22`, color: regimeColor(nr.market_regime),
+                    border: `1px solid ${regimeColor(nr.market_regime)}44`,
+                  }}>{nr.market_regime}</span>
+                )}
+                <button onClick={() => fetchNews(true)} disabled={newsLoading} style={{
+                  padding: '6px 14px', borderRadius: '6px', border: '1px solid #3b82f644',
+                  background: newsLoading ? '#1e293b' : 'rgba(59,130,246,0.12)', color: '#60a5fa',
+                  cursor: newsLoading ? 'wait' : 'pointer', fontSize: '0.75rem', fontWeight: 600,
+                }}>{newsLoading ? '⏳ Generating...' : '🔄 Generate Fresh Report'}</button>
+              </div>
+            </div>
+
+            {newsLoading && !nr && (
+              <div style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '1rem', animation: 'pulse 2s infinite' }}>📡</div>
+                <p>Generating intelligence report via Gemini...</p>
+              </div>
+            )}
+
+            {nr && (
+              <>
+                {/* ── HEADLINES ── */}
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <h3 style={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.06em', marginBottom: '0.75rem' }}>
+                    TOP MARKET HEADLINES
+                  </h3>
+                  {(nr.headlines || []).map((h, i) => (
+                    <div key={i} style={{
+                      background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)',
+                      borderLeft: `3px solid ${severityColor(h.severity)}`,
+                      borderRadius: '8px', padding: '1rem', marginBottom: '0.75rem',
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span>{severityIcon(h.severity)}</span>
+                          <span style={{ fontWeight: 700, color: '#e2e8f0', fontSize: '0.85rem' }}>{h.title}</span>
+                        </div>
+                        <span style={{
+                          fontSize: '0.6rem', padding: '2px 8px', borderRadius: '4px',
+                          background: `${severityColor(h.severity)}22`, color: severityColor(h.severity),
+                          fontWeight: 600, border: `1px solid ${severityColor(h.severity)}33`, whiteSpace: 'nowrap',
+                        }}>{h.severity}</span>
+                      </div>
+                      <p style={{ color: '#94a3b8', fontSize: '0.78rem', margin: '0 0 0.5rem', lineHeight: 1.5 }}>{h.summary}</p>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                        <div style={{ padding: '0.4rem 0.6rem', background: 'rgba(59,130,246,0.08)', borderRadius: '6px' }}>
+                          <div style={{ fontSize: '0.6rem', color: '#60a5fa', fontWeight: 600, marginBottom: '2px' }}>SPX IMPACT</div>
+                          <div style={{ fontSize: '0.72rem', color: '#cbd5e1' }}>{h.spx_impact}</div>
+                        </div>
+                        <div style={{ padding: '0.4rem 0.6rem', background: 'rgba(234,179,8,0.08)', borderRadius: '6px' }}>
+                          <div style={{ fontSize: '0.6rem', color: '#eab308', fontWeight: 600, marginBottom: '2px' }}>POSITION IMPACT</div>
+                          <div style={{ fontSize: '0.72rem', color: '#cbd5e1' }}>{h.position_impact}</div>
+                        </div>
+                      </div>
+                      {h.source && <div style={{ fontSize: '0.6rem', color: '#475569', marginTop: '0.4rem' }}>Source: {h.source}</div>}
+                    </div>
+                  ))}
+                </div>
+
+                {/* ── UPCOMING EVENTS ── */}
+                {(nr.upcoming_events || []).length > 0 && (
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <h3 style={{ color: '#94a3b8', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.06em', marginBottom: '0.75rem' }}>
+                      UPCOMING ECONOMIC EVENTS
+                    </h3>
+                    <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '8px', overflow: 'hidden' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem' }}>
+                        <thead>
+                          <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                            {['Date', 'Event', 'Consensus', 'VIX Impact', 'Position Risk', ''].map((h, i) => (
+                              <th key={i} style={{ padding: '0.6rem 0.75rem', textAlign: 'left', color: '#64748b', fontWeight: 600, fontSize: '0.65rem', letterSpacing: '0.04em' }}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {nr.upcoming_events.map((ev, i) => (
+                            <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                              <td style={{ padding: '0.6rem 0.75rem', color: '#e2e8f0', whiteSpace: 'nowrap' }}>{ev.date}{ev.time ? ` ${ev.time}` : ''}</td>
+                              <td style={{ padding: '0.6rem 0.75rem', color: '#f1f5f9', fontWeight: 600 }}>{ev.event}</td>
+                              <td style={{ padding: '0.6rem 0.75rem', color: '#94a3b8' }}>{ev.consensus || '—'}</td>
+                              <td style={{ padding: '0.6rem 0.75rem', color: '#94a3b8', fontSize: '0.7rem' }}>{ev.vix_impact || '—'}</td>
+                              <td style={{ padding: '0.6rem 0.75rem', color: '#94a3b8', fontSize: '0.7rem' }}>{ev.risk_to_position || '—'}</td>
+                              <td style={{ padding: '0.6rem 0.75rem' }}>
+                                <span style={{
+                                  fontSize: '0.6rem', padding: '2px 6px', borderRadius: '4px',
+                                  background: `${severityColor(ev.severity)}22`, color: severityColor(ev.severity),
+                                  fontWeight: 600, border: `1px solid ${severityColor(ev.severity)}33`,
+                                }}>{ev.severity}</span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── KEY LEVELS + RECOMMENDATION ── */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  {/* Key Levels */}
+                  {nr.key_levels && (
+                    <div style={{
+                      background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)',
+                      borderRadius: '8px', padding: '1rem',
+                    }}>
+                      <h3 style={{ color: '#94a3b8', fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.06em', marginBottom: '0.75rem', marginTop: 0 }}>KEY SPX LEVELS</h3>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                        <div>
+                          <div style={{ fontSize: '0.6rem', color: '#10b981', fontWeight: 600, marginBottom: '4px' }}>SUPPORT</div>
+                          {(nr.key_levels.spx_support || []).map((l, i) => (
+                            <div key={i} style={{ fontSize: '0.85rem', color: '#e2e8f0', fontWeight: 700, fontFamily: 'monospace' }}>{typeof l === 'number' ? l.toLocaleString() : l}</div>
+                          ))}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '0.6rem', color: '#ef4444', fontWeight: 600, marginBottom: '4px' }}>RESISTANCE</div>
+                          {(nr.key_levels.spx_resistance || []).map((l, i) => (
+                            <div key={i} style={{ fontSize: '0.85rem', color: '#e2e8f0', fontWeight: 700, fontFamily: 'monospace' }}>{typeof l === 'number' ? l.toLocaleString() : l}</div>
+                          ))}
+                        </div>
+                      </div>
+                      {nr.key_levels.vix_warning_threshold && (
+                        <div style={{ marginTop: '0.5rem', fontSize: '0.7rem', color: '#eab308' }}>
+                          ⚠ VIX Warning Threshold: <strong>{nr.key_levels.vix_warning_threshold}</strong>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Trade Recommendation */}
+                  {nr.trade_recommendation && (
+                    <div style={{
+                      background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.15)',
+                      borderRadius: '8px', padding: '1rem',
+                    }}>
+                      <h3 style={{ color: '#60a5fa', fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.06em', marginBottom: '0.75rem', marginTop: 0 }}>
+                        💡 TRADE RECOMMENDATION
+                      </h3>
+                      <p style={{ color: '#cbd5e1', fontSize: '0.82rem', lineHeight: 1.6, margin: 0 }}>{nr.trade_recommendation}</p>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        );
+      })()}
+
 
       {/* ══ FLOATING CHAT BUTTON ═══════════════════════════════ */}
       <button
