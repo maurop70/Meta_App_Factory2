@@ -25,20 +25,95 @@ const formatTimestamp = (date) => {
 
 // Message Component
 function Message({ message, showAvatarAndName }) {
-  const { role, text, timestamp } = message;
+  const { role, text, timestamp, studyButtons, mermaidCode, studySuggestion } = message;
   const name = role === 'user' ? 'You' : 'Alex';
-  const userAvatarBg = '#4CAF50'; // Green for user
-  const alexAvatarSrc = "/alex_avatar.png"; // Asset path for Alex's avatar
+  const userAvatarBg = '#4CAF50';
+  const alexAvatarSrc = "/alex_avatar.png";
+  const mermaidRef = useRef(null);
 
   const renderMarkdown = useCallback((markdownText) => {
     return { __html: DOMPurify.sanitize(marked.parse(markdownText || '')) };
   }, []);
 
-  if (role === 'system') { // New condition for system messages
+  // Mermaid diagram rendering with Neon theme + zoom/pan
+  useEffect(() => {
+    if (mermaidCode && mermaidRef.current) {
+      const id = `mermaid-${Date.now()}`;
+      import('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs').then(({ default: mermaid }) => {
+        mermaid.initialize({
+          startOnLoad: false,
+          theme: 'dark',
+          themeVariables: {
+            // Neon Dark Theme — Electric Blue, Magenta, Lime Green
+            primaryColor: '#00d4ff',
+            primaryTextColor: '#ffffff',
+            primaryBorderColor: '#00d4ff',
+            lineColor: '#ff00ff',
+            secondaryColor: '#1a0033',
+            tertiaryColor: '#0a1628',
+            mainBkg: '#0f0f1a',
+            nodeBorder: '#39ff14',
+            clusterBkg: 'rgba(0, 212, 255, 0.08)',
+            clusterBorder: '#00d4ff',
+            titleColor: '#ffffff',
+            edgeLabelBackground: '#0f0f1a',
+            fontFamily: 'Inter, sans-serif',
+          },
+          mindmap: {
+            useMaxWidth: false,
+            padding: 20,
+          },
+        });
+        mermaid.render(id, mermaidCode).then(({ svg }) => {
+          if (mermaidRef.current) {
+            mermaidRef.current.innerHTML = svg;
+            // Add zoom/pan interactivity to SVG
+            const svgEl = mermaidRef.current.querySelector('svg');
+            if (svgEl) {
+              svgEl.style.cursor = 'grab';
+              let scale = 1, panX = 0, panY = 0, dragging = false, startX = 0, startY = 0;
+              const updateTransform = () => { svgEl.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`; };
+              mermaidRef.current.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                scale = Math.max(0.3, Math.min(3, scale + (e.deltaY > 0 ? -0.1 : 0.1)));
+                updateTransform();
+              }, { passive: false });
+              mermaidRef.current.addEventListener('mousedown', (e) => { dragging = true; startX = e.clientX - panX; startY = e.clientY - panY; svgEl.style.cursor = 'grabbing'; });
+              window.addEventListener('mousemove', (e) => { if (dragging) { panX = e.clientX - startX; panY = e.clientY - startY; updateTransform(); } });
+              window.addEventListener('mouseup', () => { dragging = false; if (svgEl) svgEl.style.cursor = 'grab'; });
+            }
+          }
+        }).catch(e => {
+          if (mermaidRef.current) mermaidRef.current.innerHTML = `<pre style="color:#F44336;font-size:0.8rem">Diagram error: ${e.message}</pre>`;
+        });
+      });
+    }
+  }, [mermaidCode]);
+
+  if (role === 'system') {
     return (
       <div className="message-item system">
         <div className="message-content system-message">
           <p><i>{text}</i></p>
+          {studyButtons && (
+            <div className="study-buttons">
+              <button className="study-btn mindmap-btn" onClick={studyButtons.onMindMap} disabled={studyButtons.loading}>
+                {studyButtons.loading === 'mindmap' ? '⏳ Generating...' : '🧠 Generate Mind Map'}
+              </button>
+              <button className="study-btn summary-btn" onClick={studyButtons.onSummary} disabled={studyButtons.loading}>
+                {studyButtons.loading === 'summary' ? '⏳ Generating...' : '📝 Create Summary'}
+              </button>
+            </div>
+          )}
+          {studySuggestion && (
+            <div className="study-suggestion">
+              <p>📚 {studySuggestion.message}</p>
+              <div className="study-buttons">
+                <button className="study-btn mindmap-btn" onClick={studySuggestion.onMindMap}>🧠 Mind Map</button>
+                <button className="study-btn summary-btn" onClick={studySuggestion.onSummary}>📝 Summary</button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -61,6 +136,7 @@ function Message({ message, showAvatarAndName }) {
         </div>
       )}
       <div className="message-content" dangerouslySetInnerHTML={renderMarkdown(text)}></div>
+      {mermaidCode && <div className="mermaid-container" ref={mermaidRef}></div>}
     </div>
   );
 }
@@ -1154,7 +1230,6 @@ function ParentPanel({ onLockAndReturn, parentConfig, saveParentConfig, parentPr
 }
 
 
-// Main App Component
 export default function App() {
   const [activeChannel, setActiveChannel] = useState(CHANNELS[0].id);
   const [chatHistory, setChatHistory] = useState({}); // { channelId: [{ role, text, timestamp }] }
@@ -1163,6 +1238,126 @@ export default function App() {
   const [typing, setTyping] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]); // [{ filename, type, uploaded_at, text_length }]
   const [showFilesPanel, setShowFilesPanel] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Drawer menu — hidden by default
+  const [chipGlow, setChipGlow] = useState(false); // Pulse glow for quick-action chips
+  const [chipLoading, setChipLoading] = useState(null); // 'mindmap' | 'summary' | null
+
+  // ── Aural Bridge: Voice Mode ──────────────────────────
+  const [voiceMode, setVoiceMode] = useState(() => localStorage.getItem('resonance_voiceMode') === 'true');
+  const [isListening, setIsListening] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const recognitionRef = useRef(null);
+
+  // Persist voice mode toggle
+  useEffect(() => {
+    localStorage.setItem('resonance_voiceMode', voiceMode);
+  }, [voiceMode]);
+
+  // Select the best Alex-appropriate voice (young, male-sounding)
+  const getAlexVoice = useCallback(() => {
+    const voices = window.speechSynthesis?.getVoices() || [];
+    // Priority order: Google US English Male > Microsoft Guy > any English male > first English
+    const preferred = [
+      v => /google.*us.*english/i.test(v.name) && /male/i.test(v.name),
+      v => /guy/i.test(v.name),
+      v => /microsoft.*mark/i.test(v.name),
+      v => /daniel/i.test(v.name),
+      v => /james/i.test(v.name),
+      v => /en.*us/i.test(v.lang) && !/female/i.test(v.name),
+      v => /en/i.test(v.lang),
+    ];
+    for (const test of preferred) {
+      const match = voices.find(test);
+      if (match) return match;
+    }
+    return voices[0] || null;
+  }, []);
+
+  // Load voices (they load asynchronously in Chrome)
+  useEffect(() => {
+    if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = () => { };
+  }, []);
+
+  // TTS: Speak Alex's response with teenage voice personality
+  const speakResponse = useCallback((text) => {
+    if (!voiceMode || !window.speechSynthesis || !text) return;
+    window.speechSynthesis.cancel(); // Stop any ongoing speech
+    // Clean markdown artifacts for natural speech
+    const cleanText = text
+      .replace(/\*\*(.*?)\*\*/g, '$1') // bold
+      .replace(/\*(.*?)\*/g, '$1') // italic
+      .replace(/#{1,6}\s/g, '') // headings
+      .replace(/\[.*?\]\(.*?\)/g, '') // links
+      .replace(new RegExp(String.fromCharCode(96).repeat(3) + '[\\s\\S]*?' + String.fromCharCode(96).repeat(3), 'g'), '') // code blocks
+      .replace(new RegExp(String.fromCharCode(96) + '(.*?)' + String.fromCharCode(96), 'g'), '$1') // inline code
+      .replace(/[-*+]\s/g, '') // list bullets
+      .replace(/\n{2,}/g, '. ') // paragraph breaks → pauses
+      .replace(/\n/g, ' ')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+    if (!cleanText) return;
+
+    // Split into sentences for natural pacing
+    const sentences = cleanText.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [cleanText];
+    setIsSpeaking(true);
+
+    sentences.forEach((sentence, i) => {
+      // Add a short silence between sentences for conversational pacing
+      if (i > 0) {
+        const pause = new SpeechSynthesisUtterance('');
+        pause.volume = 0;
+        pause.rate = 0.1;
+        window.speechSynthesis.speak(pause);
+      }
+
+      const utterance = new SpeechSynthesisUtterance(sentence.trim());
+      const voice = getAlexVoice();
+      if (voice) utterance.voice = voice;
+      // Teenage voice: slightly higher pitch, energetic but clear for APD
+      utterance.pitch = 1.15;  // Higher = younger sounding
+      utterance.rate = 1.05;   // Slightly energetic, not robotic
+      utterance.volume = 1.0;
+      if (i === sentences.length - 1) {
+        utterance.onend = () => setIsSpeaking(false);
+      }
+      window.speechSynthesis.speak(utterance);
+    });
+  }, [voiceMode, getAlexVoice]);
+
+  // STT: Start/stop listening
+  const toggleListening = useCallback(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert('Speech recognition is not supported in this browser. Please use Chrome or Edge.');
+      return;
+    }
+
+    if (isListening && recognitionRef.current) {
+      recognitionRef.current.stop();
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+
+    recognition.onstart = () => setIsListening(true);
+    recognition.onresult = (event) => {
+      const transcript = Array.from(event.results)
+        .map(r => r[0].transcript)
+        .join('');
+      setInput(transcript);
+    };
+    recognition.onerror = (event) => {
+      console.error('STT error:', event.error);
+      setIsListening(false);
+    };
+    recognition.onend = () => setIsListening(false);
+
+    recognitionRef.current = recognition;
+    recognition.start();
+  }, [isListening]);
   const [uploading, setUploading] = useState(false);
 
   // Parent Portal States
@@ -1222,12 +1417,45 @@ export default function App() {
       }
 
       const data = await res.json();
-      const systemMessage = { role: 'system', text: `📎 File uploaded: ${data.filename}`, timestamp: new Date().toISOString() };
+
+      // Study Mode: helper functions for mind map and summary generation
+      const generateStudy = async (type) => {
+        try {
+          const studyRes = await fetch(`${API}/api/study/${type}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filename: data.filename }),
+          });
+          const studyData = await studyRes.json();
+          if (type === 'mindmap' && studyData.mermaid) {
+            const mmMsg = { role: 'assistant', text: `🧠 **Mind Map for ${data.filename}:**`, mermaidCode: studyData.mermaid, timestamp: new Date().toISOString() };
+            setChatHistory(prev => ({ ...prev, [activeChannel]: [...(prev[activeChannel] || []), mmMsg] }));
+          } else if (type === 'summary' && studyData.summary) {
+            const smMsg = { role: 'assistant', text: studyData.summary, timestamp: new Date().toISOString() };
+            setChatHistory(prev => ({ ...prev, [activeChannel]: [...(prev[activeChannel] || []), smMsg] }));
+          }
+        } catch (err) {
+          console.error(`Study ${type} error:`, err);
+          const errMsg = { role: 'system', text: `❌ Failed to generate ${type}: ${err.message}`, timestamp: new Date().toISOString() };
+          setChatHistory(prev => ({ ...prev, [activeChannel]: [...(prev[activeChannel] || []), errMsg] }));
+        }
+      };
+
+      const systemMessage = {
+        role: 'system',
+        text: `📎 File uploaded: ${data.filename}`,
+        timestamp: new Date().toISOString(),
+        studyButtons: data.study_available ? {
+          loading: false,
+          onMindMap: () => generateStudy('mindmap'),
+          onSummary: () => generateStudy('summary'),
+        } : undefined,
+      };
       setChatHistory(prev => ({
         ...prev,
         [activeChannel]: [...(prev[activeChannel] || []), systemMessage]
       }));
-      fetchUploadedFiles(); // Refresh the list of uploaded files
+      fetchUploadedFiles();
     } catch (e) {
       console.error("File upload failed:", e);
       const errorMessage = { role: 'system', text: `❌ File upload failed: ${e.message}`, timestamp: new Date().toISOString() };
@@ -1272,15 +1500,28 @@ export default function App() {
     const p = input.trim();
     if (!p || streaming || uploading) return; // Disable send if uploading
 
-    setStreaming(true); // Set streaming state to true BEFORE initiating fetch
+    // Curiosity-based chip glow: detect How/Why questions
+    const isHowWhy = /\b(how|why|what if|explain|tell me about|show me)\b/i.test(p);
+    if (isHowWhy && uploadedFiles.length > 0) {
+      setChipGlow(true);
+      setTimeout(() => setChipGlow(false), 5000); // Glow for 5 seconds
+    }
+
+    setStreaming(true);
     setInput('');
     setTyping(true);
 
     const userMessage = { role: 'user', text: p, timestamp: new Date().toISOString() };
-    setChatHistory(prev => ({
-      ...prev,
-      [activeChannel]: [...(prev[activeChannel] || []), userMessage]
-    }));
+    setChatHistory(prev => {
+      const updated = { ...prev, [activeChannel]: [...(prev[activeChannel] || []), userMessage] };
+      // Nudge trigger: glow chips after 10+ messages
+      const msgCount = updated[activeChannel].length;
+      if (msgCount >= 10 && msgCount % 5 === 0 && uploadedFiles.length > 0) {
+        setChipGlow(true);
+        setTimeout(() => setChipGlow(false), 6000);
+      }
+      return updated;
+    });
 
     const assistantPlaceholder = { role: 'assistant', text: '', timestamp: new Date().toISOString() };
     setChatHistory(prev => ({
@@ -1319,6 +1560,57 @@ export default function App() {
 
           setTyping(false);
           setStreaming(false);
+
+          // Aural Bridge: TTS — read Alex's response aloud when voice mode is ON
+          if (voiceMode) {
+            setChatHistory(prev => {
+              const ch = prev[activeChannel] || [];
+              const last = ch[ch.length - 1];
+              if (last && last.role === 'assistant') speakResponse(last.text);
+              return prev;
+            });
+          }
+
+          // Engagement Pulse: Auto-inject study buttons every 4 assistant messages
+          setChatHistory(prev => {
+            const ch = prev[activeChannel] || [];
+            const assistantCount = ch.filter(m => m.role === 'assistant' && !m.studySuggestion).length;
+            if (assistantCount > 0 && assistantCount % 4 === 0 && uploadedFiles.length > 0) {
+              const engagementMsg = {
+                role: 'system',
+                text: '',
+                timestamp: new Date().toISOString(),
+                studySuggestion: {
+                  message: "Yo, we've been going for a bit! Want me to map this out or summarize what we've covered?",
+                  onMindMap: async () => {
+                    try {
+                      const latest = uploadedFiles[uploadedFiles.length - 1];
+                      const res = await fetch(`${API}/api/study/mindmap`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename: latest.filename }) });
+                      const data = await res.json();
+                      if (data.mermaid) {
+                        const mmMsg = { role: 'assistant', text: `🧠 **Mind Map for ${latest.filename}:**`, mermaidCode: data.mermaid, timestamp: new Date().toISOString() };
+                        setChatHistory(p => ({ ...p, [activeChannel]: [...(p[activeChannel] || []), mmMsg] }));
+                      }
+                    } catch (err) { console.error('Engagement mindmap error:', err); }
+                  },
+                  onSummary: async () => {
+                    try {
+                      const latest = uploadedFiles[uploadedFiles.length - 1];
+                      const res = await fetch(`${API}/api/study/summary`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename: latest.filename }) });
+                      const data = await res.json();
+                      if (data.summary) {
+                        const smMsg = { role: 'assistant', text: data.summary, timestamp: new Date().toISOString() };
+                        setChatHistory(p => ({ ...p, [activeChannel]: [...(p[activeChannel] || []), smMsg] }));
+                      }
+                    } catch (err) { console.error('Engagement summary error:', err); }
+                  },
+                },
+              };
+              return { ...prev, [activeChannel]: [...ch, engagementMsg] };
+            }
+            return prev;
+          });
+
           break; // Break cleanly on event.done
         }
 
@@ -1367,6 +1659,49 @@ export default function App() {
                 return { ...prev, [activeChannel]: currentChannelHistory };
               });
             }
+            // Study Mode: Proactive suggestion from complexity scorer
+            if (event.study_suggestion) {
+              const suggestStudy = async (type) => {
+                try {
+                  // Use the most recent uploaded file, or generate from conversation context
+                  const uploadsRes = await fetch(`${API}/api/uploads`);
+                  const uploadsData = await uploadsRes.json();
+                  const files = uploadsData.files || [];
+                  if (files.length > 0) {
+                    const latest = files[files.length - 1];
+                    const studyRes = await fetch(`${API}/api/study/${type}`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ filename: latest.filename }),
+                    });
+                    const studyData = await studyRes.json();
+                    if (type === 'mindmap' && studyData.mermaid) {
+                      const mmMsg = { role: 'assistant', text: `🧠 **Mind Map for ${latest.filename}:**`, mermaidCode: studyData.mermaid, timestamp: new Date().toISOString() };
+                      setChatHistory(prev => ({ ...prev, [activeChannel]: [...(prev[activeChannel] || []), mmMsg] }));
+                    } else if (type === 'summary' && studyData.summary) {
+                      const smMsg = { role: 'assistant', text: studyData.summary, timestamp: new Date().toISOString() };
+                      setChatHistory(prev => ({ ...prev, [activeChannel]: [...(prev[activeChannel] || []), smMsg] }));
+                    }
+                  }
+                } catch (err) {
+                  console.error(`Proactive study ${type} error:`, err);
+                }
+              };
+              const suggestionMsg = {
+                role: 'system',
+                text: '',
+                timestamp: new Date().toISOString(),
+                studySuggestion: {
+                  message: event.message,
+                  onMindMap: () => suggestStudy('mindmap'),
+                  onSummary: () => suggestStudy('summary'),
+                },
+              };
+              setChatHistory(prev => ({
+                ...prev,
+                [activeChannel]: [...(prev[activeChannel] || []), suggestionMsg]
+              }));
+            }
           } catch (parseError) {
             console.error("Error parsing SSE event:", parseError);
           }
@@ -1400,9 +1735,13 @@ export default function App() {
   };
 
   const getWelcomeMessage = (channelId) => {
-    const channel = CHANNELS.find(c => c.id === channelId);
-    if (!channel) return "Welcome to Resonance!";
-    return `Welcome to #${channel.name}! ${channel.description}`;
+    const welcomes = {
+      'general': "Yo! I'm Alex. I'm here to help you crush these topics. You can just talk to me, or if you've got a doc for me to look at, just throw it my way! \ud83d\udcaa",
+      'wingman-mode': "Aight, you're in wingman mode! Need help with a convo, a text, or just wanna practice talking to people? I got you. Let's get it! \ud83d\ude0e",
+      'focus-room': "Welcome to the focus room! This is where we lock in and get stuff done. Drop a topic or a doc and we'll break it down together. Too easy. \ud83e\udde0",
+      'mixing-board': "Yo, the mixing board! This is where we build sentences and get creative with words. Think of it like remixing language. Let's gooo! \ud83c\udfb5",
+    };
+    return welcomes[channelId] || "Yo! I'm Alex. What's good? \ud83d\udc4b";
   };
 
   // Parent Portal Functions
@@ -1490,10 +1829,14 @@ export default function App() {
 
   return (
     <div className="app-container">
-      {/* Sidebar */}
-      <div className="sidebar">
+      {/* Drawer Overlay */}
+      {sidebarOpen && <div className="drawer-overlay" onClick={() => setSidebarOpen(false)} />}
+
+      {/* Sidebar Drawer — hidden by default, slides in */}
+      <div className={`sidebar drawer ${sidebarOpen ? 'open' : ''}`}>
         <div className="server-header">
           <span className="server-icon">🎧</span> Resonance
+          <button className="drawer-close" onClick={() => setSidebarOpen(false)}>✕</button>
         </div>
         <nav className="channel-list">
           {CHANNELS.map(channel => (
@@ -1502,28 +1845,32 @@ export default function App() {
               className={`channel-item ${activeChannel === channel.id && !parentMode ? 'active' : ''}`}
               onClick={() => {
                 setActiveChannel(channel.id);
-                setParentMode(false); // Exit parent mode if channel is clicked
+                setParentMode(false);
+                setSidebarOpen(false);
               }}
             >
               <span className="channel-icon">{channel.icon}</span>
-              <span className="channel-name">#{channel.name}</span>
+              <span className="channel-name">{channel.name}</span>
             </div>
           ))}
         </nav>
 
-        {/* Parent Portal Button */}
-        <div
-          className={`parent-portal-button ${parentMode ? 'active' : ''}`}
-          onClick={() => {
-            if (!parentMode) {
-              setShowPinGate(true);
-            } else {
-              handleLockAndReturn(); // If already in parent mode, lock and return
-            }
-          }}
-        >
-          <span className="channel-icon">🔒</span>
-          <span className="channel-name">Parent Portal</span>
+        {/* Parent Portal — stealthy at bottom of drawer */}
+        <div className="drawer-footer">
+          <div
+            className={`parent-portal-button ${parentMode ? 'active' : ''}`}
+            onClick={() => {
+              if (!parentMode) {
+                setShowPinGate(true);
+              } else {
+                handleLockAndReturn();
+              }
+              setSidebarOpen(false);
+            }}
+          >
+            <span className="channel-icon">⚙️</span>
+            <span className="channel-name">Settings</span>
+          </div>
         </div>
 
         <div className="user-panel">
@@ -1535,7 +1882,7 @@ export default function App() {
         </div>
       </div>
 
-      {/* Main Content Area: Chat or Parent Panel */}
+      {/* Main Content Area: Parent Panel, Dashboard, or Chat */}
       {parentMode ? (
         <ParentPanel
           onLockAndReturn={handleLockAndReturn}
@@ -1547,17 +1894,28 @@ export default function App() {
       ) : (
         <div className="chat-area">
           <header className="chat-header">
-            <div className="channel-info">
-              <span className="channel-icon">{currentChannel.icon}</span>
-              <h2 className="channel-name">#{currentChannel.name}</h2>
-              <span className="channel-description">{currentChannel.description}</span>
+            <button className="menu-button" onClick={() => setSidebarOpen(true)} aria-label="Open menu">☰</button>
+            <div className="header-profile">
+              <img src={alexAvatarSrc} alt="Alex" className="header-avatar alex-avatar" width="32" height="32" />
+              <div className="header-profile-info">
+                <span className="header-name">Alex</span>
+                <span className="header-status">Online</span>
+              </div>
+            </div>
+            <div className="header-actions">
               {uploadedFiles.length > 0 && (
                 <button className="files-badge" onClick={() => setShowFilesPanel(!showFilesPanel)}>
-                  📎 Files ({uploadedFiles.length})
+                  📎 {uploadedFiles.length}
                 </button>
               )}
+              <button
+                className={`voice-toggle-button ${voiceMode ? 'voice-on' : ''} ${isSpeaking ? 'speaking' : ''}`}
+                onClick={() => { if (isSpeaking) { window.speechSynthesis?.cancel(); setIsSpeaking(false); } setVoiceMode(v => !v); }}
+                title={voiceMode ? 'Voice Mode ON' : 'Voice Mode OFF'}
+              >
+                {isSpeaking ? '🔊' : voiceMode ? '🔈' : '🔇'}
+              </button>
             </div>
-            <button className="clear-chat-button" onClick={clearChatHistory}>Clear Chat</button>
           </header>
 
           {showFilesPanel && (
@@ -1582,12 +1940,18 @@ export default function App() {
 
           <div className="message-list-container">
             {messages.length === 0 && (
-              <div className="welcome-banner">
-                <div className="welcome-avatar-glow">
-                  <img src={alexAvatarSrc} alt="Alex's avatar" className="welcome-avatar alex-avatar" width="80" height="80" />
+              <div className="message-item group self-start">
+                <div className="message-header">
+                  <div className="avatar-container">
+                    <img src={alexAvatarSrc} alt="Alex" className="avatar alex-avatar" width="32" height="32" />
+                    <div className="online-status-dot"></div>
+                  </div>
+                  <span className="username">Alex</span>
+                  <span className="timestamp">Just now</span>
                 </div>
-                <h1>Welcome to #{currentChannel.name}!</h1>
-                <p>{getWelcomeMessage(activeChannel)}</p>
+                <div className="message-content">
+                  <p>{getWelcomeMessage(activeChannel)}</p>
+                </div>
               </div>
             )}
 
@@ -1600,12 +1964,58 @@ export default function App() {
             <div ref={endRef} />
           </div>
 
+          {/* Persistent Quick-Action Chips */}
+          {uploadedFiles.length > 0 && (
+            <div className={`quick-chips-bar ${chipGlow ? 'glow' : ''}`}>
+              <button
+                className={`quick-chip mindmap-chip ${chipLoading === 'mindmap' ? 'loading' : ''}`}
+                disabled={chipLoading !== null || streaming}
+                onClick={async () => {
+                  setChipLoading('mindmap');
+                  setChipGlow(false);
+                  try {
+                    const latest = uploadedFiles[uploadedFiles.length - 1];
+                    const res = await fetch(`${API}/api/study/mindmap`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename: latest.filename }) });
+                    const data = await res.json();
+                    if (data.mermaid) {
+                      const mmMsg = { role: 'assistant', text: `🧠 **Mind Map for ${latest.filename}:**\n\nCheck this out, I laid it all out in a map so it's easier to see!`, mermaidCode: data.mermaid, timestamp: new Date().toISOString() };
+                      setChatHistory(p => ({ ...p, [activeChannel]: [...(p[activeChannel] || []), mmMsg] }));
+                    }
+                  } catch (err) { console.error('Chip mindmap error:', err); }
+                  setChipLoading(null);
+                }}
+              >
+                {chipLoading === 'mindmap' ? '⏳ Mapping...' : '🧠 Mind Map'}
+              </button>
+              <button
+                className={`quick-chip summary-chip ${chipLoading === 'summary' ? 'loading' : ''}`}
+                disabled={chipLoading !== null || streaming}
+                onClick={async () => {
+                  setChipLoading('summary');
+                  setChipGlow(false);
+                  try {
+                    const latest = uploadedFiles[uploadedFiles.length - 1];
+                    const res = await fetch(`${API}/api/study/summary`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename: latest.filename }) });
+                    const data = await res.json();
+                    if (data.summary) {
+                      const smMsg = { role: 'assistant', text: `📝 **Summary:**\n\n${data.summary}`, timestamp: new Date().toISOString() };
+                      setChatHistory(p => ({ ...p, [activeChannel]: [...(p[activeChannel] || []), smMsg] }));
+                    }
+                  } catch (err) { console.error('Chip summary error:', err); }
+                  setChipLoading(null);
+                }}
+              >
+                {chipLoading === 'summary' ? '⏳ Summarizing...' : '📝 Summary'}
+              </button>
+            </div>
+          )}
+
           <div className="chat-input-area">
             <input
               type="file"
               ref={fileInputRef}
               style={{ display: 'none' }}
-              accept=".txt,.pdf,.docx,.csv,.md,.png,.jpg,.jpeg"
+              accept=".txt,.pdf,.docx,.pptx,.csv,.md,.png,.jpg,.jpeg"
               onChange={handleFileChange}
             />
             <button
@@ -1620,11 +2030,20 @@ export default function App() {
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && send()}
-              placeholder={`Message #${currentChannel.name}`}
+              placeholder="Message Alex..."
               disabled={streaming || uploading}
               className="chat-input"
-              aria-label={`Message #${currentChannel.name}`}
+              aria-label="Message Alex"
             />
+            <button
+              className={`mic-button ${isListening ? 'recording' : ''}`}
+              onClick={toggleListening}
+              disabled={streaming || uploading}
+              aria-label={isListening ? 'Stop listening' : 'Start voice input'}
+              title={isListening ? 'Listening... click to stop' : 'Hold to speak'}
+            >
+              {isListening ? '⏺️' : '🎤'}
+            </button>
             <button onClick={send} disabled={streaming || uploading || !input.trim()} className="send-button">
               ↑
             </button>

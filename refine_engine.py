@@ -49,6 +49,7 @@ except ImportError:
 MODIFIABLE_EXTENSIONS = {
     ".py", ".js", ".jsx", ".ts", ".tsx", ".css", ".html",
     ".json", ".bat", ".sh", ".md", ".env.template",
+    ".yml", ".yaml",  # Docker Compose, CI/CD configs
 }
 
 SKIP_DIRS = {"node_modules", "__pycache__", ".git", ".Gemini_state"}

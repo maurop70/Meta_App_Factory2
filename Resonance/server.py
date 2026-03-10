@@ -26,6 +26,13 @@ except ImportError:
     Document = None
     logging.warning("python-docx not installed. DOCX file extraction will not work.")
 
+# For PPTX
+try:
+    from pptx import Presentation
+except ImportError:
+    Presentation = None
+    logging.warning("python-pptx not installed. PPTX file extraction will not work.")
+
 
 # Load .env variables
 load_dotenv()
@@ -90,6 +97,16 @@ async def _extract_text_from_file(file_path: str, file_type: str) -> str:
                     extracted_text += para.text + "\n"
             else:
                 extracted_text = "[DOCX text extraction requires python-docx library]"
+        elif file_type == "pptx":
+            if Presentation:
+                prs = Presentation(file_path)
+                for slide_num, slide in enumerate(prs.slides, 1):
+                    extracted_text += f"--- Slide {slide_num} ---\n"
+                    for shape in slide.shapes:
+                        if hasattr(shape, "text") and shape.text.strip():
+                            extracted_text += shape.text + "\n"
+            else:
+                extracted_text = "[PPTX text extraction requires python-pptx library]"
         elif file_type in ["png", "jpg", "jpeg"]:
             extracted_text = f"[Image uploaded: {os.path.basename(file_path)}]"
         else:
@@ -147,6 +164,15 @@ try:
 except ImportError as e:
     DIGEST_AVAILABLE = False
     logger.warning(f"Report Digest engine not available: {e}")
+
+# ── Nerve Center (Self-Healing Engine) Import ──────────
+try:
+    from nerve_center import NerveCenter, start_background_monitor, get_nerve_instance
+    NERVE_CENTER_AVAILABLE = True
+    logger.info("Nerve Center self-healing engine loaded.")
+except ImportError as e:
+    NERVE_CENTER_AVAILABLE = False
+    logger.warning(f"Nerve Center not available: {e}")
 
 def _load_parent_config():
     """Loads the parent configuration from parent_config.json, creating it if it doesn't exist."""
@@ -221,9 +247,19 @@ class PinResetRequest(BaseModel):
 class ReportSettingsRequest(BaseModel):
     enabled: Optional[bool] = None
 
+# ── Auto-start Nerve Center Background Monitor ────────
+@app.on_event("startup")
+async def startup_nerve_center():
+    if NERVE_CENTER_AVAILABLE:
+        try:
+            start_background_monitor(interval_seconds=300)  # Scan every 5 minutes
+            logger.info("Nerve Center background monitor started (interval: 300s).")
+        except Exception as e:
+            logger.warning(f"Nerve Center background start failed: {e}")
+
 @app.get("/")
 def root():
-    return {"service": "Resonance", "version": "3.0", "streaming": STREAMING}
+    return {"service": "Resonance", "version": "3.0", "streaming": STREAMING, "nerve_center": NERVE_CENTER_AVAILABLE}
 
 @app.post("/api/chat/stream")
 async def chat_stream(req: ChatRequest):
@@ -252,7 +288,7 @@ async def upload_file(file: UploadFile = File(...), section_tag: Optional[str] =
     Optional section_tag links the file to a specific Student Profile section.
     Supported types: .txt, .pdf, .docx, .csv, .md, .png, .jpg, .jpeg
     """
-    allowed_extensions = {".txt", ".pdf", ".docx", ".csv", ".md", ".png", ".jpg", ".jpeg"}
+    allowed_extensions = {".txt", ".pdf", ".docx", ".pptx", ".csv", ".md", ".png", ".jpg", ".jpeg"}
     file_extension = os.path.splitext(file.filename)[1].lower()
 
     if file_extension not in allowed_extensions:
@@ -289,11 +325,15 @@ async def upload_file(file: UploadFile = File(...), section_tag: Optional[str] =
     file_context["files"].append(new_entry)
     _save_file_context(file_context)
 
+    # Study mode is available if meaningful text was extracted (not images)
+    study_available = len(extracted_text) > 50 and not extracted_text.startswith("[")
+
     return JSONResponse({
         "status": "ok",
         "filename": safe_filename,
         "text_length": len(extracted_text),
-        "section_tag": section_tag or "general"
+        "section_tag": section_tag or "general",
+        "study_available": study_available,
     })
 
 @app.get("/api/uploads")
@@ -565,6 +605,317 @@ def update_report_settings(req: ReportSettingsRequest):
     config["report_intelligence"] = report_intel
     _save_parent_config(config)
     return JSONResponse({"status": "ok", "enabled": report_intel["enabled"]})
+
+# ── Nerve Center (Self-Healing) API Endpoints ───────────
+
+@app.get("/api/nerve-center/status")
+def nerve_center_status():
+    """Returns the current Nerve Center status, circuit breaker health, and recent actions."""
+    if not NERVE_CENTER_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Nerve Center not available.")
+    nc = get_nerve_instance()
+    if not nc:
+        # Create a one-shot instance for status
+        nc = NerveCenter()
+    return JSONResponse(nc.get_status())
+
+@app.post("/api/nerve-center/scan")
+def nerve_center_scan():
+    """Triggers an immediate SCAN → ANALYZE → ACT → LOG self-healing cycle."""
+    if not NERVE_CENTER_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Nerve Center not available.")
+    nc = get_nerve_instance()
+    if not nc:
+        nc = NerveCenter()
+    report = nc.scan_and_heal()
+    return JSONResponse(report)
+
+@app.get("/api/nerve-center/review-queue")
+def nerve_center_review_queue():
+    """Returns failures that require manual review (not auto-healable)."""
+    if not NERVE_CENTER_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Nerve Center not available.")
+    nc = get_nerve_instance()
+    if not nc:
+        nc = NerveCenter()
+    status = nc.get_status()
+    return JSONResponse({
+        "review_queue": status.get("review_queue", []),
+        "total": status.get("review_queue_size", 0),
+    })
+
+# ── Dashboard API Endpoints ─────────────────────────────
+
+FACTORY_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
+REGISTRY_PATH = os.path.join(FACTORY_DIR, "registry.json")
+
+@app.get("/api/dashboard/projects")
+def dashboard_projects():
+    """Returns the Project Index from registry.json."""
+    try:
+        with open(REGISTRY_PATH, "r", encoding="utf-8") as f:
+            registry = json.load(f)
+        apps = registry.get("apps", {})
+        projects = []
+        for name, data in apps.items():
+            projects.append({
+                "name": name,
+                "status": data.get("status", "unknown"),
+                "type": data.get("type", "Unknown"),
+                "port": data.get("port"),
+                "path": data.get("path", f"Meta_App_Factory/{name}"),
+                "capabilities": data.get("capabilities", []),
+                "last_build": data.get("last_build"),
+                "blueprint": data.get("blueprint"),
+            })
+        return JSONResponse({
+            "projects": projects,
+            "total": len(projects),
+            "last_updated": registry.get("last_updated"),
+        })
+    except FileNotFoundError:
+        return JSONResponse({"projects": [], "total": 0, "error": "registry.json not found"})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/dashboard/health")
+def dashboard_health():
+    """Returns System Health: live-pings registered services and security status."""
+    import requests as req_lib
+
+    # Load registry for service list
+    services = []
+    try:
+        with open(REGISTRY_PATH, "r", encoding="utf-8") as f:
+            registry = json.load(f)
+
+        for name, data in registry.get("apps", {}).items():
+            port = data.get("port")
+            status_val = "unknown"
+            if port:
+                try:
+                    r = req_lib.get(f"http://localhost:{port}/api/health", timeout=2)
+                    status_val = "online" if r.status_code == 200 else "error"
+                except Exception:
+                    status_val = "offline"
+            else:
+                status_val = "no_port"
+
+            services.append({
+                "name": name,
+                "endpoint": f"localhost:{port}" if port else "N/A",
+                "status": status_val,
+                "port": port,
+                "type": data.get("type", "Unknown"),
+            })
+    except Exception as e:
+        logger.warning(f"Dashboard health: registry load failed: {e}")
+
+    # Static infrastructure services
+    infra_services = [
+        {"name": "n8n Cloud", "endpoint": "humanresource.app.n8n.cloud", "status": "configured", "type": "Workflow Engine"},
+        {"name": "Google Drive Sync", "endpoint": "Multi-PC", "status": "active", "type": "Storage"},
+    ]
+
+    # Nerve Center status
+    nerve_status = "unavailable"
+    if NERVE_CENTER_AVAILABLE:
+        try:
+            nc = get_nerve_instance()
+            if nc:
+                nerve_status = "active"
+            else:
+                nerve_status = "idle"
+        except Exception:
+            nerve_status = "error"
+
+    # Security status
+    security = [
+        {"item": "Credential Exposure", "status": "green", "owner": "Compliance Officer", "note": "All hardcoded keys removed"},
+        {"item": "Vault Encryption", "status": "green", "owner": "Compliance Officer", "note": "Fernet AES-128 active"},
+        {"item": "Isolation Boundary", "status": "green", "owner": "All agents", "note": "forbidden_references enforced"},
+        {"item": "Webhook Auth", "status": "yellow", "owner": "CTO", "note": "P1: Add bearer tokens"},
+    ]
+
+    return JSONResponse({
+        "services": services,
+        "infrastructure": infra_services,
+        "nerve_center": nerve_status,
+        "security": security,
+        "checked_at": datetime.now().isoformat(),
+    })
+
+@app.get("/api/dashboard/fiscal")
+def dashboard_fiscal():
+    """Returns Fiscal Oversight budget data."""
+    try:
+        sys.path.insert(0, os.path.join(FACTORY_DIR, "Project_Aether"))
+        from fiscal_oversight import FiscalOversight
+        fo = FiscalOversight()
+        status = fo.get_status()
+        return JSONResponse(status)
+    except ImportError:
+        return JSONResponse({
+            "engine": "Not Available",
+            "threshold": 10.0,
+            "current_total_cost": 0.0,
+            "budget_remaining": 10.0,
+            "error": "fiscal_oversight module not found",
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class DashboardCommandRequest(BaseModel):
+    prompt: str
+
+@app.post("/api/dashboard/command")
+def dashboard_command(req: DashboardCommandRequest):
+    """Universal Input: sends a prompt to the n8n Brain webhook and returns the response."""
+    webhook_url = os.getenv("WEBHOOK_URL", "")
+    if not webhook_url:
+        raise HTTPException(status_code=503, detail="WEBHOOK_URL not configured in .env")
+
+    import requests as req_lib
+    try:
+        response = req_lib.post(
+            webhook_url,
+            json={"prompt": req.prompt},
+            timeout=60,
+        )
+        response.raise_for_status()
+        try:
+            data = response.json()
+            output = data.get("text") or data.get("output") or json.dumps(data)
+        except ValueError:
+            output = response.text
+        return JSONResponse({"response": output, "status": "ok"})
+    except req_lib.exceptions.Timeout:
+        return JSONResponse({"response": "Timeout: The Brain took too long to respond.", "status": "timeout"})
+    except Exception as e:
+        return JSONResponse({"response": f"Error: {str(e)}", "status": "error"})
+
+# ── Study Mode API ───────────────────────────────────────
+
+class StudyRequest(BaseModel):
+    filename: str
+
+@app.post("/api/study/mindmap")
+async def generate_mindmap(req: StudyRequest):
+    """Generates a Mermaid.js knowledge graph from an uploaded document."""
+    file_context = _load_file_context()
+    target = next((f for f in file_context["files"] if f["filename"] == req.filename), None)
+    if not target:
+        raise HTTPException(status_code=404, detail="File not found in uploads")
+
+    text = target.get("extracted_text", "")
+    if len(text) < 50:
+        raise HTTPException(status_code=400, detail="Not enough text content to generate a mind map")
+
+    # Truncate to first 4000 chars for API efficiency
+    text_snippet = text[:4000]
+
+    import google.generativeai as genai
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        try:
+            from vault_client import get_secret
+            api_key = get_secret("GEMINI_API_KEY")
+        except Exception:
+            pass
+    if not api_key:
+        raise HTTPException(status_code=500, detail="GEMINI_API_KEY not configured")
+
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel("gemini-2.5-flash")
+
+    prompt = f"""Analyze this document and create a Mermaid.js mindmap diagram for a teenager.
+Rules:
+- Use the `mindmap` diagram type (radial layout, NOT flowchart)
+- The root node should be the main topic with an emoji (e.g., 🧬 Biology)
+- Create 3-6 branches for key themes, each with an emoji prefix (💡 for key ideas, 📝 for details, 🔬 for experiments, 🧠 for concepts, ⚡ for important facts, 🎯 for goals)
+- Each branch should have 2-4 sub-items with short, punchy labels
+- Keep labels SHORT (max 5 words), use teen-friendly casual language
+- Add emojis to ALL nodes to make it visually scannable
+- Output ONLY the raw Mermaid code, no explanation, no code fences
+- Example format:
+  mindmap
+    root((🧬 Biology Basics))
+      💡 Key Concepts
+        🧠 Cells are building blocks
+        ⚡ DNA carries the code
+      📝 Vocabulary
+        🔬 Mitosis = cell split
+        🎯 Photosynthesis = food factory
+
+Document:
+{text_snippet}"""
+
+    try:
+        response = model.generate_content(prompt)
+        mermaid_code = response.text.strip()
+        # Clean up any accidental code fences
+        if mermaid_code.startswith("```"):
+            mermaid_code = mermaid_code.split("\n", 1)[-1]
+        if mermaid_code.endswith("```"):
+            mermaid_code = mermaid_code.rsplit("```", 1)[0].strip()
+        return JSONResponse({"status": "ok", "mermaid": mermaid_code, "filename": req.filename})
+    except Exception as e:
+        logger.error(f"Mind map generation error: {e}")
+        raise HTTPException(status_code=500, detail=f"Mind map generation failed: {str(e)}")
+
+
+@app.post("/api/study/summary")
+async def generate_summary(req: StudyRequest):
+    """Generates a structured summary of an uploaded document."""
+    file_context = _load_file_context()
+    target = next((f for f in file_context["files"] if f["filename"] == req.filename), None)
+    if not target:
+        raise HTTPException(status_code=404, detail="File not found in uploads")
+
+    text = target.get("extracted_text", "")
+    if len(text) < 50:
+        raise HTTPException(status_code=400, detail="Not enough text content to summarize")
+
+    # Truncate to first 6000 chars for API efficiency
+    text_snippet = text[:6000]
+
+    import google.generativeai as genai
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        try:
+            from vault_client import get_secret
+            api_key = get_secret("GEMINI_API_KEY")
+        except Exception:
+            pass
+    if not api_key:
+        raise HTTPException(status_code=500, detail="GEMINI_API_KEY not configured")
+
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel("gemini-2.5-flash")
+
+    prompt = f"""Create a structured study summary of this document. Format it as:
+
+## Key Concepts
+- Bullet points of the main ideas
+
+## Important Details
+- Supporting facts and details
+
+## Quick Review Questions
+- 3-4 questions to test understanding
+
+Keep it concise and student-friendly. Use simple language.
+
+Document:
+{text_snippet}"""
+
+    try:
+        response = model.generate_content(prompt)
+        return JSONResponse({"status": "ok", "summary": response.text.strip(), "filename": req.filename})
+    except Exception as e:
+        logger.error(f"Summary generation error: {e}")
+        raise HTTPException(status_code=500, detail=f"Summary generation failed: {str(e)}")
+
 
 if __name__ == "__main__":
     import uvicorn
