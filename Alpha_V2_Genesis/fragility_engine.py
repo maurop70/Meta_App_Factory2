@@ -22,16 +22,39 @@ logger = logging.getLogger("FragilityEngine")
 _cache = {"data": None, "ts": 0}
 CACHE_TTL = 60  # seconds
 
+# ── Fetch Tracking (for confidence scoring) ──────────────────────
+_fetch_tracker = {"total": 0, "success": 0, "failed": 0, "stale": 0}
+
+def _reset_fetch_tracker():
+    _fetch_tracker["total"] = 0
+    _fetch_tracker["success"] = 0
+    _fetch_tracker["failed"] = 0
+    _fetch_tracker["stale"] = 0
 
 def _fetch_history(ticker, period="3mo"):
-    """Safe yfinance history fetch with fallback."""
+    """Safe yfinance history fetch with fallback. Tracks success/failure."""
+    _fetch_tracker["total"] += 1
     try:
         t = yf.Ticker(ticker)
         h = t.history(period=period)
         if h.empty:
+            _fetch_tracker["failed"] += 1
             return None
+        # Check data freshness — stale if last datapoint > 30 min old
+        if len(h) > 0:
+            last_ts = h.index[-1]
+            try:
+                import pandas as pd
+                now = pd.Timestamp.now(tz=last_ts.tzinfo) if last_ts.tzinfo else pd.Timestamp.now()
+                age_minutes = (now - last_ts).total_seconds() / 60
+                if age_minutes > 30:
+                    _fetch_tracker["stale"] += 1
+            except Exception:
+                pass
+        _fetch_tracker["success"] += 1
         return h
     except Exception as e:
+        _fetch_tracker["failed"] += 1
         logger.warning(f"[Fragility] Failed to fetch {ticker}: {e}")
         return None
 
@@ -637,6 +660,77 @@ def _synthesize(vol, corr, credit):
 # PUBLIC API — compute_fragility()
 # ══════════════════════════════════════════════════════════════════
 
+# ══════════════════════════════════════════════════════════════════
+# 5. DATA CONFIDENCE SCORE (Aether-integrated)
+# ══════════════════════════════════════════════════════════════════
+
+def _compute_data_confidence() -> dict:
+    """
+    Evaluates the quality and freshness of data feeds.
+    Returns a confidence_score (0-100) indicating how reliable
+    the current fragility reading is.
+
+    Factors:
+    - Fetch success rate (failed fetches = big penalty)
+    - Data freshness (stale feeds = moderate penalty)
+    - Total coverage (more successful fetches = higher base confidence)
+    """
+    total = _fetch_tracker.get("total", 0)
+    success = _fetch_tracker.get("success", 0)
+    failed = _fetch_tracker.get("failed", 0)
+    stale = _fetch_tracker.get("stale", 0)
+
+    if total == 0:
+        return {
+            "confidence_score": 0,
+            "confidence_status": "UNKNOWN",
+            "confidence_details": {
+                "total_fetches": 0,
+                "successful": 0,
+                "failed": 0,
+                "stale": 0,
+                "success_rate": 0,
+            },
+        }
+
+    # Base confidence from success rate
+    success_rate = success / total
+    base_score = success_rate * 100
+
+    # Penalize stale data (each stale feed reduces score by 8 points)
+    stale_penalty = min(stale * 8, 40)
+
+    # Penalize failed fetches harder (each failure reduces by 12 points)
+    fail_penalty = min(failed * 12, 60)
+
+    # Bonus for good coverage (> 8 successful fetches)
+    coverage_bonus = min((success - 5) * 3, 15) if success > 5 else 0
+
+    confidence_score = max(0, min(100, int(
+        base_score - stale_penalty - fail_penalty + coverage_bonus
+    )))
+
+    # Status classification
+    if confidence_score >= 70:
+        status = "HIGH"
+    elif confidence_score >= 40:
+        status = "MEDIUM"
+    else:
+        status = "LOW"
+
+    return {
+        "confidence_score": confidence_score,
+        "confidence_status": status,
+        "confidence_details": {
+            "total_fetches": total,
+            "successful": success,
+            "failed": failed,
+            "stale": stale,
+            "success_rate": round(success_rate, 2),
+        },
+    }
+
+
 def compute_fragility():
     """
     Main entry point. Returns the full fragility payload.
@@ -648,14 +742,23 @@ def compute_fragility():
 
     logger.info("[Fragility] Computing fragility indicators...")
 
+    # Reset fetch tracker for this computation cycle
+    _reset_fetch_tracker()
+
     vol = _compute_volatility_structure()
     corr = _compute_correlations()
     credit = _compute_credit_stress()
     synthesis = _synthesize(vol, corr, credit)
 
+    # Compute data confidence based on fetch results
+    confidence = _compute_data_confidence()
+
     payload = {
         "timestamp": datetime.now().isoformat(),
         "fragility_index": synthesis["fragility_index"],
+        "confidence_score": confidence["confidence_score"],
+        "confidence_status": confidence["confidence_status"],
+        "confidence_details": confidence["confidence_details"],
         "volatility": vol,
         "correlations": corr,
         "credit": credit,
@@ -668,6 +771,7 @@ def compute_fragility():
     logger.info(
         f"[Fragility] Index: {synthesis['fragility_index']}/100 "
         f"| Regime: {synthesis['regime']} "
+        f"| Confidence: {confidence['confidence_score']}/100 ({confidence['confidence_status']}) "
         f"| Stop: {synthesis['stop_trading']}"
     )
 

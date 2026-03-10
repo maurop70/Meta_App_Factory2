@@ -703,6 +703,78 @@ def get_fragility():
         return jsonify({"error": str(e)}), 500
 
 
+# ── Performance Audit Telemetry ─────────────────────────────────
+try:
+    from performance_audit import load_latest_report as load_perf_report, run_audit
+    PERF_AUDIT_AVAILABLE = True
+except ImportError:
+    PERF_AUDIT_AVAILABLE = False
+
+@app.route('/api/telemetry/perf', methods=['GET'])
+def get_perf_telemetry():
+    """Returns the latest performance audit report."""
+    if not PERF_AUDIT_AVAILABLE:
+        return jsonify({"error": "Performance audit module not available"}), 503
+    try:
+        report = load_perf_report()
+        if not report:
+            return jsonify({"status": "no_data", "message": "No audit has been run yet. Trigger via POST."}), 200
+        return jsonify(report)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/telemetry/perf', methods=['POST'])
+def trigger_perf_audit():
+    """Triggers a fresh performance audit and returns the results."""
+    if not PERF_AUDIT_AVAILABLE:
+        return jsonify({"error": "Performance audit module not available"}), 503
+    try:
+        report = run_audit()
+        return jsonify(report)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ── Market News Intelligence Report ────────────────────────────
+try:
+    from market_news_report import generate_news_report, load_cached_report
+    NEWS_REPORT_AVAILABLE = True
+except ImportError:
+    NEWS_REPORT_AVAILABLE = False
+
+@app.route('/api/news-report', methods=['GET'])
+def get_news_report():
+    """Returns the latest cached news report."""
+    if not NEWS_REPORT_AVAILABLE:
+        return jsonify({"error": "News report module not available"}), 503
+    try:
+        report = load_cached_report()
+        if not report:
+            return jsonify({"status": "no_data", "message": "No report generated yet. Trigger via POST."}), 200
+        return jsonify(report)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/news-report', methods=['POST'])
+def trigger_news_report():
+    """Generates a fresh market news intelligence report."""
+    if not NEWS_REPORT_AVAILABLE:
+        return jsonify({"error": "News report module not available"}), 503
+    try:
+        # Fetch live snapshot if Loki is available
+        snapshot = None
+        if Loki:
+            try:
+                loki = Loki()
+                snapshot = loki.get_market_snapshot()
+            except Exception:
+                pass
+        report = generate_news_report(market_snapshot=snapshot)
+        return jsonify(report)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 # ── SSE Streaming Chat ──────────────────────────────────────────
 STREAM_SESSION = "alpha-stream"  # Default session ID for the chat panel
 

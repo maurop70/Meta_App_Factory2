@@ -176,6 +176,32 @@ def compute_position_greeks(legs_with_greeks, multiplier=100):
 # 1. MARKET DATA LAYER
 # ══════════════════════════════════════════════════════════════════
 
+def _get_live_price(ticker_obj):
+    """Get the most current price using 3-tier fallback: fast_info → intraday → daily close."""
+    # Tier 1: fast_info (near-realtime during market hours)
+    try:
+        price = ticker_obj.fast_info.last_price
+        if price and price > 0:
+            return float(price)
+    except Exception:
+        pass
+    # Tier 2: 1-minute intraday history (5-15 min delay but better than daily)
+    try:
+        h = ticker_obj.history(period="1d", interval="1m")
+        if not h.empty:
+            return float(h["Close"].iloc[-1])
+    except Exception:
+        pass
+    # Tier 3: Daily close (may be yesterday's close during market hours)
+    try:
+        h = ticker_obj.history(period="1d")
+        if not h.empty:
+            return float(h["Close"].iloc[-1])
+    except Exception:
+        pass
+    return None
+
+
 def fetch_market_snapshot():
     """Fetches live SPX, VIX, IV Rank, HV30, and trend data."""
     spx_t = yf.Ticker("^GSPC")
@@ -183,8 +209,9 @@ def fetch_market_snapshot():
     spx_1y = spx_t.history(period="1y")
     vix_1y = vix_t.history(period="1y")
 
-    spx_now = float(spx_1y["Close"].iloc[-1])
-    vix_now = float(vix_1y["Close"].iloc[-1])
+    # Use live price (fast_info/intraday) instead of daily close
+    spx_now = _get_live_price(spx_t) or float(spx_1y["Close"].iloc[-1])
+    vix_now = _get_live_price(vix_t) or float(vix_1y["Close"].iloc[-1])
 
     vix_hi  = float(vix_1y["High"].max())
     vix_lo  = float(vix_1y["Low"].min())

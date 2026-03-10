@@ -401,6 +401,44 @@ def health_check():
     }
 
 
+# ── Scraper Self-Heal (ScraperError → Gemini Re-prompt) ───────
+class ScraperHealRequest(BaseModel):
+    error_type: str = "ScraperError"
+    url: str = ""
+    selector: str = ""
+    context: str = ""
+
+@app.post("/api/factory/scraper-heal")
+def scraper_heal(req: ScraperHealRequest):
+    """
+    Meta_App_Factory log-watcher endpoint. When a ScraperError
+    is detected in Sentry/error logs, this endpoint triggers the
+    Browser Agent (Gemini) to find new CSS selectors for the
+    Yahoo Finance price feed.
+    """
+    try:
+        alpha_dir = os.path.join(SCRIPT_DIR, "Alpha_V2_Genesis")
+        sys.path.insert(0, alpha_dir)
+        from scraper_healer import ScraperHealer
+        healer = ScraperHealer()
+        result = healer.heal_scraper(
+            url=req.url or "https://finance.yahoo.com/quote/",
+            old_selector=req.selector,
+            context=req.context or req.error_type,
+        )
+        return result
+    except ImportError:
+        return JSONResponse(
+            {"error": "ScraperHealer module not available"},
+            status_code=503
+        )
+    except Exception as e:
+        return JSONResponse(
+            {"error": str(e)},
+            status_code=500
+        )
+
+
 @app.get("/api/ip/status")
 def ip_status():
     """IP Strategist status endpoint — used by heartbeat.py and health_check.py."""

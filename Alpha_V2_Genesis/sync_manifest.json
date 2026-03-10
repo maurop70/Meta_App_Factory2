@@ -1,0 +1,58 @@
+{
+  "version": "2.6-hardened",
+  "codename": "Hardened",
+  "build_date": "2026-03-10T10:07:00-04:00",
+  "stability_tier": "production",
+  "modules": {
+    "performance_audit": {
+      "file": "performance_audit.py",
+      "status": "new",
+      "description": "Aether-powered profiling for all Alpha Architect scripts"
+    },
+    "scraper_healer": {
+      "file": "scraper_healer.py",
+      "status": "new",
+      "description": "Gemini-powered CSS selector self-correction for Yahoo Finance"
+    },
+    "fragility_engine": {
+      "file": "fragility_engine.py",
+      "status": "modified",
+      "change": "Added confidence_score based on Yahoo data feed quality"
+    },
+    "self_heal": {
+      "file": "../Sentinel_Bridge/self_heal.py",
+      "status": "modified",
+      "change": "ScraperError patterns + resolve_selectors action"
+    },
+    "server": {
+      "file": "server.py",
+      "status": "modified",
+      "change": "Added /api/telemetry/perf endpoint"
+    },
+    "api": {
+      "file": "../api.py",
+      "status": "modified",
+      "change": "Added /api/factory/scraper-heal endpoint"
+    },
+    "ui": {
+      "file": "alpha_ui/src/App.jsx",
+      "status": "modified",
+      "change": "Data Confidence badge (green/amber/red) in Fragility Index tab"
+    }
+  },
+  "required_stability_modules": [
+    "preflight.py",
+    "circuit_breaker.py",
+    "error_aggregator.py",
+    "n8n_budget_guard.py",
+    "telemetry_dashboard.py",
+    "config_snapshot.py",
+    "infrastructure_supervisor.py",
+    "volatility_sentry.py"
+  ],
+  "sync_policy": {
+    "auto_update": true,
+    "minimum_version": "2.6-hardened",
+    "sync_channel": "google_drive"
+  }
+}
