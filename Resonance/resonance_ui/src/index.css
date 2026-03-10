@@ -2995,3 +2995,83 @@ body {
     box-shadow: 0 0 0 8px rgba(244, 67, 54, 0);
   }
 }
+
+/* ══ AUDIENCE DETECTION NUDGE ═══════════════════════ */
+.audience-nudge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.8rem;
+  margin: 0 0.5rem;
+  background: linear-gradient(135deg, rgba(88, 101, 242, 0.15), rgba(157, 78, 221, 0.15));
+  border: 1px solid rgba(88, 101, 242, 0.35);
+  border-radius: 10px;
+  animation: nudgeSlideIn 0.4s ease-out;
+}
+
+@keyframes nudgeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.nudge-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.nudge-text {
+  flex: 1;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.nudge-text strong {
+  color: #818cf8;
+}
+
+.nudge-research-btn {
+  background: linear-gradient(135deg, #5865F2, #9D4EDD);
+  border: none;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  padding: 5px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.nudge-research-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 3px 10px rgba(88, 101, 242, 0.3);
+}
+
+.nudge-research-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.nudge-dismiss {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 2px 5px;
+  border-radius: 4px;
+  transition: color 0.2s;
+}
+
+.nudge-dismiss:hover {
+  color: var(--error-color);
+}

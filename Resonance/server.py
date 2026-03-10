@@ -922,6 +922,19 @@ FACTORY_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
 if FACTORY_DIR not in sys.path:
     sys.path.insert(0, FACTORY_DIR)
 
+class AudienceDetectRequest(BaseModel):
+    text: str
+
+@app.post("/api/audience/detect")
+async def audience_detect(req: AudienceDetectRequest):
+    """Instant audience intent detection — regex only, no API call."""
+    try:
+        from Project_Aether.audience_validator import AudienceValidator
+        result = AudienceValidator.detect_audience_intent(req.text)
+        return JSONResponse(result)
+    except Exception as e:
+        return JSONResponse({"detected": False, "audience_hint": "", "confidence": 0.0, "error": str(e)})
+
 class AudienceValidateRequest(BaseModel):
     messages: List[dict] = []
     content: str = ""
