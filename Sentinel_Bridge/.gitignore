@@ -1,0 +1,23 @@
+# Sentinel Bridge — .gitignore
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# Local data (machine-specific logs)
+data/seen_events.json
+data/delivery_log.json
+data/aether_input_log.json
+
+# Encrypted vault (machine-bound)
+.env.sentinel
+
+# Node
+sentinel_ui/node_modules/
+sentinel_ui/dist/
+
+# IDE
+.vscode/
+.idea/
