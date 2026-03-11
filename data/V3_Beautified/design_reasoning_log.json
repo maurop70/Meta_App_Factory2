@@ -1,121 +1,57 @@
-[
-  {
-    "slide_type": "title",
-    "audience": "investor",
-    "visual_focus": "Brand Impact \u2014 full-width gradient with logo prominence",
-    "iconography": [
-      "company_logo",
-      "tagline_banner"
-    ],
-    "layout": "center_hero",
-    "color_weight": "primary_dominant",
-    "font_scale": "display",
-    "reasoning_source": "library"
-  },
-  {
-    "slide_type": "executive_summary",
-    "audience": "investor",
-    "visual_focus": "KPI Dashboard \u2014 key metrics at a glance",
-    "iconography": [
-      "chart_up",
-      "target",
-      "lightning",
-      "shield",
-      "roi"
-    ],
-    "layout": "kpi_grid_top_bullets_bottom",
-    "color_weight": "accent_highlights",
-    "font_scale": "heading_large",
-    "reasoning_source": "library"
-  },
-  {
-    "slide_type": "architecture",
-    "audience": "investor",
-    "visual_focus": "Technical Depth \u2014 layered system diagram",
-    "iconography": [
-      "server",
-      "network",
-      "gear",
-      "code",
-      "shield"
-    ],
-    "layout": "split_diagram_left_text_right",
-    "color_weight": "primary_gradient",
-    "font_scale": "heading_medium",
-    "reasoning_source": "library"
-  },
-  {
-    "slide_type": "network_diagram",
-    "audience": "investor",
-    "visual_focus": "Agent Network Topology \u2014 cluster-based node map",
-    "iconography": [
-      "node",
-      "connection",
-      "cluster",
-      "hub"
-    ],
-    "layout": "full_canvas_diagram",
-    "color_weight": "multi_cluster_palette",
-    "font_scale": "label_small",
-    "reasoning_source": "library"
-  },
-  {
-    "slide_type": "financials",
-    "audience": "investor",
-    "visual_focus": "Data Storytelling \u2014 chart with narrative context",
-    "iconography": [
-      "chart_bar",
-      "dollar",
-      "trending_up",
-      "calendar"
-    ],
-    "layout": "chart_left_bullets_right",
-    "color_weight": "accent_data_viz",
-    "font_scale": "body_standard",
-    "reasoning_source": "library"
-  },
-  {
-    "slide_type": "sensitivity",
-    "audience": "investor",
-    "visual_focus": "Scenario Comparison \u2014 tabular what-if analysis",
-    "iconography": [
-      "scale",
-      "warning",
-      "calculator",
-      "shield"
-    ],
-    "layout": "table_centered",
-    "color_weight": "gradient_risk_scale",
-    "font_scale": "body_compact",
-    "reasoning_source": "library"
-  },
-  {
-    "slide_type": "roadmap",
-    "audience": "investor",
-    "visual_focus": "Timeline \u2014 progressive milestone visualization",
-    "iconography": [
-      "milestone",
-      "rocket",
-      "flag",
-      "globe"
-    ],
-    "layout": "horizontal_timeline",
-    "color_weight": "sequential_gradient",
-    "font_scale": "heading_medium",
-    "reasoning_source": "library"
-  },
-  {
-    "slide_type": "closing",
-    "audience": "investor",
-    "visual_focus": "Call to Action \u2014 clean contact emphasis",
-    "iconography": [
-      "handshake",
-      "link",
-      "mail"
-    ],
-    "layout": "center_minimal",
-    "color_weight": "primary_dominant",
-    "font_scale": "display",
-    "reasoning_source": "library"
-  }
-]
+{
+  "verification_timestamp": "2026-03-11T22:32:29.316137+00:00",
+  "total_slides": 8,
+  "slides_with_visuals": 8,
+  "visual_coverage": "100%",
+  "all_slides_visual": true,
+  "slides": [
+    {
+      "slide_title": "Title",
+      "visual_elements": "gradient_bg + accent_bar",
+      "has_visual": true,
+      "verified": true
+    },
+    {
+      "slide_title": "Executive Summary",
+      "visual_elements": "kpi_boxes(5) + bullets",
+      "has_visual": true,
+      "verified": true
+    },
+    {
+      "slide_title": "Architecture Diagram",
+      "visual_elements": "node_map(5_clusters, 18_nodes, legend)",
+      "has_visual": true,
+      "verified": true
+    },
+    {
+      "slide_title": "System Health",
+      "visual_elements": "kpi_boxes(5) + n8n_warning + bullets",
+      "has_visual": true,
+      "verified": true
+    },
+    {
+      "slide_title": "Financials",
+      "visual_elements": "kpi_boxes(5) + chart_ref_shape + bullets",
+      "has_visual": true,
+      "verified": true
+    },
+    {
+      "slide_title": "Sensitivity",
+      "visual_elements": "scenario_kpi_boxes(4) + bullets",
+      "has_visual": true,
+      "verified": true
+    },
+    {
+      "slide_title": "Roadmap",
+      "visual_elements": "timeline_nodes(4) + n8n_warning_flag",
+      "has_visual": true,
+      "verified": true
+    },
+    {
+      "slide_title": "Closing",
+      "visual_elements": "brand_center + accent_bar",
+      "has_visual": true,
+      "verified": true
+    }
+  ]
+}
