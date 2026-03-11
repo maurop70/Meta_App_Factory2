@@ -5,6 +5,34 @@
       "type": "txt",
       "extracted_text": "Biology Homework - Chapter 5: Evolution\n\n1. What is natural selection?\nNatural selection is the process by which organisms with favorable traits are more likely to survive and reproduce.\n\n2. Define homologous structures.\nHomologous structures are body parts that share a common ancestry but may have different functions.\n\n3. What are vestigial structures?\nVestigial structures are body parts that have lost their original function through evolution.\n\n4. Explain divergent evolution.\nDivergent evolution occurs when two species that share a common ancestor diverge.\n\n5. Practice Question:\nThe wings of a bat and the wings of a butterfly are NOT homologous. They are analogous.",
       "uploaded_at": "2026-03-04T21:02:48.904994"
+    },
+    {
+      "filename": "quantum_physics.txt",
+      "type": "txt",
+      "extracted_text": "Quantum mechanics is a fundamental theory in physics that provides a description of the physical properties of nature at the scale of atoms and subatomic particles. It is the foundation of all quantum physics including quantum chemistry, quantum field theory, quantum technology, and quantum information science.",
+      "uploaded_at": "2026-03-09T22:05:29.798838",
+      "section_tag": "general"
+    },
+    {
+      "filename": "photosynthesis.txt",
+      "type": "txt",
+      "extracted_text": "Photosynthesis is the process by which plants use sunlight, water, and carbon dioxide to produce glucose and oxygen. Chloroplasts contain chlorophyll which absorbs light. The light reactions occur in the thylakoid membranes. The Calvin cycle fixes carbon in the stroma. ATP and NADPH are produced during the light-dependent reactions.",
+      "uploaded_at": "2026-03-09T22:47:11.052486",
+      "section_tag": "general"
+    },
+    {
+      "filename": "photosynthesis_test.txt",
+      "type": "txt",
+      "extracted_text": "Photosynthesis is the process by which green plants and some other organisms use sunlight to synthesize foods from carbon dioxide and water.",
+      "uploaded_at": "2026-03-09T22:57:44.707314",
+      "section_tag": "general"
+    },
+    {
+      "filename": "photosynthesis_retry.txt",
+      "type": "txt",
+      "extracted_text": "Photosynthesis is the process by which green plants and some other organisms use sunlight to synthesize foods from carbon dioxide and water. It involves chlorophyll and produces oxygen.",
+      "uploaded_at": "2026-03-09T22:59:17.824054",
+      "section_tag": "general"
     }
   ]
 }

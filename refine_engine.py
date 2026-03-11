@@ -21,6 +21,7 @@ import re
 import subprocess
 import shutil
 from typing import Generator, Dict, List, Optional, Tuple
+from datetime import datetime, timezone
 
 logger = logging.getLogger("RefineEngine")
 
@@ -413,6 +414,160 @@ def _lint_python(full_path: str, rel_path: str) -> List[str]:
         return [f"{rel_path}: Lint error — {e}"]
 
 
+# ── Active Recall: Validation Loop Helpers ───────────────────
+
+def _load_high_priority_failures(app_dir: str) -> List[dict]:
+    """Load past high-priority failures from .Gemini_state to prevent repeat errors."""
+    state_dir = os.path.join(os.path.dirname(app_dir), ".Gemini_state")
+    failures_path = os.path.join(state_dir, "high_priority_failures.json")
+    if not os.path.isfile(failures_path):
+        return []
+    try:
+        with open(failures_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        # Return only failures relevant to this app (last 10)
+        app_name = os.path.basename(app_dir)
+        return [e for e in data if e.get("app_name") == app_name][-10:]
+    except Exception as e:
+        logger.warning(f"Could not load high-priority failures: {e}")
+        return []
+
+
+def _extract_fix_descriptions(
+    modifications: Dict[str, str], gemini_response: str
+) -> List[dict]:
+    """Extract a list of {file, description} from the Gemini response summary."""
+    fixes = []
+    # Gemini typically writes a brief summary before ===FILE=== blocks.
+    # Extract lines that look like fix descriptions.
+    summary_section = gemini_response.split("===FILE:")[0].strip()
+    for line in summary_section.split("\n"):
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        # Match lines like "- Fixed X in Y" or "* Updated Z"
+        if line.startswith(("-", "*", "•")):
+            fixes.append({"description": line.lstrip("-*• ").strip()})
+
+    # Also generate entries from modified file names
+    for rel_path in modifications:
+        fixes.append({"file": rel_path, "description": f"Modified {rel_path}"})
+
+    return fixes
+
+
+def _generate_test_case(
+    app_name: str,
+    app_dir: str,
+    fix_descriptions: List[dict],
+    source_files: Dict[str, str],
+) -> Optional[str]:
+    """Call Gemini to generate a test_case.py that validates the applied fixes."""
+    fix_text = "\n".join(
+        f"  - {f.get('file', 'general')}: {f['description']}" for f in fix_descriptions
+    )
+
+    # Include a subset of source files for context (keep prompt under 30k chars)
+    context_files = []
+    budget = 20000
+    for rel_path, content in source_files.items():
+        if rel_path.endswith((".py", ".js", ".jsx")):
+            chunk = content[:3000]
+            if budget - len(chunk) < 0:
+                break
+            context_files.append(f"===FILE: {rel_path}===\n{chunk}\n===END_FILE===")
+            budget -= len(chunk)
+
+    test_prompt = f"""You are a QA engineer for the "{app_name}" application.
+
+The self-healing engine just applied these fixes:
+{fix_text}
+
+Here are the relevant source files (truncated for context):
+{chr(10).join(context_files)}
+
+Generate a Python test file using ONLY the `unittest` standard library module.
+The test file must:
+1. Be a complete, runnable `test_case.py` file
+2. Test that the fixes are logically sound (e.g. files exist, imports work, key functions are callable)
+3. Include at least one test per fix described above
+4. Use descriptive test method names like `test_<what_was_fixed>`
+5. NOT import any external packages — only stdlib + the app's own modules
+6. NOT start a server or make HTTP requests
+7. Handle ImportError gracefully with `self.skipTest()` if a module can't be imported
+
+Return ONLY the Python code. No markdown fences, no explanation.
+"""
+
+    response = _call_gemini(test_prompt, max_tokens=8192)
+    if not response:
+        return None
+
+    # Clean markdown fences if present
+    code = response.strip()
+    if code.startswith("```python"):
+        code = code[len("```python"):]
+    elif code.startswith("```"):
+        code = code[3:]
+    if code.endswith("```"):
+        code = code[:-3]
+    code = code.strip()
+
+    # Validate syntax before writing
+    try:
+        compile(code, "test_case.py", "exec")
+    except SyntaxError as e:
+        logger.warning(f"Generated test_case.py has syntax error: {e}")
+        return None
+
+    # Write to app directory
+    test_path = os.path.join(app_dir, "test_case.py")
+    try:
+        with open(test_path, "w", encoding="utf-8", newline="\n") as f:
+            f.write(code)
+        return test_path
+    except Exception as e:
+        logger.error(f"Could not write test_case.py: {e}")
+        return None
+
+
+def _log_high_priority_failure(
+    app_dir: str, app_name: str, verdict: dict, feedback: str
+) -> None:
+    """Append a high-priority failure entry to .Gemini_state/high_priority_failures.json."""
+    state_dir = os.path.join(os.path.dirname(app_dir), ".Gemini_state")
+    os.makedirs(state_dir, exist_ok=True)
+    failures_path = os.path.join(state_dir, "high_priority_failures.json")
+
+    # Load existing entries
+    entries = []
+    if os.path.isfile(failures_path):
+        try:
+            with open(failures_path, "r", encoding="utf-8") as f:
+                entries = json.load(f)
+        except (json.JSONDecodeError, Exception):
+            entries = []
+
+    entry = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "app_name": app_name,
+        "priority": "HIGH",
+        "source": "validation_loop",
+        "failures": verdict.get("failure_details", []),
+        "context": f"Refinement feedback: '{feedback[:200]}'",
+        "test_file": "test_case.py",
+        "total_tests": verdict.get("total_tests", 0),
+        "verdict": verdict.get("verdict", "REVISE"),
+    }
+    entries.append(entry)
+
+    try:
+        with open(failures_path, "w", encoding="utf-8", newline="\n") as f:
+            json.dump(entries, f, indent=2)
+    except Exception as e:
+        logger.error(f"Could not write high-priority failure log: {e}")
+
+
 # ── System Prompt (V2: Production Quality) ───────────────────
 
 REFINE_SYSTEM_PROMPT = """You are the Meta App Factory Self-Healing Architect V2. You are an elite full-stack production engineer.
@@ -511,7 +666,24 @@ def refine_and_apply(app_name: str, app_dir: str, feedback: str) -> Generator:
         f"## STATIC ANALYSIS DIAGNOSTICS\n{diag_text}\n\n"
         f"## CURRENT SOURCE CODE\n\n"
         + "\n\n".join(file_listing)
-        + f"\n\n## USER REFINEMENT REQUEST\n\n{feedback}\n\n"
+    )
+
+    # Active Recall: inject known high-priority failures to prevent repeat errors
+    past_failures = _load_high_priority_failures(app_dir)
+    if past_failures:
+        failure_lines = []
+        for pf in past_failures:
+            for detail in pf.get("failures", []):
+                failure_lines.append(f"  - [{pf.get('timestamp', '?')}] {detail}")
+        prompt += (
+            f"\n\n## KNOWN HIGH-PRIORITY FAILURES (DO NOT REPEAT)\n"
+            f"The following errors were logged from previous refinement cycles. "
+            f"Your output MUST NOT reintroduce these issues:\n"
+            + "\n".join(failure_lines)
+        )
+
+    prompt += (
+        f"\n\n## USER REFINEMENT REQUEST\n\n{feedback}\n\n"
         f"IMPORTANT: Address ALL static analysis diagnostics in addition to the user's request. "
         f"Use available assets from the inventory. "
         f"Produce modified files using the ===FILE: path=== format. "
@@ -586,9 +758,53 @@ def refine_and_apply(app_name: str, app_dir: str, feedback: str) -> Generator:
         # Update written list to exclude reverted files
         written = [f for f in written if f not in reverted]
 
-    # Phase 7: Summary
+    # Phase 7.5: VALIDATE — Active Recall Validation Loop
+    verdict = {"passed": True}  # Default: pass if validation is skipped
     if written:
-        yield {"step": "COMPLETE", "text": f"🎉 Self-healing applied! Modified {len(written)} files in {app_name}: {', '.join(written)}"}
+        yield {"step": "VALIDATE", "text": "🧪 Active Recall: Generating validation tests..."}
+
+        # Extract what was fixed
+        fix_descriptions = _extract_fix_descriptions(modifications, response)
+        yield {"step": "VALIDATE", "text": f"🧪 Identified {len(fix_descriptions)} fix(es) to validate."}
+
+        # Generate test_case.py via Gemini
+        test_path = _generate_test_case(app_name, app_dir, fix_descriptions, source_files)
+        if test_path:
+            yield {"step": "VALIDATE", "text": f"🧪 Generated: test_case.py ({os.path.getsize(test_path):,} bytes)"}
+
+            # Invoke the Critic
+            try:
+                sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+                from utils.critic import ArtisanCritic
+                critic = ArtisanCritic()
+                yield {"step": "VALIDATE", "text": "🔍 Specialist — Critic: Running test suite..."}
+                verdict = critic.validate_refinement(app_dir, app_name)
+
+                if verdict["passed"]:
+                    yield {"step": "VALIDATE", "text": f"✅ Critic Verdict: APPROVE — {verdict['total_tests']} test(s) passed."}
+                else:
+                    yield {"step": "VALIDATE", "text": f"❌ Critic Verdict: REVISE — {verdict['failures']} failure(s) in {verdict['total_tests']} test(s)."}
+                    for detail in verdict.get("failure_details", []):
+                        yield {"step": "VALIDATE", "text": f"  ⚠️ {detail}"}
+
+                    # Log to .Gemini_state as high-priority
+                    _log_high_priority_failure(app_dir, app_name, verdict, feedback)
+                    yield {"step": "VALIDATE", "text": "📋 Logged failure as HIGH-PRIORITY in .Gemini_state — future refinements will avoid this error."}
+            except ImportError:
+                yield {"step": "VALIDATE", "text": "⚠️ Could not import ArtisanCritic — skipping validation."}
+                verdict = {"passed": True}  # Don't block on import failure
+            except Exception as e:
+                yield {"step": "VALIDATE", "text": f"⚠️ Critic error: {e} — skipping validation."}
+                verdict = {"passed": True}
+        else:
+            yield {"step": "VALIDATE", "text": "⚠️ Could not generate test_case.py — skipping validation."}
+            verdict = {"passed": True}  # Don't block if test gen fails
+
+    # Phase 8: Summary
+    if written and verdict.get("passed", True):
+        yield {"step": "COMPLETE", "text": f"🎉 Self-healing applied & validated! Modified {len(written)} files in {app_name}: {', '.join(written)}"}
+    elif written and not verdict.get("passed", True):
+        yield {"step": "INCOMPLETE", "text": f"⚠️ Self-healing applied {len(written)} file(s) but validation FAILED. Check test_case.py and .Gemini_state/high_priority_failures.json for details."}
     elif reverted:
         yield {"step": "ERROR", "text": f"⚠️ All modified files had syntax errors and were reverted. The AI-generated code needs manual review."}
     else:

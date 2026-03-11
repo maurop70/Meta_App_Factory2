@@ -1,9 +1,9 @@
 {
   "pin": "1234",
-  "instructions": "Focus on biology vocabulary this week. Practice describing school events using full sentences.",
+  "instructions": "When Leonardo (the user) launches Alex, and he asks questions that are unrelated to one another or that are too obvious, start ask him questions and move the conversation toward his interests (music, YouTube, or girls). Make conversations engaging and funny",
   "focus_topics": [
-    "Biology - Evolution",
-    "Math - Quadratics"
+    "Math - Quadratics",
+    "biology"
   ],
   "vocabulary": [
     {
@@ -19,12 +19,373 @@
       "user_words": 4,
       "alex_words": 70,
       "session_duration_estimate": "short"
+    },
+    {
+      "timestamp": "2026-03-09T20:12:29.403737",
+      "channel": "general",
+      "user_words": 7,
+      "alex_words": 101,
+      "session_duration_estimate": "medium"
+    },
+    {
+      "timestamp": "2026-03-09T20:13:15.490022",
+      "channel": "general",
+      "user_words": 6,
+      "alex_words": 70,
+      "session_duration_estimate": "short"
+    },
+    {
+      "timestamp": "2026-03-09T20:13:35.088152",
+      "channel": "general",
+      "user_words": 6,
+      "alex_words": 63,
+      "session_duration_estimate": "short"
+    },
+    {
+      "timestamp": "2026-03-09T20:13:57.611587",
+      "channel": "general",
+      "user_words": 6,
+      "alex_words": 77,
+      "session_duration_estimate": "short"
+    },
+    {
+      "timestamp": "2026-03-09T20:14:49.661090",
+      "channel": "general",
+      "user_words": 4,
+      "alex_words": 45,
+      "session_duration_estimate": "short"
+    },
+    {
+      "timestamp": "2026-03-09T20:15:10.882194",
+      "channel": "general",
+      "user_words": 3,
+      "alex_words": 36,
+      "session_duration_estimate": "short"
+    },
+    {
+      "timestamp": "2026-03-09T20:15:37.197094",
+      "channel": "general",
+      "user_words": 3,
+      "alex_words": 30,
+      "session_duration_estimate": "short"
+    },
+    {
+      "timestamp": "2026-03-09T20:15:41.181497",
+      "channel": "general",
+      "user_words": 3,
+      "alex_words": 39,
+      "session_duration_estimate": "short"
+    },
+    {
+      "timestamp": "2026-03-09T20:15:52.044905",
+      "channel": "general",
+      "user_words": 5,
+      "alex_words": 45,
+      "session_duration_estimate": "short"
+    },
+    {
+      "timestamp": "2026-03-09T20:16:03.819821",
+      "channel": "general",
+      "user_words": 3,
+      "alex_words": 45,
+      "session_duration_estimate": "short"
+    },
+    {
+      "timestamp": "2026-03-09T20:16:23.947031",
+      "channel": "general",
+      "user_words": 5,
+      "alex_words": 38,
+      "session_duration_estimate": "short"
+    },
+    {
+      "timestamp": "2026-03-09T20:16:51.025579",
+      "channel": "general",
+      "user_words": 7,
+      "alex_words": 74,
+      "session_duration_estimate": "short"
+    },
+    {
+      "timestamp": "2026-03-09T20:17:03.516371",
+      "channel": "general",
+      "user_words": 5,
+      "alex_words": 42,
+      "session_duration_estimate": "short"
+    },
+    {
+      "timestamp": "2026-03-09T20:17:18.187155",
+      "channel": "general",
+      "user_words": 7,
+      "alex_words": 81,
+      "session_duration_estimate": "short"
+    },
+    {
+      "timestamp": "2026-03-09T20:17:59.628067",
+      "channel": "general",
+      "user_words": 5,
+      "alex_words": 42,
+      "session_duration_estimate": "short"
+    },
+    {
+      "timestamp": "2026-03-09T20:18:18.060439",
+      "channel": "general",
+      "user_words": 7,
+      "alex_words": 73,
+      "session_duration_estimate": "short"
+    },
+    {
+      "timestamp": "2026-03-09T20:18:27.172534",
+      "channel": "general",
+      "user_words": 5,
+      "alex_words": 42,
+      "session_duration_estimate": "short"
+    },
+    {
+      "timestamp": "2026-03-09T20:18:45.092090",
+      "channel": "general",
+      "user_words": 7,
+      "alex_words": 78,
+      "session_duration_estimate": "short"
+    },
+    {
+      "timestamp": "2026-03-09T20:18:57.484563",
+      "channel": "general",
+      "user_words": 7,
+      "alex_words": 56,
+      "session_duration_estimate": "short"
+    },
+    {
+      "timestamp": "2026-03-09T20:19:11.988289",
+      "channel": "general",
+      "user_words": 7,
+      "alex_words": 99,
+      "session_duration_estimate": "medium"
+    },
+    {
+      "timestamp": "2026-03-09T20:19:20.827573",
+      "channel": "general",
+      "user_words": 7,
+      "alex_words": 54,
+      "session_duration_estimate": "short"
+    },
+    {
+      "timestamp": "2026-03-09T20:19:51.971554",
+      "channel": "general",
+      "user_words": 10,
+      "alex_words": 105,
+      "session_duration_estimate": "medium"
+    },
+    {
+      "timestamp": "2026-03-09T20:20:05.366842",
+      "channel": "general",
+      "user_words": 5,
+      "alex_words": 46,
+      "session_duration_estimate": "short"
+    },
+    {
+      "timestamp": "2026-03-09T20:20:22.265492",
+      "channel": "general",
+      "user_words": 8,
+      "alex_words": 100,
+      "session_duration_estimate": "medium"
+    },
+    {
+      "timestamp": "2026-03-09T20:21:47.976911",
+      "channel": "general",
+      "user_words": 5,
+      "alex_words": 40,
+      "session_duration_estimate": "short"
+    },
+    {
+      "timestamp": "2026-03-09T20:22:09.563114",
+      "channel": "general",
+      "user_words": 8,
+      "alex_words": 117,
+      "session_duration_estimate": "medium"
+    },
+    {
+      "timestamp": "2026-03-09T22:41:14.996724",
+      "channel": "general",
+      "user_words": 16,
+      "alex_words": 56,
+      "session_duration_estimate": "short"
+    },
+    {
+      "timestamp": "2026-03-09T23:03:18.595363",
+      "channel": "general",
+      "user_words": 45,
+      "alex_words": 69,
+      "session_duration_estimate": "medium"
+    },
+    {
+      "timestamp": "2026-03-09T23:03:38.495132",
+      "channel": "general",
+      "user_words": 41,
+      "alex_words": 57,
+      "session_duration_estimate": "short"
+    },
+    {
+      "timestamp": "2026-03-09T23:03:51.083487",
+      "channel": "general",
+      "user_words": 43,
+      "alex_words": 53,
+      "session_duration_estimate": "short"
+    },
+    {
+      "timestamp": "2026-03-09T23:04:49.615598",
+      "channel": "general",
+      "user_words": 25,
+      "alex_words": 149,
+      "session_duration_estimate": "medium"
+    },
+    {
+      "timestamp": "2026-03-09T23:05:09.671238",
+      "channel": "general",
+      "user_words": 14,
+      "alex_words": 78,
+      "session_duration_estimate": "short"
+    },
+    {
+      "timestamp": "2026-03-09T23:05:35.330254",
+      "channel": "general",
+      "user_words": 38,
+      "alex_words": 89,
+      "session_duration_estimate": "medium"
+    },
+    {
+      "timestamp": "2026-03-09T23:14:29.738323",
+      "channel": "general",
+      "user_words": 5,
+      "alex_words": 5,
+      "session_duration_estimate": "short"
+    },
+    {
+      "timestamp": "2026-03-09T23:22:36.757456",
+      "channel": "general",
+      "user_words": 6,
+      "alex_words": 30,
+      "session_duration_estimate": "short"
+    },
+    {
+      "timestamp": "2026-03-09T23:32:49.737943",
+      "channel": "general",
+      "user_words": 3,
+      "alex_words": 37,
+      "session_duration_estimate": "short"
+    },
+    {
+      "timestamp": "2026-03-10T20:35:59.343171",
+      "channel": "general",
+      "user_words": 6,
+      "alex_words": 61,
+      "session_duration_estimate": "short"
+    },
+    {
+      "timestamp": "2026-03-10T20:36:12.317504",
+      "channel": "general",
+      "user_words": 4,
+      "alex_words": 62,
+      "session_duration_estimate": "short"
+    },
+    {
+      "timestamp": "2026-03-10T20:36:26.004582",
+      "channel": "general",
+      "user_words": 4,
+      "alex_words": 71,
+      "session_duration_estimate": "short"
+    },
+    {
+      "timestamp": "2026-03-10T20:36:34.868363",
+      "channel": "general",
+      "user_words": 4,
+      "alex_words": 91,
+      "session_duration_estimate": "short"
+    },
+    {
+      "timestamp": "2026-03-10T20:37:25.467846",
+      "channel": "general",
+      "user_words": 6,
+      "alex_words": 112,
+      "session_duration_estimate": "medium"
+    },
+    {
+      "timestamp": "2026-03-10T20:38:32.428469",
+      "channel": "general",
+      "user_words": 20,
+      "alex_words": 94,
+      "session_duration_estimate": "medium"
+    },
+    {
+      "timestamp": "2026-03-10T20:39:15.233782",
+      "channel": "general",
+      "user_words": 10,
+      "alex_words": 125,
+      "session_duration_estimate": "medium"
+    },
+    {
+      "timestamp": "2026-03-10T20:39:48.515971",
+      "channel": "general",
+      "user_words": 7,
+      "alex_words": 115,
+      "session_duration_estimate": "medium"
+    },
+    {
+      "timestamp": "2026-03-10T20:40:58.784451",
+      "channel": "general",
+      "user_words": 7,
+      "alex_words": 104,
+      "session_duration_estimate": "medium"
+    },
+    {
+      "timestamp": "2026-03-10T20:42:16.796208",
+      "channel": "general",
+      "user_words": 7,
+      "alex_words": 105,
+      "session_duration_estimate": "medium"
+    },
+    {
+      "timestamp": "2026-03-10T20:44:09.646768",
+      "channel": "general",
+      "user_words": 7,
+      "alex_words": 181,
+      "session_duration_estimate": "medium"
+    },
+    {
+      "timestamp": "2026-03-10T21:10:38.681962",
+      "channel": "general",
+      "user_words": 7,
+      "alex_words": 81,
+      "session_duration_estimate": "short"
+    },
+    {
+      "timestamp": "2026-03-10T21:11:21.442910",
+      "channel": "general",
+      "user_words": 6,
+      "alex_words": 90,
+      "session_duration_estimate": "short"
+    },
+    {
+      "timestamp": "2026-03-10T21:39:44.003406",
+      "channel": "general",
+      "user_words": 6,
+      "alex_words": 56,
+      "session_duration_estimate": "short"
+    },
+    {
+      "timestamp": "2026-03-10T21:46:57.185308",
+      "channel": "general",
+      "user_words": 6,
+      "alex_words": 67,
+      "session_duration_estimate": "short"
     }
   ],
   "student_profile": {
     "hobbies_interests": [
-      "Gaming",
-      "Music"
+      "Music",
+      "Social Media",
+      "you tube",
+      "telephone towers",
+      "guitar",
+      "drive through-fast foods"
     ],
     "social_level": "social",
     "academic_weak_areas": [
@@ -41,7 +402,7 @@
     ],
     "learning_style_preferences": [
       "Visual",
-      "Kinesthetic"
+      "Auditory"
     ]
   },
   "report_intelligence": {

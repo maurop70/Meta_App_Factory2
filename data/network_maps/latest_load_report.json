@@ -1,0 +1,95 @@
+{
+  "generated_at": "2026-03-11T19:51:53.837369+00:00",
+  "lookback_days": 7,
+  "total_agents": 13,
+  "total_apps": 7,
+  "agent_status": {
+    "CEO": {
+      "classification": "ORPHANED",
+      "total_calls": 0,
+      "last_called": "never"
+    },
+    "CFO": {
+      "classification": "ORPHANED",
+      "total_calls": 0,
+      "last_called": "never"
+    },
+    "CMO": {
+      "classification": "ORPHANED",
+      "total_calls": 0,
+      "last_called": "never"
+    },
+    "CTO": {
+      "classification": "ORPHANED",
+      "total_calls": 0,
+      "last_called": "never"
+    },
+    "CX_Strategist": {
+      "classification": "ORPHANED",
+      "total_calls": 0,
+      "last_called": "never"
+    },
+    "Compliance_Officer": {
+      "classification": "ORPHANED",
+      "total_calls": 0,
+      "last_called": "never"
+    },
+    "Data_Architect": {
+      "classification": "ORPHANED",
+      "total_calls": 0,
+      "last_called": "never"
+    },
+    "Deep_Crawler": {
+      "classification": "ORPHANED",
+      "total_calls": 0,
+      "last_called": "never"
+    },
+    "Graphic_Designer": {
+      "classification": "ORPHANED",
+      "total_calls": 0,
+      "last_called": "never"
+    },
+    "Presentation_Expert": {
+      "classification": "ORPHANED",
+      "total_calls": 0,
+      "last_called": "never"
+    },
+    "Researcher": {
+      "classification": "ORPHANED",
+      "total_calls": 0,
+      "last_called": "never"
+    },
+    "The_Critic": {
+      "classification": "ORPHANED",
+      "total_calls": 0,
+      "last_called": "never"
+    },
+    "The_Librarian": {
+      "classification": "ORPHANED",
+      "total_calls": 0,
+      "last_called": "never"
+    }
+  },
+  "recommendations": [
+    {
+      "type": "ORPHAN_REVIEW",
+      "priority": "MEDIUM",
+      "agents": [
+        "CEO",
+        "CFO",
+        "CMO",
+        "CTO",
+        "CX_Strategist",
+        "Compliance_Officer",
+        "Data_Architect",
+        "Deep_Crawler",
+        "Graphic_Designer",
+        "Presentation_Expert",
+        "Researcher",
+        "The_Critic",
+        "The_Librarian"
+      ],
+      "action": "13 agent(s) have low utilization. Consider: (1) integrating them into more workflows, (2) merging their capabilities into other agents, or (3) marking them as inactive in registry.json."
+    }
+  ]
+}

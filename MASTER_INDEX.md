@@ -1,5 +1,70 @@
 # MASTER INDEX
 
+## ERROR_REGISTRY
+
+> Leitner Spaced-Repetition Error Memory. Errors rated 1-5 by complexity.
+> Level 4-5 errors are deep-reviewed every 72 hours by the Specialist — Architect.
+
+| Level | Meaning | Review Frequency |
+|:------|:--------|:-----------------|
+| 1 | Trivial (typo, config) | Never (resolved) |
+| 2 | Minor (missing import, CSS) | Weekly |
+| 3 | Moderate (logic bug, state) | Every 5 days |
+| 4 | Severe (architectural flaw, data loss risk) | Every 72 hours |
+| 5 | Critical (security, regression, systemic) | Every 72 hours |
+
+### ERROR_ENTRY
+- **Timestamp:** 2026-03-09 20:45:01
+- **App:** Resonance
+- **Error_Complexity:** 2
+- **Description:** Self-healing cycle detected unknown failure type — queued for manual review
+- **Root_Cause:** Nerve Center v1.0 could not classify failure pattern
+- **Resolution:** log_for_review
+- **Status:** REVIEWED
+- **Last_Reviewed:** 2026-03-11 19:15 UTC
+
+### ERROR_ENTRY
+- **Timestamp:** 2026-03-09 21:01:00
+- **App:** Meta App Factory
+- **Error_Complexity:** 4
+- **Description:** Refine engine wrote JSX with Babel parse errors — comments placed between tag attributes
+- **Root_Cause:** Gemini output included {/* */} comments inside JSX attribute lists, causing @babel/parser to reject the file
+- **Resolution:** Added post-write lint validation and automatic revert in refine_engine.py V2
+- **Status:** RESOLVED
+- **Last_Reviewed:** 2026-03-11 19:15 UTC
+
+### ERROR_ENTRY
+- **Timestamp:** 2026-03-10 20:31:10
+- **App:** Resonance
+- **Error_Complexity:** 2
+- **Description:** Self-healing cycle detected 2 unknown failures — queued for review
+- **Root_Cause:** Nerve Center classification gap
+- **Resolution:** log_for_review
+- **Status:** REVIEWED
+- **Last_Reviewed:** 2026-03-11 19:15 UTC
+
+### ERROR_ENTRY
+- **Timestamp:** 2026-03-06 14:59:53
+- **App:** Alpha_V2_Genesis
+- **Error_Complexity:** 3
+- **Description:** Trade Journal /api/journal endpoint crash — comparison between string and NoneType
+- **Root_Cause:** Missing null check when comparing trade dates — NoneType values from incomplete trade records
+- **Resolution:** Added explicit None filtering before date comparisons in trade_journal handler
+- **Status:** RESOLVED
+- **Last_Reviewed:** 2026-03-11 19:15 UTC
+
+### ERROR_ENTRY
+- **Timestamp:** 2026-03-05 13:59:45
+- **App:** Alpha_V2_Genesis
+- **Error_Complexity:** 4
+- **Description:** Chat component not connected to Fragility Index tab — contextual data missing from AI responses
+- **Root_Cause:** App.jsx chat component only gathered context from active tab, not from all relevant UI sections
+- **Resolution:** Modified chat context to include data from all tabs, not just the active one
+- **Status:** RESOLVED
+- **Last_Reviewed:** 2026-03-11 19:15 UTC
+
+---
+
 ## FRESH_BOOT
 - **Timestamp:** 2026-02-20 16:12:55
 - **Reason:** Sentry cache was older than 24 hours. Auto-wiped by System Diagnostic.
@@ -283,3 +348,124 @@
 - **Actions:**
   - ✅ `UNKNOWN` → `log_for_review` | Workflow: Unknown | Severity: medium
 - **Status:** ALL_HEALED
+
+## SELF_HEALING_CYCLE
+- **Timestamp:** 2026-03-10 00:03:38
+- **App:** Resonance
+- **Engine:** Nerve Center v1.0 (Closed-Loop Autonomic Recovery)
+- **Failures Detected:** 1
+- **Auto-Healed:** 0
+- **Queued for Review:** 1
+- **Heal Failures:** 0
+- **Actions:**
+  - ✅ `UNKNOWN` → `log_for_review` | Workflow: Unknown | Severity: medium
+- **Status:** ALL_HEALED
+
+## SELF_HEALING_CYCLE
+- **Timestamp:** 2026-03-10 00:04:04
+- **App:** Resonance
+- **Engine:** Nerve Center v1.0 (Closed-Loop Autonomic Recovery)
+- **Failures Detected:** 1
+- **Auto-Healed:** 0
+- **Queued for Review:** 1
+- **Heal Failures:** 0
+- **Actions:**
+  - ✅ `UNKNOWN` → `log_for_review` | Workflow: Unknown | Severity: medium
+- **Status:** ALL_HEALED
+
+## SELF_HEALING_CYCLE
+- **Timestamp:** 2026-03-10 20:31:10
+- **App:** Resonance
+- **Engine:** Nerve Center v1.0 (Closed-Loop Autonomic Recovery)
+- **Failures Detected:** 2
+- **Auto-Healed:** 0
+- **Queued for Review:** 2
+- **Heal Failures:** 0
+- **Actions:**
+  - ✅ `UNKNOWN` → `log_for_review` | Workflow: Unknown | Severity: medium
+  - ✅ `UNKNOWN` → `log_for_review` | Workflow: Unknown | Severity: medium
+- **Status:** ALL_HEALED
+
+## SELF_HEALING_CYCLE
+- **Timestamp:** 2026-03-10 21:03:58
+- **App:** Resonance
+- **Engine:** Nerve Center v1.0 (Closed-Loop Autonomic Recovery)
+- **Failures Detected:** 1
+- **Auto-Healed:** 0
+- **Queued for Review:** 1
+- **Heal Failures:** 0
+- **Actions:**
+  - ✅ `UNKNOWN` → `log_for_review` | Workflow: Unknown | Severity: medium
+- **Status:** ALL_HEALED
+
+## SELF_HEALING_CYCLE
+- **Timestamp:** 2026-03-10 21:34:04
+- **App:** Resonance
+- **Engine:** Nerve Center v1.0 (Closed-Loop Autonomic Recovery)
+- **Failures Detected:** 1
+- **Auto-Healed:** 0
+- **Queued for Review:** 1
+- **Heal Failures:** 0
+- **Actions:**
+  - ✅ `UNKNOWN` → `log_for_review` | Workflow: Unknown | Severity: medium
+- **Status:** ALL_HEALED
+
+## SELF_HEALING_CYCLE
+- **Timestamp:** 2026-03-10 22:02:33
+- **App:** Resonance
+- **Engine:** Nerve Center v1.0 (Closed-Loop Autonomic Recovery)
+- **Failures Detected:** 1
+- **Auto-Healed:** 0
+- **Queued for Review:** 1
+- **Heal Failures:** 0
+- **Actions:**
+  - ✅ `UNKNOWN` → `log_for_review` | Workflow: Unknown | Severity: medium
+- **Status:** ALL_HEALED
+
+### AETHER_GENERATION
+- **Timestamp:** 2026-03-11 20:44:42
+- **App:** DelegateAI
+- **Type:** code
+- **Quality_Score:** 10.0/10
+- **Iterations:** 1/3
+- **Status:** ACCEPTED
+
+---
+
+## EXECUTIVE_LAYER_OVERHAUL
+
+- **Timestamp:** 2026-03-11 22:17:00
+- **Protocol:** Aether Creative Director V3 — Executive Layer
+- **Status:** DEPLOYED
+
+### New Modules
+
+| Module | Path | Purpose |
+|:-------|:-----|:--------|
+| Creative Director | `Aether/creative_director.py` | Design reasoning + V3 report orchestrator |
+| Financial Architect V2 | `Aether/financial_architect.py` | Formula-driven XLSX with charts |
+| Presentation Architect V2 | `Aether/presentation_architect.py` | PPTX with node maps + sensitivity |
+| Executive Report Runner | `Aether/executive_report_runner.py` | V1 report orchestrator |
+| OmniDashboard | `factory_ui/src/OmniDashboard.jsx` | 18-agent real-time React dashboard |
+| Data Validation Engine | `Alpha_V2_Genesis/data_validation_engine.py` | Signal Warnings on bad data |
+| Signal Processor | `Alpha_V2_Genesis/signal_processor.py` | News Bureau Chief agent |
+| JSX Validator | `utils/jsx_validator.py` | React syntax validation hook |
+| Unified EQ Engine | `Resonance/unified_eq_engine.py` | Consolidated EQ from Resonance 1-4 |
+| Sentiment Bridge | `Resonance/sentiment_bridge.py` | Stress-aware notification rewriting |
+
+### Credential Security
+
+- OAuth creds: `utils/auth/google_creds.json` (gitignored)
+- Env vars: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_PROJECT_ID`, `GOOGLE_REDIRECT_URI`
+- Zero-leak audit: PASSED (no hardcoded secrets)
+- Cloud-Auth agents: `presentation-expert`, `news-bureau-chief`
+
+### Generated Reports
+
+- `data/V3_Beautified/Delegate_AI_V3_Projections.xlsx` (5 sheets, 2 charts)
+- `data/V3_Beautified/Delegate_AI_V3_Investor_Pitch.pptx` (8 slides, node map)
+- `data/V3_Beautified/design_reasoning_log.json` (8 slide designs)
+
+### Router
+
+- `agent_skills_router.py` V7 — 18 agents, `CLOUD_AUTH_AGENTS` set

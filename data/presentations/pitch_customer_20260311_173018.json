@@ -1,0 +1,95 @@
+{
+  "audience": "customer",
+  "tone": "warm, approachable, trust-building",
+  "focus_areas": [
+    "User Experience",
+    "Safety & Privacy",
+    "Reliability",
+    "Ease of Use",
+    "Support"
+  ],
+  "slides": [
+    {
+      "type": "title",
+      "title": "Antigravity-AI \u2014 Customer Brief",
+      "subtitle": "Autonomous Intelligence Infrastructure",
+      "date": "March 11, 2026"
+    },
+    {
+      "type": "content",
+      "title": "Welcome to Antigravity-AI",
+      "bullets": [
+        "Your intelligent assistant that adapts to how you work",
+        "18 specialized agents working together seamlessly",
+        "Beautiful dashboards that make complex data simple",
+        "Your data stays private \u2014 always"
+      ],
+      "kpi": {}
+    },
+    {
+      "type": "content",
+      "title": "Intuitive Dashboard",
+      "bullets": [
+        "Omni-Dashboard: see all agents at a glance",
+        "Real-time stress monitoring adapts notification tone",
+        "One-click context refresh for decision support",
+        "Dark mode optimized for extended use"
+      ],
+      "kpi": {}
+    },
+    {
+      "type": "content",
+      "title": "Your Data is Safe",
+      "bullets": [
+        "PIIMasker: automatic personal data redaction on all outputs",
+        "FernetVault: encrypted API key storage",
+        "No external data leaves your system unmasked",
+        "Compliance-ready audit trails in MASTER_INDEX"
+      ],
+      "kpi": {}
+    },
+    {
+      "type": "content",
+      "title": "Emotional Intelligence",
+      "bullets": [
+        "Unified EQ Engine assesses operator stress (0-10)",
+        "High stress? Notifications become calming and supportive",
+        "Learns your preferences over time",
+        "Negative reactions flagged for tone improvement"
+      ],
+      "kpi": {}
+    },
+    {
+      "type": "content",
+      "title": "Getting Started",
+      "bullets": [
+        "1. Launch the Meta App Factory dashboard",
+        "2. Review your agent network health",
+        "3. Set your notification preferences",
+        "4. Let the system work for you"
+      ],
+      "kpi": {}
+    },
+    {
+      "type": "closing",
+      "title": "Thank You",
+      "subtitle": "Antigravity-AI | Autonomous Intelligence Infrastructure",
+      "contact": "Built with Aether Creative Protocol"
+    }
+  ],
+  "branding": {
+    "company": "Antigravity-AI",
+    "tagline": "Autonomous Intelligence Infrastructure",
+    "primary_color": "667EEA",
+    "secondary_color": "764BA2",
+    "accent_color": "10B981",
+    "bg_dark": "0F0F1A",
+    "bg_light": "F8FAFC",
+    "text_dark": "1E293B",
+    "text_light": "E0E0E0",
+    "font_heading": "Inter",
+    "font_body": "Roboto"
+  },
+  "generated_at": "2026-03-11T21:30:18.578936+00:00",
+  "format": "16:9"
+}

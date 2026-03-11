@@ -1,7 +1,8 @@
 """
-server.py — Delegate AI Beta-Agreement Vault — FastAPI Backend
+server.py — Delegate AI Orchestrator — FastAPI Backend v2.0
 ================================================================
 Port: 5007 | Fernet AES-128 Encrypted | Leitner Alert System
+Orchestrator Protocol: Performance-Based Routing + PII Safety
 Antigravity-AI | Project: DAI-2026-A1F3E7
 """
 
@@ -19,6 +20,21 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from cryptography.fernet import Fernet
+
+# ── Factory-level imports ─────────────────────────────────────
+sys.path.insert(0, os.path.join(SCRIPT_DIR, ".."))
+sys.path.insert(0, os.path.join(SCRIPT_DIR, "..", "Sentinel_Bridge"))
+try:
+    from pii_masker import PIIMasker
+    pii_masker = PIIMasker()
+except ImportError:
+    pii_masker = None
+
+try:
+    from delegate_logic import DelegateOrchestrator
+    orchestrator = DelegateOrchestrator()
+except ImportError:
+    orchestrator = None
 
 # ── Logging ───────────────────────────────────────────────────
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(message)s")
@@ -189,14 +205,14 @@ def _cross_reference_ledger(agreement_id: str, content_hash: str) -> dict:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Delegate AI Beta-Agreement Vault starting on port 5007")
+    logger.info("Delegate AI Orchestrator v2.0 starting on port 5007")
     _escalate_alerts()  # Escalate unresolved alerts on startup
     yield
-    logger.info("Vault shutting down")
+    logger.info("Orchestrator shutting down")
 
 app = FastAPI(
-    title="Delegate AI Beta-Agreement Vault",
-    version="1.0.0",
+    title="Delegate AI Orchestrator",
+    version="2.0.0",
     lifespan=lifespan,
 )
 
@@ -237,11 +253,13 @@ def health():
     critical_alerts = [a for a in active_alerts if a.get("box", 1) >= 4]
     return {
         "status": "healthy" if not critical_alerts else "warning",
-        "service": "Delegate AI Beta-Agreement Vault",
-        "version": "1.0.0",
+        "service": "Delegate AI Orchestrator",
+        "version": "2.0.0",
         "project_id": "DAI-2026-A1F3E7",
         "port": 5007,
         "encryption": "Fernet AES-128",
+        "pii_masking": pii_masker is not None,
+        "orchestrator": orchestrator is not None,
         "agreements_stored": len(vault.get("agreements", {})),
         "active_alerts": len(active_alerts),
         "critical_alerts": len(critical_alerts),
@@ -330,14 +348,18 @@ def vault_retrieve(req: RetrieveRequest):
         "hash": entry.get("content_hash"),
     })
 
+    # PII-mask decrypted content for safe display
+    safe_content = pii_masker.mask(decrypted) if pii_masker else decrypted
+
     return {
         "agreement_id": req.agreement_id,
-        "content": decrypted,
+        "content": safe_content,
         "party_a": entry.get("party_a", ""),
         "party_b": entry.get("party_b", ""),
         "agreement_type": entry.get("agreement_type", ""),
         "stored_at": entry.get("stored_at", ""),
         "content_hash": entry.get("content_hash", ""),
+        "pii_masked": pii_masker is not None,
     }
 
 
@@ -418,6 +440,84 @@ def get_audit_trail(limit: int = 50):
                 pass
     entries.reverse()  # newest first
     return {"entries": entries, "total": len(entries)}
+
+
+# ── Orchestrator Endpoints ────────────────────────────────────
+
+class DelegateRequest(BaseModel):
+    task: str
+    target_agent: str = "aether-architect"
+    context: dict = {}
+
+
+@app.post("/delegate")
+def delegate_task(req: DelegateRequest):
+    """Orchestrate a task delegation to a target agent."""
+    if not orchestrator:
+        raise HTTPException(status_code=503,
+                            detail="Orchestrator not initialized")
+    result = orchestrator.delegate(
+        task=req.task,
+        target_agent=req.target_agent,
+        context=req.context,
+    )
+    _audit("DELEGATION", result.to_dict())
+    return result.to_dict()
+
+
+@app.get("/delegate/health")
+def delegate_health():
+    """Agent health dashboard via heartbeat scanning."""
+    if not orchestrator:
+        return {"status": "orchestrator_offline"}
+
+    agents = ["meta-app-factory", "aether-architect",
+              "sentinel-bridge", "delegate-orchestrator"]
+    health = {}
+    for agent in agents:
+        health[agent] = orchestrator.get_agent_health(agent)
+    return {"agents": health, "timestamp": _now()}
+
+
+@app.get("/delegate/log")
+def delegate_log():
+    """Recent delegation log."""
+    if not orchestrator:
+        return {"log": [], "total": 0}
+    log = orchestrator.get_delegation_log()
+    return {"log": log, "total": len(log)}
+
+
+@app.get("/vault/export/{agreement_id}")
+def vault_export(agreement_id: str):
+    """Export an agreement with full PII masking for external use."""
+    vault = _load_vault()
+    if agreement_id not in vault.get("agreements", {}):
+        raise HTTPException(status_code=404, detail="Agreement not found")
+
+    entry = vault["agreements"][agreement_id]
+    try:
+        decrypted = decrypt(entry["encrypted_content"])
+    except Exception:
+        raise HTTPException(status_code=500, detail="Decryption failed")
+
+    # Full PII masking for export
+    safe_content = pii_masker.mask(decrypted) if pii_masker else decrypted
+
+    _audit("AGREEMENT_EXPORTED", {
+        "agreement_id": agreement_id,
+        "pii_masked": pii_masker is not None,
+    })
+
+    return {
+        "agreement_id": agreement_id,
+        "content": safe_content,
+        "party_a": entry.get("party_a", ""),
+        "party_b": entry.get("party_b", ""),
+        "agreement_type": entry.get("agreement_type", ""),
+        "pii_masked": True,
+        "exported_at": _now(),
+    }
 
 
 # ── Entry Point ───────────────────────────────────────────────

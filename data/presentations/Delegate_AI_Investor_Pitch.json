@@ -1,0 +1,115 @@
+{
+  "audience": "investor",
+  "tone": "professional, data-driven, scalability-focused",
+  "focus_areas": [
+    "Scalability",
+    "Market Intelligence",
+    "ROI",
+    "Agent Network Architecture",
+    "Growth Metrics"
+  ],
+  "slides": [
+    {
+      "type": "title",
+      "title": "Antigravity-AI \u2014 Investor Brief",
+      "subtitle": "Autonomous Intelligence Infrastructure",
+      "date": "March 11, 2026"
+    },
+    {
+      "type": "content",
+      "title": "Executive Summary",
+      "bullets": [
+        "18-agent autonomous AI network managing trading, analysis, and operations",
+        "Processing 50+ actionable signals/day",
+        "Self-healing infrastructure with 99.7% uptime target",
+        "Emotional intelligence layer adapting to operator stress in real-time",
+        "Projected ROI: 340% Year 1"
+      ],
+      "kpi": {
+        "agents": 18,
+        "uptime": "99.7%",
+        "signals": "50+/day"
+      }
+    },
+    {
+      "type": "content",
+      "title": "Scalable Architecture",
+      "bullets": [
+        "V7 Agent Skills Router \u2014 18 specialist agents with load balancing",
+        "Delegate AI Orchestrator for performance-based task routing",
+        "Leitner spaced-repetition error memory (5-level triage)",
+        "Visual Mapping Protocol for orphaned/bottleneck detection",
+        "Circuit breaker pattern preventing cascade failures"
+      ],
+      "kpi": {
+        "version": "V7",
+        "agents": 18,
+        "pattern": "Microservices"
+      }
+    },
+    {
+      "type": "content",
+      "title": "Market Intelligence (GeoTalent)",
+      "bullets": [
+        "Skill Gap Analyzer scanning MASTER_INDEX for systemic weaknesses",
+        "Market Trends Monitor tracking 2026 AI standards (LLMs, frameworks)",
+        "News Bureau Chief filtering global events for actionable signals",
+        "Auto-triggered context refresh on high-impact events (score >= 7)",
+        "DataValidationEngine blocking decisions on unreliable data"
+      ],
+      "kpi": {
+        "models_tracked": 4,
+        "categories": 7,
+        "auto_trigger": true
+      }
+    },
+    {
+      "type": "content",
+      "title": "Financial Projections",
+      "bullets": [
+        "Break-even: Month 2",
+        "Year 1 Revenue: $1.2M",
+        "Gross Margin: 68%",
+        "Cost per agent: $0.02/decision (token-efficient)",
+        "Infrastructure: Google Cloud + N8N orchestration"
+      ],
+      "kpi": {
+        "breakeven": "Month 4",
+        "margin": "68%",
+        "cost": "$0.02/decision"
+      }
+    },
+    {
+      "type": "content",
+      "title": "Growth Roadmap",
+      "bullets": [
+        "Q2 2026: Multi-tenant SaaS deployment",
+        "Q3 2026: API marketplace for agent skills",
+        "Q4 2026: Enterprise compliance certification",
+        "2027: International expansion with localized agents"
+      ],
+      "kpi": {}
+    },
+    {
+      "type": "closing",
+      "title": "Thank You",
+      "subtitle": "Antigravity-AI | Autonomous Intelligence Infrastructure",
+      "contact": "Built with Aether Creative Protocol"
+    }
+  ],
+  "branding": {
+    "company": "Antigravity-AI",
+    "tagline": "Autonomous Intelligence Infrastructure",
+    "primary_color": "667EEA",
+    "secondary_color": "764BA2",
+    "accent_color": "10B981",
+    "bg_dark": "0F0F1A",
+    "bg_light": "F8FAFC",
+    "text_dark": "1E293B",
+    "text_light": "E0E0E0",
+    "font_heading": "Inter",
+    "font_body": "Roboto"
+  },
+  "generated_at": "2026-03-11T22:01:10.104676+00:00",
+  "format": "16:9"
+}

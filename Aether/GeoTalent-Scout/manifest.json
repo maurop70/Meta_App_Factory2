@@ -1,0 +1,33 @@
+{
+    "name": "GeoTalent-Scout",
+    "version": "1.0.0",
+    "description": "Aether-based agentic talent scouting application. Extracts job requirements, searches for candidates, and cross-references against the internal employee database.",
+    "port": 8080,
+    "status": "operational",
+    "parent": "Project_Aether",
+    "blueprint": "aether_agent",
+    "created": "2026-03-10T13:40:00-04:00",
+    "author": "Meta_App_Factory / Aether Lead Architect",
+    "capabilities": [
+        "keyword_extraction",
+        "candidate_search",
+        "internal_db_cross_reference",
+        "drive_workflow_trigger"
+    ],
+    "data_sources": {
+        "internal_db": "../data/employees.json",
+        "xlsx_source": "../../Employees email and phone.xlsx"
+    },
+    "integration": {
+        "supervisor_hook": true,
+        "system_core_registered": true,
+        "registry_entry": "GeoTalent_Scout",
+        "sync_manifest_included": true
+    },
+    "endpoints": {
+        "scout": "POST /api/scout",
+        "employees": "GET /api/employees",
+        "trigger_workflow": "POST /api/trigger-workflow",
+        "health": "GET /api/health"
+    }
+}
