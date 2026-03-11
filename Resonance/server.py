@@ -916,6 +916,130 @@ Document:
         logger.error(f"Summary generation error: {e}")
         raise HTTPException(status_code=500, detail=f"Summary generation failed: {str(e)}")
 
+# ── Conversation-Based Study Endpoints ───────────────────────────
+
+class ConversationStudyRequest(BaseModel):
+    messages: List[dict]  # [{ "role": "user"|"assistant", "text": "..." }]
+
+@app.post("/api/study/conversation-mindmap")
+async def generate_conversation_mindmap(req: ConversationStudyRequest):
+    """Generates a Mermaid.js mind map from the current conversation history."""
+    if not req.messages or len(req.messages) < 2:
+        raise HTTPException(status_code=400, detail="Need at least 2 messages to generate a mind map")
+
+    # Build conversation text from messages
+    convo_text = "\n".join(
+        f"{'User' if m.get('role') == 'user' else 'Alex'}: {m.get('text', '')}"
+        for m in req.messages[-30:]  # Last 30 messages
+        if m.get('text') and m.get('role') in ('user', 'assistant')
+    )
+    if len(convo_text) < 50:
+        raise HTTPException(status_code=400, detail="Not enough conversation content to generate a mind map")
+
+    # Truncate for API efficiency
+    convo_snippet = convo_text[:5000]
+
+    import google.generativeai as genai
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        try:
+            from vault_client import get_secret
+            api_key = get_secret("GEMINI_API_KEY")
+        except Exception:
+            pass
+    if not api_key:
+        raise HTTPException(status_code=500, detail="GEMINI_API_KEY not configured")
+
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel("gemini-2.5-flash")
+
+    prompt = f"""Analyze this conversation between a student and their tutor Alex, and create a Mermaid.js mindmap diagram showing the topics and concepts discussed.
+Rules:
+- Use the `mindmap` diagram type (radial layout, NOT flowchart)
+- The root node should be the main topic with an emoji
+- Create 3-6 branches for key themes discussed, each with an emoji prefix
+- Each branch should have 2-4 sub-items with short, punchy labels
+- Keep labels SHORT (max 5 words), use teen-friendly casual language
+- Add emojis to ALL nodes to make it visually scannable
+- Output ONLY the raw Mermaid code, no explanation, no code fences
+- Example format:
+  mindmap
+    root((🧬 What We Talked About))
+      💡 Key Topics
+        🧠 Concept One
+        ⚡ Concept Two
+      📝 Questions Asked
+        🔬 Question about X
+        🎯 Question about Y
+
+Conversation:
+{convo_snippet}"""
+
+    try:
+        response = model.generate_content(prompt)
+        mermaid_code = response.text.strip()
+        if mermaid_code.startswith("```"):
+            mermaid_code = mermaid_code.split("\n", 1)[-1]
+        if mermaid_code.endswith("```"):
+            mermaid_code = mermaid_code.rsplit("```", 1)[0].strip()
+        return JSONResponse({"status": "ok", "mermaid": mermaid_code, "source": "conversation"})
+    except Exception as e:
+        logger.error(f"Conversation mind map generation error: {e}")
+        raise HTTPException(status_code=500, detail=f"Mind map generation failed: {str(e)}")
+
+@app.post("/api/study/conversation-summary")
+async def generate_conversation_summary(req: ConversationStudyRequest):
+    """Generates a structured summary from the current conversation history."""
+    if not req.messages or len(req.messages) < 2:
+        raise HTTPException(status_code=400, detail="Need at least 2 messages to generate a summary")
+
+    convo_text = "\n".join(
+        f"{'User' if m.get('role') == 'user' else 'Alex'}: {m.get('text', '')}"
+        for m in req.messages[-30:]
+        if m.get('text') and m.get('role') in ('user', 'assistant')
+    )
+    if len(convo_text) < 50:
+        raise HTTPException(status_code=400, detail="Not enough conversation content to summarize")
+
+    convo_snippet = convo_text[:6000]
+
+    import google.generativeai as genai
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        try:
+            from vault_client import get_secret
+            api_key = get_secret("GEMINI_API_KEY")
+        except Exception:
+            pass
+    if not api_key:
+        raise HTTPException(status_code=500, detail="GEMINI_API_KEY not configured")
+
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel("gemini-2.5-flash")
+
+    prompt = f"""Create a structured summary of this conversation between a student and their tutor Alex. Format it as:
+
+## What We Covered
+- Bullet points of the main topics discussed
+
+## Key Takeaways
+- Important things the student learned or discussed
+
+## Quick Review Questions
+- 3-4 questions to test understanding of what was discussed
+
+Keep it concise and student-friendly. Use simple, casual language.
+
+Conversation:
+{convo_snippet}"""
+
+    try:
+        response = model.generate_content(prompt)
+        return JSONResponse({"status": "ok", "summary": response.text.strip(), "source": "conversation"})
+    except Exception as e:
+        logger.error(f"Conversation summary generation error: {e}")
+        raise HTTPException(status_code=500, detail=f"Summary generation failed: {str(e)}")
+
 # ── Audience Validation (inherited from Aether) ─────────────────
 import sys
 FACTORY_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
