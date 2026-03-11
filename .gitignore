@@ -10,6 +10,11 @@ vault.enc
 vault.enc.salt
 *.key
 *.pem
+google_creds.json
+client_secret*.json
+token*.json
+token*.pickle
+utils/auth/
 
 # ── Node / Frontend ──────────────────────────────────
 node_modules/

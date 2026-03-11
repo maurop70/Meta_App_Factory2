@@ -1,0 +1,71 @@
+{
+  "_meta": {
+    "description": "Sentinel Bridge Multi-Channel Routing Rules",
+    "version": "1.0.0",
+    "protocol": "Aether — Universal Bridge",
+    "updated": "2026-03-11"
+  },
+
+  "channels": {
+    "push": {
+      "provider": "ntfy",
+      "enabled": true,
+      "priority": 1,
+      "config_keys": ["ntfy_server", "ntfy_topic"],
+      "description": "Primary push notification channel via ntfy.sh"
+    },
+    "whatsapp": {
+      "provider": "whatsapp_business_api",
+      "enabled": false,
+      "priority": 2,
+      "config_keys": ["whatsapp_api_key", "whatsapp_phone"],
+      "description": "WhatsApp Business API — enable when API key is configured"
+    },
+    "sms": {
+      "provider": "twilio",
+      "enabled": false,
+      "priority": 3,
+      "config_keys": ["twilio_sid", "twilio_auth_token", "twilio_phone"],
+      "description": "Twilio SMS — enable when account is configured"
+    }
+  },
+
+  "routing_rules": [
+    {
+      "name": "critical_all_channels",
+      "urgency_min": 8,
+      "urgency_max": 10,
+      "channels": ["push", "whatsapp", "sms"],
+      "description": "Critical/urgent: blast all available channels"
+    },
+    {
+      "name": "important_dual",
+      "urgency_min": 5,
+      "urgency_max": 7,
+      "channels": ["push", "whatsapp"],
+      "description": "Important: push + WhatsApp backup"
+    },
+    {
+      "name": "normal_push_only",
+      "urgency_min": 1,
+      "urgency_max": 4,
+      "channels": ["push"],
+      "description": "Low priority: push notification only"
+    }
+  ],
+
+  "fallback_chain": {
+    "enabled": true,
+    "order": ["push", "whatsapp", "sms"],
+    "description": "If primary channel fails, try next in chain"
+  },
+
+  "quiet_hours": {
+    "enabled": false,
+    "start": "23:00",
+    "end": "07:00",
+    "timezone": "America/New_York",
+    "override_urgency_min": 9,
+    "description": "Suppress non-critical notifications during quiet hours"
+  }
+}

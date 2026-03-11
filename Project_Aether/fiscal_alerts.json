@@ -1,0 +1,18 @@
+[
+  {
+    "timestamp": "2026-03-09 21:08:13",
+    "threshold": 10.0,
+    "alerts": [
+      {
+        "level": "CRITICAL",
+        "message": "\ud83d\udd34 n8n Cloud (Pro): $20.00 EXCEEDS $10.00 threshold!",
+        "pct_of_budget": 200.0
+      },
+      {
+        "level": "CRITICAL",
+        "message": "\ud83d\udd34 TOTAL ALL SERVICES: $20.00 EXCEEDS $10.00 threshold!",
+        "pct_of_budget": 200.0
+      }
+    ]
+  }
+]

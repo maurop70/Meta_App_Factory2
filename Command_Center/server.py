@@ -170,6 +170,114 @@ def send_command(req: CommandRequest):
     except Exception as e:
         return JSONResponse({"response": f"Error: {str(e)}", "status": "error"})
 
+# ── System Warnings (Leitner Deep Review) ────────────────
+
+WARNINGS_PATH = os.path.join(FACTORY_DIR, ".Gemini_state", "system_warnings.json")
+
+@app.get("/api/warnings")
+def get_warnings():
+    """Return active System Warnings from Leitner Deep Review."""
+    try:
+        if not os.path.isfile(WARNINGS_PATH):
+            return JSONResponse({"warnings": [], "total": 0})
+        with open(WARNINGS_PATH, "r", encoding="utf-8") as f:
+            all_warnings = json.load(f)
+        active = [w for w in all_warnings if w.get("status") == "ACTIVE"]
+        return JSONResponse({
+            "warnings": active,
+            "total": len(active),
+            "total_all": len(all_warnings),
+        })
+    except Exception as e:
+        return JSONResponse({"warnings": [], "total": 0, "error": str(e)})
+
+class WarningIngestRequest(BaseModel):
+    warnings: list
+
+@app.post("/api/warnings/ingest")
+def ingest_warnings(req: WarningIngestRequest):
+    """Accept System Warnings from deep_review_cron.py."""
+    try:
+        os.makedirs(os.path.dirname(WARNINGS_PATH), exist_ok=True)
+        existing = []
+        if os.path.isfile(WARNINGS_PATH):
+            with open(WARNINGS_PATH, "r", encoding="utf-8") as f:
+                existing = json.load(f)
+        existing.extend(req.warnings)
+        with open(WARNINGS_PATH, "w", encoding="utf-8") as f:
+            json.dump(existing, f, indent=2)
+        return JSONResponse({"status": "ok", "ingested": len(req.warnings)})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+class WarningDismissRequest(BaseModel):
+    timestamp: str
+
+@app.post("/api/warnings/dismiss")
+def dismiss_warning(req: WarningDismissRequest):
+    """Mark a System Warning as dismissed."""
+    try:
+        if not os.path.isfile(WARNINGS_PATH):
+            return JSONResponse({"status": "not_found"})
+        with open(WARNINGS_PATH, "r", encoding="utf-8") as f:
+            warnings = json.load(f)
+        found = False
+        for w in warnings:
+            if w.get("timestamp") == req.timestamp:
+                w["status"] = "DISMISSED"
+                w["dismissed_at"] = datetime.now().isoformat()
+                found = True
+                break
+        if found:
+            with open(WARNINGS_PATH, "w", encoding="utf-8") as f:
+                json.dump(warnings, f, indent=2)
+        return JSONResponse({"status": "dismissed" if found else "not_found"})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ── Network Map (Visual Mapping Protocol) ────────────────
+
+MAPS_DIR = os.path.join(FACTORY_DIR, "data", "network_maps")
+
+@app.get("/api/network-map")
+def get_network_map():
+    """Return the latest Mermaid diagram and load report."""
+    latest_md = os.path.join(MAPS_DIR, "latest_network_map.md")
+    latest_json = os.path.join(MAPS_DIR, "latest_load_report.json")
+
+    result = {"diagram": None, "report": None}
+    try:
+        if os.path.isfile(latest_md):
+            with open(latest_md, "r", encoding="utf-8") as f:
+                result["diagram"] = f.read()
+        if os.path.isfile(latest_json):
+            with open(latest_json, "r", encoding="utf-8") as f:
+                result["report"] = json.load(f)
+    except Exception as e:
+        result["error"] = str(e)
+    return JSONResponse(result)
+
+@app.post("/api/network-map/ingest")
+def ingest_network_map(report: dict = None):
+    """Accept a load report from visual_map_cron.py."""
+    return JSONResponse({"status": "ok", "message": "Report received."})
+
+@app.post("/api/network-map/generate")
+def generate_network_map():
+    """Trigger an on-demand network map generation."""
+    try:
+        sys.path.insert(0, FACTORY_DIR)
+        from network_mapper import NetworkMapper
+        mapper = NetworkMapper()
+        summary = mapper.scan_network()
+        mermaid = mapper.generate_mermaid()
+        report = mapper.generate_load_report()
+        mapper.save_diagram(mermaid, report)
+        return JSONResponse({"status": "ok", "summary": summary})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/health-check")
 def health_check():
     return JSONResponse({"status": "ok", "app": "Aether Command Center"})

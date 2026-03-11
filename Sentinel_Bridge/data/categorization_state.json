@@ -1,0 +1,88 @@
+{
+  "categories": [
+    "AI",
+    "Work",
+    "Leo's School",
+    "Family"
+  ],
+  "keyword_weights": {
+    "Leo's School": {
+      "science project": 0.5,
+      "homework": 0.5,
+      "school project": 0.5,
+      "due date": 0.5,
+      "parent-teacher": 0.5,
+      "report card": 0.5,
+      "school meeting": 0.5,
+      "leo": 0.5,
+      "field trip": 0.5,
+      "school event": 0.5,
+      "exam": 0.5,
+      "test": 0.5
+    },
+    "Work": {
+      "deadline": 0.5,
+      "quarterly": 0.5,
+      "budget": 0.5,
+      "presentation": 0.5,
+      "client meeting": 0.5,
+      "board meeting": 0.5,
+      "review": 0.5,
+      "audit": 0.5,
+      "contract": 0.5,
+      "shipment": 0.5,
+      "delivery": 0.5,
+      "invoice": 0.5
+    },
+    "Family": {
+      "doctor": 0.65,
+      "dentist": 0.5,
+      "appointment": 0.65,
+      "birthday": 0.5,
+      "anniversary": 0.5,
+      "family dinner": 0.5,
+      "reservation": 0.5,
+      "vacation": 0.5,
+      "don": 0.15
+    },
+    "AI": {
+      "model training": 0.5,
+      "deployment": 0.5,
+      "pipeline": 0.5,
+      "checkpoint": 0.5,
+      "fine-tuning": 0.5,
+      "api key": 0.5,
+      "token refresh": 0.5,
+      "crawl": 0.5,
+      "doctor": 0.29999999999999993,
+      "appointment": 0.29999999999999993,
+      "don": 0.15,
+      "dawn": 0.15
+    }
+  },
+  "custom_rules": [],
+  "override_history": [
+    {
+      "reminder_id": "485e74e5",
+      "text": "doctor appointment for Don",
+      "old_category": "AI",
+      "new_category": "AI",
+      "timestamp": "2026-03-10T16:51:06.353181+00:00"
+    },
+    {
+      "reminder_id": "485e74e5",
+      "text": "doctor appointment for Don",
+      "old_category": "Family",
+      "new_category": "Family",
+      "timestamp": "2026-03-10T16:51:18.773899+00:00"
+    },
+    {
+      "reminder_id": "485e74e5",
+      "text": "Doctor appointment for Dawn",
+      "old_category": "AI",
+      "new_category": "AI",
+      "timestamp": "2026-03-10T16:51:51.806396+00:00"
+    }
+  ],
+  "last_updated": "2026-03-10T16:51:51.806440+00:00"
+}

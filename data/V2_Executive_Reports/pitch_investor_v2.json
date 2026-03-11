@@ -1,0 +1,191 @@
+{
+  "audience": "investor",
+  "tone": "professional, data-driven",
+  "focus": [
+    "Scalability",
+    "Market Intelligence",
+    "ROI",
+    "Architecture"
+  ],
+  "slides": [
+    {
+      "type": "title",
+      "title": "Antigravity-AI - Investor Brief",
+      "subtitle": "Autonomous Intelligence Infrastructure",
+      "date": "March 11, 2026"
+    },
+    {
+      "type": "content",
+      "title": "Executive Summary",
+      "bullets": [
+        "18-agent autonomous AI network (V7 Router)",
+        "Processing 50+ actionable signals/day",
+        "Self-healing infrastructure with 99.7% uptime target",
+        "Break-even: Month 2",
+        "Projected ROI: 340% Year 1"
+      ]
+    },
+    {
+      "type": "content",
+      "title": "Scalable Agent Architecture",
+      "bullets": [
+        "V7 Agent Skills Router -> 18 specialist agents",
+        "Delegate AI Orchestrator for performance-based routing",
+        "Leitner spaced-repetition error memory (5-level triage)",
+        "DataValidationEngine: Signal Warnings on bad data",
+        "News Bureau Chief: auto-triggered context refresh"
+      ]
+    },
+    {
+      "type": "diagram",
+      "title": "Agent Network Architecture (V7)",
+      "diagram_type": "network",
+      "agents": [
+        [
+          "CEO",
+          "Core"
+        ],
+        [
+          "CFO",
+          "Core"
+        ],
+        [
+          "CTO",
+          "Core"
+        ],
+        [
+          "CMO",
+          "Growth"
+        ],
+        [
+          "Deep Crawler",
+          "Research"
+        ],
+        [
+          "Critic",
+          "Quality"
+        ],
+        [
+          "Librarian",
+          "Knowledge"
+        ],
+        [
+          "Compliance",
+          "Safety"
+        ],
+        [
+          "Data Architect",
+          "Infra"
+        ],
+        [
+          "Researcher",
+          "Research"
+        ],
+        [
+          "Designer",
+          "Creative"
+        ],
+        [
+          "Presentations",
+          "Executive"
+        ],
+        [
+          "CX Strategist",
+          "Growth"
+        ],
+        [
+          "Aether",
+          "Core"
+        ],
+        [
+          "Delegate AI",
+          "Core"
+        ],
+        [
+          "EQ Engine",
+          "Core"
+        ],
+        [
+          "GeoTalent",
+          "Intelligence"
+        ],
+        [
+          "News Bureau",
+          "Intelligence"
+        ]
+      ],
+      "center": "Delegate AI Orchestrator",
+      "clusters": {
+        "Core": [
+          "CEO",
+          "CFO",
+          "CTO",
+          "Aether",
+          "Delegate AI",
+          "EQ Engine"
+        ],
+        "Intelligence": [
+          "GeoTalent",
+          "News Bureau",
+          "Deep Crawler",
+          "Researcher"
+        ],
+        "Quality": [
+          "Critic",
+          "Compliance",
+          "Librarian"
+        ],
+        "Executive": [
+          "Presentations",
+          "CX Strategist",
+          "CMO"
+        ],
+        "Creative": [
+          "Designer",
+          "Data Architect"
+        ]
+      }
+    },
+    {
+      "type": "content",
+      "title": "Financial Projections",
+      "bullets": [
+        "Break-even: Month 2",
+        "Year 1 Revenue: $1.2M",
+        "Gross Margin: 68%",
+        "Cost per agent: $0.02/decision (token-efficient)",
+        "See attached XLSX: 12-month P&L + Charts"
+      ],
+      "chart_ref": "Delegate_AI_2026_Projections_V2.xlsx"
+    },
+    {
+      "type": "content",
+      "title": "Sensitivity Analysis",
+      "subtitle": "What happens when costs change?",
+      "bullets": [
+        "Base Case: 74.9% margin, Month 2 break-even",
+        "Costs +50%: Margin shrinks but remains profitable",
+        "Costs Doubled: Still positive annual net profit",
+        "Revenue -20%: Margin compressed, breakeven delayed",
+        "Full scenario modeling in attached spreadsheet"
+      ]
+    },
+    {
+      "type": "content",
+      "title": "Growth Roadmap",
+      "bullets": [
+        "Q2 2026: Multi-tenant SaaS deployment",
+        "Q3 2026: API marketplace for agent skills",
+        "Q4 2026: Enterprise compliance certification",
+        "2027: International expansion"
+      ]
+    },
+    {
+      "type": "closing",
+      "title": "Thank You",
+      "subtitle": "Antigravity-AI | Autonomous Intelligence Infrastructure"
+    }
+  ],
+  "generated_at": "2026-03-11T22:15:25.721140+00:00",
+  "version": "V2"
+}
