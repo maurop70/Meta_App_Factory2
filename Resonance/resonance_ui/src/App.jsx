@@ -1243,6 +1243,7 @@ export default function App() {
   const [chipLoading, setChipLoading] = useState(null); // 'mindmap' | 'summary' | null
   const [audienceDetected, setAudienceDetected] = useState(null);
   const [generatingProfile, setGeneratingProfile] = useState(false);
+  const [sandboxMode, setSandboxMode] = useState(false); // Parent testing mode indicator
 
   // ── Aural Bridge: Voice Mode ──────────────────────────
   const [voiceMode, setVoiceMode] = useState(() => localStorage.getItem('resonance_voiceMode') === 'true');
@@ -1374,6 +1375,7 @@ export default function App() {
 
   const endRef = useRef(null);
   const fileInputRef = useRef(null); // Ref for the hidden file input
+  const chatInputRef = useRef(null); // Ref for auto-focus on chat input
 
   const currentChannel = CHANNELS.find(c => c.id === activeChannel);
   const messages = chatHistory[activeChannel] || [];
@@ -1387,6 +1389,13 @@ export default function App() {
   useEffect(() => {
     fetchUploadedFiles();
   }, []);
+
+  // ── Auto-Focus: return cursor to input after Alex finishes typing ──
+  useEffect(() => {
+    if (!typing && !streaming && chatInputRef.current) {
+      chatInputRef.current.focus();
+    }
+  }, [typing, streaming]);
 
   const fetchUploadedFiles = async () => {
     try {
@@ -1511,6 +1520,8 @@ export default function App() {
 
     setStreaming(true);
     setInput('');
+    // Immediately return focus to the input
+    setTimeout(() => chatInputRef.current?.focus(), 0);
     setTyping(true);
 
     // Audience detection (non-blocking, uses backend regex - no API call)
@@ -1592,7 +1603,8 @@ export default function App() {
           setChatHistory(prev => {
             const ch = prev[activeChannel] || [];
             const assistantCount = ch.filter(m => m.role === 'assistant' && !m.studySuggestion).length;
-            if (assistantCount > 0 && assistantCount % 4 === 0 && uploadedFiles.length > 0) {
+            if (assistantCount > 0 && assistantCount % 4 === 0) {
+              const hasFiles = uploadedFiles.length > 0;
               const engagementMsg = {
                 role: 'system',
                 text: '',
@@ -1601,23 +1613,43 @@ export default function App() {
                   message: "Yo, we've been going for a bit! Want me to map this out or summarize what we've covered?",
                   onMindMap: async () => {
                     try {
-                      const latest = uploadedFiles[uploadedFiles.length - 1];
-                      const res = await fetch(`${API}/api/study/mindmap`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename: latest.filename }) });
-                      const data = await res.json();
-                      if (data.mermaid) {
-                        const mmMsg = { role: 'assistant', text: `🧠 **Mind Map for ${latest.filename}:**`, mermaidCode: data.mermaid, timestamp: new Date().toISOString() };
-                        setChatHistory(p => ({ ...p, [activeChannel]: [...(p[activeChannel] || []), mmMsg] }));
+                      if (hasFiles) {
+                        const latest = uploadedFiles[uploadedFiles.length - 1];
+                        const res = await fetch(`${API}/api/study/mindmap`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename: latest.filename }) });
+                        const data = await res.json();
+                        if (data.mermaid) {
+                          const mmMsg = { role: 'assistant', text: `\u{1F9E0} **Mind Map for ${latest.filename}:**`, mermaidCode: data.mermaid, timestamp: new Date().toISOString() };
+                          setChatHistory(p => ({ ...p, [activeChannel]: [...(p[activeChannel] || []), mmMsg] }));
+                        }
+                      } else {
+                        const currentMsgs = ch.filter(m => m.role === 'user' || m.role === 'assistant').map(m => ({ role: m.role, text: m.text }));
+                        const res = await fetch(`${API}/api/study/conversation-mindmap`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: currentMsgs }) });
+                        const data = await res.json();
+                        if (data.mermaid) {
+                          const mmMsg = { role: 'assistant', text: `\u{1F9E0} **Mind Map of Our Conversation:**`, mermaidCode: data.mermaid, timestamp: new Date().toISOString() };
+                          setChatHistory(p => ({ ...p, [activeChannel]: [...(p[activeChannel] || []), mmMsg] }));
+                        }
                       }
                     } catch (err) { console.error('Engagement mindmap error:', err); }
                   },
                   onSummary: async () => {
                     try {
-                      const latest = uploadedFiles[uploadedFiles.length - 1];
-                      const res = await fetch(`${API}/api/study/summary`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename: latest.filename }) });
-                      const data = await res.json();
-                      if (data.summary) {
-                        const smMsg = { role: 'assistant', text: data.summary, timestamp: new Date().toISOString() };
-                        setChatHistory(p => ({ ...p, [activeChannel]: [...(p[activeChannel] || []), smMsg] }));
+                      if (hasFiles) {
+                        const latest = uploadedFiles[uploadedFiles.length - 1];
+                        const res = await fetch(`${API}/api/study/summary`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename: latest.filename }) });
+                        const data = await res.json();
+                        if (data.summary) {
+                          const smMsg = { role: 'assistant', text: data.summary, timestamp: new Date().toISOString() };
+                          setChatHistory(p => ({ ...p, [activeChannel]: [...(p[activeChannel] || []), smMsg] }));
+                        }
+                      } else {
+                        const currentMsgs = ch.filter(m => m.role === 'user' || m.role === 'assistant').map(m => ({ role: m.role, text: m.text }));
+                        const res = await fetch(`${API}/api/study/conversation-summary`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: currentMsgs }) });
+                        const data = await res.json();
+                        if (data.summary) {
+                          const smMsg = { role: 'assistant', text: `\u{1F4DD} **Summary:**\n\n${data.summary}`, timestamp: new Date().toISOString() };
+                          setChatHistory(p => ({ ...p, [activeChannel]: [...(p[activeChannel] || []), smMsg] }));
+                        }
                       }
                     } catch (err) { console.error('Engagement summary error:', err); }
                   },
@@ -1675,6 +1707,9 @@ export default function App() {
                 }
                 return { ...prev, [activeChannel]: currentChannelHistory };
               });
+            }
+            if (event.sandbox_mode) {
+              setSandboxMode(true);
             }
             // Study Mode: Proactive suggestion from complexity scorer
             if (event.study_suggestion) {
@@ -1957,7 +1992,7 @@ export default function App() {
               <img src={alexAvatarSrc} alt="Alex" className="header-avatar alex-avatar" width="32" height="32" />
               <div className="header-profile-info">
                 <span className="header-name">Alex</span>
-                <span className="header-status">Online</span>
+                <span className="header-status">{sandboxMode ? '\u{1F512} Parent Mode' : 'Online'}</span>
               </div>
             </div>
             <div className="header-actions">
@@ -2022,8 +2057,8 @@ export default function App() {
             <div ref={endRef} />
           </div>
 
-          {/* Persistent Quick-Action Chips */}
-          {uploadedFiles.length > 0 && (
+          {/* Persistent Quick-Action Chips — Always Visible */}
+          {messages.length >= 2 && (
             <div className={`quick-chips-bar ${chipGlow ? 'glow' : ''}`}>
               <button
                 className={`quick-chip mindmap-chip ${chipLoading === 'mindmap' ? 'loading' : ''}`}
@@ -2032,18 +2067,34 @@ export default function App() {
                   setChipLoading('mindmap');
                   setChipGlow(false);
                   try {
-                    const latest = uploadedFiles[uploadedFiles.length - 1];
-                    const res = await fetch(`${API}/api/study/mindmap`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename: latest.filename }) });
-                    const data = await res.json();
-                    if (data.mermaid) {
-                      const mmMsg = { role: 'assistant', text: `🧠 **Mind Map for ${latest.filename}:**\n\nCheck this out, I laid it all out in a map so it's easier to see!`, mermaidCode: data.mermaid, timestamp: new Date().toISOString() };
-                      setChatHistory(p => ({ ...p, [activeChannel]: [...(p[activeChannel] || []), mmMsg] }));
+                    // Anti-Leakage: Default to conversation context. Only use file if user's last message explicitly requests it.
+                    const lastUserMsg = messages.filter(m => m.role === 'user').slice(-1)[0]?.text || '';
+                    const fileRequested = uploadedFiles.length > 0 && /\b(summarize|mind\s*map|map out|break down)\s+(this|the|my)\s+(file|doc|document|pdf|upload)/i.test(lastUserMsg);
+
+                    if (fileRequested) {
+                      // File-based mind map (only when explicitly requested)
+                      const latest = uploadedFiles[uploadedFiles.length - 1];
+                      const res = await fetch(`${API}/api/study/mindmap`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename: latest.filename }) });
+                      const data = await res.json();
+                      if (data.mermaid) {
+                        const mmMsg = { role: 'assistant', text: `\u{1F9E0} **Mind Map for ${latest.filename}:**\n\nCheck this out, I laid it all out in a map so it's easier to see!`, mermaidCode: data.mermaid, timestamp: new Date().toISOString() };
+                        setChatHistory(p => ({ ...p, [activeChannel]: [...(p[activeChannel] || []), mmMsg] }));
+                      }
+                    } else {
+                      // Conversation-based mind map (default behavior)
+                      const currentMsgs = messages.filter(m => m.role === 'user' || m.role === 'assistant').map(m => ({ role: m.role, text: m.text }));
+                      const res = await fetch(`${API}/api/study/conversation-mindmap`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: currentMsgs }) });
+                      const data = await res.json();
+                      if (data.mermaid) {
+                        const mmMsg = { role: 'assistant', text: `\u{1F9E0} **Mind Map of Our Conversation:**\n\nHere's how everything connects!`, mermaidCode: data.mermaid, timestamp: new Date().toISOString() };
+                        setChatHistory(p => ({ ...p, [activeChannel]: [...(p[activeChannel] || []), mmMsg] }));
+                      }
                     }
                   } catch (err) { console.error('Chip mindmap error:', err); }
                   setChipLoading(null);
                 }}
               >
-                {chipLoading === 'mindmap' ? '⏳ Mapping...' : '🧠 Mind Map'}
+                {chipLoading === 'mindmap' ? '\u23F3 Mapping...' : '\u{1F9E0} Mind Map'}
               </button>
               <button
                 className={`quick-chip summary-chip ${chipLoading === 'summary' ? 'loading' : ''}`}
@@ -2052,18 +2103,34 @@ export default function App() {
                   setChipLoading('summary');
                   setChipGlow(false);
                   try {
-                    const latest = uploadedFiles[uploadedFiles.length - 1];
-                    const res = await fetch(`${API}/api/study/summary`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename: latest.filename }) });
-                    const data = await res.json();
-                    if (data.summary) {
-                      const smMsg = { role: 'assistant', text: `📝 **Summary:**\n\n${data.summary}`, timestamp: new Date().toISOString() };
-                      setChatHistory(p => ({ ...p, [activeChannel]: [...(p[activeChannel] || []), smMsg] }));
+                    // Anti-Leakage: Default to conversation context. Only use file if user's last message explicitly requests it.
+                    const lastUserMsg = messages.filter(m => m.role === 'user').slice(-1)[0]?.text || '';
+                    const fileRequested = uploadedFiles.length > 0 && /\b(summarize|summary|mind\s*map|map out|break down)\s+(this|the|my)\s+(file|doc|document|pdf|upload)/i.test(lastUserMsg);
+
+                    if (fileRequested) {
+                      // File-based summary (only when explicitly requested)
+                      const latest = uploadedFiles[uploadedFiles.length - 1];
+                      const res = await fetch(`${API}/api/study/summary`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename: latest.filename }) });
+                      const data = await res.json();
+                      if (data.summary) {
+                        const smMsg = { role: 'assistant', text: `\u{1F4DD} **Summary:**\n\n${data.summary}`, timestamp: new Date().toISOString() };
+                        setChatHistory(p => ({ ...p, [activeChannel]: [...(p[activeChannel] || []), smMsg] }));
+                      }
+                    } else {
+                      // Conversation-based summary (default behavior)
+                      const currentMsgs = messages.filter(m => m.role === 'user' || m.role === 'assistant').map(m => ({ role: m.role, text: m.text }));
+                      const res = await fetch(`${API}/api/study/conversation-summary`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: currentMsgs }) });
+                      const data = await res.json();
+                      if (data.summary) {
+                        const smMsg = { role: 'assistant', text: `\u{1F4DD} **Summary of Our Chat:**\n\n${data.summary}`, timestamp: new Date().toISOString() };
+                        setChatHistory(p => ({ ...p, [activeChannel]: [...(p[activeChannel] || []), smMsg] }));
+                      }
                     }
                   } catch (err) { console.error('Chip summary error:', err); }
                   setChipLoading(null);
                 }}
               >
-                {chipLoading === 'summary' ? '⏳ Summarizing...' : '📝 Summary'}
+                {chipLoading === 'summary' ? '\u23F3 Summarizing...' : '\u{1F4DD} Summary'}
               </button>
             </div>
           )}
@@ -2103,6 +2170,7 @@ export default function App() {
               {uploading ? '...' : '📎'}
             </button>
             <input
+              ref={chatInputRef}
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && send()}
