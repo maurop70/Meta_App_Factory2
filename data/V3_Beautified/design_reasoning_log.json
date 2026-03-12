@@ -1,57 +1,71 @@
 {
-  "verification_timestamp": "2026-03-11T22:32:29.316137+00:00",
+  "timestamp": "2026-03-11T22:39:37.679681+00:00",
   "total_slides": 8,
-  "slides_with_visuals": 8,
   "visual_coverage": "100%",
-  "all_slides_visual": true,
+  "all_visual": true,
+  "gemini_designed": [
+    3,
+    5
+  ],
   "slides": [
     {
-      "slide_title": "Title",
-      "visual_elements": "gradient_bg + accent_bar",
-      "has_visual": true,
-      "verified": true
+      "title": "Title",
+      "visual": "gradient_bg + accent_bar"
     },
     {
-      "slide_title": "Executive Summary",
-      "visual_elements": "kpi_boxes(5) + bullets",
-      "has_visual": true,
-      "verified": true
+      "title": "Executive Summary",
+      "visual": "kpi_boxes(5) + bullets"
     },
     {
-      "slide_title": "Architecture Diagram",
-      "visual_elements": "node_map(5_clusters, 18_nodes, legend)",
-      "has_visual": true,
-      "verified": true
+      "title": "Architecture",
+      "visual": "visual_node_map(5_clusters,18_nodes,legend)",
+      "gemini": {
+        "visual_focus": "Agent Network Topology \u2014 clustered node map",
+        "iconography": [
+          "network",
+          "hub",
+          "cluster",
+          "shield",
+          "gear"
+        ],
+        "layout": "full_canvas_diagram",
+        "gemini_directive": "Replace text lists with visual node shapes",
+        "source": "library",
+        "slide_type": "architecture"
+      }
     },
     {
-      "slide_title": "System Health",
-      "visual_elements": "kpi_boxes(5) + n8n_warning + bullets",
-      "has_visual": true,
-      "verified": true
+      "title": "System Health",
+      "visual": "kpi_boxes(5,n8n_heal) + bullets"
     },
     {
-      "slide_title": "Financials",
-      "visual_elements": "kpi_boxes(5) + chart_ref_shape + bullets",
-      "has_visual": true,
-      "verified": true
+      "title": "Financials",
+      "visual": "kpi_boxes(5) + chart_ref + bullets",
+      "gemini": {
+        "visual_focus": "Data Storytelling \u2014 KPI metrics + chart reference",
+        "iconography": [
+          "chart_bar",
+          "dollar",
+          "trending_up",
+          "calendar"
+        ],
+        "layout": "kpi_grid_top_chart_bottom",
+        "gemini_directive": "Use KPI boxes and reference embedded charts",
+        "source": "library",
+        "slide_type": "financials"
+      }
     },
     {
-      "slide_title": "Sensitivity",
-      "visual_elements": "scenario_kpi_boxes(4) + bullets",
-      "has_visual": true,
-      "verified": true
+      "title": "Sensitivity",
+      "visual": "scenario_kpi(4) + bullets"
     },
     {
-      "slide_title": "Roadmap",
-      "visual_elements": "timeline_nodes(4) + n8n_warning_flag",
-      "has_visual": true,
-      "verified": true
+      "title": "Roadmap",
+      "visual": "timeline(4) + n8n_heal_flag"
     },
     {
-      "slide_title": "Closing",
-      "visual_elements": "brand_center + accent_bar",
-      "has_visual": true,
-      "verified": true
+      "title": "Closing",
+      "visual": "brand_center + accent_bar"
     }
   ]
 }
