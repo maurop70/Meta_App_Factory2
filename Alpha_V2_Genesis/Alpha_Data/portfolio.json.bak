@@ -15,7 +15,7 @@
         },
         {
             "id": "exec_1772819415_open",
-            "status": "OPEN",
+            "status": "CLOSED",
             "strategy": "Iron Condor (24 APR 26)",
             "open_date": "2026-03-06",
             "expiration_date": "2026-04-24",
@@ -25,6 +25,19 @@
             "long_put_strike": 6250,
             "credit_received": 10.00,
             "open_price": 10.00
+        },
+        {
+            "id": "exec_1773327236",
+            "status": "OPEN",
+            "strategy": "Iron Condor (24 APR 26)",
+            "open_date": "2026-03-12",
+            "expiration_date": "2026-04-24",
+            "short_call_strike": 7000,
+            "long_call_strike": 7025,
+            "short_put_strike": 6300,
+            "long_put_strike": 6275,
+            "credit_received": 12.15,
+            "open_price": 12.15
         }
     ]
 }

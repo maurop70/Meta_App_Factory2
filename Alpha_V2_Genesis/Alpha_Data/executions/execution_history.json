@@ -16,5 +16,26 @@
         "ticker": "SPX",
         "timestamp": "2026-03-06T12:50:15.603042",
         "id": "exec_1772819415"
+    },
+    {
+        "ticker": "SPX",
+        "action": "OPEN",
+        "strategy": "Iron Condor (24 APR 26)",
+        "strikes": "7000/7025/6300/6275",
+        "credit_debit": "+12.15",
+        "notes": "",
+        "id": "exec_1773327236",
+        "timestamp": "2026-03-12T10:53:56.658193",
+        "screenshot_path": "C:\\Users\\mpetr\\My Drive (maurotgs@gmail.com)\\Antigravity-AI Agents\\Meta_App_Factory\\Alpha_V2_Genesis\\Alpha_Data\\executions\\exec_1773327236_Screenshot 2026-03-12 105316.png"
+    },
+    {
+        "ticker": "SPX",
+        "action": "CLOSE",
+        "strategy": "Iron Condor (24 APR 26)",
+        "strikes": "7100/7125/6275/6250",
+        "credit_debit": "-8.70",
+        "notes": "",
+        "id": "exec_1773327248",
+        "timestamp": "2026-03-12T10:54:08.635920"
     }
 ]

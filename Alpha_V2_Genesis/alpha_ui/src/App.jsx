@@ -710,7 +710,7 @@ const ChatPanel = ({ isOpen, onToggle, apiBase, getContext }) => {
 };
 
 
-const ExecutionTab = ({ apiBase }) => {
+const ExecutionTab = ({ apiBase, onCommit }) => {
   const [executions, setExecutions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -833,6 +833,7 @@ const ExecutionTab = ({ apiBase }) => {
     try {
       const data = await commitSingleTrade(formData, file);
       if (data.status === 'success') {
+        if (onCommit) onCommit();
         // Remove committed trade from pending queue
         setPendingTrades(prev => prev.filter(t => t.strikes !== formData.strikes || t.action !== formData.action));
         setFormData(emptyForm);
@@ -856,6 +857,7 @@ const ExecutionTab = ({ apiBase }) => {
       }
       setPendingTrades([]);
       setFormData(emptyForm);
+      if (onCommit) onCommit();
       setOcrStatus({ type: 'success', msg: `Committed ${pendingTrades.length} trade(s) to ledger` });
       fetchExecutions();
     } catch (e) {
@@ -1522,11 +1524,23 @@ function App() {
                   <b>{wd.trade_details.long_call_strike}</b>
                 </div>
 
-                <div style={{ gridColumn: 'span 2', background: 'rgba(234, 179, 8, 0.1)', padding: '0.5rem', borderRadius: '6px', border: '1px solid rgba(234, 179, 8, 0.2)', textAlign: 'center', marginTop: '0.5rem' }}>
-                  <span style={{ color: '#eab308', fontSize: '0.8rem', fontWeight: 'bold' }}>SCANNING CHALLENGER TRADES vs MMM 📡</span>
-                  <div style={{ fontSize: '1.1rem', marginTop: '2px' }}>
-                    <b style={{ color: '#eab308' }}>${data.expert_opinions.new_trade?.mmm || data.expert_opinions.simulation?.financials?.mmm || data.expert_opinions.defense?.financials?.mmm || "N/A"}</b>
-                    <span style={{ color: '#94a3b8', fontSize: '0.8rem', marginLeft: '4px' }}>Market Range</span>
+                <div style={{ gridColumn: 'span 2', background: 'rgba(234, 179, 8, 0.1)', padding: '0.5rem', borderRadius: '6px', border: '1px solid rgba(234, 179, 8, 0.2)', marginTop: '0.5rem' }}>
+                  <div style={{ textAlign: 'center', marginBottom: '0.3rem' }}>
+                    <span style={{ color: '#eab308', fontSize: '0.8rem', fontWeight: 'bold' }}>SCANNING CHALLENGER TRADES vs MMM 📡</span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                    <div style={{ textAlign: 'center', background: 'rgba(0,0,0,0.2)', padding: '0.3rem', borderRadius: '4px' }}>
+                      <div style={{ fontSize: '0.6rem', color: '#94a3b8', fontWeight: 600, letterSpacing: '0.04em' }}>WEEKLY MMM (7 DTE)</div>
+                      <div style={{ fontSize: '1rem', fontWeight: 800, color: '#eab308' }}>
+                        ${data.expert_opinions.new_trade?.mmm || data.expert_opinions.simulation?.financials?.mmm || data.expert_opinions.defense?.financials?.mmm || 'N/A'}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'center', background: 'rgba(59,130,246,0.1)', padding: '0.3rem', borderRadius: '4px', border: '1px solid rgba(59,130,246,0.2)' }}>
+                      <div style={{ fontSize: '0.6rem', color: '#60a5fa', fontWeight: 600, letterSpacing: '0.04em' }}>POSITION MMM ({Math.max(0, Math.ceil((new Date(wd.trade_details.expiration_date) - new Date()) / (1000 * 60 * 60 * 24)))} DTE)</div>
+                      <div style={{ fontSize: '1rem', fontWeight: 800, color: '#60a5fa' }}>
+                        ${data.expert_opinions.defense?.financials?.mmm_position || 'N/A'}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1557,6 +1571,42 @@ function App() {
                   <span style={{ fontSize: '0.85rem' }}>${wd.trade_details.short_put_strike - wd.trade_details.long_put_strike}</span>
                 </div>
               </div>
+              {/* ── Danger Side Indicator ── */}
+              {wd.danger_side && wd.danger_side !== 'NONE' && (
+                <div style={{
+                  marginTop: '0.75rem', padding: '0.5rem 0.75rem',
+                  background: wd.distance_pct < 2 ? 'rgba(239,68,68,0.15)' : wd.distance_pct < 4 ? 'rgba(234,179,8,0.12)' : 'rgba(16,185,129,0.1)',
+                  border: `1px solid ${wd.distance_pct < 2 ? '#ef4444' : wd.distance_pct < 4 ? '#eab308' : '#10b981'}`,
+                  borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{
+                      fontSize: '1.1rem',
+                      color: wd.distance_pct < 2 ? '#ef4444' : wd.distance_pct < 4 ? '#eab308' : '#10b981',
+                      fontWeight: 'bold',
+                    }}>{wd.danger_side === 'CALL' ? '↑' : '↓'}</span>
+                    <div>
+                      <div style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 600, letterSpacing: '0.04em' }}>PRIMARY RISK</div>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#e2e8f0' }}>
+                        {wd.danger_side} SIDE
+                        <span style={{
+                          marginLeft: '0.4rem', fontSize: '0.7rem', fontWeight: 600,
+                          color: wd.distance_pct < 2 ? '#ef4444' : wd.distance_pct < 4 ? '#eab308' : '#10b981',
+                        }}>
+                          ({wd.distance_pct < 2 ? '⚠️ CLOSE' : wd.distance_pct < 4 ? 'WATCH' : 'SAFE'})
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '0.6rem', color: '#94a3b8', fontWeight: 600 }}>MIN DISTANCE</div>
+                    <div style={{
+                      fontSize: '1.1rem', fontWeight: 800, fontFamily: 'monospace',
+                      color: wd.distance_pct < 2 ? '#ef4444' : wd.distance_pct < 4 ? '#eab308' : '#10b981',
+                    }}>{wd.distance_pct}%</div>
+                  </div>
+                </div>
+              )}
               <div style={{ textAlign: 'center', marginTop: '0.75rem' }}>
                 <div className="metric-large">{wd.verdict}</div>
                 <div className="metric-label">WATCHDOG VERDICT</div>
@@ -1877,7 +1927,15 @@ function App() {
 
       {/* ══ TAB: TRADE ENTRY ══════════════════════════════════ */}
       {activeTab === 'execution' && (
-        <ExecutionTab apiBase={apiBase} />
+        <ExecutionTab apiBase={apiBase} onCommit={() => {
+          // Delay to let backend finish sync_to_portfolio + ledger refresh
+          setTimeout(() => {
+            fetchLedger();
+            fetchJournal();
+            fetchFragility();
+            fetchAnalysis();
+          }, 3000);
+        }} />
       )}
 
       {/* ══ TAB: FRAGILITY INDEX ══════════════════════════════════ */}
