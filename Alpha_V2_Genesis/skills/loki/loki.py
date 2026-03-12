@@ -1094,10 +1094,16 @@ class Loki:
 
         
         
-        # MMM Calculation
+        # MMM Calculation (Weekly = 7 DTE default)
         mmm_val = self.calculate_realtime_mmm(snapshot['spx'])
         
-        logger.info(f"Live Pricing: Hold/Debit=${hold_value}, Roll/Credit=${roll_value}, MMM=${mmm_val}")
+        # MMM for actual position DTE (if active trade exists)
+        mmm_position = None
+        if active_trade and active_trade.get('expiration_date'):
+            mmm_position = self.calculate_realtime_mmm(snapshot['spx'], active_trade['expiration_date'])
+            logger.info(f"Position MMM (DTE: {active_trade['expiration_date']}): ${mmm_position}")
+        
+        logger.info(f"Live Pricing: Hold/Debit=${hold_value}, Roll/Credit=${roll_value}, MMM Weekly=${mmm_val}, MMM Position=${mmm_position}")
         
         # Defense logic
         expert_opinions['defense'] = {
@@ -1106,7 +1112,8 @@ class Loki:
                 "credit_open": roll_value,
                 "net_impact": round(roll_value - hold_value, 2),
                 "width": "10 Wide", # Simplified
-                "mmm": mmm_val
+                "mmm": mmm_val,
+                "mmm_position": mmm_position
             },
             "target_trade": {
                 "type": "Credit Put Vertical", # Assuming Put side management for now

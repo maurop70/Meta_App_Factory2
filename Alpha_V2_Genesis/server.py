@@ -1,5 +1,6 @@
 import os
 import json
+import re
 import requests
 import sys
 import base64
