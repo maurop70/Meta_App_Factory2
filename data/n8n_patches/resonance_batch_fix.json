@@ -1,0 +1,17 @@
+{
+  "timestamp": "2026-03-11T22:39:32.713208+00:00",
+  "workflow_name": "Resonance2: Level Up Engine Orchestrator",
+  "patch_type": "node_injection",
+  "node": {
+    "type": "n8n-nodes-base.splitInBatches",
+    "name": "Split In Batches",
+    "parameters": {
+      "batchSize": 50,
+      "options": {}
+    },
+    "position": "after_trigger_before_process"
+  },
+  "reason": "Prevent memory timeouts on large student batches",
+  "status": "READY_TO_APPLY",
+  "instructions": "Import this patch via n8n CLI or apply manually:\n1. Open Resonance2: Level Up Engine Orchestrator\n2. After the Trigger node, insert a 'Split In Batches' node\n3. Set Batch Size = 50\n4. Connect output to the existing processing chain\n5. Save and activate workflow"
+}
