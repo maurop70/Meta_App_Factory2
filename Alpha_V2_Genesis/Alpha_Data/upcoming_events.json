@@ -1,11 +1,6 @@
 [
     {
-        "event": "CPI Data Release",
-        "impact": "HIGH",
-        "days_until": 1
-    },
-    {
-        "event": "Fed Official Speech",
+        "event": "Upcoming Economic Data Releases",
         "impact": "MEDIUM",
         "days_until": 1
     }

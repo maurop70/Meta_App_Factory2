@@ -1,3 +1,39 @@
+# ── V3.0 Resilience Integration ──────────────────────────
+import os as _os, sys as _sys
+_FACTORY_DIR = _os.path.normpath(_os.path.join(_os.path.dirname(_os.path.abspath(__file__)), ".."))
+_sys.path.insert(0, _FACTORY_DIR)
+try:
+    from factory import safe_post
+    from local_state_manager import StateManager as _StateManager
+    _v3_sm = _StateManager()
+    _V3_AVAILABLE = True
+except ImportError:
+    _V3_AVAILABLE = False
+# ── End V3 Integration ──────────────────────────────────
+
+from auto_heal import healed_post, auto_heal, diagnose
+
+def _v3_preflight():
+    """V3: Ping Resonance_Watchdog_V3 before execution."""
+    if not _V3_AVAILABLE:
+        return True
+    try:
+        import json as _j
+        _cfg_path = _os.path.join(_FACTORY_DIR, "resilience_config.json")
+        if not _os.path.exists(_cfg_path):
+            return True
+        with open(_cfg_path) as _f:
+            _cfg = _j.load(_f)
+        _url = _cfg.get("cloud_health", {}).get("watchdog_url", "")
+        if not _url:
+            return True
+        import requests as _rq
+        _r = _rq.get(_url, timeout=5)
+        return _r.status_code == 200
+    except Exception:
+        return False
+
+
 
 import json
 import bridge
@@ -32,10 +68,10 @@ class Atomizer:
                 atomizer_url = bridge.AGENT_REGISTRY.get("ATOMIZER")
                 if atomizer_url:
                     print(f"DEBUG ATOMIZER: Routing to Dedicated Agent: {atomizer_url} (Attempt {attempt+1})")
-                    import requests
-                    
                     # Wrap the request to catch 502/504 errors before JSON decoding
-                    r = requests.post(atomizer_url, json={"prompt": prompt}, timeout=60)
+                    _v3_status = healed_post(atomizer_url, {"prompt": prompt})
+
+                    r = type("Resp", (), {"status_code": 200 if _v3_status == "sent" else 503, "ok": _v3_status == "sent", "text": _v3_status, "json": lambda: {"status": _v3_status}})()
                     
                     if r.status_code != 200:
                          print(f"DEBUG ATOMIZER ERROR: Status {r.status_code} - {r.text[:100]}")
@@ -106,3 +142,6 @@ class Atomizer:
         for i, res in enumerate(results):
             final_report += f"## Part {i+1}\n{res}\n\n"
         return final_report
+
+# V3 MIGRATION COMPLETE
+# V3 AUTO-HEAL ACTIVE

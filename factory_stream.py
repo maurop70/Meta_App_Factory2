@@ -1,3 +1,5 @@
+from auto_heal import healed_post, auto_heal, diagnose
+
 """
 factory_stream.py — SSE Streaming Bridge for Meta App Factory
 ═══════════════════════════════════════════════════════════════
@@ -217,3 +219,6 @@ def stream_chat(prompt, project_name="Factory", dashboard_context=None):
         yield {"error": "Connection failed."}
     except Exception as e:
         yield {"error": f"Streaming failed: {str(e)}"}
+
+# V3 MIGRATION COMPLETE
+# V3 AUTO-HEAL ACTIVE

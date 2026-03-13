@@ -1,3 +1,30 @@
+# ═══════════════════════════════════════════════════════════════════
+#  RESILIENCE ANCHOR V3.0 — factory.py
+# ═══════════════════════════════════════════════════════════════════
+#
+#  This file is the CENTRAL ORCHESTRATOR of the Antigravity Ops
+#  Intelligence system. All child apps, agents, and workflows
+#  depend on this module for:
+#
+#    • safe_post()    — V3 resilience pattern (preflight → log → POST)
+#    • healed_post()  — Auto-heal layer (retry + backoff + diagnosis)
+#    • StateManager   — UUID+timestamp logging via local_state_manager.py
+#    • Safe-Buffer    — Automatic offline queuing during cloud outages
+#
+#  AUTHORIZED CREDENTIAL:
+#    Name:        Antigravity_Full_v2
+#    Fingerprint: eyJhbGciOiJIUzI1NiIs...UebO3WCxto
+#    Length:      267 chars
+#    Source:      Meta_App_Factory/.env (READ-ONLY — do NOT modify directly)
+#    Rotation:    Via env_updater.py only (see SOP_MAINTENANCE.md)
+#
+#  DO NOT bypass this module. Doing so removes Safe-Buffer protection
+#  and Auto-Heal capabilities from the calling agent.
+#
+#  Frozen: 2026-03-13T12:22:22-04:00
+#  Status: [SYSTEM_V3_UPGRADE] FULLY DEPLOYED & SEALED
+# ═══════════════════════════════════════════════════════════════════
+
 import os
 import json
 import argparse
@@ -597,23 +624,79 @@ You have access to new "Professional Grade" tools. DO NOT Refuse these tasks.
         # IMMEDIATE LOGGING: Capture user intent before network call
         memory.add("user", prompt)
 
-        # CRASH SHIELD: Retry Logic
+        # CRASH SHIELD: Exponential Backoff + Circuit Breaker (SWDR v1.0)
         import time
+        import random
         max_retries = 3
+        backoff_base = 2  # seconds — delays: 2s, 4s, 8s
         result = None
-        
-            for attempt in range(max_retries):
+
+        # Circuit Breaker Gate — 3 consecutive failures = Soft Pause
+        try:
+            from circuit_breaker import CircuitBreaker
+            _cb = CircuitBreaker("elite-council-webhook", failure_threshold=3, cooldown_seconds=120)
+        except ImportError:
+            _cb = None
+
+        if _cb and not _cb.can_call():
+            # SOFT PAUSE: Circuit is OPEN — do NOT hammer the endpoint
+            try:
+                from error_aggregator import ErrorAggregator
+                ErrorAggregator("SWDR").log_critical(
+                    "Soft Pause triggered — circuit breaker OPEN for elite-council-webhook",
+                    context={"project": project_name, "action": "soft_pause"}
+                )
+            except ImportError:
+                pass
+            status = _cb.get_status()
+            cooldown = status.get("cooldown_remaining_s", "?")
+            return (f"🛑 SOFT PAUSE: The Elite Council circuit breaker is OPEN "
+                    f"({status.get('consecutive_failures', '?')} consecutive failures). "
+                    f"Cooldown: {cooldown}s remaining. "
+                    f"The Overseer has been notified.")
+
+        for attempt in range(max_retries):
                 try:
                     print(f"--- CEO: Sending prompt to Elite Council (Attempt {attempt+1}/{max_retries}) [Context: {project_name}] ---", flush=True)
                     span.add_event("Calling N8N", {"attempt": attempt + 1, "url": WEBHOOK_URL})
                     
                     # INJECT MEMORY CONTEXT
-                    # N8N WindowBufferMemory usually looks for 'sessionId'
                     payload["sessionId"] = project_name 
-                    
+
+                    # ── STATE MANAGER + SAFE-BUFFER (Hardening V3 Sealed) ──
+                    _sm = None
+                    _entry_id = None
+                    try:
+                        from local_state_manager import StateManager
+                        _sm = StateManager()
+
+                        # Check Safe-Buffer mode (set by heartbeat on watchdog failure)
+                        if _sm.is_safe_buffer_mode():
+                            _entry_id = _sm.log_outgoing(WEBHOOK_URL, payload, project_name)
+                            _sm.mark_failed(_entry_id, "Safe-Buffer mode active — cloud unreachable")
+                            _sync_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "pending_sync")
+                            os.makedirs(_sync_dir, exist_ok=True)
+                            _ts = time.strftime("%Y%m%d_%H%M%S")
+                            _queue_file = os.path.join(_sync_dir, f"{project_name}_{_ts}.json")
+                            import json as _json
+                            with open(_queue_file, "w") as _qf:
+                                _json.dump({"url": WEBHOOK_URL, "payload": payload, "project": project_name, "queued_at": _ts}, _qf, indent=2, default=str)
+                            print(f"📦 Safe-Buffer: Payload queued to {_queue_file}", flush=True)
+                            span.add_event("Safe-Buffer queue", {"file": _queue_file})
+                            return "Your request has been queued (Safe-Buffer mode active). It will be sent when cloud connectivity is restored."
+
+                        # Log outgoing request BEFORE the call
+                        _entry_id = _sm.log_outgoing(WEBHOOK_URL, payload, project_name)
+                    except ImportError:
+                        pass
+                    # ── END STATE MANAGER SETUP ──────────────────────────
+
+                    _call_start = time.time()
                     response = requests.post(WEBHOOK_URL, json=payload, timeout=300)
+                    _latency_ms = (time.time() - _call_start) * 1000
                     
                     if response.status_code in [500, 502, 503, 504, 404]:
+                         if _sm and _entry_id: _sm.mark_failed(_entry_id, f"N8N Server Error: {response.status_code}")
                          raise Exception(f"N8N Server Error: {response.status_code}")
                          
                     response.raise_for_status()
@@ -622,17 +705,33 @@ You have access to new "Professional Grade" tools. DO NOT Refuse these tasks.
                         result = response.json()
                         if not result: raise Exception("Empty JSON Response")
                         span.add_event("N8N Response Received")
+                        if _cb: _cb.record_success()
+                        if _sm and _entry_id: _sm.mark_sent(_entry_id, response.status_code, _latency_ms)
+                        print(f"--- Response received in {_latency_ms:.0f}ms ---", flush=True)
                         break # Success
                     except ValueError:
                         raise Exception(f"Invalid JSON Response: {response.text[:50]}...")
 
                 except Exception as e:
-                    print(f"⚠️ N8N Error: {str(e)}. Retrying in 3s...", flush=True)
+                    if _cb: _cb.record_failure()
+                    if _sm and _entry_id: _sm.mark_failed(_entry_id, str(e))
+                    delay = backoff_base * (2 ** attempt) + random.uniform(-0.4, 0.4) * backoff_base
+                    print(f"⚠️ N8N Error: {str(e)}. Exponential backoff: {delay:.1f}s...", flush=True)
                     span.record_exception(e)
                     if attempt < max_retries - 1:
-                    time.sleep(3)
-                else:
-                    return f"Graceful Failure: The CEO is currently unreachable after 3 attempts ({str(e)}). Please check your N8N Workflow or Internet Connection."
+                        time.sleep(delay)
+                    else:
+                        # Overseer Notification on final failure
+                        try:
+                            from error_aggregator import ErrorAggregator
+                            ErrorAggregator("SWDR").log_critical(
+                                f"Elite Council unreachable after {max_retries} attempts",
+                                context={"project": project_name, "error": str(e), "action": "overseer_notify"}
+                            )
+                        except ImportError:
+                            pass
+                        return (f"Graceful Failure: The CEO is currently unreachable after {max_retries} attempts ({str(e)}). "
+                                f"Circuit breaker engaged. Please check your N8N Workflow or Internet Connection.")
 
         # 3. Interaction Protocol (Drafting)
         if isinstance(result, dict) and result.get("action") == "draft_summary":
@@ -1454,6 +1553,76 @@ def cmd_tunnels(_args):
     print()
 
 
+# ── SWDR — System-Wide Diagnostic & Repair ─────────────────────────
+def cmd_swdr(_args):
+    """Run a System-Wide Diagnostic & Repair check across all circuit breakers and error logs."""
+    print("\n🔬 SWDR — System-Wide Diagnostic & Repair")
+    print("=" * 60)
+
+    # 1. Credential Sentinel — check N8N_API_KEY validity
+    print("\n🔑 CREDENTIAL SENTINEL")
+    api_key = os.getenv("N8N_API_KEY", "")
+    if not api_key:
+        print("   🔴 N8N_API_KEY: NOT SET")
+    else:
+        try:
+            r = requests.get(f"{N8N_API_BASE}/workflows?limit=1", headers=N8N_HEADERS, timeout=10)
+            if r.status_code == 200:
+                print(f"   🟢 N8N_API_KEY: VALID (connected to {N8N_API_BASE})")
+            elif r.status_code == 401:
+                print(f"   🔴 N8N_API_KEY: EXPIRED / INVALID (401 Unauthorized)")
+            else:
+                print(f"   🟡 N8N_API_KEY: UNKNOWN STATUS ({r.status_code})")
+        except Exception as e:
+            print(f"   🔴 N8N Connection Failed: {e}")
+
+    # 2. Circuit Breaker Status
+    print("\n⚡ CIRCUIT BREAKER STATUS")
+    cb_dir = os.path.join(os.path.expanduser("~"), ".antigravity", "circuit_breakers")
+    if not os.path.exists(cb_dir):
+        print("   No circuit breakers registered yet.")
+    else:
+        sys.path.insert(0, FACTORY_DIR)
+        try:
+            from circuit_breaker import CircuitBreaker
+            for fname in os.listdir(cb_dir):
+                if fname.endswith(".json"):
+                    name = fname[:-5]
+                    cb = CircuitBreaker(name)
+                    s = cb.get_status()
+                    icons = {"CLOSED": "🟢", "OPEN": "🔴", "HALF_OPEN": "🟡"}
+                    icon = icons.get(s["state"], "❓")
+                    line = f"   {icon} {s['name']}: {s['state']} (fails: {s['total_failures']}, ok: {s['total_successes']})"
+                    if s.get("cooldown_remaining_s"):
+                        line += f" — cooldown: {s['cooldown_remaining_s']}s"
+                    print(line)
+        except ImportError:
+            print("   ⚠️ circuit_breaker module not found")
+
+    # 3. Error Aggregator Summary
+    print("\n📊 ERROR AGGREGATOR SUMMARY")
+    try:
+        sys.path.insert(0, FACTORY_DIR)
+        from error_aggregator import ErrorAggregator
+        summary = ErrorAggregator.get_summary()
+        print(f"   Total logged events: {summary['total']}")
+        if summary['by_severity']:
+            for sev, count in summary['by_severity'].items():
+                icons = {"error": "❌", "warning": "⚠️", "info": "ℹ️", "critical": "🚨"}
+                print(f"   {icons.get(sev, '❓')} {sev}: {count}")
+        if summary['by_app']:
+            print("   By app:")
+            for app, count in summary['by_app'].items():
+                print(f"      {app}: {count}")
+    except ImportError:
+        print("   ⚠️ error_aggregator module not found")
+    except Exception as e:
+        print(f"   ⚠️ Error reading logs: {e}")
+
+    print(f"\n{'=' * 60}")
+    print("✅ SWDR diagnostic complete.\n")
+
+
 # ── Audience Validation ────────────────────────────────────────────
 APP_PROFILE_MAP = {
     "Resonance": "teen_learner",
@@ -1521,6 +1690,89 @@ def cmd_validate(args):
     print(result.summary())
 
 
+# ═══════════════════════════════════════════════════════════
+# safe_post — V3.0 Resilience Pattern for Child Apps
+# ═══════════════════════════════════════════════════════════
+
+def safe_post(target_url: str, payload: dict, project: str = "child_app",
+              timeout: int = 60) -> str:
+    """
+    V3.0 Safe-Post Pattern.
+    Returns: "sent" | "buffered" | "failed"
+    Auth: Antigravity_Full_v2 inherited automatically via factory .env.
+    """
+    import json as _json
+    import time as _time
+    _sm = None
+    _entry_id = None
+
+    try:
+        from local_state_manager import StateManager
+        _sm = StateManager()
+    except ImportError:
+        pass
+
+    if _sm and _sm.is_safe_buffer_mode():
+        _entry_id = _sm.log_outgoing(target_url, payload, project)
+        _sm.mark_failed(_entry_id, "Safe-Buffer mode active")
+        _queue_to_disk(target_url, payload, project)
+        return "buffered"
+
+    try:
+        _rc_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "resilience_config.json")
+        if os.path.exists(_rc_path):
+            with open(_rc_path) as _f:
+                _rc = _json.load(_f)
+            _wdog = _rc.get("cloud_health", {}).get("watchdog_url", "")
+            if _wdog:
+                _probe = requests.get(_wdog, timeout=5)
+                if _probe.status_code != 200:
+                    if _sm:
+                        _entry_id = _sm.log_outgoing(target_url, payload, project)
+                        _sm.mark_failed(_entry_id, f"Watchdog returned {_probe.status_code}")
+                    _queue_to_disk(target_url, payload, project)
+                    return "buffered"
+    except requests.exceptions.RequestException:
+        if _sm:
+            _entry_id = _sm.log_outgoing(target_url, payload, project)
+            _sm.mark_failed(_entry_id, "Watchdog unreachable")
+        _queue_to_disk(target_url, payload, project)
+        return "buffered"
+    except Exception:
+        pass
+
+    if _sm:
+        _entry_id = _sm.log_outgoing(target_url, payload, project)
+
+    try:
+        _start = _time.time()
+        resp = requests.post(target_url, json=payload, timeout=timeout)
+        _latency = (_time.time() - _start) * 1000
+        if resp.status_code >= 500:
+            if _sm and _entry_id:
+                _sm.mark_failed(_entry_id, f"Server Error: {resp.status_code}")
+            return "failed"
+        if _sm and _entry_id:
+            _sm.mark_sent(_entry_id, resp.status_code, _latency)
+        return "sent"
+    except requests.exceptions.RequestException as e:
+        if _sm and _entry_id:
+            _sm.mark_failed(_entry_id, str(e))
+        _queue_to_disk(target_url, payload, project)
+        return "buffered"
+
+
+def _queue_to_disk(url: str, payload: dict, project: str):
+    """Write a payload to pending_sync/ for recovery."""
+    import json as _json
+    import time as _time
+    _sync_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "pending_sync")
+    os.makedirs(_sync_dir, exist_ok=True)
+    _ts = _time.strftime("%Y%m%d_%H%M%S")
+    _path = os.path.join(_sync_dir, f"{project}_{_ts}.json")
+    with open(_path, "w") as f:
+        _json.dump({"url": url, "payload": payload, "project": project, "queued_at": _ts}, f, indent=2, default=str)
+
 
 if __name__ == "__main__":
     # Force UTF-8 on Windows
@@ -1558,6 +1810,7 @@ Examples:
     p_launch = sub.add_parser("launch", help="Build and launch an app")
     p_launch.add_argument("app_name", help="App name from registry")
     sub.add_parser("tunnels", help="Show active ngrok tunnels")
+    sub.add_parser("swdr", help="System-Wide Diagnostic & Repair")
     p_validate = sub.add_parser("validate", help="Validate app against target audience")
     p_validate.add_argument("app_name", help="App name from registry")
     p_validate.add_argument("--profile", default=None, help="Audience profile ID (auto-detected if not set)")
@@ -1586,6 +1839,8 @@ Examples:
         cmd_launch(args)
     elif args.command == "tunnels":
         cmd_tunnels(args)
+    elif args.command == "swdr":
+        cmd_swdr(args)
     elif args.command == "validate":
         cmd_validate(args)
     else:

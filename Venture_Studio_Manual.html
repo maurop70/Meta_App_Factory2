@@ -1,0 +1,1422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Venture Studio Operations & Mastery Manual — Antigravity V3.0</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0b0f1a;
+    --bg-card: rgba(15, 23, 42, 0.7);
+    --bg-section: rgba(15, 23, 42, 0.5);
+    --border: rgba(100, 116, 139, 0.2);
+    --text: #e2e8f0;
+    --text-dim: #94a3b8;
+    --text-muted: #64748b;
+    --heading: #f1f5f9;
+    --green: #22c55e;
+    --green-glow: rgba(34, 197, 94, 0.15);
+    --yellow: #eab308;
+    --red: #ef4444;
+    --blue: #3b82f6;
+    --blue-glow: rgba(59, 130, 246, 0.12);
+    --purple: #8b5cf6;
+    --purple-glow: rgba(139, 92, 246, 0.12);
+    --cyan: #06b6d4;
+    --orange: #f97316;
+    --accent: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    font-size: 15px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Print styles */
+  @media print {
+    body { background: white; color: #1e293b; }
+    .cover { page-break-after: always; }
+    .chapter { page-break-before: always; }
+    .no-print { display: none; }
+  }
+
+  /* ── Cover Page ── */
+  .cover {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 60px 40px;
+    position: relative;
+    overflow: hidden;
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(59, 130, 246, 0.12) 0%, transparent 50%),
+      radial-gradient(ellipse at 70% 80%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 50%, rgba(6, 182, 212, 0.06) 0%, transparent 60%),
+      var(--bg);
+  }
+
+  .cover::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 49px, rgba(100, 116, 139, 0.03) 50px);
+    pointer-events: none;
+  }
+
+  .cover-badge {
+    padding: 8px 20px;
+    border-radius: 24px;
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    color: var(--blue);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 32px;
+  }
+
+  .cover-icon {
+    font-size: 72px;
+    margin-bottom: 24px;
+    filter: drop-shadow(0 0 40px rgba(59, 130, 246, 0.3));
+  }
+
+  .cover h1 {
+    font-size: 42px;
+    font-weight: 800;
+    letter-spacing: -1.5px;
+    background: linear-gradient(135deg, #e2e8f0, #3b82f6, #8b5cf6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    max-width: 700px;
+    line-height: 1.15;
+    margin-bottom: 16px;
+  }
+
+  .cover-subtitle {
+    font-size: 18px;
+    color: var(--text-dim);
+    max-width: 500px;
+    margin-bottom: 48px;
+  }
+
+  .cover-meta {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    max-width: 600px;
+    width: 100%;
+  }
+
+  .cover-stat {
+    padding: 16px;
+    border-radius: 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+  }
+
+  .cover-stat .val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--blue);
+  }
+
+  .cover-stat .lbl {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  .cover-footer {
+    position: absolute;
+    bottom: 40px;
+    font-size: 12px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+
+  /* ── Content Container ── */
+  .content {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 60px 40px 120px;
+  }
+
+  /* ── Chapter ── */
+  .chapter {
+    margin-bottom: 80px;
+  }
+
+  .chapter-number {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    color: var(--blue);
+    margin-bottom: 8px;
+  }
+
+  .chapter h2 {
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--heading);
+    margin-bottom: 8px;
+  }
+
+  .chapter-desc {
+    font-size: 15px;
+    color: var(--text-dim);
+    margin-bottom: 40px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 24px;
+  }
+
+  /* ── Section ── */
+  .section {
+    margin-bottom: 48px;
+  }
+
+  .section h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--heading);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section h3 .icon {
+    font-size: 22px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+  }
+
+  p {
+    margin-bottom: 16px;
+    color: var(--text);
+  }
+
+  /* ── Diagram Container ── */
+  .diagram {
+    margin: 32px 0;
+    padding: 32px;
+    border-radius: 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    overflow-x: auto;
+  }
+
+  .diagram-title {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+    text-align: center;
+  }
+
+  /* ── Flow Diagrams (CSS-based) ── */
+  .flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    flex-wrap: wrap;
+  }
+
+  .flow-node {
+    padding: 12px 20px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+    min-width: 120px;
+    position: relative;
+  }
+
+  .flow-node.core {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.15));
+    border: 1.5px solid rgba(59, 130, 246, 0.4);
+    color: var(--blue);
+  }
+
+  .flow-node.agent {
+    background: rgba(34, 197, 94, 0.1);
+    border: 1.5px solid rgba(34, 197, 94, 0.3);
+    color: var(--green);
+  }
+
+  .flow-node.cloud {
+    background: rgba(6, 182, 212, 0.1);
+    border: 1.5px solid rgba(6, 182, 212, 0.3);
+    color: var(--cyan);
+  }
+
+  .flow-node.heal {
+    background: rgba(234, 179, 8, 0.1);
+    border: 1.5px solid rgba(234, 179, 8, 0.3);
+    color: var(--yellow);
+  }
+
+  .flow-node.danger {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1.5px solid rgba(239, 68, 68, 0.3);
+    color: var(--red);
+  }
+
+  .flow-node.buffer {
+    background: rgba(249, 115, 22, 0.1);
+    border: 1.5px solid rgba(249, 115, 22, 0.3);
+    color: var(--orange);
+  }
+
+  .flow-node small {
+    display: block;
+    font-size: 10px;
+    font-weight: 400;
+    opacity: 0.7;
+    margin-top: 3px;
+  }
+
+  .flow-arrow {
+    font-size: 18px;
+    color: var(--text-muted);
+    padding: 0 8px;
+    flex-shrink: 0;
+  }
+
+  .flow-arrow.down {
+    transform: rotate(90deg);
+    padding: 8px 0;
+  }
+
+  /* ── Tables ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    font-size: 13px;
+  }
+
+  th {
+    text-align: left;
+    padding: 10px 14px;
+    background: rgba(59, 130, 246, 0.08);
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+  }
+
+  td {
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(100, 116, 139, 0.1);
+    vertical-align: top;
+  }
+
+  tr:hover td {
+    background: rgba(59, 130, 246, 0.04);
+  }
+
+  /* ── Code blocks ── */
+  .code-block {
+    margin: 16px 0;
+    padding: 16px 20px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.6;
+    overflow-x: auto;
+    color: var(--text-dim);
+  }
+
+  .code-block .kw { color: var(--purple); }
+  .code-block .fn { color: var(--blue); }
+  .code-block .str { color: var(--green); }
+  .code-block .cmt { color: var(--text-muted); font-style: italic; }
+  .code-block .var { color: var(--cyan); }
+
+  /* ── Callout ── */
+  .callout {
+    margin: 24px 0;
+    padding: 16px 20px;
+    border-radius: 12px;
+    border-left: 4px solid var(--blue);
+    background: rgba(59, 130, 246, 0.06);
+    font-size: 13.5px;
+  }
+
+  .callout.warn {
+    border-left-color: var(--yellow);
+    background: rgba(234, 179, 8, 0.06);
+  }
+
+  .callout.danger {
+    border-left-color: var(--red);
+    background: rgba(239, 68, 68, 0.06);
+  }
+
+  .callout.success {
+    border-left-color: var(--green);
+    background: rgba(34, 197, 94, 0.06);
+  }
+
+  .callout-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+    font-size: 13px;
+  }
+
+  /* ── Vertical Flow ── */
+  .vflow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+
+  .vflow .flow-arrow {
+    transform: none;
+    padding: 4px 0;
+    font-size: 20px;
+  }
+
+  /* ── Step list ── */
+  .step-list {
+    counter-reset: step;
+    list-style: none;
+    padding: 0;
+  }
+
+  .step-list li {
+    counter-increment: step;
+    padding: 14px 16px 14px 56px;
+    margin: 8px 0;
+    border-radius: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    position: relative;
+    font-size: 14px;
+  }
+
+  .step-list li::before {
+    content: counter(step);
+    position: absolute;
+    left: 16px;
+    top: 14px;
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    background: var(--accent);
+    color: white;
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .step-list li strong { color: var(--heading); }
+
+  /* ── Board Grid ── */
+  .board-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin: 24px 0;
+  }
+
+  .board-card {
+    padding: 20px;
+    border-radius: 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    text-align: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .board-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  }
+
+  .board-card .card-icon {
+    font-size: 32px;
+    margin-bottom: 10px;
+  }
+
+  .board-card .card-title {
+    font-weight: 700;
+    font-size: 14px;
+    margin-bottom: 4px;
+    color: var(--heading);
+  }
+
+  .board-card .card-role {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .board-card .card-desc {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 8px;
+    line-height: 1.5;
+  }
+
+  /* ── Inheritance tree ── */
+  .tree {
+    padding: 24px;
+  }
+
+  .tree-node {
+    padding: 10px 16px;
+    margin: 4px 0;
+    border-radius: 8px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .tree-node.root {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(139, 92, 246, 0.1));
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .tree-children {
+    margin-left: 24px;
+    border-left: 2px solid var(--border);
+    padding-left: 16px;
+  }
+
+  .tree-node.child {
+    background: rgba(34, 197, 94, 0.08);
+    border: 1px solid rgba(34, 197, 94, 0.2);
+  }
+
+  .tree-tag {
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .tree-tag.inherited { background: rgba(59, 130, 246, 0.15); color: var(--blue); }
+  .tree-tag.own { background: rgba(139, 92, 246, 0.15); color: var(--purple); }
+
+  /* ── Footer ── */
+  .manual-footer {
+    text-align: center;
+    padding: 40px;
+    border-top: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+
+  .toc { margin: 24px 0; }
+  .toc a {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 16px;
+    margin: 4px 0;
+    border-radius: 8px;
+    color: var(--text);
+    text-decoration: none;
+    font-size: 14px;
+    transition: background 0.2s;
+  }
+  .toc a:hover { background: rgba(59, 130, 246, 0.08); }
+  .toc a span.num { color: var(--blue); font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!--  COVER PAGE                                           -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="cover">
+  <div class="cover-badge">CLASSIFIED — INTERNAL OPERATIONS</div>
+  <div class="cover-icon">⚡</div>
+  <h1>Venture Studio Operations & Mastery Manual</h1>
+  <p class="cover-subtitle">
+    The definitive guide to the Antigravity Hardened V3.0 Architecture — from self-healing engines to autonomous boardroom agents.
+  </p>
+  <div class="cover-meta">
+    <div class="cover-stat"><div class="val">V3.0</div><div class="lbl">Architecture</div></div>
+    <div class="cover-stat"><div class="val">19</div><div class="lbl">Agents</div></div>
+    <div class="cover-stat"><div class="val">193</div><div class="lbl">Files Hardened</div></div>
+    <div class="cover-stat"><div class="val">14</div><div class="lbl">Specialist AIs</div></div>
+  </div>
+  <div class="cover-footer">
+    Antigravity Ops Intelligence — Meta App Factory — March 2026<br>
+    Credential: Antigravity_Full_v2 (AUTHORIZED)
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!--  TABLE OF CONTENTS                                    -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="content">
+  <div class="chapter">
+    <div class="chapter-number">Manual Contents</div>
+    <h2>Table of Contents</h2>
+    <div class="toc">
+      <a href="#ch1"><span class="num">01</span> Deep System Mapping</a>
+      <a href="#ch1-heal"><span class="num">1.1</span> &nbsp;&nbsp;The Self-Healing Engine</a>
+      <a href="#ch1-agents"><span class="num">1.2</span> &nbsp;&nbsp;The 14 Specialist Agents</a>
+      <a href="#ch2"><span class="num">02</span> Visual Architecture</a>
+      <a href="#ch2-engine"><span class="num">2.1</span> &nbsp;&nbsp;The Engine Map</a>
+      <a href="#ch2-board"><span class="num">2.2</span> &nbsp;&nbsp;The Boardroom Flow</a>
+      <a href="#ch2-tree"><span class="num">2.3</span> &nbsp;&nbsp;The Inheritance Tree</a>
+      <a href="#ch3"><span class="num">03</span> Operational How-To Guides</a>
+      <a href="#ch3-ingest"><span class="num">3.1</span> &nbsp;&nbsp;The Legacy Ingest</a>
+      <a href="#ch3-loop"><span class="num">3.2</span> &nbsp;&nbsp;The Persuasion Loop</a>
+      <a href="#ch3-design"><span class="num">3.3</span> &nbsp;&nbsp;The Design Engine</a>
+      <a href="#ch4"><span class="num">04</span> SOP Quick Reference</a>
+      <a href="#ch5"><span class="num">05</span> Real-Time War Room (Phase 2)</a>
+      <a href="#ch5-ws"><span class="num">5.1</span> &nbsp;&nbsp;WebSocket Dialogue Feed</a>
+      <a href="#ch5-agents"><span class="num">5.2</span> &nbsp;&nbsp;Board Member Personas</a>
+      <a href="#ch5-meter"><span class="num">5.3</span> &nbsp;&nbsp;The Persuasion Meter</a>
+      <a href="#ch6"><span class="num">06</span> Socratic Challenger Protocol (Phase 3)</a>
+      <a href="#ch6-pause"><span class="num">6.1</span> &nbsp;&nbsp;The Strategic Pause</a>
+      <a href="#ch6-convince"><span class="num">6.2</span> &nbsp;&nbsp;The Convince Logic</a>
+      <a href="#ch6-override"><span class="num">6.3</span> &nbsp;&nbsp;Hard Override &amp; Audit Trail</a>
+      <a href="#ch7"><span class="num">07</span> Boardroom Integration &amp; Automation (Phase 4)</a>
+      <a href="#ch7-watcher"><span class="num">7.1</span> &nbsp;&nbsp;Incoming File Watcher</a>
+      <a href="#ch7-archive"><span class="num">7.2</span> &nbsp;&nbsp;n8n Legacy Archiver</a>
+      <a href="#ch7-audit"><span class="num">7.3</span> &nbsp;&nbsp;MASTER_INDEX Socratic Audit</a>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!--  CHAPTER 1: DEEP SYSTEM MAPPING                       -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="chapter" id="ch1">
+    <div class="chapter-number">Chapter 01</div>
+    <h2>Deep System Mapping</h2>
+    <p class="chapter-desc">
+      How <code>auto_heal.py</code>, <code>circuit_breaker.py</code>, and the <code>n8n_bridge.py</code> interlock to form an autonomous self-healing engine — and how the Antigravity_Full_v2 API key governs 14 specialist AI agents.
+    </p>
+
+    <div class="section" id="ch1-heal">
+      <h3><span class="icon">🛡️</span> The Self-Healing Engine</h3>
+
+      <p>The V3.0 architecture creates a <strong>three-layer defense</strong> that ensures no data is ever lost and no failure goes undiagnosed:</p>
+
+      <table>
+        <thead>
+          <tr><th>Layer</th><th>Module</th><th>Role</th><th>Trigger</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Layer 1</strong><br>Auto-Heal</td>
+            <td><code>auto_heal.py</code></td>
+            <td>Retry with exponential backoff (2s → 4s → 8s), then self-diagnose watchdog, credentials, and buffer state</td>
+            <td>Any <code>healed_post()</code> failure</td>
+          </tr>
+          <tr>
+            <td><strong>Layer 2</strong><br>Circuit Breaker</td>
+            <td><code>circuit_breaker.py</code></td>
+            <td>After 5 consecutive failures, OPENS the circuit — blocks all calls for 300s cooldown, preventing cascade overload</td>
+            <td>5 consecutive failures to same endpoint</td>
+          </tr>
+          <tr>
+            <td><strong>Layer 3</strong><br>Safe Buffer</td>
+            <td><code>factory.py</code> + <code>local_state_manager.py</code></td>
+            <td>All payloads are UUID-stamped and logged to <code>local_pending_sync.json</code> before POST. If cloud is down, data queues locally.</td>
+            <td>Watchdog returns RED or timeout</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="diagram">
+        <div class="diagram-title">Self-Healing Data Flow</div>
+        <div class="vflow">
+          <div class="flow-node core">healed_post(url, payload)<small>Auto-Heal Layer</small></div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node agent">Attempt 1: safe_post()<small>Log UUID → POST</small></div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow" style="gap:8px">
+            <div class="flow-node agent" style="min-width:140px">✅ "sent"<small>Delivered</small></div>
+            <div style="color:var(--text-muted);padding:8px">or</div>
+            <div class="flow-node danger" style="min-width:140px">❌ 5xx Error<small>Retry triggered</small></div>
+          </div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node heal">Retry 1→2→3 (2s, 4s, 8s)<small>Exponential backoff</small></div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow" style="gap:8px">
+            <div class="flow-node agent" style="min-width:140px">✅ "healed"<small>Self-repaired</small></div>
+            <div style="color:var(--text-muted);padding:8px">or</div>
+            <div class="flow-node buffer" style="min-width:180px">🟠 "buffered"<small>Queued in local_pending_sync.json</small></div>
+          </div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node core">diagnose() → auto_heal_log.json<small>Verdict: CLOUD_DOWN | CREDENTIAL_DECAY | HEALTHY</small></div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node cloud">recovery_sync.py → Flush buffer when cloud recovers<small>Eventual delivery guaranteed</small></div>
+        </div>
+      </div>
+
+      <div class="callout success">
+        <div class="callout-title">🔒 Zero Data Loss Guarantee</div>
+        Every payload is UUID-stamped and written to <code>local_pending_sync.json</code> <em>before</em> the HTTP call is attempted. Even if the process crashes mid-transmission, the Recovery Sync Engine will detect and re-deliver the orphaned entry.
+      </div>
+
+      <h3 style="margin-top:40px;display:flex;align-items:center;gap:10px"><span class="icon">🔌</span> Circuit Breaker States</h3>
+
+      <div class="diagram">
+        <div class="diagram-title">State Machine</div>
+        <div class="flow" style="flex-wrap:wrap;justify-content:center;gap:16px">
+          <div class="flow-node agent" style="min-width:160px">
+            🟢 CLOSED<small>Normal operations<br>All calls go through</small>
+          </div>
+          <div style="text-align:center;color:var(--text-muted);font-size:11px;padding:0 4px">
+            5 failures →
+          </div>
+          <div class="flow-node danger" style="min-width:160px">
+            🔴 OPEN<small>Calls blocked<br>300s cooldown</small>
+          </div>
+          <div style="text-align:center;color:var(--text-muted);font-size:11px;padding:0 4px">
+            cooldown expires →
+          </div>
+          <div class="flow-node heal" style="min-width:160px">
+            🟡 HALF_OPEN<small>One test call allowed<br>2 successes → CLOSED</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section" id="ch1-agents">
+      <h3><span class="icon">🧠</span> The 14 Specialist Agents</h3>
+
+      <p>The <strong>Antigravity_Full_v2</strong> API key (<code>eyJhbG...UebO3WCxto</code>, 267 chars) authenticates all communication between the local factory and the n8n Cloud. It controls a registry of 14 specialist agents, each with a dedicated webhook endpoint:</p>
+
+      <div class="board-grid">
+        <div class="board-card">
+          <div class="card-icon">💰</div>
+          <div class="card-title">CFO</div>
+          <div class="card-role">Chief Financial Officer</div>
+          <div class="card-desc">Revenue models, unit economics, financial projections</div>
+        </div>
+        <div class="board-card">
+          <div class="card-icon">📢</div>
+          <div class="card-title">CMO</div>
+          <div class="card-role">Chief Marketing Officer</div>
+          <div class="card-desc">Go-to-market strategy, brand positioning, audience</div>
+        </div>
+        <div class="board-card">
+          <div class="card-icon">👥</div>
+          <div class="card-title">HR</div>
+          <div class="card-role">Human Resources</div>
+          <div class="card-desc">Team composition, hiring roadmap, culture alignment</div>
+        </div>
+        <div class="board-card">
+          <div class="card-icon">🔍</div>
+          <div class="card-title">CRITIC</div>
+          <div class="card-role">Quality Assurance</div>
+          <div class="card-desc">Stress-tests proposals, finds weaknesses, demands evidence</div>
+        </div>
+        <div class="board-card">
+          <div class="card-icon">🎯</div>
+          <div class="card-title">PITCH</div>
+          <div class="card-role">Pitch Specialist</div>
+          <div class="card-desc">Investor narratives, pitch deck structure, storytelling</div>
+        </div>
+        <div class="board-card">
+          <div class="card-icon">⚛️</div>
+          <div class="card-title">ATOMIZER</div>
+          <div class="card-role">Task Decomposer</div>
+          <div class="card-desc">Breaks complex directives into atomic sub-tasks</div>
+        </div>
+        <div class="board-card">
+          <div class="card-icon">🏗️</div>
+          <div class="card-title">ARCHITECT</div>
+          <div class="card-role">System Designer</div>
+          <div class="card-desc">Technical architecture, stack decisions, scalability</div>
+        </div>
+        <div class="board-card">
+          <div class="card-icon">⚙️</div>
+          <div class="card-title">COO</div>
+          <div class="card-role">Operations</div>
+          <div class="card-desc">Process optimization, operational workflows</div>
+        </div>
+        <div class="board-card">
+          <div class="card-icon">💻</div>
+          <div class="card-title">CTO</div>
+          <div class="card-role">Technology</div>
+          <div class="card-desc">Engineering strategy, infra decisions, tech debt</div>
+        </div>
+        <div class="board-card">
+          <div class="card-icon">⚖️</div>
+          <div class="card-title">LEGAL</div>
+          <div class="card-role">Legal Counsel</div>
+          <div class="card-desc">Compliance, IP protection, contracts</div>
+        </div>
+        <div class="board-card">
+          <div class="card-icon">📦</div>
+          <div class="card-title">PRODUCT</div>
+          <div class="card-role">Product Manager</div>
+          <div class="card-desc">Roadmap, feature priorities, user stories</div>
+        </div>
+        <div class="board-card">
+          <div class="card-icon">📈</div>
+          <div class="card-title">SALES</div>
+          <div class="card-role">Sales Director</div>
+          <div class="card-desc">Revenue channels, pricing strategy, pipeline</div>
+        </div>
+        <div class="board-card">
+          <div class="card-icon">📊</div>
+          <div class="card-title">ANALYST</div>
+          <div class="card-role">Data Analyst</div>
+          <div class="card-desc">Market research, competitive analysis, data insights</div>
+        </div>
+        <div class="board-card">
+          <div class="card-icon">🎨</div>
+          <div class="card-title">PRES. ARCHITECT</div>
+          <div class="card-role">Creative Director</div>
+          <div class="card-desc">Visual design, presentation architecture, branding</div>
+        </div>
+      </div>
+
+      <div class="callout">
+        <div class="callout-title">🔑 API Key Role</div>
+        The Antigravity_Full_v2 key is injected into every <code>healed_post()</code> header. It authorizes each agent call, controls rate limits, and enables the Watchdog to verify system health. The key is stored in a <strong>READ-ONLY .env</strong> file; rotation must go through <code>env_updater.py</code>.
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!--  CHAPTER 2: VISUAL ARCHITECTURE                       -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="chapter" id="ch2">
+    <div class="chapter-number">Chapter 02</div>
+    <h2>Visual Architecture (Aether Design)</h2>
+    <p class="chapter-desc">Three architectural diagrams showing how data flows from local code to the cloud, how the C-Suite debates, and how child projects inherit from the Global Core.</p>
+
+    <div class="section" id="ch2-engine">
+      <h3><span class="icon">🗺️</span> The Engine Map</h3>
+      <p>From a local file change to a live n8n cloud execution — every step in the pipeline:</p>
+
+      <div class="diagram">
+        <div class="diagram-title">Local → Cloud Execution Pipeline</div>
+        <div class="vflow">
+          <div class="flow-node core" style="min-width:240px">📝 Local Code Change<small>Developer edits agent logic</small></div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node agent" style="min-width:240px">🔍 _v3_preflight()<small>Ping Resonance_Watchdog_V3</small></div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow" style="gap:16px">
+            <div class="flow-node agent" style="min-width:160px">🟢 Watchdog GREEN<small>&lt;1000ms → live mode</small></div>
+            <div class="flow-node danger" style="min-width:160px">🔴 Watchdog RED<small>&gt;3000ms → buffer mode</small></div>
+          </div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node heal" style="min-width:280px">📦 StateManager.log(uuid, payload)<small>UUID + timestamp → local_pending_sync.json</small></div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node core" style="min-width:280px">🚀 healed_post(url, payload)<small>Retry up to 3× with backoff → diagnose()</small></div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node cloud" style="min-width:280px">☁️ n8n Cloud Webhook<small>13 specialist agents via AGENT_REGISTRY</small></div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow" style="gap:16px">
+            <div class="flow-node agent" style="min-width:140px">✅ 200 OK<small>Tool loop / Delegation</small></div>
+            <div class="flow-node heal" style="min-width:140px">🔄 delegate_task<small>Route to specialist</small></div>
+            <div class="flow-node buffer" style="min-width:140px">📋 use_tool<small>Financial / Docs / Search</small></div>
+          </div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node core" style="min-width:280px">💬 Response → User Interface<small>Output rendered in Builder Chat or CLI</small></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section" id="ch2-board">
+      <h3><span class="icon">🏛️</span> The Boardroom Flow (Socratic Dialogue)</h3>
+      <p>When a complex directive enters the system, the <strong>Elite Council</strong> convenes. The CEO (main webhook) orchestrates a Socratic debate between specialists before presenting the final output to the user:</p>
+
+      <div class="diagram">
+        <div class="diagram-title">Socratic Dialogue — C-Suite Debate Flow</div>
+        <div class="vflow">
+          <div class="flow-node core" style="min-width:280px">👤 Commander Input<small>"Analyze this market for our new product"</small></div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node cloud" style="min-width:280px">🏛️ Elite Council (CEO Webhook)<small>Routes via AGENT_REGISTRY</small></div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow" style="gap:12px;flex-wrap:wrap;justify-content:center">
+            <div class="flow-node agent" style="min-width:100px">💰 CFO<small>Financials</small></div>
+            <div class="flow-node agent" style="min-width:100px">📢 CMO<small>Market</small></div>
+            <div class="flow-node agent" style="min-width:100px">🔍 CRITIC<small>Challenge</small></div>
+            <div class="flow-node agent" style="min-width:100px">🎯 PITCH<small>Narrative</small></div>
+          </div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node heal" style="min-width:280px">🔄 Delegation Recursion<small>Each specialist's output feeds back to Council for synthesis</small></div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node core" style="min-width:280px">📋 Draft Summary<small>action: "draft_summary" → User review</small></div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow" style="gap:16px">
+            <div class="flow-node agent" style="min-width:140px">✅ User Approves<small>Execute plan</small></div>
+            <div class="flow-node danger" style="min-width:140px">🔄 User Pivots<small>New direction → re-debate</small></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout">
+        <div class="callout-title">🎭 How the Debate Works</div>
+        The <code>n8n_bridge.py</code> uses a recursive <code>call_app()</code> pattern. When the Council returns <code>{"action": "delegate_task", "recipient": "CMO"}</code>, the bridge routes the sub-task to the CMO's dedicated webhook. The CMO's response is then injected back into the Council as <code>OBSERVATION FROM CMO: ...</code>, prompting the next round of deliberation.
+      </div>
+    </div>
+
+    <div class="section" id="ch2-tree">
+      <h3><span class="icon">🌳</span> The Inheritance Tree</h3>
+      <p>Every child project inherits core V3 capabilities from the <strong>Global Core</strong> (Meta_App_Factory) while maintaining its own unique logic — its "Soul":</p>
+
+      <div class="diagram">
+        <div class="diagram-title">V3 Inheritance Architecture</div>
+        <div class="tree">
+          <div class="tree-node root">⚡ Meta_App_Factory (Global Core)</div>
+          <div class="tree-children">
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 12px">
+              <span class="tree-tag inherited">factory.py</span>
+              <span class="tree-tag inherited">auto_heal.py</span>
+              <span class="tree-tag inherited">local_state_manager.py</span>
+              <span class="tree-tag inherited">recovery_sync.py</span>
+              <span class="tree-tag inherited">.env (READ-ONLY)</span>
+              <span class="tree-tag inherited">resilience_config.json</span>
+            </div>
+
+            <div class="tree-node child">🏢 Alpha_V2_Genesis (Trading Dashboard)</div>
+            <div class="tree-children" style="margin-bottom:12px">
+              <div style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 0">
+                <span class="tree-tag inherited">healed_post()</span>
+                <span class="tree-tag inherited">CircuitBreaker</span>
+                <span class="tree-tag inherited">_v3_preflight()</span>
+                <span class="tree-tag own">Loki Engine</span>
+                <span class="tree-tag own">Signal Processor</span>
+                <span class="tree-tag own">Volatility Sentry</span>
+              </div>
+            </div>
+
+            <div class="tree-node child">🛡️ Sentinel_Bridge (Assistant)</div>
+            <div class="tree-children" style="margin-bottom:12px">
+              <div style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 0">
+                <span class="tree-tag inherited">healed_post()</span>
+                <span class="tree-tag inherited">_v3_preflight()</span>
+                <span class="tree-tag own">Intent Extractor</span>
+                <span class="tree-tag own">PII Masker</span>
+                <span class="tree-tag own">Calendar Poller</span>
+              </div>
+            </div>
+
+            <div class="tree-node child">🎼 Resonance (Educational Platform)</div>
+            <div class="tree-children" style="margin-bottom:12px">
+              <div style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 0">
+                <span class="tree-tag inherited">healed_post()</span>
+                <span class="tree-tag inherited">CircuitBreaker</span>
+                <span class="tree-tag own">EQ Engine</span>
+                <span class="tree-tag own">Sentiment Bridge</span>
+                <span class="tree-tag own">Nerve Center</span>
+              </div>
+            </div>
+
+            <div class="tree-node child">🧬 Project_Genesis (Delegation Framework)</div>
+            <div class="tree-children" style="margin-bottom:12px">
+              <div style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 0">
+                <span class="tree-tag inherited">healed_post()</span>
+                <span class="tree-tag inherited">_v3_preflight()</span>
+                <span class="tree-tag own">Delegation Router</span>
+                <span class="tree-tag own">Delegate API</span>
+                <span class="tree-tag own">Compliance Vault</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout success">
+        <div class="callout-title">🧬 The DNA Pattern</div>
+        When <code>app_generator.py</code> scaffolds a new child, it copies <code>child_app_template.py</code> which already contains: V3 header (FACTORY_DIR resolution + imports), <code>_v3_preflight()</code>, and the <code>healed_post()</code> pattern. The child inherits resilience but develops its own domain logic.
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!--  CHAPTER 3: OPERATIONAL HOW-TO GUIDES                 -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="chapter" id="ch3">
+    <div class="chapter-number">Chapter 03</div>
+    <h2>Operational How-To Guides</h2>
+    <p class="chapter-desc">Step-by-step procedures for the three core operational workflows: ingesting legacy materials, using the Boardroom persuasion loop, and driving the design engine.</p>
+
+    <div class="section" id="ch3-ingest">
+      <h3><span class="icon">📥</span> The Legacy Ingest</h3>
+      <p>How to introduce existing business materials into the Antigravity ecosystem for AI-powered analysis and transformation:</p>
+
+      <ol class="step-list">
+        <li><strong>Prepare Materials</strong> — Gather all documents (pitch decks, financials, research PDFs). Rename them with a clear convention: <code>PROJECT_type_version.ext</code></li>
+        <li><strong>Upload via Builder Chat</strong> — Open the Meta App Factory UI → Builder Chat → click <strong>📎 Upload</strong>. The file content is injected into the prompt context (max 3000 chars, truncated with notice).</li>
+        <li><strong>Trigger the Critic's Audit</strong> — Prompt: <em>"Analyze the uploaded document. Run a full CRITIC audit — stress-test the assumptions, identify gaps, and score confidence 1-10."</em> The system routes to the CRITIC agent via the Elite Council.</li>
+        <li><strong>Review the Draft Summary</strong> — The Council returns a <code>draft_summary</code> with actionable insights. You can <strong>approve</strong> to proceed or <strong>pivot</strong> with new instructions.</li>
+        <li><strong>Store to Vector Memory</strong> — Key findings are automatically stored via the <code>vector_memory</code> tool (ChromaDB). Future prompts can reference: <em>"Recall the CRITIC's analysis from last week."</em></li>
+      </ol>
+
+      <div class="callout warn">
+        <div class="callout-title">⚠️ File Size Limit</div>
+        The upload truncates at 3000 characters. For larger documents, break them into sections and upload sequentially, or use <code>Google Workspace</code> integration to ingest directly from Drive.
+      </div>
+    </div>
+
+    <div class="section" id="ch3-loop">
+      <h3><span class="icon">🎭</span> The Persuasion Loop (War Room UI)</h3>
+      <p>The Persuasion Loop now operates through the <strong>Adversarial War Room</strong> — a real-time WebSocket interface at <code>localhost:5173 → War Room</code>. See <a href="#ch5">Chapter 5</a> for the full War Room guide and <a href="#ch6">Chapter 6</a> for the Socratic Challenger Protocol.</p>
+
+      <ol class="step-list">
+        <li><strong>Set a Debate Topic</strong> — Open the War Room sidebar (⚔️ icon). In the topic bar, enter your directive and click <strong>🏛️ Debate</strong> to open a free boardroom session.</li>
+        <li><strong>Trigger a Socratic Challenge</strong> — Enter a score (1–10) and click <strong>🔍 Challenge</strong> to invoke a Strategic Pause. If the score is below 9.5, the Critic presents 3 state-of-the-art weaknesses.</li>
+        <li><strong>Watch the Board Deliberate</strong> — CEO, CMO, CFO, and CRITIC respond in real-time in the Dialogue Feed. Each agent is color-coded with their persona icon.</li>
+        <li><strong>Present Evidence</strong> — In <em>Convince Mode</em>, the intervention box switches to an evidence input. Use data-driven language: metrics, validated research, A/B test results. The Critic scores your reasoning out of 10.</li>
+        <li><strong>Hard Override</strong> — If the Board resists, click <strong>🚨 Force Proceed</strong>. Risks are logged with severity (LOW → CRITICAL) and a 30-day audit deadline is set for HIGH/CRITICAL overrides.</li>
+      </ol>
+
+      <div class="callout danger">
+        <div class="callout-title">🚨 Hard Override Warning</div>
+        Force Proceed bypasses the Critic's quality gates and logs the override in <code>socratic_audit.json</code>. HIGH and CRITICAL overrides trigger a mandatory 30-day audit review.
+      </div>
+    </div>
+
+    <div class="section" id="ch3-design">
+      <h3><span class="icon">🎨</span> The Design Engine</h3>
+      <p>How to use the creative tools to produce professional documents, presentations, and visual assets:</p>
+
+      <ol class="step-list">
+        <li><strong>Financial Models</strong> — Prompt: <em>"Generate a 5-year financial model for a SaaS with $20/mo subscription, 5% monthly growth, and 40% churn."</em> The <code>financial_model</code> tool creates a live Excel file with working formulas.</li>
+        <li><strong>Presentations</strong> — Prompt: <em>"Create a 10-slide investor pitch deck for [Product]. Include market size, business model, team, and ask."</em> The <code>produce_document</code> tool generates a PPTX and uploads to Google Drive.</li>
+        <li><strong>Visual Assets</strong> — Prompt: <em>"Generate a hero image for our landing page: futuristic city skyline at sunset with glowing data streams."</em> The tool routes to DALL-E for generation.</li>
+        <li><strong>Auto-Upload to Drive</strong> — All generated files are automatically uploaded to the project's Google Drive folder via <code>GoogleSuiteManager</code>. Drive links are returned in the response.</li>
+      </ol>
+
+      <div class="code-block">
+<span class="cmt"># Available Creative Tools (via n8n_bridge Tool Loop)</span>
+
+<span class="kw">financial_model</span>  → Excel with live formulas (FinancialPlanner)
+<span class="kw">produce_document</span> → PPTX, DOCX, TXT, Image (FileFactory)
+<span class="kw">google_workspace</span> → Read/Write Google Docs, Sheets (GoogleSuiteManager)
+<span class="kw">market_search</span>    → Live web research (TavilySearch)
+<span class="kw">vector_memory</span>    → Store/recall knowledge (ChromaDB)
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!--  CHAPTER 4: SOP QUICK REFERENCE                       -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="chapter" id="ch4">
+    <div class="chapter-number">Chapter 04</div>
+    <h2>SOP Quick Reference</h2>
+    <p class="chapter-desc">Essential commands and watchdog thresholds for daily operations.</p>
+
+    <table>
+      <thead>
+        <tr><th>Operation</th><th>Command</th><th>When to Use</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>System Diagnosis</td>
+          <td><code>python auto_heal.py</code></td>
+          <td>Any time — shows watchdog, credentials, buffer, verdict</td>
+        </tr>
+        <tr>
+          <td>Check Buffer</td>
+          <td><code>python recovery_sync.py --status</code></td>
+          <td>Every 24 hours (per SOP_MAINTENANCE.md)</td>
+        </tr>
+        <tr>
+          <td>Flush Buffer</td>
+          <td><code>python recovery_sync.py --force</code></td>
+          <td>Only when Watchdog is 🟢 GREEN</td>
+        </tr>
+        <tr>
+          <td>Key Rotation</td>
+          <td><code>python env_updater.py</code></td>
+          <td>When Watchdog latency exceeds 2000ms consistently</td>
+        </tr>
+        <tr>
+          <td>Scaffold New Agent</td>
+          <td><code>python app_generator.py &lt;name&gt;</code></td>
+          <td>Always — never write from scratch</td>
+        </tr>
+        <tr>
+          <td>Circuit Breaker Status</td>
+          <td><code>python circuit_breaker.py</code></td>
+          <td>When agents are timing out</td>
+        </tr>
+        <tr>
+          <td>Launch Factory UI</td>
+          <td><code>Launch_Meta_App_Factory_V3.bat</code></td>
+          <td>Start of each work session</td>
+        </tr>
+        <tr>
+          <td>Socratic Challenge (CLI)</td>
+          <td><code>python socratic_challenger.py --score 6 --proposal "..."</code></td>
+          <td>Test challenge logic offline</td>
+        </tr>
+        <tr>
+          <td>Scan Incoming Files</td>
+          <td><code>python incoming_watcher.py --once</code></td>
+          <td>One-shot audit of projects/*/incoming/</td>
+        </tr>
+        <tr>
+          <td>n8n Archive Scan</td>
+          <td><code>python n8n_archiver.py --dry-run</code></td>
+          <td>Identify legacy workflows before archiving</td>
+        </tr>
+        <tr>
+          <td>MASTER_INDEX Audit</td>
+          <td><code>POST /api/audit/master_index</code></td>
+          <td>Full Socratic Audit via API (posts to War Room)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3 style="margin-top:32px"><span class="icon">🚦</span> Watchdog Interpretation</h3>
+    <table>
+      <thead>
+        <tr><th>Status</th><th>Latency</th><th>Action</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>🟢 GREEN</td><td>&lt;1000ms</td><td>Normal operations. All <code>healed_post()</code> calls execute live.</td></tr>
+        <tr><td>🟡 YELLOW</td><td>1000–3000ms</td><td>Degraded. Monitor <code>local_pending_sync.json</code> for growth.</td></tr>
+        <tr><td>🔴 RED</td><td>&gt;3000ms or 4xx/5xx</td><td>Auto-pivot to Safe-Buffer. Cease live cloud attempts.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!--  CHAPTER 5: REAL-TIME WAR ROOM (PHASE 2)              -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="chapter" id="ch5">
+    <div class="chapter-number">Chapter 05</div>
+    <h2>Real-Time War Room (Phase 2)</h2>
+    <p class="chapter-desc">The Adversarial War Room provides a live WebSocket interface for observing agent debates, intervening with strategic input, and monitoring the Critic's agreement level in real-time.</p>
+
+    <div class="section" id="ch5-ws">
+      <h3><span class="icon">📡</span> WebSocket Dialogue Feed</h3>
+      <p>The War Room connects via <code>ws://localhost:8000/ws/warroom</code> for real-time bidirectional communication. Every agent message, challenge, and persuasion update flows through this socket.</p>
+
+      <div class="diagram">
+        <div class="diagram-title">War Room Architecture</div>
+        <div class="vflow">
+          <div class="flow-node core" style="min-width:260px">🏛️ Commander Input<small>Topic / Intervention / Evidence</small></div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node cloud" style="min-width:260px">🌐 WebSocket /ws/warroom<small>Bidirectional real-time channel</small></div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow" style="gap:12px;flex-wrap:wrap;justify-content:center">
+            <div class="flow-node agent" style="min-width:90px">👔 CEO<small>Strategy</small></div>
+            <div class="flow-node agent" style="min-width:90px">📢 CMO<small>Market</small></div>
+            <div class="flow-node agent" style="min-width:90px">💰 CFO<small>Finance</small></div>
+            <div class="flow-node danger" style="min-width:90px">🔍 CRITIC<small>Challenge</small></div>
+            <div class="flow-node heal" style="min-width:90px">🏗️ ARCH<small>System</small></div>
+          </div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node core" style="min-width:260px">📊 Persuasion Meter Update<small>Real-time score broadcast</small></div>
+        </div>
+      </div>
+
+      <table>
+        <thead><tr><th>Event Type</th><th>Payload</th><th>Direction</th></tr></thead>
+        <tbody>
+          <tr><td><code>init</code></td><td>History + current persuasion score</td><td>Server → Client</td></tr>
+          <tr><td><code>dialogue</code></td><td>Agent message with icon, color, timestamp</td><td>Server → Client</td></tr>
+          <tr><td><code>persuasion_update</code></td><td>New score (1–10) + reason</td><td>Server → Client</td></tr>
+          <tr><td><code>challenge</code></td><td>3 weaknesses + challenge_id + gap</td><td>Server → Client</td></tr>
+          <tr><td><code>intervention</code></td><td>Commander message text</td><td>Client → Server</td></tr>
+          <tr><td><code>override</code></td><td>Force proceed signal</td><td>Client → Server</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section" id="ch5-agents">
+      <h3><span class="icon">👥</span> Board Member Personas</h3>
+      <p>Each agent in the War Room has a distinct visual identity and deliberation role:</p>
+
+      <div class="board-grid">
+        <div class="board-card" style="border-color:rgba(59,130,246,0.3)">
+          <div class="card-icon">👔</div>
+          <div class="card-title" style="color:#3b82f6">CEO</div>
+          <div class="card-role">Strategic Vision</div>
+          <div class="card-desc">Market positioning, executive decisions, roadmap direction</div>
+        </div>
+        <div class="board-card" style="border-color:rgba(139,92,246,0.3)">
+          <div class="card-icon">📢</div>
+          <div class="card-title" style="color:#8b5cf6">CMO</div>
+          <div class="card-role">Market Intelligence</div>
+          <div class="card-desc">Audience research, competitive positioning, GTM timing</div>
+        </div>
+        <div class="board-card" style="border-color:rgba(34,197,94,0.3)">
+          <div class="card-icon">💰</div>
+          <div class="card-title" style="color:#22c55e">CFO</div>
+          <div class="card-role">Financial Architect</div>
+          <div class="card-desc">Unit economics, burn rate, ROI projections, runway</div>
+        </div>
+        <div class="board-card" style="border-color:rgba(239,68,68,0.3)">
+          <div class="card-icon">🔍</div>
+          <div class="card-title" style="color:#ef4444">CRITIC</div>
+          <div class="card-role">Sole Arbiter of Quality</div>
+          <div class="card-desc">Stress-tests proposals, issues Socratic challenges, demands evidence</div>
+        </div>
+        <div class="board-card" style="border-color:rgba(6,182,212,0.3)">
+          <div class="card-icon">🏗️</div>
+          <div class="card-title" style="color:#06b6d4">ARCHITECT</div>
+          <div class="card-role">System Designer</div>
+          <div class="card-desc">Technical architecture, scalability strategy, implementation</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section" id="ch5-meter">
+      <h3><span class="icon">📊</span> The Persuasion Meter</h3>
+      <p>The meter visualizes the Critic's agreement level on a 1–10 scale. The <strong>9.5 threshold</strong> is marked on the meter — proposals must reach this level to proceed without challenge.</p>
+
+      <table>
+        <thead><tr><th>Score Range</th><th>Label</th><th>Color</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td>1 – 2</td><td>Hostile</td><td style="color:#ef4444">🔴 Red</td><td>Fundamental objections — proposal rejected</td></tr>
+          <tr><td>3 – 4</td><td>Skeptical</td><td style="color:#eab308">🟡 Yellow</td><td>Serious concerns — evidence required</td></tr>
+          <tr><td>5 – 6</td><td>Neutral</td><td style="color:#eab308">🟡 Yellow</td><td>Some merit — needs strengthening</td></tr>
+          <tr><td>7 – 8</td><td>Receptive</td><td style="color:#f97316">🟠 Orange</td><td>Mostly convinced — minor gaps remain</td></tr>
+          <tr><td>9 – 10</td><td>Convinced</td><td style="color:#22c55e">🟢 Green</td><td>Approved — proceed with execution</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!--  CHAPTER 6: SOCRATIC CHALLENGER PROTOCOL (PHASE 3)    -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="chapter" id="ch6">
+    <div class="chapter-number">Chapter 06</div>
+    <h2>Socratic Challenger Protocol (Phase 3)</h2>
+    <p class="chapter-desc">The dialectical challenge system that forces critical evaluation of every proposal. When the Critic's score falls below 9.5, the board halts until the Commander defends their position with data.</p>
+
+    <div class="section" id="ch6-pause">
+      <h3><span class="icon">⏸</span> The Strategic Pause</h3>
+      <p>When any proposal scores below the <strong>9.5 threshold</strong>, the Socratic Challenger engine triggers a <strong>Strategic Pause</strong>:</p>
+
+      <div class="diagram">
+        <div class="diagram-title">Socratic Challenge Flow</div>
+        <div class="vflow">
+          <div class="flow-node core" style="min-width:260px">📋 Proposal Submitted<small>Topic + Critic Score</small></div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node danger" style="min-width:260px">🔍 evaluate(score < 9.5?)<small>Gap = 9.5 − score</small></div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node heal" style="min-width:260px">⏸ STRATEGIC PAUSE<small>Board halts — UI shows PAUSED badge</small></div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node danger" style="min-width:260px">⚠️ 3 Weaknesses Generated<small>From 10 categories × 3 templates</small></div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow" style="gap:16px">
+            <div class="flow-node agent" style="min-width:150px">✅ Submit Evidence<small>Convince Logic analysis</small></div>
+            <div class="flow-node buffer" style="min-width:150px">🚨 Force Proceed<small>Override with risk log</small></div>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="margin-top:24px">Weakness Categories</h3>
+      <p>The Challenger draws from <strong>10 categories</strong>, each with 3 unique challenge templates (30 total):</p>
+      <table>
+        <thead><tr><th>Category</th><th>Focus Area</th></tr></thead>
+        <tbody>
+          <tr><td>Scalability</td><td>Auto-scaling, single-node bottlenecks, replication</td></tr>
+          <tr><td>Market Validation</td><td>A/B test data, competitor funnels, user research</td></tr>
+          <tr><td>Unit Economics</td><td>Gross margins, infrastructure amortization, LTV:CAC</td></tr>
+          <tr><td>Technical Debt</td><td>Test coverage, CVE remediation, dependency tree</td></tr>
+          <tr><td>Team Dependency</td><td>Bus-factor analysis, knowledge concentration</td></tr>
+          <tr><td>Regulatory Risk</td><td>GDPR compliance, data handling practices</td></tr>
+          <tr><td>User Retention</td><td>Re-engagement mechanics, churn recovery paths</td></tr>
+          <tr><td>Competitive Moat</td><td>Differentiation depth, network effects</td></tr>
+          <tr><td>Go-to-Market Timing</td><td>Competitor launch windows, seasonal factors</td></tr>
+          <tr><td>Data Security</td><td>Encryption at rest, zero-trust architecture</td></tr>
+        </tbody>
+      </table>
+
+      <p>Severity is assigned based on the gap to threshold:</p>
+      <table>
+        <thead><tr><th>Gap</th><th>Severity</th></tr></thead>
+        <tbody>
+          <tr><td>≤ 2 pts</td><td style="color:#eab308">MODERATE</td></tr>
+          <tr><td>2 – 4 pts</td><td style="color:#f97316">SIGNIFICANT</td></tr>
+          <tr><td>> 4 pts</td><td style="color:#ef4444">CRITICAL</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section" id="ch6-convince">
+      <h3><span class="icon">🏛️</span> The Convince Logic</h3>
+      <p>When the Commander submits evidence, the Challenger analyzes it using keyword analysis and coverage scoring:</p>
+
+      <table>
+        <thead><tr><th>Signal Type</th><th>Examples</th><th>Impact</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Strong Evidence</strong> (25 signals)</td><td><em>data shows, validated, benchmark, A/B test, ROI confirmed, research indicates, statistically significant</em></td><td>+1.5 per signal (max +5)</td></tr>
+          <tr><td><strong>Weak Reasoning</strong> (13 signals)</td><td><em>I think, probably, gut feeling, might work, trust me, should be fine</em></td><td>−0.5 per signal</td></tr>
+          <tr><td><strong>Weakness Coverage</strong></td><td>Mentioning each weakness category by name</td><td>+2 bonus for full coverage</td></tr>
+          <tr><td><strong>Evidence Depth</strong></td><td>100+ words = +3, 50+ = +2, 20+ = +1</td><td>Length bonus for substance</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout success">
+        <div class="callout-title">✅ Convinced Verdict</div>
+        If the combined score (Critic + reasoning) ÷ 2 ≥ 8.0, the Critic marks the proposal as <strong>"User-Validated"</strong> and clears the Strategic Pause. The persuasion meter updates to reflect the new score.
+      </div>
+
+      <div class="callout warn">
+        <div class="callout-title">⚠️ Unconvinced Verdict</div>
+        If the combined score < 8.0, the Critic identifies which weaknesses were not adequately addressed and suggests the Commander try again or use Hard Override.
+      </div>
+    </div>
+
+    <div class="section" id="ch6-override">
+      <h3><span class="icon">🚨</span> Hard Override & Audit Trail</h3>
+      <p>When the Commander elects to Force Proceed despite unresolved weaknesses, the system logs the override with a risk assessment:</p>
+
+      <table>
+        <thead><tr><th>Risk Level</th><th>Gap Required</th><th>Consequence</th></tr></thead>
+        <tbody>
+          <tr><td style="color:#22c55e; font-weight:700">LOW</td><td>≤ 1 point</td><td>Minor gaps — proceed with monitoring</td></tr>
+          <tr><td style="color:#3b82f6; font-weight:700">MEDIUM</td><td>≤ 3 points</td><td>Substantive objections unaddressed</td></tr>
+          <tr><td style="color:#ef4444; font-weight:700">HIGH</td><td>≤ 5 points</td><td>Critical weaknesses bypassed — <strong>30-day audit required</strong></td></tr>
+          <tr><td style="color:#ef4444; font-weight:700">CRITICAL</td><td>> 5 points</td><td>Structural risks overridden — <strong>full audit within 30 days</strong></td></tr>
+        </tbody>
+      </table>
+
+      <p>All overrides are logged to <code>socratic_logs/socratic_audit.json</code> with:</p>
+      <div class="code-block">
+<span class="cmt">// Audit entry structure</span>
+{
+  <span class="str">"challenge_id"</span>: <span class="str">"CHS-0001"</span>,
+  <span class="str">"type"</span>: <span class="str">"HARD_OVERRIDE"</span>,
+  <span class="str">"risk_level"</span>: <span class="str">"HIGH"</span>,
+  <span class="str">"gap"</span>: <span class="var">3.5</span>,
+  <span class="str">"unaddressed_weaknesses"</span>: [<span class="str">"Scalability"</span>, <span class="str">"Unit Economics"</span>],
+  <span class="str">"audit_deadline"</span>: <span class="str">"2026-04-12"</span>,
+  <span class="str">"commander_note"</span>: <span class="str">"Proceeding per strategic priority"</span>
+}
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!--  CHAPTER 7: BOARDROOM INTEGRATION (PHASE 4)           -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="chapter" id="ch7">
+    <div class="chapter-number">Chapter 07</div>
+    <h2>Boardroom Integration & Automation (Phase 4)</h2>
+    <p class="chapter-desc">Automated file ingestion, legacy workflow cleanup, and system-wide audits — all wired into the War Room for real-time oversight.</p>
+
+    <div class="section" id="ch7-watcher">
+      <h3><span class="icon">📥</span> Incoming File Watcher</h3>
+      <p><code>incoming_watcher.py</code> monitors <code>projects/*/incoming/</code> directories on a 60-second polling interval. When new files are detected:</p>
+
+      <ol class="step-list">
+        <li><strong>File Detected</strong> — Hash-based deduplication prevents re-processing. Each file is fingerprinted by path + mtime + size.</li>
+        <li><strong>War Room Seeded</strong> — A boardroom session is automatically opened via <code>POST /api/warroom/seed</code> with the file details as the topic.</li>
+        <li><strong>Socratic Challenge Issued</strong> — A challenge is triggered via <code>POST /api/warroom/challenge</code> with a starting score of 5.0 (skeptical). The Critic presents 3 weaknesses in the War Room feed.</li>
+        <li><strong>Commander Review</strong> — You see the challenge in the War Room and respond with evidence or Force Proceed.</li>
+      </ol>
+
+      <div class="callout">
+        <div class="callout-title">📁 Auto-Start</div>
+        The watcher starts automatically when the FastAPI server boots. It runs as a daemon thread with a 60-second poll interval. To run a one-shot scan: <code>python incoming_watcher.py --once</code>
+      </div>
+    </div>
+
+    <div class="section" id="ch7-archive">
+      <h3><span class="icon">🗄️</span> n8n Legacy Archiver</h3>
+      <p><code>n8n_archiver.py</code> uses the <strong>Antigravity_Full_v2</strong> API key to scan all n8n Cloud workflows and identify legacy entries matching <code>V1</code>, <code>TEST</code>, or <code>OLD</code> labels.</p>
+
+      <table>
+        <thead><tr><th>Action</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Scan</strong></td><td>Lists all workflows, matches names/tags against archive labels</td></tr>
+          <tr><td><strong>Identify</strong></td><td>Reports legacy workflows with ID, name, active status, matched labels</td></tr>
+          <tr><td><strong>Archive</strong></td><td>Deactivates workflows (POST /deactivate, PATCH fallback). Does NOT delete.</td></tr>
+          <tr><td><strong>Confirm Arbiter</strong></td><td>Identifies all Critic V2 workflows as the sole quality arbiter</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout warn">
+        <div class="callout-title">⚠️ Dry-Run by Default</div>
+        The archiver defaults to dry-run mode via both CLI (<code>--dry-run</code>) and API (<code>dry_run: true</code>). Set <code>dry_run: false</code> explicitly to execute the archive.
+      </div>
+    </div>
+
+    <div class="section" id="ch7-audit">
+      <h3><span class="icon">📋</span> MASTER_INDEX Socratic Audit</h3>
+      <p>The <code>POST /api/audit/master_index</code> endpoint performs a full Socratic Audit on <code>MASTER_INDEX.md</code>:</p>
+
+      <ol class="step-list">
+        <li><strong>Parse</strong> — Reads the full MASTER_INDEX.md and counts sections, healing cycles, deployments, errors, and fresh boots.</li>
+        <li><strong>Broadcast</strong> — Posts the analysis summary to the War Room dialogue feed as a SYSTEM message.</li>
+        <li><strong>Challenge</strong> — Triggers a Socratic Challenge at score 6.0. The Critic presents 3 structural weaknesses based on the index analysis.</li>
+        <li><strong>Await Input</strong> — The board enters STRATEGIC PAUSE at 6/10 (Gap: 3.5). The Commander must present evidence or Force Proceed.</li>
+      </ol>
+
+      <h3 style="margin-top:24px">Phase 4 API Endpoints</h3>
+      <table>
+        <thead><tr><th>Endpoint</th><th>Method</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>/api/incoming/scan</code></td><td>POST</td><td>One-shot scan of incoming directories</td></tr>
+          <tr><td><code>/api/incoming/watch</code></td><td>POST</td><td>Start background watcher (30s poll)</td></tr>
+          <tr><td><code>/api/n8n/archive</code></td><td>POST</td><td>Archive V1/TEST/OLD workflows (dry-run default)</td></tr>
+          <tr><td><code>/api/audit/master_index</code></td><td>POST</td><td>Full Socratic Audit on MASTER_INDEX.md</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!--  FOOTER                                               -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="manual-footer">
+    <strong>Venture Studio Operations & Mastery Manual</strong><br>
+    Antigravity Ops Intelligence — Meta App Factory V3.0<br>
+    Generated: 2026-03-13 | Credential: Antigravity_Full_v2 | Status: SEALED<br>
+    Phases: Core + Phase 2 (War Room) + Phase 3 (Socratic Challenger) + Phase 4 (Boardroom Integration)<br><br>
+    <em>To save as PDF: Open in browser → Ctrl+P → Save as PDF</em>
+  </div>
+</div>
+
+</body>
+</html>

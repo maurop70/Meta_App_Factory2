@@ -10,9 +10,9 @@ import json
 import logging
 import subprocess
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.responses import StreamingResponse, JSONResponse, FileResponse
 from pydantic import BaseModel
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(message)s")
@@ -500,6 +500,663 @@ def audience_generate(req: AudienceGenRequest):
     except Exception as e:
         logger.error(f"Profile generation error: {e}")
         return {"status": "error", "message": str(e)}
+
+
+# ── System Map (V3 Architecture Visual) ───────────────────────
+
+@app.get("/system_map.html")
+def serve_system_map():
+    """Serve the V3 System Map HTML for iframe embedding."""
+    map_path = os.path.join(SCRIPT_DIR, "system_map.html")
+    if os.path.exists(map_path):
+        return FileResponse(map_path, media_type="text/html")
+    return JSONResponse({"error": "system_map.html not found"}, status_code=404)
+
+
+@app.get("/api/v3/map")
+def v3_map_data():
+    """Return live V3_MAP.json data for the System Map."""
+    map_path = os.path.join(SCRIPT_DIR, "V3_MAP.json")
+    heal_path = os.path.join(SCRIPT_DIR, "auto_heal_log.json")
+    result = {"agents": {}, "heal_events": []}
+    try:
+        if os.path.exists(map_path):
+            with open(map_path, "r", encoding="utf-8") as f:
+                result.update(json.load(f))
+    except Exception:
+        pass
+    try:
+        if os.path.exists(heal_path):
+            with open(heal_path, "r", encoding="utf-8") as f:
+                events = json.load(f)
+                result["heal_events"] = events[-20:]  # Last 20
+    except Exception:
+        pass
+    return result
+
+
+# ── War Room WebSocket (Phase 2 — Adversarial Boardroom) ─────
+
+import asyncio
+import time as _time
+import random
+from datetime import datetime as _dt
+
+# War Room State
+_warroom_clients: list[WebSocket] = []
+_warroom_log: list[dict] = []
+_persuasion_score: int = 5  # 1-10 Critic agreement
+_session_active: bool = False
+
+# Agent personas for the boardroom
+_AGENTS = {
+    "CEO": {"icon": "👔", "color": "#3b82f6", "role": "Chief Executive Officer"},
+    "CMO": {"icon": "📢", "color": "#8b5cf6", "role": "Chief Marketing Officer"},
+    "CFO": {"icon": "💰", "color": "#22c55e", "role": "Chief Financial Officer"},
+    "CRITIC": {"icon": "🔍", "color": "#ef4444", "role": "Quality Assurance / Devil's Advocate"},
+    "ARCHITECT": {"icon": "🏗️", "color": "#06b6d4", "role": "System Architect"},
+    "SYSTEM": {"icon": "⚡", "color": "#eab308", "role": "System Orchestrator"},
+}
+
+async def _broadcast(msg: dict):
+    """Send a message to all connected War Room clients."""
+    _warroom_log.append(msg)
+    # Keep last 200 messages
+    if len(_warroom_log) > 200:
+        _warroom_log.pop(0)
+    dead = []
+    for ws in _warroom_clients:
+        try:
+            await ws.send_json(msg)
+        except Exception:
+            dead.append(ws)
+    for ws in dead:
+        _warroom_clients.remove(ws)
+
+
+@app.websocket("/ws/warroom")
+async def warroom_websocket(websocket: WebSocket):
+    """WebSocket endpoint for War Room real-time dialogue."""
+    global _persuasion_score
+    await websocket.accept()
+    _warroom_clients.append(websocket)
+    logger.info(f"War Room client connected ({len(_warroom_clients)} total)")
+
+    # Send history on connect
+    try:
+        await websocket.send_json({
+            "type": "init",
+            "history": _warroom_log[-50:],
+            "persuasion": _persuasion_score,
+            "agents": _AGENTS,
+        })
+    except Exception:
+        pass
+
+    try:
+        while True:
+            data = await websocket.receive_json()
+            # Handle user interventions
+            if data.get("type") == "intervention":
+                user_msg = data.get("message", "")
+                await _broadcast({
+                    "type": "dialogue",
+                    "agent": "COMMANDER",
+                    "icon": "⚡",
+                    "color": "#f97316",
+                    "message": user_msg,
+                    "timestamp": _dt.now().isoformat(),
+                    "is_user": True,
+                })
+                # Simulate agent response cycle
+                asyncio.create_task(_simulate_response(user_msg))
+
+            elif data.get("type") == "override":
+                _persuasion_score = min(10, _persuasion_score + 2)
+                await _broadcast({
+                    "type": "persuasion_update",
+                    "score": _persuasion_score,
+                    "reason": "Commander Hard Override executed",
+                })
+                await _broadcast({
+                    "type": "dialogue",
+                    "agent": "SYSTEM",
+                    "icon": "⚡",
+                    "color": "#eab308",
+                    "message": f"🚨 HARD OVERRIDE — Commander bypassed deliberation. Critic compliance forced to {_persuasion_score}/10.",
+                    "timestamp": _dt.now().isoformat(),
+                })
+    except WebSocketDisconnect:
+        pass
+    finally:
+        if websocket in _warroom_clients:
+            _warroom_clients.remove(websocket)
+        logger.info(f"War Room client disconnected ({len(_warroom_clients)} total)")
+
+
+async def _simulate_response(user_msg: str):
+    """Simulate a boardroom response cycle to a user intervention."""
+    global _persuasion_score
+
+    # CEO acknowledges
+    await asyncio.sleep(0.8)
+    await _broadcast({
+        "type": "dialogue",
+        "agent": "CEO",
+        "icon": "👔",
+        "color": "#3b82f6",
+        "message": f"Acknowledged, Commander. Let me consult the board on: \"{user_msg[:80]}...\"",
+        "timestamp": _dt.now().isoformat(),
+    })
+
+    # CMO weighs in
+    await asyncio.sleep(1.5)
+    cmo_responses = [
+        f"From a market positioning standpoint, the Commander's directive aligns with our target demographics. I support this direction.",
+        f"The go-to-market implications are significant. We should A/B test this before full commitment.",
+        f"Our audience research supports this pivot. Engagement metrics predict strong uptake.",
+    ]
+    await _broadcast({
+        "type": "dialogue",
+        "agent": "CMO",
+        "icon": "📢",
+        "color": "#8b5cf6",
+        "message": random.choice(cmo_responses),
+        "timestamp": _dt.now().isoformat(),
+    })
+
+    # CFO responds
+    await asyncio.sleep(1.2)
+    cfo_responses = [
+        "The financial model holds under these assumptions. Projected ROI remains above our 15% threshold.",
+        "I have reservations about the burn rate. We need to cap spending at the approved budget envelope.",
+        "Revenue projections look aggressive but achievable given current growth trajectory.",
+    ]
+    await _broadcast({
+        "type": "dialogue",
+        "agent": "CFO",
+        "icon": "💰",
+        "color": "#22c55e",
+        "message": random.choice(cfo_responses),
+        "timestamp": _dt.now().isoformat(),
+    })
+
+    # Critic challenges
+    await asyncio.sleep(1.8)
+    critic_responses = [
+        "I remain skeptical. Where is the evidence that this approach outperforms the baseline? Show me data, not conviction.",
+        "The Commander's instinct may be right, but I need to see a controlled test before I increase my agreement score.",
+        "Interesting direction. I'll concede 1 point, but my core objections about scalability remain unaddressed.",
+        "This is a stronger argument than before. I'm raising my agreement, but the risk profile hasn't changed.",
+    ]
+    msg = random.choice(critic_responses)
+
+    # Adjust persuasion based on randomized critic mood
+    delta = random.choice([-1, 0, 0, 1, 1])
+    _persuasion_score = max(1, min(10, _persuasion_score + delta))
+
+    await _broadcast({
+        "type": "dialogue",
+        "agent": "CRITIC",
+        "icon": "🔍",
+        "color": "#ef4444",
+        "message": msg,
+        "timestamp": _dt.now().isoformat(),
+    })
+    await _broadcast({
+        "type": "persuasion_update",
+        "score": _persuasion_score,
+        "reason": f"Critic re-evaluated after Commander input (delta: {'+' if delta > 0 else ''}{delta})",
+    })
+
+
+@app.post("/api/warroom/intervene")
+async def warroom_intervene(request: Request):
+    """REST endpoint for posting interventions (fallback for non-WS clients)."""
+    body = await request.json()
+    msg = body.get("message", "")
+    await _broadcast({
+        "type": "dialogue",
+        "agent": "COMMANDER",
+        "icon": "⚡",
+        "color": "#f97316",
+        "message": msg,
+        "timestamp": _dt.now().isoformat(),
+        "is_user": True,
+    })
+    asyncio.create_task(_simulate_response(msg))
+    return {"status": "ok", "message": "Intervention dispatched"}
+
+
+@app.get("/api/warroom/state")
+def warroom_state():
+    """Get current War Room state."""
+    return {
+        "persuasion_score": _persuasion_score,
+        "connected_clients": len(_warroom_clients),
+        "log_length": len(_warroom_log),
+        "agents": _AGENTS,
+        "recent": _warroom_log[-20:],
+    }
+
+
+@app.post("/api/warroom/seed")
+async def warroom_seed(request: Request):
+    """Seed the War Room with a debate topic."""
+    global _persuasion_score
+    body = await request.json()
+    topic = body.get("topic", "strategic direction")
+    _persuasion_score = 5  # Reset
+
+    await _broadcast({
+        "type": "dialogue",
+        "agent": "SYSTEM",
+        "icon": "⚡",
+        "color": "#eab308",
+        "message": f"🏛️ BOARDROOM SESSION OPENED — Topic: \"{topic}\"",
+        "timestamp": _dt.now().isoformat(),
+    })
+    await _broadcast({"type": "persuasion_update", "score": 5, "reason": "Session reset"})
+
+    # Kick off debate
+    asyncio.create_task(_simulate_response(topic))
+    return {"status": "ok", "topic": topic}
+
+
+# ── Socratic Challenger (Phase 3 — Dialectical Challenge) ─────
+
+try:
+    from socratic_challenger import get_challenger
+    _challenger = get_challenger()
+    logger.info("Socratic Challenger loaded.")
+except ImportError:
+    _challenger = None
+    logger.warning("socratic_challenger.py not found — Phase 3 disabled.")
+
+
+@app.post("/api/warroom/challenge")
+async def warroom_challenge(request: Request):
+    """Issue a Socratic Challenge — Strategic Pause."""
+    global _persuasion_score
+
+    if not _challenger:
+        return JSONResponse({"error": "Socratic Challenger not loaded"}, status_code=500)
+
+    body = await request.json()
+    proposal = body.get("proposal", "")
+    critic_score = body.get("critic_score", _persuasion_score)
+
+    result = _challenger.evaluate(proposal, critic_score)
+
+    if result["status"] == "PAUSED":
+        _persuasion_score = max(1, int(critic_score))
+
+        # Broadcast the strategic pause
+        await _broadcast({
+            "type": "dialogue",
+            "agent": "SYSTEM",
+            "icon": "⚡",
+            "color": "#eab308",
+            "message": f"🛑 STRATEGIC PAUSE — Critic score {critic_score}/10 is below threshold ({_challenger.PAUSE_THRESHOLD}). Board deliberation required.",
+            "timestamp": _dt.now().isoformat(),
+        })
+
+        # Broadcast a structured challenge event
+        await _broadcast({
+            "type": "challenge",
+            "challenge_id": result["challenge_id"],
+            "score": critic_score,
+            "threshold": _challenger.PAUSE_THRESHOLD,
+            "gap": result["gap"],
+            "weaknesses": result["weaknesses"],
+        })
+
+        # Critic presents each weakness
+        for w in result["weaknesses"]:
+            await asyncio.sleep(0.6)
+            await _broadcast({
+                "type": "dialogue",
+                "agent": "CRITIC",
+                "icon": "🔍",
+                "color": "#ef4444",
+                "message": f"⚠️ [{w['severity']}] {w['category']}: {w['challenge']}",
+                "timestamp": _dt.now().isoformat(),
+            })
+
+        await asyncio.sleep(0.4)
+        await _broadcast({
+            "type": "dialogue",
+            "agent": "CRITIC",
+            "icon": "🔍",
+            "color": "#ef4444",
+            "message": "🏛️ The board awaits the Commander's reasoning. Present your evidence or invoke Hard Override.",
+            "timestamp": _dt.now().isoformat(),
+        })
+
+        await _broadcast({"type": "persuasion_update", "score": _persuasion_score, "reason": "Strategic Pause issued"})
+    else:
+        await _broadcast({
+            "type": "dialogue",
+            "agent": "SYSTEM",
+            "icon": "⚡",
+            "color": "#eab308",
+            "message": f"✅ APPROVED — Critic score {critic_score}/10 meets threshold. No challenge required.",
+            "timestamp": _dt.now().isoformat(),
+        })
+
+    return result
+
+
+@app.post("/api/warroom/convince")
+async def warroom_convince(request: Request):
+    """Submit reasoning to convince the Critic."""
+    global _persuasion_score
+
+    if not _challenger:
+        return JSONResponse({"error": "Socratic Challenger not loaded"}, status_code=500)
+
+    body = await request.json()
+    challenge_id = body.get("challenge_id", "")
+    reasoning = body.get("reasoning", "")
+
+    # Broadcast user's reasoning
+    await _broadcast({
+        "type": "dialogue",
+        "agent": "COMMANDER",
+        "icon": "⚡",
+        "color": "#f97316",
+        "message": reasoning,
+        "timestamp": _dt.now().isoformat(),
+        "is_user": True,
+    })
+
+    await asyncio.sleep(1.0)
+
+    # Analyze the response
+    verdict = _challenger.analyze_response(challenge_id, reasoning)
+
+    if "error" in verdict:
+        return JSONResponse(verdict, status_code=404)
+
+    _persuasion_score = verdict["new_persuasion"]
+
+    # Broadcast Critic's verdict
+    if verdict["verdict"] == "CONVINCED":
+        await _broadcast({
+            "type": "dialogue",
+            "agent": "CRITIC",
+            "icon": "🔍",
+            "color": "#22c55e",  # Green when convinced
+            "message": f"✅ {verdict['message']}",
+            "timestamp": _dt.now().isoformat(),
+        })
+        await _broadcast({
+            "type": "dialogue",
+            "agent": "SYSTEM",
+            "icon": "⚡",
+            "color": "#eab308",
+            "message": f"🏛️ PATH MARKED: User-Validated. The Architect may proceed with full board endorsement.",
+            "timestamp": _dt.now().isoformat(),
+        })
+    else:
+        await _broadcast({
+            "type": "dialogue",
+            "agent": "CRITIC",
+            "icon": "🔍",
+            "color": "#ef4444",
+            "message": f"❌ {verdict['message']}",
+            "timestamp": _dt.now().isoformat(),
+        })
+
+    # Broadcast challenge resolution event
+    await _broadcast({
+        "type": "challenge_resolved",
+        "challenge_id": challenge_id,
+        "verdict": verdict["verdict"],
+        "validation": verdict["validation"],
+        "new_persuasion": _persuasion_score,
+    })
+    await _broadcast({"type": "persuasion_update", "score": _persuasion_score, "reason": f"Convince result: {verdict['verdict']}"})
+
+    return verdict
+
+
+@app.post("/api/warroom/force_proceed")
+async def warroom_force_proceed(request: Request):
+    """Commander Hard Override — log risks and release lock."""
+    global _persuasion_score
+
+    if not _challenger:
+        return JSONResponse({"error": "Socratic Challenger not loaded"}, status_code=500)
+
+    body = await request.json()
+    challenge_id = body.get("challenge_id", "")
+    commander_note = body.get("note", "Commander override — proceeding.")
+
+    override = _challenger.force_proceed(challenge_id, commander_note)
+
+    if "error" in override:
+        return JSONResponse(override, status_code=404)
+
+    _persuasion_score = min(10, _persuasion_score + 2)
+
+    # Broadcast the override
+    await _broadcast({
+        "type": "dialogue",
+        "agent": "SYSTEM",
+        "icon": "⚡",
+        "color": "#eab308",
+        "message": f"🚨 HARD OVERRIDE — Commander has bypassed Critic deliberation. Risk level: {override['risk_level'].upper()}.",
+        "timestamp": _dt.now().isoformat(),
+    })
+
+    await asyncio.sleep(0.5)
+    await _broadcast({
+        "type": "dialogue",
+        "agent": "CRITIC",
+        "icon": "🔍",
+        "color": "#ef4444",
+        "message": f"📋 Override logged. {override['risk_description']} Audit required: {'YES (30 days)' if override['audit_required'] else 'No'}. Unaddressed weaknesses preserved in audit trail.",
+        "timestamp": _dt.now().isoformat(),
+    })
+
+    await _broadcast({
+        "type": "challenge_resolved",
+        "challenge_id": challenge_id,
+        "verdict": "OVERRIDE",
+        "validation": f"Commander-Override ({override['risk_level']})",
+        "new_persuasion": _persuasion_score,
+        "risk_level": override["risk_level"],
+    })
+    await _broadcast({"type": "persuasion_update", "score": _persuasion_score, "reason": "Hard Override executed"})
+
+    return override
+
+
+# ── Phase 4: Incoming Watcher + n8n Archiver + Master Audit ───
+
+import threading
+
+try:
+    from incoming_watcher import audit_incoming, watch_incoming
+    _watcher_available = True
+    logger.info("Incoming Watcher loaded.")
+except ImportError:
+    _watcher_available = False
+
+try:
+    from n8n_archiver import run_archive, list_workflows, identify_legacy
+    _archiver_available = True
+    logger.info("n8n Archiver loaded.")
+except ImportError:
+    _archiver_available = False
+
+_watcher_thread = None
+
+
+@app.post("/api/incoming/scan")
+async def incoming_scan():
+    """One-shot scan of projects/*/incoming/ directories."""
+    if not _watcher_available:
+        return JSONResponse({"error": "incoming_watcher.py not found"}, status_code=500)
+    results = audit_incoming()
+    return {"status": "ok", "files_detected": len(results), "results": results}
+
+
+@app.post("/api/incoming/watch")
+async def incoming_watch_start():
+    """Start the background incoming file watcher."""
+    global _watcher_thread
+    if not _watcher_available:
+        return JSONResponse({"error": "incoming_watcher.py not found"}, status_code=500)
+    if _watcher_thread and _watcher_thread.is_alive():
+        return {"status": "already_running"}
+    _watcher_thread = threading.Thread(target=watch_incoming, args=(30,), daemon=True)
+    _watcher_thread.start()
+    return {"status": "watcher_started", "interval": 30}
+
+
+@app.post("/api/n8n/archive")
+async def n8n_archive(request: Request):
+    """Archive legacy n8n workflows (V1/TEST/OLD)."""
+    if not _archiver_available:
+        return JSONResponse({"error": "n8n_archiver.py not found"}, status_code=500)
+    body = await request.json() if request.headers.get("content-length", "0") != "0" else {}
+    dry_run = body.get("dry_run", True)
+    summary = run_archive(dry_run=dry_run)
+
+    # Broadcast to War Room
+    await _broadcast({
+        "type": "dialogue",
+        "agent": "SYSTEM",
+        "icon": "⚡",
+        "color": "#eab308",
+        "message": f"🗄️ n8n ARCHIVE {'SCAN' if dry_run else 'COMPLETE'} — "
+                   f"{summary['legacy_identified']} legacy workflows identified, "
+                   f"{summary.get('archived', 0)} archived. "
+                   f"Sole arbiter: {summary['sole_arbiter']}.",
+        "timestamp": _dt.now().isoformat(),
+    })
+    return summary
+
+
+@app.post("/api/audit/master_index")
+async def audit_master_index():
+    """Run a full Socratic Audit on MASTER_INDEX.md and post to War Room."""
+    global _persuasion_score
+
+    # Read MASTER_INDEX.md
+    mi_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "MASTER_INDEX.md")
+    if not os.path.exists(mi_path):
+        return JSONResponse({"error": "MASTER_INDEX.md not found"}, status_code=404)
+
+    with open(mi_path, "r", encoding="utf-8") as f:
+        mi_content = f.read()
+
+    lines = mi_content.strip().split("\n")
+    sections = [l for l in lines if l.startswith("## ")]
+
+    # Analyze the index
+    analysis = {
+        "total_lines": len(lines),
+        "sections": len(sections),
+        "self_healing_cycles": sum(1 for s in sections if "SELF_HEALING" in s),
+        "deployed_modules": sum(1 for s in sections if "DEPLOY" in s.upper()),
+        "error_entries": mi_content.count("### ERROR_ENTRY"),
+        "fresh_boots": sum(1 for s in sections if "FRESH_BOOT" in s),
+    }
+
+    # Broadcast the audit initiation
+    await _broadcast({
+        "type": "dialogue",
+        "agent": "SYSTEM",
+        "icon": "⚡",
+        "color": "#eab308",
+        "message": f"📋 MASTER AUDIT INITIATED — Scanning MASTER_INDEX.md "
+                   f"({analysis['total_lines']} lines, {analysis['sections']} sections, "
+                   f"{analysis['self_healing_cycles']} healing cycles, "
+                   f"{analysis['deployed_modules']} deployments).",
+        "timestamp": _dt.now().isoformat(),
+    })
+
+    # Issue Socratic Challenge
+    if _challenger:
+        proposal = (
+            f"MASTER_INDEX.md Audit — Current state: {analysis['total_lines']} lines, "
+            f"{analysis['sections']} sections. Contains {analysis['self_healing_cycles']} "
+            f"self-healing cycle logs (many UNKNOWN failures queued for review), "
+            f"{analysis['error_entries']} error entries, {analysis['deployed_modules']} "
+            f"deployed modules, {analysis['fresh_boots']} fresh boots. "
+            f"Key sections: ERROR_REGISTRY, SELF_HEALING_CYCLE, "
+            f"COMMERCIAL_INFRASTRUCTURE_UPGRADE, EXECUTIVE_LAYER_OVERHAUL."
+        )
+
+        _persuasion_score = 5  # Start neutral
+        result = _challenger.evaluate(proposal, critic_score=6.0)
+
+        if result["status"] == "PAUSED":
+            _persuasion_score = 6
+            await _broadcast({
+                "type": "dialogue",
+                "agent": "SYSTEM",
+                "icon": "⚡",
+                "color": "#eab308",
+                "message": f"🛑 STRATEGIC PAUSE — MASTER_INDEX audit score 6.0/9.5. "
+                           f"Gap: {result['gap']}. Critic deliberation required.",
+                "timestamp": _dt.now().isoformat(),
+            })
+
+            await _broadcast({
+                "type": "challenge",
+                "challenge_id": result["challenge_id"],
+                "score": 6.0,
+                "threshold": _challenger.PAUSE_THRESHOLD,
+                "gap": result["gap"],
+                "weaknesses": result["weaknesses"],
+            })
+
+            for w in result["weaknesses"]:
+                await asyncio.sleep(0.6)
+                await _broadcast({
+                    "type": "dialogue",
+                    "agent": "CRITIC",
+                    "icon": "🔍",
+                    "color": "#ef4444",
+                    "message": f"⚠️ [{w['severity']}] {w['category']}: {w['challenge']}",
+                    "timestamp": _dt.now().isoformat(),
+                })
+
+            await asyncio.sleep(0.4)
+            await _broadcast({
+                "type": "dialogue",
+                "agent": "CRITIC",
+                "icon": "🔍",
+                "color": "#ef4444",
+                "message": "🏛️ Commander: The MASTER_INDEX audit reveals structural concerns. "
+                           "Present your evidence or invoke Hard Override.",
+                "timestamp": _dt.now().isoformat(),
+            })
+
+            await _broadcast({
+                "type": "persuasion_update",
+                "score": _persuasion_score,
+                "reason": "MASTER_INDEX audit initiated",
+            })
+
+        result["analysis"] = analysis
+        return result
+
+    return {"status": "no_challenger", "analysis": analysis}
+
+
+# ── Startup: Auto-start incoming watcher ──────────────────
+@app.on_event("startup")
+async def _startup_watcher():
+    global _watcher_thread
+    if _watcher_available:
+        _watcher_thread = threading.Thread(target=watch_incoming, args=(60,), daemon=True)
+        _watcher_thread.start()
+        logger.info("Incoming Watcher auto-started (60s poll)")
 
 
 if __name__ == "__main__":

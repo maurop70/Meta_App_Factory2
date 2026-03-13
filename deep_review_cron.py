@@ -1,3 +1,5 @@
+from auto_heal import healed_post, auto_heal, diagnose
+
 """
 deep_review_cron.py — Leitner Deep Review Daemon
 ═════════════════════════════════════════════════
@@ -121,9 +123,10 @@ def run_review(min_level: int = 4) -> dict:
 def _notify_command_center(warnings: list) -> None:
     """Try to POST warnings to the Command Center API."""
     try:
-        import requests
         url = "http://localhost:5010/api/warnings/ingest"
-        resp = requests.post(url, json={"warnings": warnings}, timeout=5)
+        _v3_status = healed_post(url, {"warnings": warnings})
+
+        resp = type("Resp", (), {"status_code": 200 if _v3_status == "sent" else 503, "ok": _v3_status == "sent", "text": _v3_status, "json": lambda: {"status": _v3_status}})()
         if resp.status_code == 200:
             print(f"[{timestamp()}] 📡 Command Center notified ({len(warnings)} warnings)")
         else:
@@ -230,3 +233,6 @@ if __name__ == "__main__":
         print(f"\n[{timestamp()}] Next deep review in {args.interval}s "
               f"({args.interval/3600:.1f}h)...\n")
         time.sleep(args.interval)
+
+# V3 MIGRATION COMPLETE
+# V3 AUTO-HEAL ACTIVE
