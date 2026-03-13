@@ -540,7 +540,11 @@ def v3_map_data():
 import asyncio
 import time as _time
 import random
+import requests as _requests
 from datetime import datetime as _dt
+from concurrent.futures import ThreadPoolExecutor
+
+_warroom_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="warroom")
 
 # War Room State
 _warroom_clients: list[WebSocket] = []
@@ -556,6 +560,39 @@ _AGENTS = {
     "CRITIC": {"icon": "🔍", "color": "#ef4444", "role": "Quality Assurance / Devil's Advocate"},
     "ARCHITECT": {"icon": "🏗️", "color": "#06b6d4", "role": "System Architect"},
     "SYSTEM": {"icon": "⚡", "color": "#eab308", "role": "System Orchestrator"},
+}
+
+# n8n Agent Webhooks (same registry used by Builder Chat)
+_WARROOM_WEBHOOKS = {
+    "CEO":  "https://humanresource.app.n8n.cloud/webhook/elite-council",
+    "CMO":  "https://humanresource.app.n8n.cloud/webhook/cmo-v2",
+    "CFO":  "https://humanresource.app.n8n.cloud/webhook/cfo-v2",
+    "CRITIC": "https://humanresource.app.n8n.cloud/webhook/critic-v2",
+}
+
+# Role-scoped prompt templates
+_WARROOM_PROMPTS = {
+    "CEO": (
+        "You are the CEO in a boardroom war room. Give a concise strategic assessment "
+        "(3-5 sentences) on the following topic. Focus on market positioning, competitive "
+        "advantage, and executive decision-making. Be direct and opinionated.\n\nTOPIC: {topic}"
+    ),
+    "CMO": (
+        "You are the CMO in a boardroom war room. Give a concise market analysis "
+        "(3-5 sentences) on the following topic. Focus on target audience, go-to-market "
+        "timing, competitive positioning, and brand strategy. Cite specific market trends.\n\nTOPIC: {topic}"
+    ),
+    "CFO": (
+        "You are the CFO in a boardroom war room. Give a concise financial assessment "
+        "(3-5 sentences) on the following topic. Focus on unit economics, burn rate, "
+        "ROI projections, and revenue model viability. Use specific numbers where possible.\n\nTOPIC: {topic}"
+    ),
+    "CRITIC": (
+        "You are the Chief Critic and quality arbiter in a boardroom war room. Give a "
+        "concise critical assessment (3-5 sentences) of the following topic. Identify the "
+        "biggest weakness, demand evidence, and score your confidence 1-10 with justification. "
+        "Be tough but fair.\n\nTOPIC: {topic}"
+    ),
 }
 
 async def _broadcast(msg: dict):
@@ -608,8 +645,8 @@ async def warroom_websocket(websocket: WebSocket):
                     "timestamp": _dt.now().isoformat(),
                     "is_user": True,
                 })
-                # Simulate agent response cycle
-                asyncio.create_task(_simulate_response(user_msg))
+                # Route to real n8n agents
+                asyncio.create_task(_live_debate(user_msg))
 
             elif data.get("type") == "override":
                 _persuasion_score = min(10, _persuasion_score + 2)
@@ -634,79 +671,129 @@ async def warroom_websocket(websocket: WebSocket):
         logger.info(f"War Room client disconnected ({len(_warroom_clients)} total)")
 
 
-async def _simulate_response(user_msg: str):
-    """Simulate a boardroom response cycle to a user intervention."""
-    global _persuasion_score
+def _call_n8n_agent(agent_name: str, topic: str) -> str:
+    """Synchronous call to a real n8n specialist webhook. Runs in thread pool."""
+    url = _WARROOM_WEBHOOKS.get(agent_name)
+    if not url:
+        return f"Agent {agent_name} has no dedicated webhook."
 
-    # CEO acknowledges
-    await asyncio.sleep(0.8)
+    prompt_template = _WARROOM_PROMPTS.get(agent_name, "Analyze: {topic}")
+    prompt = prompt_template.format(topic=topic)
+
+    try:
+        resp = _requests.post(
+            url,
+            json={"prompt": prompt, "sessionId": "warroom", "project_name": "WarRoom"},
+            timeout=45,
+        )
+        if resp.status_code == 200:
+            try:
+                data = resp.json()
+                # n8n agents return text in various keys
+                text = (
+                    data.get("text")
+                    or data.get("output")
+                    or data.get("commentary")
+                    or str(data)
+                )
+                # Clean up — cap at 600 chars for readability
+                return text.strip()[:600]
+            except Exception:
+                return resp.text.strip()[:600]
+        else:
+            return ""
+    except Exception as e:
+        logger.warning(f"War Room: {agent_name} call failed: {e}")
+        return ""
+
+
+_FALLBACK_RESPONSES = {
+    "CEO": [
+        "Based on our strategic priorities, this direction warrants further board analysis. I've noted the proposal.",
+        "The strategic implications are significant. Let me hear from the specialists before I weigh in fully.",
+    ],
+    "CMO": [
+        "From a market positioning standpoint, we need more audience data before committing to this direction.",
+        "The go-to-market implications require A/B testing. I'll reserve my full assessment pending data.",
+    ],
+    "CFO": [
+        "The financial model needs stress-testing. I'll need projected cash flows before approving spend.",
+        "Unit economics are unclear at this stage. We should run the numbers through our financial model.",
+    ],
+    "CRITIC": [
+        "I remain skeptical. Where is the evidence that this outperforms the baseline? Show me data, not conviction.",
+        "Interesting direction, but my core objections about scalability and validation remain unaddressed.",
+    ],
+}
+
+
+async def _live_debate(topic: str):
+    """Route the debate topic to real n8n specialist agents and stream responses."""
+    global _persuasion_score
+    loop = asyncio.get_event_loop()
+
+    # CEO leads
+    await asyncio.sleep(0.5)
     await _broadcast({
         "type": "dialogue",
         "agent": "CEO",
         "icon": "👔",
         "color": "#3b82f6",
-        "message": f"Acknowledged, Commander. Let me consult the board on: \"{user_msg[:80]}...\"",
+        "message": f"Opening deliberation on: \"{topic[:120]}\"\u2026 Consulting the board now.",
         "timestamp": _dt.now().isoformat(),
     })
 
-    # CMO weighs in
-    await asyncio.sleep(1.5)
-    cmo_responses = [
-        f"From a market positioning standpoint, the Commander's directive aligns with our target demographics. I support this direction.",
-        f"The go-to-market implications are significant. We should A/B test this before full commitment.",
-        f"Our audience research supports this pivot. Engagement metrics predict strong uptake.",
-    ]
-    await _broadcast({
-        "type": "dialogue",
-        "agent": "CMO",
-        "icon": "📢",
-        "color": "#8b5cf6",
-        "message": random.choice(cmo_responses),
-        "timestamp": _dt.now().isoformat(),
-    })
+    # Call agents in parallel via thread pool
+    agents_to_call = ["CMO", "CFO", "CRITIC"]
+    futures = {}
+    for agent in agents_to_call:
+        futures[agent] = loop.run_in_executor(_warroom_executor, _call_n8n_agent, agent, topic)
 
-    # CFO responds
-    await asyncio.sleep(1.2)
-    cfo_responses = [
-        "The financial model holds under these assumptions. Projected ROI remains above our 15% threshold.",
-        "I have reservations about the burn rate. We need to cap spending at the approved budget envelope.",
-        "Revenue projections look aggressive but achievable given current growth trajectory.",
-    ]
-    await _broadcast({
-        "type": "dialogue",
-        "agent": "CFO",
-        "icon": "💰",
-        "color": "#22c55e",
-        "message": random.choice(cfo_responses),
-        "timestamp": _dt.now().isoformat(),
-    })
+    # Also call CEO (elite council) for a real strategic take
+    futures["CEO"] = loop.run_in_executor(_warroom_executor, _call_n8n_agent, "CEO", topic)
 
-    # Critic challenges
-    await asyncio.sleep(1.8)
-    critic_responses = [
-        "I remain skeptical. Where is the evidence that this approach outperforms the baseline? Show me data, not conviction.",
-        "The Commander's instinct may be right, but I need to see a controlled test before I increase my agreement score.",
-        "Interesting direction. I'll concede 1 point, but my core objections about scalability remain unaddressed.",
-        "This is a stronger argument than before. I'm raising my agreement, but the risk profile hasn't changed.",
-    ]
-    msg = random.choice(critic_responses)
+    # Stream responses as they arrive, with staggered timing for natural feel
+    agent_order = ["CEO", "CMO", "CFO", "CRITIC"]
+    for agent in agent_order:
+        response = await futures[agent]
+        await asyncio.sleep(0.8)  # Natural delay between speakers
 
-    # Adjust persuasion based on randomized critic mood
-    delta = random.choice([-1, 0, 0, 1, 1])
-    _persuasion_score = max(1, min(10, _persuasion_score + delta))
+        if not response:
+            # Fallback if agent unreachable
+            response = random.choice(_FALLBACK_RESPONSES.get(agent, ["No response."]))
+            response = f"\u26a0\ufe0f [Cached] {response}"
 
-    await _broadcast({
-        "type": "dialogue",
-        "agent": "CRITIC",
-        "icon": "🔍",
-        "color": "#ef4444",
-        "message": msg,
-        "timestamp": _dt.now().isoformat(),
-    })
+        meta = _AGENTS.get(agent, {})
+        await _broadcast({
+            "type": "dialogue",
+            "agent": agent,
+            "icon": meta.get("icon", "💬"),
+            "color": meta.get("color", "#94a3b8"),
+            "message": response,
+            "timestamp": _dt.now().isoformat(),
+        })
+
+    # After Critic speaks, parse their confidence and update persuasion
+    critic_response = await futures["CRITIC"]
+    if critic_response:
+        # Try to extract a score from Critic's response
+        import re
+        score_match = re.search(r'(\d+(?:\.\d+)?)/10', critic_response)
+        if score_match:
+            new_score = min(10, max(1, int(float(score_match.group(1)))))
+            _persuasion_score = new_score
+        else:
+            # Slight random adjustment if no explicit score
+            delta = random.choice([-1, 0, 0, 1, 1])
+            _persuasion_score = max(1, min(10, _persuasion_score + delta))
+    else:
+        delta = random.choice([-1, 0, 1])
+        _persuasion_score = max(1, min(10, _persuasion_score + delta))
+
     await _broadcast({
         "type": "persuasion_update",
         "score": _persuasion_score,
-        "reason": f"Critic re-evaluated after Commander input (delta: {'+' if delta > 0 else ''}{delta})",
+        "reason": f"Critic assessment after live deliberation",
     })
 
 
@@ -758,8 +845,8 @@ async def warroom_seed(request: Request):
     })
     await _broadcast({"type": "persuasion_update", "score": 5, "reason": "Session reset"})
 
-    # Kick off debate
-    asyncio.create_task(_simulate_response(topic))
+    # Kick off live debate via real n8n agents
+    asyncio.create_task(_live_debate(topic))
     return {"status": "ok", "topic": topic}
 
 
