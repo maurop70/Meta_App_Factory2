@@ -1,0 +1,305 @@
+{
+  "scanned": 84,
+  "with_webhooks": 69,
+  "updated": 0,
+  "skipped": 36,
+  "errors": 33,
+  "details": [
+    {
+      "workflow": "Gemini Agent Bridge",
+      "workflow_id": "1JjyTk5VwmBItQvG",
+      "node": "Webhook",
+      "node_id": "5561de54-42f1-4f7b-bfeb-d4b053440a46",
+      "old_mode": "lastNode",
+      "new_mode": "responseNode"
+    },
+    {
+      "workflow": "Resonance2: Database Sync & Backup",
+      "workflow_id": "229MJpbOvVlj8KGz",
+      "node": "Webhook (Generated)",
+      "node_id": "2e7d2bb4-7e91-4b4a-b922-9389026c3f09",
+      "old_mode": "lastNode",
+      "new_mode": "responseNode"
+    },
+    {
+      "workflow": "Resonance2: Dynamic Content & Vocabulary Update",
+      "workflow_id": "9AYt7x5ohzZIO03K",
+      "node": "Webhook (Generated)",
+      "node_id": "56c73b5f-f543-4240-85b1-5a5f583d1e8f",
+      "old_mode": "lastNode",
+      "new_mode": "responseNode"
+    },
+    {
+      "workflow": "MetaApp: MyNewApp",
+      "workflow_id": "9wsnmTVAUXtEXA8x",
+      "node": "Webhook",
+      "node_id": "1c3c302f-bdc9-4984-9aa3-46ada7511cf9",
+      "old_mode": "lastNode",
+      "new_mode": "responseNode"
+    },
+    {
+      "workflow": "Alex Insight Engine",
+      "workflow_id": "CW4uXGIKAPkkKBYx",
+      "node": "Alex Webhook",
+      "node_id": "webhook-trigger",
+      "old_mode": "lastNode",
+      "new_mode": "responseNode"
+    },
+    {
+      "workflow": "Resonance2: Overseer Orchestration",
+      "workflow_id": "EnjMhETdzwE2w2Vy",
+      "node": "Webhook (Generated)",
+      "node_id": "04e5f825-3cfd-415d-89b8-ef2725b653fa",
+      "old_mode": "lastNode",
+      "new_mode": "responseNode"
+    },
+    {
+      "workflow": "Claude Code Executor",
+      "workflow_id": "JlEXsH2MbzBx15Mk",
+      "node": "Webhook",
+      "node_id": "webhook-trigger",
+      "old_mode": "lastNode",
+      "new_mode": "responseNode"
+    },
+    {
+      "workflow": "Resonance2: Monetization & Compliance Automation",
+      "workflow_id": "KLP8xGpuj9kGV19w",
+      "node": "Webhook (Generated)",
+      "node_id": "33a4be38-bc8d-4758-9cf7-b275a6b4e4d9",
+      "old_mode": "lastNode",
+      "new_mode": "responseNode"
+    },
+    {
+      "workflow": "Email Search Workflow (N8N Data Tables)",
+      "workflow_id": "LTiLLU0mqidai4DN",
+      "node": "Chat trigger",
+      "node_id": "c256da2e-67c9-4532-956a-666e33d33071",
+      "old_mode": "lastNode",
+      "new_mode": "responseNode"
+    },
+    {
+      "workflow": "Resonance2: Pivot Protocol Automation",
+      "workflow_id": "OzQy5jspun0wNwhB",
+      "node": "Webhook (Generated)",
+      "node_id": "030bb391-d328-41f0-9dc0-a4ef71cf6458",
+      "old_mode": "lastNode",
+      "new_mode": "responseNode"
+    },
+    {
+      "workflow": "Alpha Architect - Genesis (v3)",
+      "workflow_id": "Q36ImsxRy4by47kw",
+      "node": "Webhook",
+      "node_id": "webhook-trigger",
+      "old_mode": "lastNode",
+      "new_mode": "responseNode"
+    },
+    {
+      "workflow": "Email Search Workflow",
+      "workflow_id": "Q8PKiRosPsRqH1Yo",
+      "node": "Chat trigger",
+      "node_id": "e8fd54c3-6807-43ae-bb26-4791f03424be",
+      "old_mode": "lastNode",
+      "new_mode": "responseNode"
+    },
+    {
+      "workflow": "Alpha Architect - Research (v2 Robust)",
+      "workflow_id": "S8KVkRMA56B21MXs",
+      "node": "Webhook1",
+      "node_id": "22f5e4c1-35a6-4f04-a610-9bce9ca5a843",
+      "old_mode": "lastNode",
+      "new_mode": "responseNode"
+    },
+    {
+      "workflow": "Resonance2: Parent/Educator Data Aggregation",
+      "workflow_id": "V0x1rMWhEgxd1vpP",
+      "node": "Webhook (Generated)",
+      "node_id": "566c7fad-8224-4662-ab60-d336a1b79b5f",
+      "old_mode": "lastNode",
+      "new_mode": "responseNode"
+    },
+    {
+      "workflow": "HR Request Router (Module 2)",
+      "workflow_id": "VRBy4h6a2guH0B2o",
+      "node": "Webhook",
+      "node_id": "5b4408a4-2529-4e62-9972-5bc0e0aa7edd",
+      "old_mode": "lastNode",
+      "new_mode": "responseNode"
+    },
+    {
+      "workflow": "Alpha_V2_Macro_Event_Tracker",
+      "workflow_id": "VkE0dmwynRPMIyjdmiONL",
+      "node": "When chat message received",
+      "node_id": "7ebf1c74-fd3a-4efe-8027-b084ee8ec629",
+      "old_mode": "lastNode",
+      "new_mode": "responseNode"
+    },
+    {
+      "workflow": "Alpha_V2_Macro_Event_Tracker",
+      "workflow_id": "VkE0dmwynRPMIyjdmiONL",
+      "node": "Manual_Trigger",
+      "node_id": "4c7ae038-5f88-4f41-bd29-f7ad8b84e69a",
+      "old_mode": "lastNode",
+      "new_mode": "responseNode"
+    },
+    {
+      "workflow": "Meta_App_Factory_Fixed",
+      "workflow_id": "WCyS6BKaGYEIY3GN",
+      "node": "Webhook_Sentinel_Bridge",
+      "node_id": "decb27da-b8ea-40ea-b612-aa59e3be7fbb",
+      "old_mode": "lastNode",
+      "new_mode": "responseNode"
+    },
+    {
+      "workflow": "Alpha Architect - Research (Universal Linear)",
+      "workflow_id": "Z99Py4WeaUHry8pj",
+      "node": "Webhook1",
+      "node_id": "eaf99185-da96-44a2-882b-cbc67d0f1584",
+      "old_mode": "lastNode",
+      "new_mode": "responseNode"
+    },
+    {
+      "workflow": "Resonance2: Error & Anomaly Aggregator",
+      "workflow_id": "ZYQXUnb4gVpR8M7x",
+      "node": "Webhook (Generated)",
+      "node_id": "338337ff-a5d2-45cc-985d-c74620f9cf21",
+      "old_mode": "lastNode",
+      "new_mode": "responseNode"
+    },
+    {
+      "workflow": "Resonance2: Monetization & Billing Processor",
+      "workflow_id": "dGLX5wPaWWpyuM8a",
+      "node": "Webhook (Generated)",
+      "node_id": "1278367a-22df-4f9d-856b-ba32218deb55",
+      "old_mode": "lastNode",
+      "new_mode": "responseNode"
+    },
+    {
+      "workflow": "My Lawyer - AI Chat",
+      "workflow_id": "dUy9vWiWQfPGBPSp",
+      "node": "Webhook",
+      "node_id": "d3cd1e8c-4705-457c-a60d-832a28f78c12",
+      "old_mode": "lastNode",
+      "new_mode": "responseNode"
+    },
+    {
+      "workflow": "My Lawyer - AI Chat",
+      "workflow_id": "dUy9vWiWQfPGBPSp",
+      "node": "Document Upload Webhook",
+      "node_id": "cd960828-1de1-4dca-b377-4d4acdc1be92",
+      "old_mode": "lastNode",
+      "new_mode": "responseNode"
+    },
+    {
+      "workflow": "My Lawyer - AI Chat",
+      "workflow_id": "dUy9vWiWQfPGBPSp",
+      "node": "Chat Webhook",
+      "node_id": "53de4bd3-8f44-4b82-ac4f-8db786892d1a",
+      "old_mode": "lastNode",
+      "new_mode": "responseNode"
+    },
+    {
+      "workflow": "Resonance2: Compliance & Data Retention Manager",
+      "workflow_id": "fjyQMrDdLLT6Z4RO",
+      "node": "Webhook (Generated)",
+      "node_id": "2fb578b3-b3a3-4287-9d9b-8d7f5b6dedc6",
+      "old_mode": "lastNode",
+      "new_mode": "responseNode"
+    },
+    {
+      "workflow": "Alpha_V2_Genesis_STAGING",
+      "workflow_id": "fuAA3uMTLquCKLHS",
+      "node": "When chat message received",
+      "node_id": "7ebf1c74-fd3a-4efe-8027-b084ee8ec629",
+      "old_mode": "lastNode",
+      "new_mode": "responseNode"
+    },
+    {
+      "workflow": "Alpha_V2_Genesis_STAGING",
+      "workflow_id": "fuAA3uMTLquCKLHS",
+      "node": "Manual_Trigger",
+      "node_id": "4c7ae038-5f88-4f41-bd29-f7ad8b84e69a",
+      "old_mode": "lastNode",
+      "new_mode": "responseNode"
+    },
+    {
+      "workflow": "Formulation Engine",
+      "workflow_id": "hm3CDhRWsKwfOxM7",
+      "node": "Webhook",
+      "node_id": "8367dff0-e1d5-4614-a442-147192f80ed8",
+      "old_mode": "lastNode",
+      "new_mode": "responseNode"
+    },
+    {
+      "workflow": "Resonance2: Level Up Engine Orchestrator",
+      "workflow_id": "jKnG1PSiBypgk5Pd",
+      "node": "Webhook (Generated)",
+      "node_id": "62756fae-b397-447f-8a82-fa46344ce8c2",
+      "old_mode": "lastNode",
+      "new_mode": "responseNode"
+    },
+    {
+      "workflow": "Ice Cream R&D",
+      "workflow_id": "jaBYfW7tKweKemqC",
+      "node": "Webhook",
+      "node_id": "ec297d0b-2088-4d7e-b2ef-2da6f02f4cc9",
+      "old_mode": "lastNode",
+      "new_mode": "responseNode"
+    },
+    {
+      "workflow": "Resonance2: Auth Bridge",
+      "workflow_id": "keZUnE7CT6vnY0Fp",
+      "node": "Webhook (Generated)",
+      "node_id": "a728542d-cffe-4ec2-a8e4-edcb59fc468e",
+      "old_mode": "lastNode",
+      "new_mode": "responseNode"
+    },
+    {
+      "workflow": "Alpha Phase 3 Logic (Push Mode)",
+      "workflow_id": "nQ8DLY23Q8Dm2dc8",
+      "node": "Webhook",
+      "node_id": "2134fd1b-61b2-475d-a6aa-1e71646dd6ab",
+      "old_mode": "onReceived",
+      "new_mode": "responseNode"
+    },
+    {
+      "workflow": "Create a Company Policy Chatbot with RAG, Pinecone Vector Database, and OpenAI",
+      "workflow_id": "nr0EqkP3tcFUfbRK",
+      "node": "When chat message received",
+      "node_id": "93879f6c-0d57-4049-9e42-44d906160eb6",
+      "old_mode": "lastNode",
+      "new_mode": "responseNode"
+    },
+    {
+      "workflow": "Resonance2: Parent/Educator Reporting",
+      "workflow_id": "p1goPxCMCgeOObk6",
+      "node": "Webhook (Generated)",
+      "node_id": "2f4381ed-adb8-46c6-9ed6-38d265c3c861",
+      "old_mode": "lastNode",
+      "new_mode": "responseNode"
+    },
+    {
+      "workflow": "Claude Code Executor",
+      "workflow_id": "pA6Kn-LGU4n80E2r-aOIO",
+      "node": "Webhook",
+      "node_id": "2ee38c4f-4f9b-4a05-84fb-ecee978274c9",
+      "old_mode": "lastNode",
+      "new_mode": "responseNode"
+    },
+    {
+      "workflow": "MetaApp: MetaTestApp",
+      "workflow_id": "u8rpX3iMOXCJLGpA",
+      "node": "Webhook",
+      "node_id": "90264d33-bc6c-4654-8619-b610a0e7d93d",
+      "old_mode": "lastNode",
+      "new_mode": "responseNode"
+    },
+    {
+      "workflow": "Ingredient Library",
+      "workflow_id": "zVzfzzOQwyZYWFbS",
+      "node": "Webhook",
+      "node_id": "bd49b02d-8529-46f6-8dc8-b47eeb14b1ed",
+      "old_mode": "lastNode",
+      "new_mode": "responseNode"
+    }
+  ]
+}

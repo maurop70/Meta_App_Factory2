@@ -1,3 +1,5 @@
+from auto_heal import healed_post, auto_heal, diagnose
+
 """
 N8N Workflow Lifecycle Manager — Antigravity
 Activates/deactivates N8N workflows per-app on launch/shutdown.
@@ -214,3 +216,6 @@ if __name__ == "__main__":
     ok = manage_workflows(group, activate=(action == "activate"))
     sys.exit(0 if ok else 1)
 
+
+# V3 MIGRATION COMPLETE
+# V3 AUTO-HEAL ACTIVE

@@ -1,0 +1,47 @@
+[
+  {
+    "timestamp": "2026-03-13T14:27:13.119610",
+    "total_workflows": 86,
+    "legacy_identified": 2,
+    "legacy_details": [
+      {
+        "id": "BNPLQXWK4nBzXbs3",
+        "name": "Specialist - CFO TEST",
+        "active": true,
+        "matched_labels": [
+          "TEST"
+        ],
+        "tags": []
+      },
+      {
+        "id": "u8rpX3iMOXCJLGpA",
+        "name": "MetaApp: MetaTestApp",
+        "active": false,
+        "matched_labels": [
+          "TEST"
+        ],
+        "tags": []
+      }
+    ],
+    "archived": 0,
+    "archive_results": [],
+    "critic_v2_workflows": [
+      "Specialist - Architect (V2)",
+      "Specialist - Pitch Director (V2)",
+      "System - Atomizer V2",
+      "Elite Council v2.0 (Memory Enabled)",
+      "Alpha Architect - Research (v2 Robust)",
+      "Elite Council v2.2 (Legacy Syntax Fix)",
+      "Alpha_V2_Macro_Event_Tracker",
+      "Elite Council v2.1 (Memory Fixed)",
+      "Alpha_V2_Genesis_STAGING",
+      "Specialist - Critic (V2)",
+      "Specialist - CFO (V2)",
+      "Specialist - CMO (V2)",
+      "Specialist - CFO (V2)",
+      "Specialist - Critic"
+    ],
+    "sole_arbiter": "Specialist - Critic (V2)",
+    "dry_run": true
+  }
+]

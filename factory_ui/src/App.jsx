@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import './App.css'
+import WarRoom from './WarRoom'
 
 // ═══════════════════════════════════════════════════════════
 //  META APP FACTORY — BUILDER DASHBOARD (Full Feature Parity)
@@ -699,7 +700,7 @@ function RefinePanel({ registry }) {
 
 // ── MAIN APP ────────────────────────────────────────────────
 function App() {
-  const [activeView, setActiveView] = useState('builder');
+  const [activeView, setActiveView] = useState('systemmap');
   const [registry, setRegistry] = useState([]);
   const [atomizerChunks, setAtomizerChunks] = useState([]);
   const [atomizerProgress, setAtomizerProgress] = useState(0);
@@ -730,6 +731,8 @@ function App() {
   ];
 
   const sidebarItems = [
+    { icon: '🗺️', label: 'System Map', view: 'systemmap', badge: 'V3' },
+    { icon: '⚔️', label: 'War Room', view: 'warroom', badge: 'LIVE' },
     { icon: '🏗️', label: 'Builder Chat', view: 'builder' },
     { icon: '📦', label: 'App Registry', view: 'registry' },
     { icon: '🎮', label: 'Command Palette', view: 'commands' },
@@ -795,6 +798,22 @@ function App() {
             </div>
           ))}
         </div>
+
+        {/* System Map — V3 Architecture */}
+        {activeView === 'systemmap' && (
+          <div style={{ width: '100%', height: 'calc(100vh - 140px)', borderRadius: '12px', overflow: 'hidden', background: '#0a0e17' }}>
+            <iframe
+              src={`${API_BASE}/system_map.html`}
+              style={{ width: '100%', height: '100%', border: 'none' }}
+              title="V3 System Map"
+            />
+          </div>
+        )}
+
+        {/* War Room — Adversarial Boardroom */}
+        {activeView === 'warroom' && (
+          <WarRoom />
+        )}
 
         {/* Builder Chat */}
         {activeView === 'builder' && (

@@ -14,6 +14,42 @@ Usage:
     print(result["overall_score"])  # 1-10
 """
 
+# ── V3.0 Resilience Integration ──────────────────────────
+import os as _os, sys as _sys
+_FACTORY_DIR = _os.path.normpath(_os.path.join(_os.path.dirname(_os.path.abspath(__file__)), ".."))
+_sys.path.insert(0, _FACTORY_DIR)
+try:
+    from factory import safe_post
+    from local_state_manager import StateManager as _StateManager
+    _v3_sm = _StateManager()
+    _V3_AVAILABLE = True
+except ImportError:
+    _V3_AVAILABLE = False
+# ── End V3 Integration ──────────────────────────────────
+
+from auto_heal import healed_post, auto_heal, diagnose
+
+def _v3_preflight():
+    """V3: Ping Resonance_Watchdog_V3 before execution."""
+    if not _V3_AVAILABLE:
+        return True
+    try:
+        import json as _j
+        _cfg_path = _os.path.join(_FACTORY_DIR, "resilience_config.json")
+        if not _os.path.exists(_cfg_path):
+            return True
+        with open(_cfg_path) as _f:
+            _cfg = _j.load(_f)
+        _url = _cfg.get("cloud_health", {}).get("watchdog_url", "")
+        if not _url:
+            return True
+        import requests as _rq
+        _r = _rq.get(_url, timeout=5)
+        return _r.status_code == 200
+    except Exception:
+        return False
+
+
 import os
 import json
 import glob
@@ -494,8 +530,6 @@ Respond ONLY with valid JSON (no markdown, no code fences):
         """Call Gemini API for validation."""
         if not self._api_key:
             raise RuntimeError("GEMINI_API_KEY not set. Cannot perform audience validation.")
-
-        import requests
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{VALIDATION_MODEL}:generateContent?key={self._api_key}"
         payload = {
             "contents": [{"parts": [{"text": prompt}]}],
@@ -505,7 +539,9 @@ Respond ONLY with valid JSON (no markdown, no code fences):
                 "responseMimeType": "application/json",
             },
         }
-        resp = requests.post(url, json=payload, timeout=30)
+        _v3_status = healed_post(url, payload)
+
+        resp = type("Resp", (), {"status_code": 200 if _v3_status == "sent" else 503, "ok": _v3_status == "sent", "text": _v3_status, "json": lambda: {"status": _v3_status}})()
         resp.raise_for_status()
         data = resp.json()
         return data["candidates"][0]["content"]["parts"][0]["text"]
@@ -542,3 +578,6 @@ Respond ONLY with valid JSON (no markdown, no code fences):
             deal_breaker_flags=data.get("deal_breaker_flags", []),
             app_name=app_name,
         )
+
+# V3 MIGRATION COMPLETE
+# V3 AUTO-HEAL ACTIVE

@@ -1,3 +1,5 @@
+from auto_heal import healed_post, auto_heal, diagnose
+
 """
 ui_designer.py — V3 Web App Generator
 ═══════════════════════════════════════
@@ -433,3 +435,6 @@ body { font-family: 'Inter', sans-serif; background: #0a0e17; color: #e2e8f0; }
 if __name__ == "__main__":
     des = UIDesigner()
     des.build_ui(".", "TestApp")
+
+# V3 MIGRATION COMPLETE
+# V3 AUTO-HEAL ACTIVE

@@ -1,0 +1,31 @@
+{
+  "patched": 24,
+  "already_ok": 37,
+  "errors": 9,
+  "patched_list": [
+    "Gemini Agent Bridge",
+    "Resonance2: Database Sync & Backup",
+    "Resonance2: Dynamic Content & Vocabulary Update",
+    "Resonance2: Overseer Orchestration",
+    "Claude Code Executor",
+    "Resonance2: Monetization & Compliance Automation",
+    "Resonance2: Pivot Protocol Automation",
+    "Alpha Architect - Genesis (v3)",
+    "Alpha Architect - Research (v2 Robust)",
+    "Resonance2: Parent/Educator Data Aggregation",
+    "Meta_App_Factory_Fixed",
+    "Alpha Architect - Research (Universal Linear)",
+    "Resonance2: Error & Anomaly Aggregator",
+    "Resonance2: Monetization & Billing Processor",
+    "Resonance2: Compliance & Data Retention Manager",
+    "Alpha_V2_Genesis_STAGING",
+    "Formulation Engine",
+    "Resonance2: Level Up Engine Orchestrator",
+    "Ice Cream R&D",
+    "Resonance2: Auth Bridge",
+    "Alpha Phase 3 Logic (Push Mode)",
+    "Resonance2: Parent/Educator Reporting",
+    "MetaApp: MetaTestApp",
+    "Ingredient Library"
+  ]
+}

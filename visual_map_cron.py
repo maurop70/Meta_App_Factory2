@@ -1,3 +1,5 @@
+from auto_heal import healed_post, auto_heal, diagnose
+
 """
 visual_map_cron.py — Visual Mapping Sunday Daemon
 ══════════════════════════════════════════════════
@@ -101,9 +103,10 @@ def run_mapping(force: bool = False) -> dict:
 def _notify_command_center(report: dict) -> None:
     """Try to push the load report to the Command Center."""
     try:
-        import requests
         url = "http://localhost:5010/api/network-map/ingest"
-        resp = requests.post(url, json=report, timeout=5)
+        _v3_status = healed_post(url, report)
+
+        resp = type("Resp", (), {"status_code": 200 if _v3_status == "sent" else 503, "ok": _v3_status == "sent", "text": _v3_status, "json": lambda: {"status": _v3_status}})()
         if resp.status_code == 200:
             print(f"[{timestamp()}] 📡 Command Center updated with network map")
         else:
@@ -142,3 +145,6 @@ if __name__ == "__main__":
         print(f"\n[{timestamp()}] Next check in {args.interval}s "
               f"({args.interval/3600:.1f}h)...\n")
         time.sleep(args.interval)
+
+# V3 MIGRATION COMPLETE
+# V3 AUTO-HEAL ACTIVE

@@ -1,0 +1,110 @@
+{
+  "timestamp": "2026-03-13T11:56:04.457294",
+  "apps": 19,
+  "retrofitted": 176,
+  "already_v3": 0,
+  "skipped": 13,
+  "handshake_passed": 0,
+  "handshake_failed": 18,
+  "failed_apps": [
+    "Adv_Autonomous_Agent",
+    "Aether",
+    "Alpha_V2_Genesis",
+    "Claude_N8N_Automation_Bridge",
+    "Command_Center",
+    "Delegate AI Beta-Agreement Vault",
+    "Delegate_AI_Beta_Agreement_Vault",
+    "HR_N8N_Bridge",
+    "MetaTestApp",
+    "MyNewApp",
+    "News Analyzer",
+    "Project_Aether",
+    "Resonance",
+    "Resonance3",
+    "Resonance4",
+    "Sentinel_Bridge",
+    "templates",
+    "utils"
+  ],
+  "test_details": {
+    "Adv_Autonomous_Agent": {
+      "status": "error",
+      "stderr": "HTTPSConnectionPool(host='humanresource.app.n8n.cloud', port=443): Read timed out. (read timeout=5)\n",
+      "handshake": false
+    },
+    "Aether": {
+      "status": "timeout",
+      "handshake": false
+    },
+    "agents": {
+      "status": "no_script",
+      "handshake": null
+    },
+    "Alpha_V2_Genesis": {
+      "status": "timeout",
+      "handshake": false
+    },
+    "Claude_N8N_Automation_Bridge": {
+      "status": "timeout",
+      "handshake": false
+    },
+    "Command_Center": {
+      "status": "timeout",
+      "handshake": false
+    },
+    "Delegate AI Beta-Agreement Vault": {
+      "status": "timeout",
+      "handshake": false
+    },
+    "Delegate_AI_Beta_Agreement_Vault": {
+      "status": "timeout",
+      "handshake": false
+    },
+    "HR_N8N_Bridge": {
+      "status": "timeout",
+      "handshake": false
+    },
+    "MetaTestApp": {
+      "status": "timeout",
+      "handshake": false
+    },
+    "MyNewApp": {
+      "status": "timeout",
+      "handshake": false
+    },
+    "News Analyzer": {
+      "status": "error",
+      "stderr": "HTTPSConnectionPool(host='humanresource.app.n8n.cloud', port=443): Read timed out. (read timeout=5)\n",
+      "handshake": false
+    },
+    "Project_Aether": {
+      "status": "timeout",
+      "handshake": false
+    },
+    "Resonance": {
+      "status": "error",
+      "stderr": "HTTPSConnectionPool(host='humanresource.app.n8n.cloud', port=443): Read timed out. (read timeout=5)\n",
+      "handshake": false
+    },
+    "Resonance3": {
+      "status": "timeout",
+      "handshake": false
+    },
+    "Resonance4": {
+      "status": "timeout",
+      "handshake": false
+    },
+    "Sentinel_Bridge": {
+      "status": "timeout",
+      "handshake": false
+    },
+    "templates": {
+      "status": "timeout",
+      "handshake": false
+    },
+    "utils": {
+      "status": "timeout",
+      "handshake": false
+    }
+  }
+}

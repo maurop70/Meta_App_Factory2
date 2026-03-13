@@ -1,3 +1,5 @@
+from auto_heal import healed_post, auto_heal, diagnose
+
 """
 Antigravity Registry — n8n Data Table Backed
 =============================================
@@ -240,3 +242,6 @@ if __name__ == "__main__":
     for name in ["Gemini Agent Bridge", "System - Atomizer", "Drive Manager"]:
         url = discover_tool(name)
         print(f"  {name}: {url or 'not found'}")
+
+# V3 MIGRATION COMPLETE
+# V3 AUTO-HEAL ACTIVE

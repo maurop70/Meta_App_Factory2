@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Factory Operations V3 — Meta App Factory</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #0a0e17; --surface: #111827; --card: #1e293b;
+  --text: #e2e8f0; --muted: #94a3b8; --accent: #3b82f6;
+  --green: #22c55e; --red: #ef4444; --yellow: #eab308; --purple: #8b5cf6;
+}
+body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
+.container { max-width: 1000px; margin: 0 auto; padding: 60px 40px; }
+h1 { font-size: 2.8rem; font-weight: 800; letter-spacing: -1px; background: linear-gradient(135deg, #3b82f6, #8b5cf6, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 8px; }
+h2 { font-size: 1.6rem; font-weight: 700; color: var(--accent); margin: 48px 0 16px; padding-bottom: 8px; border-bottom: 1px solid rgba(59,130,246,0.2); }
+h3 { font-size: 1.15rem; font-weight: 600; color: #e2e8f0; margin: 24px 0 10px; }
+p { color: var(--muted); margin-bottom: 12px; }
+.subtitle { font-size: 1rem; color: var(--muted); margin-bottom: 40px; }
+.badge { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; }
+.badge-blue { background: rgba(59,130,246,0.15); color: var(--accent); }
+.badge-green { background: rgba(34,197,94,0.15); color: var(--green); }
+.badge-red { background: rgba(239,68,68,0.15); color: var(--red); }
+.badge-purple { background: rgba(139,92,246,0.15); color: var(--purple); }
+.card { background: var(--card); border-radius: 12px; padding: 24px; margin: 16px 0; border: 1px solid rgba(100,116,139,0.12); }
+table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+th { text-align: left; padding: 10px 14px; background: rgba(59,130,246,0.08); color: var(--accent); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(100,116,139,0.12); }
+td { padding: 10px 14px; border-bottom: 1px solid rgba(100,116,139,0.06); font-size: 14px; color: var(--muted); }
+code { font-family: 'JetBrains Mono', monospace; background: rgba(59,130,246,0.08); padding: 2px 6px; border-radius: 4px; font-size: 13px; color: #e2e8f0; }
+.flow { display: flex; align-items: center; gap: 12px; margin: 16px 0; flex-wrap: wrap; }
+.flow-step { padding: 8px 16px; border-radius: 8px; background: var(--card); border: 1px solid rgba(100,116,139,0.12); font-size: 13px; font-weight: 600; }
+.flow-arrow { color: var(--accent); font-weight: 700; }
+.section-num { font-family: 'JetBrains Mono', monospace; color: var(--accent); font-size: 12px; }
+hr { border: none; border-top: 1px solid rgba(100,116,139,0.1); margin: 40px 0; }
+.cover { text-align: center; padding: 80px 0 60px; }
+.cover .version { font-family: 'JetBrains Mono', monospace; font-size: 4rem; font-weight: 800; color: var(--accent); opacity: 0.15; position: absolute; top: 20px; right: 40px; }
+.metric { display: inline-flex; flex-direction: column; align-items: center; padding: 20px 30px; margin: 8px; background: var(--card); border-radius: 12px; border: 1px solid rgba(100,116,139,0.12); }
+.metric-val { font-size: 2rem; font-weight: 800; color: var(--accent); }
+.metric-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+@media print { body { background: white; color: #1e293b; } .card { border: 1px solid #e2e8f0; } h1 { -webkit-text-fill-color: #1e293b; } }
+</style>
+</head>
+<body>
+<div class="container" style="position:relative;">
+<span class="version">V3</span>
+
+<div class="cover">
+<h1>FACTORY OPERATIONS V3</h1>
+<p class="subtitle">Meta App Factory — Resilience Anchor V3.0<br>
+Compiled: March 13, 2026 | Authorized Credential: Antigravity_Full_v2</p>
+<div>
+<span class="metric"><span class="metric-val">19</span><span class="metric-label">Agents</span></span>
+<span class="metric"><span class="metric-val">86</span><span class="metric-label">n8n Workflows</span></span>
+<span class="metric"><span class="metric-val">193</span><span class="metric-label">Retrofitted Files</span></span>
+<span class="metric"><span class="metric-val">472</span><span class="metric-label">Index Lines</span></span>
+</div>
+</div>
+
+<hr>
+
+<h2><span class="section-num">01</span> Resilience Architecture</h2>
+
+<h3>V3 Core DNA</h3>
+<p>Every file in the factory inherits the V3 resilience DNA: <code>safe_post()</code> routing, <code>auto_heal()</code> recovery, and <code>diagnose()</code> self-repair.</p>
+
+<div class="flow">
+<span class="flow-step">📁 File Change</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step">🔍 V3 Preflight</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step">🛡️ healed_post()</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step">☁️ n8n Cloud</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step">📋 MASTER_INDEX</span>
+</div>
+
+<div class="card">
+<h3>Auto-Heal Layer</h3>
+<table>
+<tr><th>Module</th><th>Function</th><th>Location</th></tr>
+<tr><td><code>auto_heal.py</code></td><td>healed_post(), auto_heal(), diagnose()</td><td>Factory root</td></tr>
+<tr><td><code>circuit_breaker.py</code></td><td>CircuitBreaker pattern (5 failures → open)</td><td>Factory root</td></tr>
+<tr><td><code>local_state_manager.py</code></td><td>Offline buffer → sync on reconnect</td><td>Factory root</td></tr>
+<tr><td><code>resilience_config.json</code></td><td>Cloud health, retry limits, watchdog URL</td><td>Factory root</td></tr>
+</table>
+</div>
+
+<h3>Self-Healing Nervous System</h3>
+<p><code>nerve_center.py</code> — Closed-loop autonomic recovery engine. SCAN → ANALYZE → ACT → LOG every 300s.</p>
+<table>
+<tr><th>Remedy</th><th>Action</th></tr>
+<tr><td>AUTH_EXPIRED</td><td>Credential refresh from vault/env</td></tr>
+<tr><td>MALFORMED_JSON</td><td>Sanitize and retry</td></tr>
+<tr><td>GATEWAY_TIMEOUT</td><td>Exponential backoff + retry</td></tr>
+<tr><td>RATE_LIMITED</td><td>Exponential backoff + retry</td></tr>
+<tr><td>CONNECTION_REFUSED</td><td>Wait + retry (3x)</td></tr>
+<tr><td>CIRCUIT_OPEN</td><td>Reset breaker after verification</td></tr>
+</table>
+
+<hr>
+
+<h2><span class="section-num">02</span> War Room — Adversarial Boardroom</h2>
+
+<h3>WebSocket Real-Time Dialogue</h3>
+<p>Phase 2 deployed the <code>WarRoom.jsx</code> component with live agent dialogue streaming via <code>/ws/warroom</code>.</p>
+
+<div class="card">
+<table>
+<tr><th>Agent</th><th>Role</th><th>Color</th></tr>
+<tr><td>👔 CEO</td><td>Strategic direction + executive decisions</td><td><span class="badge badge-blue">Blue</span></td></tr>
+<tr><td>📢 CMO</td><td>Market positioning + audience research</td><td><span class="badge badge-purple">Purple</span></td></tr>
+<tr><td>💰 CFO</td><td>Financial model + ROI projections</td><td><span class="badge badge-green">Green</span></td></tr>
+<tr><td>🔍 CRITIC</td><td>Quality assurance + devil's advocate</td><td><span class="badge badge-red">Red</span></td></tr>
+<tr><td>🏗️ ARCHITECT</td><td>System design + implementation</td><td><span class="badge badge-blue">Cyan</span></td></tr>
+</table>
+</div>
+
+<h3>Socratic Challenger Protocol (Phase 3)</h3>
+<p>The dialectical challenge engine enforces quality gates on all proposals.</p>
+
+<div class="flow">
+<span class="flow-step">📋 Proposal</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step">🔍 Critic Score</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step">⏸ Pause < 9.5</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step">⚠️ 3 Weaknesses</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step">🏛️ Commander Input</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step">✅ or 🚨</span>
+</div>
+
+<div class="card">
+<h3>Convince Logic</h3>
+<table>
+<tr><th>Signal Type</th><th>Examples</th><th>Impact</th></tr>
+<tr><td>Strong Evidence</td><td>data shows, validated, benchmark, A/B test, ROI</td><td>+1.5 per signal (max +5)</td></tr>
+<tr><td>Weak Reasoning</td><td>I think, probably, gut feeling, trust me</td><td>-0.5 per signal</td></tr>
+<tr><td>Coverage</td><td>Addressing each weakness category</td><td>+2 max bonus</td></tr>
+<tr><td>Substance</td><td>100+ words = +3, 50+ = +2, 20+ = +1</td><td>Length bonus</td></tr>
+</table>
+</div>
+
+<h3>Override Risk Levels</h3>
+<table>
+<tr><th>Level</th><th>Gap</th><th>Consequence</th></tr>
+<tr><td><span class="badge badge-green">LOW</span></td><td>≤ 1 pt</td><td>Minor gaps — proceed with monitoring</td></tr>
+<tr><td><span class="badge badge-blue">MEDIUM</span></td><td>≤ 3 pts</td><td>Substantive objections unaddressed</td></tr>
+<tr><td><span class="badge badge-red">HIGH</span></td><td>≤ 5 pts</td><td>Critical weaknesses bypassed — 30-day audit required</td></tr>
+<tr><td><span class="badge badge-red">CRITICAL</span></td><td>> 5 pts</td><td>Structural risks overridden — full audit within 30 days</td></tr>
+</table>
+
+<hr>
+
+<h2><span class="section-num">03</span> Venture Studio Engine</h2>
+
+<h3>Global Skills (.system_core)</h3>
+<table>
+<tr><th>Module</th><th>Capability</th></tr>
+<tr><td><code>pii_masker.py</code></td><td>PII & secrets redaction (paths, API keys, tokens, IPs)</td></tr>
+<tr><td><code>visual_engine.py</code></td><td>PDF, DOCX, PPTX, XLSX generation with brand enforcement</td></tr>
+<tr><td><code>market_crawler.py</code></td><td>Tavily search, competitive scanning, market_intel.db</td></tr>
+</table>
+
+<h3>Project Bootstrapper</h3>
+<p><code>bootstrap_project.py</code> creates new ventures with symbolic links to core, project Soul, and brand identity.</p>
+
+<h3>Brand Guardian</h3>
+<p><code>brand_guardian.py</code> audits files for brand compliance (fonts, colors, mission) with 0-100 scoring.</p>
+
+<hr>
+
+<h2><span class="section-num">04</span> Phase 4 — Boardroom Integration</h2>
+
+<h3>Incoming File Watcher</h3>
+<p><code>incoming_watcher.py</code> monitors <code>projects/*/incoming/</code> and auto-seeds War Room boardroom sessions + Socratic challenges.</p>
+
+<div class="card">
+<table>
+<tr><th>Endpoint</th><th>Function</th></tr>
+<tr><td><code>POST /api/incoming/scan</code></td><td>One-shot scan of incoming directories</td></tr>
+<tr><td><code>POST /api/incoming/watch</code></td><td>Start background watcher (30s poll)</td></tr>
+<tr><td><code>POST /api/n8n/archive</code></td><td>Archive V1/TEST/OLD workflows</td></tr>
+<tr><td><code>POST /api/audit/master_index</code></td><td>Full Socratic Audit on MASTER_INDEX.md</td></tr>
+</table>
+</div>
+
+<h3>n8n Optimization</h3>
+<p>Antigravity_Full_v2 key manages 86 workflows. Legacy archiver identified 2 workflows matching archive criteria. Critic V2 confirmed as sole arbiter across 14 quality workflows.</p>
+
+<h3>MASTER_INDEX Audit Results</h3>
+<table>
+<tr><th>Metric</th><th>Value</th></tr>
+<tr><td>Total Lines</td><td>472</td></tr>
+<tr><td>Sections</td><td>30+</td></tr>
+<tr><td>Self-Healing Cycles</td><td>14</td></tr>
+<tr><td>Deployed Modules</td><td>10+</td></tr>
+<tr><td>Error Entries</td><td>5</td></tr>
+<tr><td>Fresh Boots</td><td>4</td></tr>
+</table>
+
+<hr>
+
+<h2><span class="section-num">05</span> API Surface</h2>
+
+<div class="card">
+<h3>Core Endpoints</h3>
+<table>
+<tr><th>Endpoint</th><th>Method</th><th>Phase</th></tr>
+<tr><td><code>/api/health</code></td><td>GET</td><td>Core</td></tr>
+<tr><td><code>/api/registry</code></td><td>GET</td><td>Core</td></tr>
+<tr><td><code>/api/chat</code></td><td>POST</td><td>Core</td></tr>
+<tr><td><code>/ws/warroom</code></td><td>WS</td><td>Phase 2</td></tr>
+<tr><td><code>/api/warroom/seed</code></td><td>POST</td><td>Phase 2</td></tr>
+<tr><td><code>/api/warroom/challenge</code></td><td>POST</td><td>Phase 3</td></tr>
+<tr><td><code>/api/warroom/convince</code></td><td>POST</td><td>Phase 3</td></tr>
+<tr><td><code>/api/warroom/force_proceed</code></td><td>POST</td><td>Phase 3</td></tr>
+<tr><td><code>/api/incoming/scan</code></td><td>POST</td><td>Phase 4</td></tr>
+<tr><td><code>/api/incoming/watch</code></td><td>POST</td><td>Phase 4</td></tr>
+<tr><td><code>/api/n8n/archive</code></td><td>POST</td><td>Phase 4</td></tr>
+<tr><td><code>/api/audit/master_index</code></td><td>POST</td><td>Phase 4</td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2><span class="section-num">06</span> Security & Credentials</h2>
+
+<table>
+<tr><th>Key</th><th>Scope</th><th>Status</th></tr>
+<tr><td>Antigravity_Full_v2</td><td>n8n Cloud API (all workflows)</td><td><span class="badge badge-green">ACTIVE</span></td></tr>
+<tr><td>Fernet AES-128</td><td>.env encryption at rest</td><td><span class="badge badge-green">DEPLOYED</span></td></tr>
+<tr><td>PBKDF2 (600K iterations)</td><td>Key derivation</td><td><span class="badge badge-green">ACTIVE</span></td></tr>
+<tr><td>.env Read-Only</td><td>Child process protection</td><td><span class="badge badge-green">ENFORCED</span></td></tr>
+</table>
+
+<hr>
+
+<div style="text-align:center; padding: 40px 0; opacity: 0.5;">
+<p style="font-size: 11px; letter-spacing: 2px; text-transform: uppercase;">Meta App Factory — Resilience Anchor V3.0</p>
+<p style="font-size: 11px;">Compiled by AY | Antigravity Ops Intelligence | March 2026</p>
+</div>
+
+</div>
+</body>
+</html>

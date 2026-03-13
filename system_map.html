@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Antigravity V3 — System Map</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0a0e17;
+    --bg-card: rgba(15, 23, 42, 0.85);
+    --border: rgba(100, 116, 139, 0.2);
+    --text: #e2e8f0;
+    --text-dim: #64748b;
+    --green: #22c55e;
+    --green-glow: rgba(34, 197, 94, 0.3);
+    --yellow: #eab308;
+    --yellow-glow: rgba(234, 179, 8, 0.3);
+    --red: #ef4444;
+    --red-glow: rgba(239, 68, 68, 0.3);
+    --blue: #3b82f6;
+    --blue-glow: rgba(59, 130, 246, 0.3);
+    --purple: #8b5cf6;
+    --purple-glow: rgba(139, 92, 246, 0.25);
+    --cyan: #06b6d4;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Background Grid ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 50% 50%, rgba(59, 130, 246, 0.08) 0%, transparent 60%),
+      radial-gradient(circle at 20% 80%, rgba(139, 92, 246, 0.06) 0%, transparent 40%),
+      radial-gradient(circle at 80% 20%, rgba(6, 182, 212, 0.05) 0%, transparent 40%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── Header ── */
+  .header {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 40px;
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(20px);
+    background: rgba(10, 14, 23, 0.8);
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .logo {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--blue), var(--purple));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 700;
+    box-shadow: 0 0 24px var(--blue-glow);
+  }
+
+  .header h1 {
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+  }
+
+  .header h1 span {
+    color: var(--text-dim);
+    font-weight: 400;
+    font-size: 14px;
+    margin-left: 8px;
+  }
+
+  .status-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 24px;
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.25);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--green);
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { box-shadow: 0 0 0 0 var(--green-glow); }
+    50% { box-shadow: 0 0 0 6px transparent; }
+  }
+
+  /* ── Stats Bar ── */
+  .stats-bar {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    padding: 20px 40px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(10, 14, 23, 0.5);
+    backdrop-filter: blur(10px);
+  }
+
+  .stat {
+    text-align: center;
+  }
+
+  .stat-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 28px;
+    font-weight: 600;
+    background: linear-gradient(135deg, var(--blue), var(--cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+
+  /* ── Map Container ── */
+  .map-container {
+    position: relative;
+    z-index: 5;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 40px;
+    min-height: calc(100vh - 160px);
+  }
+
+  .map-canvas {
+    position: relative;
+    width: 900px;
+    height: 900px;
+  }
+
+  /* ── SVG Lines ── */
+  .connections {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+  }
+
+  .conn-line {
+    stroke: var(--border);
+    stroke-width: 1.5;
+    stroke-dasharray: 4, 4;
+    animation: dash-flow 30s linear infinite;
+  }
+
+  .conn-line.active {
+    stroke: rgba(34, 197, 94, 0.35);
+    stroke-width: 2;
+    stroke-dasharray: 6, 3;
+  }
+
+  .conn-line.inactive {
+    stroke: rgba(100, 116, 139, 0.15);
+    stroke-dasharray: 2, 6;
+  }
+
+  @keyframes dash-flow {
+    to { stroke-dashoffset: -200; }
+  }
+
+  /* ── Core Node ── */
+  .core-node {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, rgba(59, 130, 246, 0.25), rgba(139, 92, 246, 0.15), var(--bg-card));
+    border: 2px solid rgba(59, 130, 246, 0.4);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    box-shadow: 0 0 60px var(--blue-glow), 0 0 120px rgba(139, 92, 246, 0.1);
+    animation: core-pulse 4s ease-in-out infinite;
+    cursor: default;
+  }
+
+  @keyframes core-pulse {
+    0%, 100% { box-shadow: 0 0 60px var(--blue-glow), 0 0 120px rgba(139, 92, 246, 0.1); }
+    50% { box-shadow: 0 0 80px var(--blue-glow), 0 0 160px rgba(139, 92, 246, 0.15); }
+  }
+
+  .core-node .core-icon { font-size: 32px; margin-bottom: 6px; }
+  .core-node .core-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--blue);
+  }
+  .core-node .core-sub {
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  /* ── Agent Nodes ── */
+  .agent-node {
+    position: absolute;
+    z-index: 8;
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    background: var(--bg-card);
+    border: 2px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(10px);
+  }
+
+  .agent-node:hover {
+    transform: scale(1.12);
+    z-index: 20;
+  }
+
+  .agent-node.active {
+    border-color: rgba(34, 197, 94, 0.5);
+    box-shadow: 0 0 30px var(--green-glow);
+  }
+  .agent-node.active:hover { box-shadow: 0 0 50px var(--green-glow); }
+
+  .agent-node.inactive {
+    border-color: rgba(100, 116, 139, 0.3);
+    opacity: 0.6;
+  }
+  .agent-node.inactive:hover { opacity: 1; }
+
+  .agent-node.healing {
+    border-color: rgba(234, 179, 8, 0.5);
+    box-shadow: 0 0 30px var(--yellow-glow);
+  }
+
+  .agent-node.buffered {
+    border-color: rgba(239, 68, 68, 0.5);
+    box-shadow: 0 0 30px var(--red-glow);
+  }
+
+  .agent-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-bottom: 6px;
+  }
+
+  .agent-dot.green { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .agent-dot.yellow { background: var(--yellow); box-shadow: 0 0 8px var(--yellow); }
+  .agent-dot.red { background: var(--red); box-shadow: 0 0 8px var(--red); }
+  .agent-dot.gray { background: #475569; }
+
+  .agent-name {
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--text);
+    max-width: 90px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 1.2;
+  }
+
+  .agent-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  /* ── Tooltip ── */
+  .tooltip {
+    display: none;
+    position: fixed;
+    z-index: 100;
+    padding: 14px 18px;
+    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid var(--border);
+    backdrop-filter: blur(20px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    font-size: 12px;
+    min-width: 200px;
+    pointer-events: none;
+  }
+
+  .tooltip.visible { display: block; }
+  .tooltip-title { font-weight: 600; font-size: 13px; margin-bottom: 8px; }
+  .tooltip-row { display: flex; justify-content: space-between; gap: 16px; margin: 3px 0; }
+  .tooltip-label { color: var(--text-dim); }
+  .tooltip-value { font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+
+  /* ── Legend ── */
+  .legend {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+    display: flex;
+    gap: 24px;
+    padding: 12px 24px;
+    border-radius: 16px;
+    background: rgba(15, 23, 42, 0.9);
+    border: 1px solid var(--border);
+    backdrop-filter: blur(16px);
+    font-size: 12px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-dim);
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  /* ── Ring labels ── */
+  .ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 1px dashed rgba(100, 116, 139, 0.1);
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+
+  .ring-inner { width: 400px; height: 400px; }
+  .ring-outer { width: 700px; height: 700px; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-left">
+    <div class="logo">⚡</div>
+    <h1>System Map <span>V3.0 Sealed Architecture</span></h1>
+  </div>
+  <div class="status-badge">
+    <div class="status-dot"></div>
+    ALL SYSTEMS NOMINAL
+  </div>
+</div>
+
+<!-- Stats Bar -->
+<div class="stats-bar">
+  <div class="stat">
+    <div class="stat-value" id="totalAgents">19</div>
+    <div class="stat-label">Agents</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value" id="activeCount">7</div>
+    <div class="stat-label">Active</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value" id="filesRetrofitted">193</div>
+    <div class="stat-label">Files Hardened</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value" id="watchdogMs">630ms</div>
+    <div class="stat-label">Watchdog</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value" id="healEvents">0</div>
+    <div class="stat-label">Heal Events</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value">🔒</div>
+    <div class="stat-label">.env Lock</div>
+  </div>
+</div>
+
+<!-- Map -->
+<div class="map-container">
+  <div class="map-canvas" id="mapCanvas">
+    <!-- Rings -->
+    <div class="ring ring-inner"></div>
+    <div class="ring ring-outer"></div>
+
+    <!-- SVG Connections -->
+    <svg class="connections" id="connections" viewBox="0 0 900 900"></svg>
+
+    <!-- Core -->
+    <div class="core-node">
+      <div class="core-icon">⚡</div>
+      <div class="core-label">Factory Core</div>
+      <div class="core-sub">Resilience Anchor V3.0</div>
+    </div>
+
+    <!-- Agents injected by JS -->
+  </div>
+</div>
+
+<!-- Tooltip -->
+<div class="tooltip" id="tooltip">
+  <div class="tooltip-title" id="ttTitle"></div>
+  <div class="tooltip-row"><span class="tooltip-label">Status</span><span class="tooltip-value" id="ttStatus"></span></div>
+  <div class="tooltip-row"><span class="tooltip-label">Last Post</span><span class="tooltip-value" id="ttTime"></span></div>
+  <div class="tooltip-row"><span class="tooltip-label">Result</span><span class="tooltip-value" id="ttResult"></span></div>
+  <div class="tooltip-row"><span class="tooltip-label">Layer</span><span class="tooltip-value" id="ttLayer"></span></div>
+</div>
+
+<!-- Legend -->
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:var(--green);box-shadow:0 0 6px var(--green)"></div> Active (sent)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--yellow);box-shadow:0 0 6px var(--yellow)"></div> Healing (retry)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--red);box-shadow:0 0 6px var(--red)"></div> Buffered (offline)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#475569"></div> No Activity</div>
+</div>
+
+<script>
+// Agent data — merged from V3_MAP.json + full directory scan
+const agents = [
+  // Inner ring — core/high-value agents (from V3_MAP with timestamps)
+  { name: "Alpha_V2_Genesis",   status: "sent",        time: "12:20:20", ring: "inner", tier: "primary" },
+  { name: "Sentinel_Bridge",    status: "sent",        time: "12:20:21", ring: "inner", tier: "primary" },
+  { name: "HR_N8N_Bridge",      status: "sent",        time: "12:20:23", ring: "inner", tier: "primary" },
+  { name: "Aether",             status: "sent",        time: "12:04:45", ring: "inner", tier: "primary" },
+  { name: "Project_Aether",     status: "sent",        time: "12:04:46", ring: "inner", tier: "primary" },
+  { name: "Resonance",          status: "sent",        time: "12:04:48", ring: "inner", tier: "primary" },
+  { name: "Command_Center",     status: "sent",        time: "11:11:58", ring: "inner", tier: "primary" },
+
+  // Outer ring — secondary/legacy agents
+  { name: "Adv_Autonomous_Agent",     status: "retrofitted", time: "—",  ring: "outer", tier: "secondary" },
+  { name: "Claude_N8N_Bridge",        status: "retrofitted", time: "—",  ring: "outer", tier: "secondary" },
+  { name: "Delegate_Vault",           status: "retrofitted", time: "—",  ring: "outer", tier: "secondary" },
+  { name: "Delegate_Vault_v2",        status: "retrofitted", time: "—",  ring: "outer", tier: "secondary" },
+  { name: "MetaTestApp",              status: "retrofitted", time: "—",  ring: "outer", tier: "secondary" },
+  { name: "MyNewApp",                 status: "retrofitted", time: "—",  ring: "outer", tier: "secondary" },
+  { name: "News_Analyzer",            status: "retrofitted", time: "—",  ring: "outer", tier: "secondary" },
+  { name: "Resonance2",               status: "retrofitted", time: "—",  ring: "outer", tier: "secondary" },
+  { name: "Resonance3",               status: "retrofitted", time: "—",  ring: "outer", tier: "secondary" },
+  { name: "Resonance4",               status: "retrofitted", time: "—",  ring: "outer", tier: "secondary" },
+  { name: "Project_Genesis",          status: "no_activity", time: "—",  ring: "outer", tier: "secondary" },
+  { name: "test_agent",               status: "no_activity", time: "—",  ring: "outer", tier: "secondary" },
+];
+
+const canvas = document.getElementById("mapCanvas");
+const svgEl  = document.getElementById("connections");
+const tooltip = document.getElementById("tooltip");
+const cx = 450, cy = 450; // center
+
+function getStatusClass(status) {
+  if (status === "sent") return "active";
+  if (status === "healed" || status === "healing") return "healing";
+  if (status === "buffered" || status === "failed") return "buffered";
+  return "inactive";
+}
+
+function getDotClass(status) {
+  if (status === "sent") return "green";
+  if (status === "healed" || status === "healing") return "yellow";
+  if (status === "buffered" || status === "failed") return "red";
+  return "gray";
+}
+
+function getLayerLabel(status) {
+  if (status === "sent") return "Auto-Heal Active";
+  if (status === "retrofitted") return "V3 Retrofitted";
+  return "Scaffolded";
+}
+
+// Place agents in a circle
+const innerAgents = agents.filter(a => a.ring === "inner");
+const outerAgents = agents.filter(a => a.ring === "outer");
+
+function placeRing(list, radius, offset = -90) {
+  const step = 360 / list.length;
+  list.forEach((agent, i) => {
+    const angle = (offset + step * i) * Math.PI / 180;
+    agent.x = cx + radius * Math.cos(angle);
+    agent.y = cy + radius * Math.sin(angle);
+  });
+}
+
+placeRing(innerAgents, 180, -90);
+placeRing(outerAgents, 320, -75);
+
+// Draw SVG connections
+agents.forEach(agent => {
+  const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+  line.setAttribute("x1", cx);
+  line.setAttribute("y1", cy);
+  line.setAttribute("x2", agent.x);
+  line.setAttribute("y2", agent.y);
+  line.classList.add("conn-line");
+  if (agent.status === "sent") line.classList.add("active");
+  else if (agent.status === "no_activity") line.classList.add("inactive");
+  svgEl.appendChild(line);
+});
+
+// Create agent nodes
+agents.forEach(agent => {
+  const node = document.createElement("div");
+  node.className = `agent-node ${getStatusClass(agent.status)}`;
+  node.style.left = `${agent.x - 55}px`;
+  node.style.top  = `${agent.y - 55}px`;
+  node.innerHTML = `
+    <div class="agent-dot ${getDotClass(agent.status)}"></div>
+    <div class="agent-name">${agent.name.replace(/_/g, ' ')}</div>
+    <div class="agent-time">${agent.time}</div>
+  `;
+
+  node.addEventListener("mouseenter", (e) => {
+    const ttTitle = document.getElementById("ttTitle");
+    const ttStatus = document.getElementById("ttStatus");
+    const ttTime = document.getElementById("ttTime");
+    const ttResult = document.getElementById("ttResult");
+    const ttLayer = document.getElementById("ttLayer");
+
+    ttTitle.textContent = agent.name;
+    ttStatus.textContent = agent.status;
+    ttTime.textContent = agent.time === "—" ? "No activity" : `2026-03-13 ${agent.time}`;
+    ttResult.textContent = agent.status === "sent" ? "✅ Delivered" :
+                           agent.status === "retrofitted" ? "🔧 Ready" : "⏳ Pending";
+    ttLayer.textContent = getLayerLabel(agent.status);
+
+    tooltip.style.left = `${e.clientX + 16}px`;
+    tooltip.style.top  = `${e.clientY - 10}px`;
+    tooltip.classList.add("visible");
+  });
+
+  node.addEventListener("mousemove", (e) => {
+    tooltip.style.left = `${e.clientX + 16}px`;
+    tooltip.style.top  = `${e.clientY - 10}px`;
+  });
+
+  node.addEventListener("mouseleave", () => {
+    tooltip.classList.remove("visible");
+  });
+
+  canvas.appendChild(node);
+});
+</script>
+
+</body>
+</html>

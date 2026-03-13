@@ -1,0 +1,50 @@
+{
+  "error_types": {
+    "401_unauthorized": 0,
+    "workflow_operation_error": 0,
+    "trigger_timeout": 0,
+    "other": 5
+  },
+  "node_errors": [
+    {
+      "exec_id": "13788",
+      "workflow_id": "VkE0dmwynRPMIyjdmiONL",
+      "node_name": "N/A",
+      "node_id": "N/A",
+      "node_type": "N/A",
+      "message": ""
+    },
+    {
+      "exec_id": "13787",
+      "workflow_id": "S8KVkRMA56B21MXs",
+      "node_name": "N/A",
+      "node_id": "N/A",
+      "node_type": "N/A",
+      "message": ""
+    },
+    {
+      "exec_id": "13786",
+      "workflow_id": "Q36ImsxRy4by47kw",
+      "node_name": "N/A",
+      "node_id": "N/A",
+      "node_type": "N/A",
+      "message": ""
+    },
+    {
+      "exec_id": "13785",
+      "workflow_id": "VkE0dmwynRPMIyjdmiONL",
+      "node_name": "N/A",
+      "node_id": "N/A",
+      "node_type": "N/A",
+      "message": ""
+    },
+    {
+      "exec_id": "13784",
+      "workflow_id": "VkE0dmwynRPMIyjdmiONL",
+      "node_name": "N/A",
+      "node_id": "N/A",
+      "node_type": "N/A",
+      "message": ""
+    }
+  ]
+}

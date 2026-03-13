@@ -1,0 +1,44 @@
+{
+  "version": "3.0",
+  "frozen_at": "2026-03-13T12:22:22-04:00",
+  "credential": {
+    "name": "Antigravity_Full_v2",
+    "fingerprint": "eyJhbGciOiJIUzI1NiIs...UebO3WCxto",
+    "length": 267,
+    "status": "AUTHORIZED"
+  },
+  "agents": {
+    "ChildApp_Example": {
+      "last_timestamp": "2026-03-13T11:11:58.973105",
+      "last_status": "sent"
+    },
+    "v3_test_Alpha_V2_Genesis": {
+      "last_timestamp": "2026-03-13T12:04:45.669391",
+      "last_status": "sent"
+    },
+    "v3_test_Sentinel_Bridge": {
+      "last_timestamp": "2026-03-13T12:04:46.892199",
+      "last_status": "sent"
+    },
+    "v3_test_HR_N8N_Bridge": {
+      "last_timestamp": "2026-03-13T12:04:48.049117",
+      "last_status": "sent"
+    },
+    "Alpha_V2_Genesis": {
+      "last_timestamp": "2026-03-13T12:20:20.792925",
+      "last_status": "sent"
+    },
+    "Sentinel_Bridge": {
+      "last_timestamp": "2026-03-13T12:20:21.967869",
+      "last_status": "sent"
+    },
+    "HR_N8N_Bridge": {
+      "last_timestamp": "2026-03-13T12:20:23.619557",
+      "last_status": "sent"
+    },
+    "test_agent": {
+      "last_timestamp": "never",
+      "last_status": "no_activity"
+    }
+  }
+}
