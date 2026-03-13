@@ -1100,41 +1100,38 @@
         </tr>
         <tr>
           <td>n8n Archive Scan</td>
-          <td><code>python n8n_archiver.py --dry-run</code></td>
-          <td>Identify legacy workflows before archiving</td>
-        </tr>
-        <tr>
-          <td>MASTER_INDEX Audit</td>
-          <td><code>POST /api/audit/master_index</code></td>
-          <td>Full Socratic Audit via API (posts to War Room)</td>
-        </tr>
-      </tbody>
-    </table>
+          <td><code>python n8n_archiver.py -      <div class="diagram">
+        <div class="diagram-title">War Room → n8n Agent Pipeline</div>
+        <div class="vflow">
+          <div class="flow-node core" style="min-width:260px">🏗️ Commander Input<small>Topic / Intervention / Evidence</small></div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node cloud" style="min-width:260px">🔄 _live_debate()<small>ThreadPoolExecutor (4 workers)</small></div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow" style="gap:12px;flex-wrap:wrap;justify-content:center">
+            <div class="flow-node agent" style="min-width:90px">👔 CEO<small>elite-council</small></div>
+            <div class="flow-node agent" style="min-width:90px">📢 CMO<small>cmo-v2</small></div>
+            <div class="flow-node agent" style="min-width:90px">💰 CFO<small>cfo-v2</small></div>
+            <div class="flow-node danger" style="min-width:90px">🔍 CRITIC<small>critic-v2</small></div>
+          </div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node heal" style="min-width:260px">🛡️ @auto_heal(project="WarRoom")<small>Retry 2s→4s→8s + diagnose() on failure</small></div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node core" style="min-width:260px">📡 WebSocket Broadcast<small>Real-time dialogue + Persuasion Meter update</small></div>
+        </div>
+      </div>
 
-    <h3 style="margin-top:32px"><span class="icon">🚦</span> Watchdog Interpretation</h3>
-    <table>
-      <thead>
-        <tr><th>Status</th><th>Latency</th><th>Action</th></tr>
-      </thead>
-      <tbody>
-        <tr><td>🟢 GREEN</td><td>&lt;1000ms</td><td>Normal operations. All <code>healed_post()</code> calls execute live.</td></tr>
-        <tr><td>🟡 YELLOW</td><td>1000–3000ms</td><td>Degraded. Monitor <code>local_pending_sync.json</code> for growth.</td></tr>
-        <tr><td>🔴 RED</td><td>&gt;3000ms or 4xx/5xx</td><td>Auto-pivot to Safe-Buffer. Cease live cloud attempts.</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <!-- ═══════════════════════════════════════════════════════ -->
-  <!--  CHAPTER 5: REAL-TIME WAR ROOM (PHASE 2)              -->
-  <!-- ═══════════════════════════════════════════════════════ -->
+      <div class="callout">
+        <div class="callout-title">🔗 Integrated System</div>
+        The War Room uses the <strong>same n8n specialist webhooks</strong> as Builder Chat — the <code>AGENT_REGISTRY</code> in <code>n8n_bridge.py</code>. Each agent receives a role-scoped prompt (strategy for CEO, market analysis for CMO, financials for CFO, weakness identification for CRITIC). The Critic's response is parsed for an <code>X/10</code> score which auto-updates the Persuasion Meter. If any agent is unreachable after 3 retries, a <strong>⚠️ [Cached]</strong> fallback response is shown.
+      </div>�══════════════════════════════════ -->
   <div class="chapter" id="ch5">
     <div class="chapter-number">Chapter 05</div>
     <h2>Real-Time War Room (Phase 2)</h2>
-    <p class="chapter-desc">The Adversarial War Room provides a live WebSocket interface for observing agent debates, intervening with strategic input, and monitoring the Critic's agreement level in real-time.</p>
+    <p class="chapter-desc">The Adversarial War Room provides a live WebSocket interface wired directly to the n8n Cloud specialist agent webhooks. Every agent message is a <strong>real AI response</strong> — CEO, CMO, CFO, and CRITIC debate through their actual n8n workflows, with V3 <code>@auto_heal</code> resilience on every call.</p>
 
     <div class="section" id="ch5-ws">
-      <h3><span class="icon">📡</span> WebSocket Dialogue Feed</h3>
-      <p>The War Room connects via <code>ws://localhost:8000/ws/warroom</code> for real-time bidirectional communication. Every agent message, challenge, and persuasion update flows through this socket.</p>
+      <h3><span class="icon">📡</span> Live n8n Agent Routing</h3>
+      <p>When a debate is seeded or the Commander intervenes, <code>_live_debate()</code> routes the topic to each specialist via their real n8n webhook in parallel using a <code>ThreadPoolExecutor</code>. Responses stream into the WebSocket as they arrive.</p>
 
       <div class="diagram">
         <div class="diagram-title">War Room Architecture</div>
