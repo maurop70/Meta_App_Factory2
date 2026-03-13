@@ -10,6 +10,8 @@ import json
 import logging
 import subprocess
 
+from auto_heal import auto_heal, diagnose
+
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse, FileResponse
@@ -671,8 +673,12 @@ async def warroom_websocket(websocket: WebSocket):
         logger.info(f"War Room client disconnected ({len(_warroom_clients)} total)")
 
 
-def _call_n8n_agent(agent_name: str, topic: str) -> str:
-    """Synchronous call to a real n8n specialist webhook. Runs in thread pool."""
+@auto_heal(project="WarRoom", max_retries=3)
+def _call_n8n_agent_inner(agent_name: str, topic: str) -> str:
+    """V3-resilient call to a real n8n specialist webhook.
+    Wrapped with @auto_heal for retry (2s/4s/8s backoff) + diagnosis.
+    Raises on failure to trigger auto_heal's retry logic.
+    """
     url = _WARROOM_WEBHOOKS.get(agent_name)
     if not url:
         return f"Agent {agent_name} has no dedicated webhook."
@@ -680,31 +686,30 @@ def _call_n8n_agent(agent_name: str, topic: str) -> str:
     prompt_template = _WARROOM_PROMPTS.get(agent_name, "Analyze: {topic}")
     prompt = prompt_template.format(topic=topic)
 
+    resp = _requests.post(
+        url,
+        json={"prompt": prompt, "sessionId": "warroom", "project_name": "WarRoom"},
+        timeout=45,
+    )
+    resp.raise_for_status()  # Let auto_heal catch 4xx/5xx
+
     try:
-        resp = _requests.post(
-            url,
-            json={"prompt": prompt, "sessionId": "warroom", "project_name": "WarRoom"},
-            timeout=45,
+        data = resp.json()
+        text = (
+            data.get("text")
+            or data.get("output")
+            or data.get("commentary")
+            or str(data)
         )
-        if resp.status_code == 200:
-            try:
-                data = resp.json()
-                # n8n agents return text in various keys
-                text = (
-                    data.get("text")
-                    or data.get("output")
-                    or data.get("commentary")
-                    or str(data)
-                )
-                # Clean up — cap at 600 chars for readability
-                return text.strip()[:600]
-            except Exception:
-                return resp.text.strip()[:600]
-        else:
-            return ""
-    except Exception as e:
-        logger.warning(f"War Room: {agent_name} call failed: {e}")
-        return ""
+        return text.strip()[:600]
+    except Exception:
+        return resp.text.strip()[:600]
+
+
+def _call_n8n_agent(agent_name: str, topic: str) -> str:
+    """Thread-pool-safe wrapper. auto_heal returns None on persistent failure."""
+    result = _call_n8n_agent_inner(agent_name, topic)
+    return result if result else ""
 
 
 _FALLBACK_RESPONSES = {
