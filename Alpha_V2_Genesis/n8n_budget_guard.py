@@ -184,6 +184,19 @@ def check_budget(monthly_limit=None):
     else:
         status = "ok"
 
+    # ── Kill-Switch Integration ──────────────────────────
+    if status == "critical":
+        try:
+            sys.path.insert(0, os.path.join(_FACTORY_DIR, ".system_core"))
+            from kill_switch import get_kill_switch
+            ks = get_kill_switch()
+            ks_result = ks.check_and_panic(hourly_limit=limit)
+            if ks_result.get("panic_triggered"):
+                print("  🚨 KILL-SWITCH TRIPPED — API keys disabled!")
+        except Exception as ks_err:
+            print(f"  ⚠️  Kill-switch check failed: {ks_err}")
+    # ── End Kill-Switch ──────────────────────────────────
+
     return status, counts
 
 

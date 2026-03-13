@@ -85,6 +85,7 @@ Compiled: March 13, 2026 | Authorized Credential: Antigravity_Full_v2</p>
 <tr><td><code>circuit_breaker.py</code></td><td>CircuitBreaker pattern (5 failures → open)</td><td>Factory root</td></tr>
 <tr><td><code>local_state_manager.py</code></td><td>Offline buffer → sync on reconnect</td><td>Factory root</td></tr>
 <tr><td><code>resilience_config.json</code></td><td>Cloud health, retry limits, watchdog URL</td><td>Factory root</td></tr>
+<tr><td><code>api.py _call_n8n_agent</code></td><td>@auto_heal(project="WarRoom") — War Room agent calls</td><td>Factory root</td></tr>
 </table>
 </div>
 
@@ -104,9 +105,46 @@ Compiled: March 13, 2026 | Authorized Credential: Antigravity_Full_v2</p>
 
 <h2><span class="section-num">02</span> War Room — Adversarial Boardroom</h2>
 
-<h3>WebSocket Real-Time Dialogue</h3>
-<p>Phase 2 deployed the <code>WarRoom.jsx</code> component with live agent dialogue streaming via <code>/ws/warroom</code>.</p>
+<h3>Live n8n Agent Routing</h3>
+<p>The War Room is wired directly to the n8n Cloud specialist agent webhooks. Every agent message is a <strong>real AI response</strong> — not a template. The <code>_live_debate()</code> function calls all 4 agents in parallel via <code>ThreadPoolExecutor</code>, then streams their responses into the WebSocket feed.</p>
 
+<div class="flow">
+<span class="flow-step">🏛️ Topic</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step">🔄 _live_debate()</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step">🧵 ThreadPool (4)</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step">☁️ n8n Webhooks</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step">📡 WebSocket</span>
+</div>
+
+<div class="card">
+<h3>Agent Webhook Registry</h3>
+<table>
+<tr><th>Agent</th><th>Webhook</th><th>Prompt Focus</th><th>Resilience</th></tr>
+<tr><td>👔 CEO</td><td><code>elite-council</code></td><td>Strategic direction, competitive advantage</td><td><span class="badge badge-green">@auto_heal</span></td></tr>
+<tr><td>📢 CMO</td><td><code>cmo-v2</code></td><td>Market analysis, audience, GTM timing</td><td><span class="badge badge-green">@auto_heal</span></td></tr>
+<tr><td>💰 CFO</td><td><code>cfo-v2</code></td><td>Unit economics, burn rate, ROI</td><td><span class="badge badge-green">@auto_heal</span></td></tr>
+<tr><td>🔍 CRITIC</td><td><code>critic-v2</code></td><td>Weakness identification, score 1-10</td><td><span class="badge badge-green">@auto_heal</span></td></tr>
+</table>
+</div>
+
+<div class="card">
+<h3>V3 Resilience Compliance</h3>
+<p>Every War Room agent call is wrapped with <code>@auto_heal(project="WarRoom", max_retries=3)</code>:</p>
+<table>
+<tr><th>Layer</th><th>Behavior</th></tr>
+<tr><td>Retry</td><td>Exponential backoff: 2s → 4s → 8s</td></tr>
+<tr><td>Diagnosis</td><td>On 3x failure: watchdog + credential + buffer check</td></tr>
+<tr><td>Logging</td><td>All heal events → <code>auto_heal_log.json</code></td></tr>
+<tr><td>Fallback</td><td>⚠️ [Cached] generic response shown in UI</td></tr>
+<tr><td>Score Parsing</td><td>Critic's X/10 score → Persuasion Meter auto-update</td></tr>
+</table>
+</div>
+
+<h3>WebSocket Events</h3>
 <div class="card">
 <table>
 <tr><th>Agent</th><th>Role</th><th>Color</th></tr>
@@ -160,18 +198,144 @@ Compiled: March 13, 2026 | Authorized Credential: Antigravity_Full_v2</p>
 <h2><span class="section-num">03</span> Venture Studio Engine</h2>
 
 <h3>Global Skills (.system_core)</h3>
+<p>The <code>.system_core</code> package is the canonical inheritance layer. Every child project symlinks into it, gaining immediate access to factory-grade capabilities without code duplication.</p>
 <table>
-<tr><th>Module</th><th>Capability</th></tr>
-<tr><td><code>pii_masker.py</code></td><td>PII & secrets redaction (paths, API keys, tokens, IPs)</td></tr>
-<tr><td><code>visual_engine.py</code></td><td>PDF, DOCX, PPTX, XLSX generation with brand enforcement</td></tr>
-<tr><td><code>market_crawler.py</code></td><td>Tavily search, competitive scanning, market_intel.db</td></tr>
+<tr><th>Module</th><th>Capability</th><th>Status</th></tr>
+<tr><td><code>pii_masker.py</code></td><td>PII & secrets redaction (paths, API keys, tokens, IPs)</td><td><span class="badge badge-green">ACTIVE</span></td></tr>
+<tr><td><code>visual_engine.py</code></td><td>PDF, DOCX, PPTX, XLSX generation with brand enforcement (Nano Banana 2)</td><td><span class="badge badge-green">ACTIVE</span></td></tr>
+<tr><td><code>market_crawler.py</code></td><td>Tavily search, competitive scanning, market_intel.db</td><td><span class="badge badge-green">ACTIVE</span></td></tr>
+<tr><td><code>deploy_shield.py</code></td><td>Deployment sanitization — strips keys, logs, PII before third-party delivery</td><td><span class="badge badge-green">ACTIVE</span></td></tr>
+<tr><td><code>wisdom_accumulator.py</code></td><td>Institutional memory — captures winning War Room logic into global_wisdom.db</td><td><span class="badge badge-green">ACTIVE</span></td></tr>
+<tr><td><code>kill_switch.py</code></td><td>Emergency API key protection — panic/restore on spending breach</td><td><span class="badge badge-green">ACTIVE</span></td></tr>
 </table>
 
+<h3>Venture Lifecycle</h3>
+<p>Every venture follows this end-to-end lifecycle — from raw ingest through the adversarial boardroom to wisdom archival.</p>
+
+<div class="flow">
+<span class="flow-step">📥 Ingest</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step">🔧 Bootstrap</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step">🔗 Symlink Core</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step">⚔️ War Room</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step">🔍 Socratic Gate</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step" style="border-color: var(--green); color: var(--green);">✅ Validated</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step">🛡️ Deploy Shield</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step">🧠 Wisdom Archive</span>
+</div>
+
+<div class="card">
+<h3>Lifecycle Stages</h3>
+<table>
+<tr><th>Stage</th><th>Module</th><th>Output</th></tr>
+<tr><td>1. Ingest</td><td><code>incoming_watcher.py</code></td><td>New files detected in <code>projects/*/incoming/</code></td></tr>
+<tr><td>2. Bootstrap</td><td><code>bootstrap_project.py</code></td><td>Project folder with Soul, brand, and <code>.system_core</code> links</td></tr>
+<tr><td>3. Symlink Core</td><td><code>.system_core/</code></td><td>Child inherits all 6 global skills via filesystem links</td></tr>
+<tr><td>4. War Room</td><td><code>api.py → _live_debate()</code></td><td>CEO / CMO / CFO / Critic responses via n8n webhooks</td></tr>
+<tr><td>5. Socratic Gate</td><td><code>socratic_challenger.py</code></td><td>3 weaknesses + persuasion loop + override logging</td></tr>
+<tr><td>6. Validated</td><td><code>socratic_challenger.py</code></td><td>Status: User-Validated or Commander-Override</td></tr>
+<tr><td>7. Deploy Shield</td><td><code>deploy_shield.py</code></td><td>Sanitized <code>_deploy/</code> bundle + <code>deploy_manifest.json</code></td></tr>
+<tr><td>8. Wisdom Archive</td><td><code>wisdom_accumulator.py</code></td><td>Winning logic appended to <code>global_wisdom.db</code></td></tr>
+</table>
+</div>
+
+<h3>The Wisdom Vault</h3>
+<p>The Wisdom Vault is the factory's institutional memory. Every time a Commander successfully convinces the Critic in the War Room — achieving a <span class="badge badge-green">CONVINCED</span> verdict — the winning logic is automatically captured and converted into "Global Core" intelligence.</p>
+
+<div class="card">
+<h3>How Overrides Become Intelligence</h3>
+<p>The <code>wisdom_accumulator.py</code> module hooks directly into the Socratic Challenger's <code>analyze_response()</code> method via monkey-patching. When a verdict of <strong>CONVINCED</strong> is returned:</p>
+<table>
+<tr><th>Step</th><th>What Happens</th><th>Where It Lives</th></tr>
+<tr><td>1. Intercept</td><td>The hooked <code>analyze_response()</code> detects <code>verdict == "CONVINCED"</code></td><td><code>wisdom_accumulator.py</code></td></tr>
+<tr><td>2. Extract</td><td>Challenge ID, proposal text, the Commander's reasoning, and all analysis metrics are packaged</td><td>In-memory</td></tr>
+<tr><td>3. Score</td><td>The combined score (original Critic + reasoning quality), strong/weak signal counts, and weakness coverage ratio are recorded</td><td>In-memory</td></tr>
+<tr><td>4. Persist</td><td>A JSON-line entry is appended to <code>global_wisdom.db</code> — one line per win, append-only, no data loss</td><td><code>.system_core/global_wisdom.db</code></td></tr>
+<tr><td>5. Recall</td><td>Future debates can query the vault: <code>--query "scalability"</code> returns all prior victories addressing that category</td><td>CLI / API</td></tr>
+<tr><td>6. Aggregate</td><td><code>--stats</code> reveals patterns: avg scores, strongest signal types, full-coverage win rates</td><td>CLI / API</td></tr>
+</table>
+<p>This means the factory <strong>learns from its own debates</strong>. Over time, the Wisdom Vault reveals which argument structures work, which evidence types are most persuasive, and which weakness categories the Commander has mastered.</p>
+</div>
+
+<h3>The Sanitization Protocol</h3>
+<p>Before any application folder is shared with a third party, investor, or external team, it must pass through the <strong>Deploy Shield</strong> — a multi-layered sanitization engine that ensures zero internal data leakage.</p>
+
+<div class="card">
+<h3>Three-Layer Sanitization</h3>
+<table>
+<tr><th>Layer</th><th>What It Does</th><th>Why It Matters</th></tr>
+<tr><td><span class="badge badge-red">Layer 1: Structural Pruning</span></td><td>Removes entire directories (<code>__pycache__</code>, <code>.git</code>, <code>node_modules</code>, <code>socratic_logs</code>, <code>.audit_snapshots</code>) and internal log files</td><td>Eliminates debug artifacts, version history, and internal audit trails that contain operational fingerprints</td></tr>
+<tr><td><span class="badge badge-purple">Layer 2: Key Stripping</span></td><td>Rewrites every <code>*_KEY</code>, <code>*_TOKEN</code>, <code>*_SECRET</code> value in <code>.env</code> files to <code>REDACTED</code></td><td>API keys and tokens are replaced — not deleted — so the file structure is preserved for the recipient to fill in their own credentials</td></tr>
+<tr><td><span class="badge badge-blue">Layer 3: PII Masking</span></td><td>Runs <code>PIIMasker</code> on all text-based source files (<code>.py</code>, <code>.js</code>, <code>.json</code>, <code>.md</code>, <code>.html</code>, <code>.yaml</code>)</td><td>Catches stray file paths, IP addresses, email addresses, and hardcoded tokens embedded in source code</td></tr>
+</table>
+<p>The output is a clean <code>_deploy/</code> staging folder with a <code>deploy_manifest.json</code> that logs every file shipped, every redaction applied, and the total sanitization statistics. This manifest serves as a verifiable audit trail.</p>
+</div>
+
+<h3>Budget Kill-Switch</h3>
+<p>The Kill-Switch is the factory's financial circuit breaker. It monitors the n8n execution rate and automatically disables all API keys if hourly spending exceeds a configurable threshold — preventing runaway costs from automated workflows.</p>
+
+<div class="card">
+<h3>Automated Protection Chain</h3>
+<div class="flow">
+<span class="flow-step">📊 n8n_budget_guard.py</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step">check_budget()</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step" style="border-color: var(--red); color: var(--red);">status == "critical" (≥ 90%)</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step">kill_switch.check_and_panic()</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step">🔒 .env keys DISABLED</span>
+</div>
+<table>
+<tr><th>Event</th><th>Action</th><th>Recovery</th></tr>
+<tr><td>Rate ≥ limit/hour</td><td>Backup <code>.env</code> → <code>.env.panic_backup</code>, rewrite all key values to <code>DISABLED_BY_KILLSWITCH</code></td><td><code>python kill_switch.py --restore</code></td></tr>
+<tr><td>Manual panic</td><td><code>python kill_switch.py --panic</code> — same as above but triggered by operator</td><td>Same restore command</td></tr>
+<tr><td>Status check</td><td><code>python kill_switch.py --status</code> — shows ARMED (🟢) or TRIPPED (🔴)</td><td>N/A (read-only)</td></tr>
+</table>
+<p>The kill-switch is <strong>non-destructive</strong>: the original <code>.env</code> is always backed up first, and restore is a single command. All panic/restore events are logged to <code>kill_switch_log.json</code> (last 100 events retained).</p>
+</div>
+
+<h3>Single App Maintenance</h3>
+<p>Child apps inherit from <code>.system_core</code> via symbolic links created by <code>bootstrap_project.py</code>. When updating a child app, follow these rules to avoid breaking the inheritance chain.</p>
+
+<div class="card">
+<h3>Safe Update Protocol</h3>
+<table>
+<tr><th>Rule</th><th>Description</th></tr>
+<tr><td><span class="badge badge-green">DO</span> Edit child-local files</td><td>Any file inside the child's own directory (e.g. <code>MyApp/server.py</code>) is safe to edit, replace, or delete</td></tr>
+<tr><td><span class="badge badge-green">DO</span> Update <code>.system_core</code> centrally</td><td>Edits to <code>.system_core/*.py</code> at the factory root automatically propagate to all child apps via symlinks — one fix benefits every project</td></tr>
+<tr><td><span class="badge badge-green">DO</span> Use <code>bootstrap_project.py</code></td><td>Always re-run bootstrap if adding new core modules — it will create any missing symlinks without disrupting existing ones</td></tr>
+<tr><td><span class="badge badge-red">DON'T</span> Delete symlink targets</td><td>Never delete a file in <code>.system_core/</code> if any child still references it — check with <code>dir /s *.symlink</code> first</td></tr>
+<tr><td><span class="badge badge-red">DON'T</span> Replace symlinks with copies</td><td>Replacing a symlink with a local copy breaks the inheritance chain — that child will no longer receive upstream fixes</td></tr>
+<tr><td><span class="badge badge-red">DON'T</span> Move the project folder</td><td>Symlinks use relative paths — moving the child folder to a different depth level breaks the <code>..</code> resolution</td></tr>
+</table>
+</div>
+
+<div class="card">
+<h3>Child App Directory Structure</h3>
+<table>
+<tr><th>Path</th><th>Type</th><th>Source</th></tr>
+<tr><td><code>MyApp/</code></td><td>Directory</td><td>Child project root</td></tr>
+<tr><td><code>MyApp/soul/</code></td><td>Directory</td><td>Project Soul — mission, context, brand identity</td></tr>
+<tr><td><code>MyApp/system_core → ../.system_core</code></td><td>Symlink</td><td>Factory global skills (PIIMasker, VisualEngine, etc.)</td></tr>
+<tr><td><code>MyApp/server.py</code></td><td>File</td><td>Child's own application code</td></tr>
+<tr><td><code>MyApp/.env</code></td><td>File</td><td>Child's own environment variables</td></tr>
+<tr><td><code>MyApp/incoming/</code></td><td>Directory</td><td>Ingest folder — watched by <code>incoming_watcher.py</code></td></tr>
+</table>
+</div>
+
 <h3>Project Bootstrapper</h3>
-<p><code>bootstrap_project.py</code> creates new ventures with symbolic links to core, project Soul, and brand identity.</p>
+<p><code>bootstrap_project.py</code> creates new ventures with symbolic links to <code>.system_core</code>, project Soul, and brand identity. Run <code>python bootstrap_project.py &lt;ProjectName&gt;</code> to scaffold a new child app.</p>
 
 <h3>Brand Guardian</h3>
-<p><code>brand_guardian.py</code> audits files for brand compliance (fonts, colors, mission) with 0-100 scoring.</p>
+<p><code>brand_guardian.py</code> audits files for brand compliance (fonts, colors, mission alignment) with 0-100 scoring. Runs automatically during the Socratic challenge phase.</p>
 
 <hr>
 
@@ -241,11 +405,155 @@ Compiled: March 13, 2026 | Authorized Credential: Antigravity_Full_v2</p>
 
 <hr>
 
+<h2><span class="section-num">07</span> Deploy Shield — Sanitization SOP</h2>
+
+<h3>Purpose</h3>
+<p>Automates the sanitization of any App folder before third-party delivery. Strips internal logs, API keys, PII, and debug artifacts to produce a clean release bundle with a verifiable manifest.</p>
+
+<div class="flow">
+<span class="flow-step">📁 App Folder</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step">🗑️ Prune Logs & .git</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step">🔑 Strip .env Keys</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step">🔒 PII Masker Pass</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step">📦 _deploy/ Staging</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step">📋 Manifest</span>
+</div>
+
+<div class="card">
+<h3>Sanitization Rules</h3>
+<table>
+<tr><th>Rule</th><th>Action</th><th>Targets</th></tr>
+<tr><td>Directory Pruning</td><td>Remove entirely</td><td><code>__pycache__</code>, <code>.git</code>, <code>node_modules</code>, <code>.venv</code>, <code>socratic_logs</code>, <code>.audit_snapshots</code></td></tr>
+<tr><td>Log File Removal</td><td>Skip during copy</td><td><code>auto_heal_log.json</code>, <code>socratic_audit.json</code>, <code>n8n_execution_log.json</code>, <code>*.log</code>, <code>*.bak</code></td></tr>
+<tr><td>.env Key Stripping</td><td>Rewrite values to <code>REDACTED</code></td><td>All <code>*_KEY</code>, <code>*_TOKEN</code>, <code>*_SECRET</code> variables</td></tr>
+<tr><td>PII Masking</td><td>Run <code>PIIMasker</code> on text files</td><td><code>.py</code>, <code>.js</code>, <code>.json</code>, <code>.md</code>, <code>.html</code>, <code>.yaml</code> + more</td></tr>
+</table>
+</div>
+
+<div class="card">
+<h3>CLI Usage</h3>
+<table>
+<tr><th>Command</th><th>Effect</th></tr>
+<tr><td><code>python .system_core/deploy_shield.py MyApp</code></td><td>Sanitize MyApp → <code>_deploy/MyApp/</code></td></tr>
+<tr><td><code>python .system_core/deploy_shield.py MyApp -o ./release</code></td><td>Custom output directory</td></tr>
+</table>
+<p>Output includes <code>deploy_manifest.json</code> with file count, redaction stats, and shipped file list.</p>
+</div>
+
+<hr>
+
+<h2><span class="section-num">08</span> Wisdom Accumulator — Institutional Memory SOP</h2>
+
+<h3>Purpose</h3>
+<p>After every successful "Persuasion" in the War Room, the winning logic is automatically captured into <code>.system_core/global_wisdom.db</code> — a JSON-lines knowledge base that grows institutional memory over time.</p>
+
+<div class="flow">
+<span class="flow-step">🏛️ War Room Debate</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step">🔍 Critic Challenge</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step">💬 Commander Reasoning</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step" style="border-color: var(--green); color: var(--green);">✅ CONVINCED</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step">🧠 Wisdom Accumulator</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step">📚 global_wisdom.db</span>
+</div>
+
+<div class="card">
+<h3>Wisdom Entry Format</h3>
+<table>
+<tr><th>Field</th><th>Type</th><th>Description</th></tr>
+<tr><td><code>ts</code></td><td>ISO timestamp</td><td>When the wisdom was captured</td></tr>
+<tr><td><code>challenge_id</code></td><td>string</td><td>Socratic challenge ID (e.g. CHG-0001)</td></tr>
+<tr><td><code>proposal</code></td><td>string</td><td>Original proposal text (first 500 chars)</td></tr>
+<tr><td><code>winning_reasoning</code></td><td>string</td><td>The Commander's winning argument</td></tr>
+<tr><td><code>combined_score</code></td><td>float</td><td>Final combined score (Critic + Reasoning)</td></tr>
+<tr><td><code>strong_signals</code></td><td>int</td><td>Count of evidence-backed reasoning signals</td></tr>
+<tr><td><code>weaknesses_addressed</code></td><td>string</td><td>Coverage ratio (e.g. "3/3")</td></tr>
+</table>
+</div>
+
+<div class="card">
+<h3>Hook Integration</h3>
+<p>The accumulator patches the Socratic Challenger's <code>analyze_response()</code> method at startup:</p>
+<table>
+<tr><th>Step</th><th>Action</th></tr>
+<tr><td>1. Init</td><td><code>wisdom.hook_into_socratic(get_challenger())</code></td></tr>
+<tr><td>2. On CONVINCED</td><td>Auto-fire <code>record_wisdom()</code> with challenge context</td></tr>
+<tr><td>3. Storage</td><td>Append JSON line to <code>.system_core/global_wisdom.db</code></td></tr>
+<tr><td>4. Query</td><td><code>--query "keyword"</code> searches across all captured reasoning</td></tr>
+<tr><td>5. Stats</td><td><code>--stats</code> shows win rates, avg scores, signal patterns</td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2><span class="section-num">09</span> Kill-Switch — Emergency Spend Protection SOP</h2>
+
+<h3>Purpose</h3>
+<p>A "Panic" function that temporarily disables all Antigravity API keys if the hourly execution rate exceeds a configurable threshold. Linked to <code>n8n_budget_guard.py</code> for automated cost protection.</p>
+
+<div class="flow">
+<span class="flow-step">📊 Budget Guard</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step">⚠️ Status: CRITICAL</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step" style="border-color: var(--red); color: var(--red);">🚨 check_and_panic()</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step">💾 Backup .env</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step">🔒 Keys → DISABLED</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step">📋 kill_switch_log</span>
+</div>
+
+<div class="card">
+<h3>Kill-Switch States</h3>
+<table>
+<tr><th>State</th><th>Indicator</th><th>Description</th></tr>
+<tr><td><span class="badge badge-green">ARMED</span></td><td>🟢</td><td>Monitoring active, ready to trip if threshold exceeded</td></tr>
+<tr><td><span class="badge badge-red">TRIPPED</span></td><td>🔴</td><td>API keys disabled, .env backed up to .env.panic_backup</td></tr>
+<tr><td><span class="badge badge-blue">RESTORED</span></td><td>🔄</td><td>Keys restored from backup, system operational</td></tr>
+</table>
+</div>
+
+<div class="card">
+<h3>Integration with Budget Guard</h3>
+<p><code>n8n_budget_guard.py</code> → <code>check_budget()</code> → on <code>"critical"</code> status → imports <code>kill_switch.get_kill_switch()</code> → fires <code>check_and_panic(hourly_limit)</code>.</p>
+<table>
+<tr><th>Config</th><th>Source</th><th>Default</th></tr>
+<tr><td>Hourly limit</td><td><code>resilience_config.json → kill_switch.hourly_limit</code></td><td>500 exec/hour</td></tr>
+<tr><td>Env files</td><td>Auto-detected: Factory root + Alpha_V2_Genesis</td><td>—</td></tr>
+<tr><td>Log</td><td><code>kill_switch_log.json</code> (last 100 events)</td><td>Factory root</td></tr>
+</table>
+</div>
+
+<div class="card">
+<h3>CLI Usage</h3>
+<table>
+<tr><th>Command</th><th>Effect</th></tr>
+<tr><td><code>python .system_core/kill_switch.py --status</code></td><td>Check current state (ARMED / TRIPPED)</td></tr>
+<tr><td><code>python .system_core/kill_switch.py --limit 500</code></td><td>Check rate, auto-panic if exceeded</td></tr>
+<tr><td><code>python .system_core/kill_switch.py --panic</code></td><td>Force-trip (disable all keys now)</td></tr>
+<tr><td><code>python .system_core/kill_switch.py --restore</code></td><td>Restore keys from backup</td></tr>
+</table>
+</div>
+
+<hr>
+
 <div style="text-align:center; padding: 40px 0; opacity: 0.5;">
 <p style="font-size: 11px; letter-spacing: 2px; text-transform: uppercase;">Meta App Factory — Resilience Anchor V3.0</p>
-<p style="font-size: 11px;">Compiled by AY | Antigravity Ops Intelligence | March 2026</p>
+<p style="font-size: 11px;">Compiled by AY | Antigravity Ops Intelligence | March 13, 2026 — Definitive Edition: Venture Studio Complete</p>
 </div>
 
 </div>
 </body>
 </html>
+
