@@ -469,3 +469,67 @@
 ### Router
 
 - `agent_skills_router.py` V7 — 18 agents, `CLOUD_AUTH_AGENTS` set
+
+## SELF_HEALING_CYCLE
+- **Timestamp:** 2026-03-14 23:16:52
+- **App:** Resonance
+- **Engine:** Nerve Center v1.0 (Closed-Loop Autonomic Recovery)
+- **Failures Detected:** 2
+- **Auto-Healed:** 0
+- **Queued for Review:** 2
+- **Heal Failures:** 0
+- **Actions:**
+  - ✅ `UNKNOWN` → `log_for_review` | Workflow: Unknown | Severity: medium
+  - ✅ `UNKNOWN` → `log_for_review` | Workflow: Unknown | Severity: medium
+- **Status:** ALL_HEALED
+
+## SELF_HEALING_CYCLE
+- **Timestamp:** 2026-03-14 23:31:55
+- **App:** Resonance
+- **Engine:** Nerve Center v1.0 (Closed-Loop Autonomic Recovery)
+- **Failures Detected:** 1
+- **Auto-Healed:** 0
+- **Queued for Review:** 1
+- **Heal Failures:** 0
+- **Actions:**
+  - ✅ `UNKNOWN` → `log_for_review` | Workflow: Unknown | Severity: medium
+- **Status:** ALL_HEALED
+
+## SELF_HEALING_CYCLE
+- **Timestamp:** 2026-03-15 00:02:01
+- **App:** Resonance
+- **Engine:** Nerve Center v1.0 (Closed-Loop Autonomic Recovery)
+- **Failures Detected:** 1
+- **Auto-Healed:** 0
+- **Queued for Review:** 1
+- **Heal Failures:** 0
+- **Actions:**
+  - ✅ `UNKNOWN` → `log_for_review` | Workflow: Unknown | Severity: medium
+- **Status:** ALL_HEALED
+
+## SELF_HEALING_CYCLE
+- **Timestamp:** 2026-03-15 00:32:07
+- **App:** Resonance
+- **Engine:** Nerve Center v1.0 (Closed-Loop Autonomic Recovery)
+- **Failures Detected:** 1
+- **Auto-Healed:** 0
+- **Queued for Review:** 1
+- **Heal Failures:** 0
+- **Actions:**
+  - ✅ `UNKNOWN` → `log_for_review` | Workflow: Unknown | Severity: medium
+- **Status:** ALL_HEALED
+
+---
+
+## DOCUMENT_PARSE_LOG
+
+> DocumentParserService extraction log. All parsed documents are appended here for cross-app visibility.
+> Routed to specialist agents based on category: Legal ? Compliance, Finance ? CFO, Medical ? Dr. Aris, Ops ? CEO.
+
+| Field | Description |
+|:------|:------------|
+| Source_App | The application that received the document |
+| Category | AI-classified type (Legal, Finance, Ops, Medical, Technical, Other) |
+| Routed_To | Destination agent or service |
+| Status | DELIVERED, OFFLINE, LOGGED |
+
