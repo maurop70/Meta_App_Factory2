@@ -1,0 +1,591 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resonance — Operations & Mastery Manual</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+  @page { size: A4; margin: 0; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root {
+    --bg: #0b0f1a; --bg-card: rgba(15,23,42,0.7); --bg-section: rgba(15,23,42,0.5);
+    --border: rgba(100,116,139,0.2); --text: #e2e8f0; --text-dim: #94a3b8; --text-muted: #64748b; --heading: #f1f5f9;
+    --green: #22c55e; --green-glow: rgba(34,197,94,0.15); --yellow: #eab308; --red: #ef4444;
+    --blue: #3b82f6; --blue-glow: rgba(59,130,246,0.12); --purple: #8b5cf6; --purple-glow: rgba(139,92,246,0.12);
+    --cyan: #06b6d4; --orange: #f97316; --amber: #F5A623; --amber-glow: rgba(245,166,35,0.12);
+    --teal: #14b8a6; --teal-glow: rgba(20,184,166,0.12);
+    --accent: linear-gradient(135deg, #F5A623, #14b8a6);
+  }
+  body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); line-height:1.7; font-size:15px; -webkit-font-smoothing:antialiased; }
+  @media print { body{background:white;color:#1e293b;} .cover{page-break-after:always;} .chapter{page-break-before:always;} .no-print{display:none;} }
+
+  .cover { min-height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding:60px 40px; position:relative; overflow:hidden;
+    background: radial-gradient(ellipse at 30% 20%,rgba(245,166,35,0.12) 0%,transparent 50%), radial-gradient(ellipse at 70% 80%,rgba(20,184,166,0.1) 0%,transparent 50%), radial-gradient(ellipse at 50% 50%,rgba(139,92,246,0.06) 0%,transparent 60%), var(--bg); }
+  .cover::before { content:''; position:absolute; inset:0; background:repeating-linear-gradient(0deg,transparent,transparent 49px,rgba(100,116,139,0.03) 50px); pointer-events:none; }
+  .cover-badge { padding:8px 20px; border-radius:24px; background:rgba(245,166,35,0.1); border:1px solid rgba(245,166,35,0.25); color:var(--amber); font-size:12px; font-weight:600; letter-spacing:2px; text-transform:uppercase; margin-bottom:32px; }
+  .cover-icon { font-size:72px; margin-bottom:24px; filter:drop-shadow(0 0 40px rgba(245,166,35,0.3)); }
+  .cover h1 { font-size:42px; font-weight:800; letter-spacing:-1.5px; background:linear-gradient(135deg,#e2e8f0,#F5A623,#14b8a6); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; max-width:700px; line-height:1.15; margin-bottom:16px; }
+  .cover-subtitle { font-size:18px; color:var(--text-dim); max-width:500px; margin-bottom:48px; }
+  .cover-meta { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; max-width:600px; width:100%; }
+  .cover-stat { padding:16px; border-radius:12px; background:var(--bg-card); border:1px solid var(--border); }
+  .cover-stat .val { font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:700; color:var(--amber); }
+  .cover-stat .lbl { font-size:10px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text-muted); margin-top:4px; }
+  .cover-footer { position:absolute; bottom:40px; font-size:12px; color:var(--text-muted); letter-spacing:0.5px; }
+
+  .content { max-width:900px; margin:0 auto; padding:60px 40px; }
+  .chapter { margin-bottom:80px; }
+  .chapter h2 { font-size:28px; font-weight:700; letter-spacing:-0.5px; color:var(--heading); margin-bottom:8px; padding-bottom:12px; border-bottom:1px solid var(--border); }
+  .chapter h3 { font-size:18px; font-weight:600; color:var(--heading); margin:32px 0 12px; }
+  .chapter p { margin-bottom:16px; color:var(--text-dim); }
+  .section { background:var(--bg-section); border:1px solid var(--border); border-radius:12px; padding:24px 28px; margin:20px 0; }
+
+  table { width:100%; border-collapse:collapse; margin:16px 0; font-size:13px; }
+  thead th { text-align:left; padding:10px 14px; background:rgba(255,255,255,0.04); border-bottom:1px solid var(--border); color:var(--text-dim); font-weight:600; text-transform:uppercase; letter-spacing:0.5px; font-size:11px; }
+  tbody td { padding:10px 14px; border-bottom:1px solid rgba(100,116,139,0.1); }
+  code { font-family:'JetBrains Mono',monospace; font-size:12px; background:rgba(255,255,255,0.06); padding:2px 6px; border-radius:4px; color:var(--amber); }
+  .kw { color:var(--teal); font-weight:600; }
+
+  .callout { border-radius:10px; padding:16px 20px; margin:16px 0; font-size:13px; }
+  .callout-title { font-weight:600; margin-bottom:6px; }
+  .callout.info { background:rgba(20,184,166,0.08); border:1px solid rgba(20,184,166,0.2); }
+  .callout.warn { background:rgba(234,179,8,0.08); border:1px solid rgba(234,179,8,0.2); }
+  .callout.tip { background:rgba(139,92,246,0.08); border:1px solid rgba(139,92,246,0.2); }
+
+  .toc { list-style:none; }
+  .toc li { margin:6px 0; }
+  .toc a { color:var(--text-dim); text-decoration:none; font-size:15px; display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:8px; transition:all 0.2s; }
+  .toc a:hover { background:rgba(255,255,255,0.04); color:var(--amber); }
+  .toc .num { font-family:'JetBrains Mono',monospace; font-weight:600; color:var(--amber); min-width:28px; }
+
+  ol.step-list { padding-left:20px; } ol.step-list li { margin:10px 0; color:var(--text-dim); }
+  ul.feature-list { list-style:none; padding:0; } ul.feature-list li { padding:6px 0 6px 20px; position:relative; color:var(--text-dim); }
+  ul.feature-list li::before { content:'▸'; position:absolute; left:0; color:var(--amber); font-weight:bold; }
+
+  .flow-diagram { display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:center; margin:20px 0; }
+  .flow-node { padding:10px 16px; border-radius:8px; font-size:12px; font-weight:500; text-align:center; }
+  .flow-node.amber { background:rgba(245,166,35,0.12); border:1px solid rgba(245,166,35,0.3); color:var(--amber); }
+  .flow-node.teal { background:var(--teal-glow); border:1px solid rgba(20,184,166,0.3); color:var(--teal); }
+  .flow-node.purple { background:var(--purple-glow); border:1px solid rgba(139,92,246,0.3); color:var(--purple); }
+  .flow-node.blue { background:var(--blue-glow); border:1px solid rgba(59,130,246,0.3); color:var(--blue); }
+  .flow-node.green { background:var(--green-glow); border:1px solid rgba(34,197,94,0.3); color:var(--green); }
+  .flow-arrow { color:var(--text-muted); font-size:16px; }
+
+  .agent-card { background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:16px 20px; margin:10px 0; }
+  .agent-card h4 { font-size:14px; margin-bottom:6px; }
+  .agent-card p { font-size:13px; color:var(--text-muted); margin:0; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:4px; font-size:10px; font-weight:600; text-transform:uppercase; }
+  .badge-amber { background:rgba(245,166,35,0.15); color:var(--amber); }
+  .badge-teal { background:var(--teal-glow); color:var(--teal); }
+  .badge-purple { background:var(--purple-glow); color:var(--purple); }
+
+  @media(max-width:768px) { .cover h1{font-size:28px;} .cover-meta{grid-template-columns:repeat(2,1fr);} .content{padding:30px 20px;} }
+</style>
+</head>
+<body>
+
+<!-- COVER PAGE -->
+<div class="cover">
+  <div class="cover-badge">CLASSIFIED — INTERNAL USE</div>
+  <div class="cover-icon">🧠</div>
+  <h1>Resonance Operations & Mastery Manual</h1>
+  <div class="cover-subtitle">The definitive guide to the AI-Powered Educational Companion — from the Council of Therapists to the Parent Portal</div>
+  <div class="cover-meta">
+    <div class="cover-stat"><div class="val">V3.0</div><div class="lbl">Architecture</div></div>
+    <div class="cover-stat"><div class="val">44</div><div class="lbl">API Endpoints</div></div>
+    <div class="cover-stat"><div class="val">4</div><div class="lbl">AI Agents</div></div>
+    <div class="cover-stat"><div class="val">5006</div><div class="lbl">Port</div></div>
+  </div>
+  <div class="cover-footer">Antigravity Ventures — Meta App Factory V3 Genesis | March 2026</div>
+</div>
+
+<!-- TABLE OF CONTENTS -->
+<div class="content">
+  <div class="chapter" id="toc">
+    <h2>Table of Contents</h2>
+    <ul class="toc">
+      <li><a href="#ch1"><span class="num">01</span> The Alex Persona & Council Architecture</a></li>
+      <li><a href="#ch2"><span class="num">02</span> Visual Architecture & Data Flow</a></li>
+      <li><a href="#ch3"><span class="num">03</span> Parent Portal — Administrative Control</a></li>
+      <li><a href="#ch4"><span class="num">04</span> Clinical Intelligence & Dr. Aris Integration</a></li>
+      <li><a href="#ch5"><span class="num">05</span> Study Tools & Learning Modes</a></li>
+      <li><a href="#ch6"><span class="num">06</span> Nerve Center & Dashboard</a></li>
+      <li><a href="#ch7"><span class="num">07</span> API Reference & Endpoints</a></li>
+      <li><a href="#ch8"><span class="num">08</span> Deployment, Launch & Troubleshooting</a></li>
+    </ul>
+  </div>
+  <!-- CHAPTER 1: THE ALEX PERSONA & COUNCIL ARCHITECTURE -->
+  <div class="chapter" id="ch1">
+    <h2>01 — The Alex Persona & Council Architecture</h2>
+    <p>Resonance is a multi-agent educational companion built for a 16-year-old male with auditory processing challenges and speech delays. At its core, it is not a single AI — it is a <strong>Council of Therapists</strong> working behind a unified persona.</p>
+
+    <div class="section">
+      <h3>🧠 Alex — The Primary Persona</h3>
+      <p>Alex is the user-facing identity. All interactions appear to come from Alex — warm, patient, and engaging. The persona is designed to feel like a cool older friend, not a clinical assistant.</p>
+      <ul class="feature-list">
+        <li><strong>Voice</strong> — Casual, encouraging, uses contractions ("that's awesome!" not "that is awesome")</li>
+        <li><strong>Sentences</strong> — Short (10-15 words), clear, no jargon. Never double-negatives.</li>
+        <li><strong>Engagement</strong> — Celebrates effort, not just correctness. Uses humor and real-world analogies.</li>
+        <li><strong>Identity Lock</strong> — Always responds "I'm Alex!" to identity questions. No exceptions.</li>
+        <li><strong>Teach-Back Loop</strong> — Asks "Can you tell me what that means in your words?" to reinforce learning.</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h3>👥 The Council of Therapists (Behind the Scenes)</h3>
+      <p>Four specialized agents operate behind Alex's unified voice. The user never sees them directly — they influence Alex's behavior through system prompt injection.</p>
+
+      <div class="agent-card">
+        <h4>🎭 Alex (The Communicator) <span class="badge badge-amber">PRIMARY</span></h4>
+        <p>The face of the system. Handles direct conversation, personality, engagement patterns, kinetic typography, Wingman Mode, and the Mixing Board for language construction.</p>
+      </div>
+
+      <div class="agent-card">
+        <h4>👁️ The Observer <span class="badge badge-teal">SENTIMENT</span></h4>
+        <p>Monitors emotional state through sentiment analysis. Detects frustration patterns (consecutive short or all-caps messages), confidence levels, and engagement dips. Triggers the "Pivot Protocol" when frustration is detected — suggests a game, changes topic, or offers encouragement.</p>
+      </div>
+
+      <div class="agent-card">
+        <h4>🏗️ The Scaffolder <span class="badge badge-purple">MODALITY</span></h4>
+        <p>Adapts content delivery modality based on the user's learning profile. Provides visual aids, step-by-step breakdowns, analogies, and fill-in-the-blank exercises. Adjusts complexity in real-time based on response patterns.</p>
+      </div>
+
+      <div class="agent-card">
+        <h4>🛡️ The Overseer <span class="badge badge-teal">ORCHESTRATOR</span></h4>
+        <p>Coordinates the other three agents. Manages turn-taking, ensures Alex stays on-topic with parent directives, enforces safety boundaries, and handles the Sandbox Mode for parent testing.</p>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>🔄 Council Prompt Injection Pipeline</h3>
+      <p>When a user sends a message, the system prompt is dynamically assembled:</p>
+      <div class="flow-diagram">
+        <div class="flow-node amber">Alex Base Prompt</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-node teal">+ Profile Hints</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-node purple">+ Parent Directives</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-node blue">+ Council Engine</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-node green">+ Dr. Aris Directives</div>
+      </div>
+      <p>The <code>app_stream.py</code> module orchestrates this assembly. The final system prompt can exceed 5,000 tokens when all layers are active.</p>
+    </div>
+  </div>
+
+  <!-- CHAPTER 2: VISUAL ARCHITECTURE & DATA FLOW -->
+  <div class="chapter" id="ch2">
+    <h2>02 — Visual Architecture & Data Flow</h2>
+
+    <div class="section">
+      <h3>📐 System Stack</h3>
+      <table>
+        <thead><tr><th>Layer</th><th>Technology</th><th>Details</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Frontend</strong></td><td>React / Vite</td><td>SSE streaming chat, dark Discord-like UI, kinetic typography</td></tr>
+          <tr><td><strong>Backend</strong></td><td>FastAPI (Port 5006)</td><td>44 endpoints, async streaming, file upload pipeline</td></tr>
+          <tr><td><strong>AI Engine</strong></td><td>Gemini 2.5 Flash</td><td>Multi-agent prompt assembly, 20-turn history</td></tr>
+          <tr><td><strong>Orchestrator</strong></td><td>n8n Workflow</td><td>Webhook bridge, Google Drive sync, frustration detection</td></tr>
+          <tr><td><strong>Memory</strong></td><td>Supabase pgvector</td><td>Session persistence, context recovery</td></tr>
+          <tr><td><strong>Resilience</strong></td><td>V3 Auto-Heal</td><td>Circuit breaker, safe buffer, watchdog preflight</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h3>📊 Data Flow: Chat Message Lifecycle</h3>
+      <div class="flow-diagram">
+        <div class="flow-node amber">User Message</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-node teal">Hint Collector</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-node purple">Council Engine</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-node blue">Gemini 2.5</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-node green">SSE Stream</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-node amber">Progress Log</div>
+      </div>
+      <ol class="step-list">
+        <li><strong>User types message</strong> in the chat UI (React frontend on Vite dev server)</li>
+        <li><strong>POST /api/chat/stream</strong> hits FastAPI — the Hint Collector passively extracts learning preferences</li>
+        <li><strong>System prompt assembled</strong> — Alex base + uploaded file context + parent directives + council prompt + Dr. Aris directives</li>
+        <li><strong>Gemini 2.5 Flash streaming</strong> — tokens arrive via SSE, displayed with kinetic typography</li>
+        <li><strong>Progress logged</strong> — word counts, session duration, and engagement metrics appended to <code>parent_config.json</code></li>
+      </ol>
+    </div>
+
+    <div class="section">
+      <h3>📁 File Architecture</h3>
+      <table>
+        <thead><tr><th>File</th><th>Role</th><th>Size</th></tr></thead>
+        <tbody>
+          <tr><td><code>server.py</code></td><td>FastAPI backend — all 44 endpoints, file management, parent API</td><td>53 KB</td></tr>
+          <tr><td><code>app_stream.py</code></td><td>Gemini streaming bridge — prompt assembly, council injection, progress tracking</td><td>34 KB</td></tr>
+          <tr><td><code>resonance_ui/src/App.jsx</code></td><td>React frontend — chat UI, parent portal, study tools, dashboard</td><td>115 KB</td></tr>
+          <tr><td><code>resonance_ui/src/index.css</code></td><td>Full design system — Discord-like dark theme with amber accents</td><td>66 KB</td></tr>
+          <tr><td><code>nerve_center.py</code></td><td>Aether Nerve Center — project monitoring, health checks, fiscal tracking</td><td>35 KB</td></tr>
+          <tr><td><code>action_plan.py</code></td><td>Action Plan Engine — structured task generation for study workflows</td><td>25 KB</td></tr>
+          <tr><td><code>unified_eq_engine.py</code></td><td>Emotional intelligence engine — sentiment analysis, EQ scoring</td><td>18 KB</td></tr>
+          <tr><td><code>parent_config.json</code></td><td>Persistent store: parent instructions, vocabulary, focus topics, progress log</td><td>11 KB</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <!-- CHAPTER 3: PARENT PORTAL -->
+  <div class="chapter" id="ch3">
+    <h2>03 — Parent Portal — Administrative Control</h2>
+    <p>The Parent Portal gives guardians and educators full control over Alex's behavior without requiring technical knowledge. Access is protected by a 4-digit PIN and visually distinguished by an <strong>amber accent</strong> color scheme.</p>
+
+    <div class="section">
+      <h3>🔐 PIN-Based Access Control</h3>
+      <p>The portal uses a simple 4-digit PIN overlay that prevents the student from modifying Alex's instructions:</p>
+      <ul class="feature-list">
+        <li><strong>PIN Gate</strong> — Full-screen modal with numeric input. Incorrect attempts show shake animation.</li>
+        <li><strong>Default PIN</strong> — Set to <code>1234</code> on first install. Can be changed via the Settings tab.</li>
+        <li><strong>PIN Reset</strong> — <code>POST /api/parent/pin-reset</code> with <code>current_pin</code> and <code>new_pin</code>.</li>
+        <li><strong>No Timeout</strong> — Session stays unlocked until the parent explicitly closes the portal.</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h3>📝 Tabbed Management Interface</h3>
+      <table>
+        <thead><tr><th>Tab</th><th>Purpose</th><th>API</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Instructions</strong></td><td>Markdown-enabled textarea for priority Alex directives (e.g., "Focus on empathy today")</td><td><code>POST /api/parent/config</code></td></tr>
+          <tr><td><strong>Focus Topics</strong></td><td>Chip/tag manager for academic focus areas. Alex will steer conversations toward these.</td><td><code>POST /api/parent/config</code></td></tr>
+          <tr><td><strong>Vocabulary</strong></td><td>Add target words with definitions and examples. Alex prioritizes these in the Teach-Back Loop.</td><td><code>POST /api/parent/config</code></td></tr>
+          <tr><td><strong>Student Profile</strong></td><td>Academic weak areas, strengths, learning style, communication level, interests.</td><td><code>POST /api/parent/profile</code></td></tr>
+          <tr><td><strong>Council Tuning</strong></td><td>Adjust individual council agent intensities (e.g., increase Observer sensitivity).</td><td><code>POST /api/parent/council-overrides</code></td></tr>
+          <tr><td><strong>Progress</strong></td><td>Session history: timestamps, word counts, engagement intensity (Short/Medium/Long).</td><td><code>GET /api/parent/progress</code></td></tr>
+          <tr><td><strong>Settings</strong></td><td>PIN change, Sandbox Mode toggle, intelligence sync toggle, report auto-digest.</td><td><code>POST /api/parent/settings</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h3>🧪 Sandbox Mode</h3>
+      <p>Parents can activate <strong>Sandbox Mode</strong> to test Alex's behavior without affecting the student's progress data or profile hints. When active, a "SANDBOX" badge appears in the chat header.</p>
+      <div class="callout info">
+        <div class="callout-title">💡 How Sandbox Works</div>
+        The system prompt includes a <code>--- SANDBOX MODE (ACTIVE) ---</code> flag. Alex treats the conversation as a test session — no profile updates, no progress logging, no hint collection. The parent can verify that their instructions produce the desired behavior before going live.
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>📊 Automated Progress Tracking</h3>
+      <p>After every streaming response, <code>app_stream.py</code> automatically logs:</p>
+      <ul class="feature-list">
+        <li><strong>Engagement Timestamps</strong> — When the session occurred and which channel was used.</li>
+        <li><strong>Verbal Flux</strong> — Word counts for both user messages and Alex's responses.</li>
+        <li><strong>Session Intensity</strong> — Classified as Short (&lt;100 words), Medium (100-300), or Long (&gt;300).</li>
+        <li><strong>Retention</strong> — Last 100 entries are maintained in <code>parent_config.json</code>.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- CHAPTER 4: CLINICAL INTELLIGENCE & DR. ARIS -->
+  <div class="chapter" id="ch4">
+    <h2>04 — Clinical Intelligence & Dr. Aris Integration</h2>
+    <p>Resonance includes a clinical intelligence pipeline that processes professional reports (medical, educational, behavioral) and integrates findings into Alex's therapeutic context. This system is powered by <strong>Dr. Aris</strong>, the Specialist Agent for developmental science.</p>
+
+    <div class="section">
+      <h3>📄 Report Upload Pipeline</h3>
+      <p>Parents upload professional reports through the Parent Portal's Clinical Intelligence tab:</p>
+      <div class="flow-diagram">
+        <div class="flow-node amber">Upload PDF/DOCX</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-node teal">Text Extraction</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-node purple">AI Digest Engine</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-node blue">Dr. Aris Analysis</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-node green">Alex Directives</div>
+      </div>
+      <ol class="step-list">
+        <li><strong>Upload</strong> — <code>POST /api/parent/report-upload</code> accepts PDF, DOCX, TXT files with a report type tag (medical, educational, behavioral, therapy).</li>
+        <li><strong>AI Digest</strong> — Gemini extracts diagnoses, accommodations, triggers, strengths, and recommended strategies from the report text.</li>
+        <li><strong>Dr. Aris Review</strong> — <code>GET /api/parent/dr-aris/analysis</code> returns structured analysis with developmental insights.</li>
+        <li><strong>Proposal System</strong> — Dr. Aris generates actionable proposals (e.g., "Increase visual scaffold for math concepts"). Parents approve or reject each via <code>POST /api/parent/dr-aris/proposals/{id}/approve</code>.</li>
+        <li><strong>Directive Injection</strong> — Approved proposals become directives injected into Alex's system prompt via the <code>dr_aris_directives</code> array.</li>
+      </ol>
+    </div>
+
+    <div class="section">
+      <h3>🏥 Dr. Aris Boardroom</h3>
+      <p>The Dr. Aris Boardroom provides a direct query interface for parents to ask developmental questions:</p>
+      <ul class="feature-list">
+        <li><strong>Boardroom Query</strong> — <code>POST /api/dr-aris/boardroom-query</code> — Ask any developmental or clinical question about the student.</li>
+        <li><strong>History</strong> — <code>GET /api/dr-aris/boardroom-history</code> — View past consultations.</li>
+        <li><strong>Full Report</strong> — <code>GET /api/parent/dr-aris/report</code> — Comprehensive developmental report aggregating all uploaded reports and analysis.</li>
+        <li><strong>Alerts</strong> — <code>GET /api/parent/dr-aris/alerts</code> — Flags when report content reveals urgent concerns.</li>
+      </ul>
+      <div class="callout warn">
+        <div class="callout-title">⚠️ Privacy by Design</div>
+        All clinical data stays in the local <code>parent_config.json</code> and <code>dr_aris_reports.json</code>. No clinical information is sent to external databases. Gemini API calls use the raw text only for analysis — nothing is stored in Gemini's context beyond the session.
+      </div>
+    </div>
+  </div>
+  <!-- CHAPTER 5: STUDY TOOLS & LEARNING MODES -->
+  <div class="chapter" id="ch5">
+    <h2>05 — Study Tools & Learning Modes</h2>
+    <p>Resonance includes AI-powered study tools that transform conversations and topics into structured learning materials.</p>
+
+    <div class="section">
+      <h3>🗺️ Mind Map Generator</h3>
+      <p>Generates visual mind maps from any topic or conversation. Two modes:</p>
+      <table>
+        <thead><tr><th>Mode</th><th>Endpoint</th><th>Input</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Topic Mind Map</strong></td><td><code>POST /api/study/mindmap</code></td><td>A topic string (e.g., "photosynthesis")</td></tr>
+          <tr><td><strong>Conversation Mind Map</strong></td><td><code>POST /api/study/conversation-mindmap</code></td><td>Chat history — extracts and maps all discussed concepts</td></tr>
+        </tbody>
+      </table>
+      <p>Both return a structured JSON tree with nodes, connections, and suggested follow-up questions. The React frontend renders these as interactive visual maps.</p>
+    </div>
+
+    <div class="section">
+      <h3>📝 AI Study Summary</h3>
+      <p>Condenses topics or conversations into structured study notes:</p>
+      <table>
+        <thead><tr><th>Mode</th><th>Endpoint</th><th>Output</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Topic Summary</strong></td><td><code>POST /api/study/summary</code></td><td>Key points, definitions, examples, practice questions</td></tr>
+          <tr><td><strong>Conversation Summary</strong></td><td><code>POST /api/study/conversation-summary</code></td><td>What was discussed, what was learned, areas to review</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h3>👤 Audience Detection</h3>
+      <p>An inherited Aether feature that detects when users mention a target audience and offers to generate AI-driven research profiles:</p>
+      <ul class="feature-list">
+        <li><code>POST /api/audience/detect</code> — Scans message for audience mentions</li>
+        <li><code>POST /api/audience/generate</code> — Creates comprehensive audience profile</li>
+        <li><code>POST /api/audience/validate</code> — Validates profile against known data</li>
+        <li><code>GET /api/audience/profiles</code> — Lists generated profiles</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- CHAPTER 6: NERVE CENTER & DASHBOARD -->
+  <div class="chapter" id="ch6">
+    <h2>06 — Nerve Center & Dashboard</h2>
+    <p>The Nerve Center is the operational command layer inherited from the Aether framework. It provides real-time monitoring, health checks, and fiscal tracking for the Resonance ecosystem.</p>
+
+    <div class="section">
+      <h3>📡 Nerve Center Endpoints</h3>
+      <table>
+        <thead><tr><th>Endpoint</th><th>Method</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>/api/nerve-center/status</code></td><td>GET</td><td>Overall system status: Gemini API health, n8n workflow state, memory store</td></tr>
+          <tr><td><code>/api/nerve-center/scan</code></td><td>POST</td><td>Force a full infrastructure scan — checks all connected services</td></tr>
+          <tr><td><code>/api/nerve-center/review-queue</code></td><td>GET</td><td>Items flagged for human review (failed heals, anomalies)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h3>📊 Dashboard Endpoints</h3>
+      <table>
+        <thead><tr><th>Endpoint</th><th>Method</th><th>Returns</th></tr></thead>
+        <tbody>
+          <tr><td><code>/api/dashboard/projects</code></td><td>GET</td><td>All registered projects with health status, port assignments, last activity</td></tr>
+          <tr><td><code>/api/dashboard/health</code></td><td>GET</td><td>System health: API latency, memory usage, circuit breaker state, auto-heal stats</td></tr>
+          <tr><td><code>/api/dashboard/fiscal</code></td><td>GET</td><td>API call costs, token usage, n8n execution counts, budget tracking</td></tr>
+          <tr><td><code>/api/dashboard/command</code></td><td>POST</td><td>Execute operational commands (restart services, clear caches, trigger scans)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <!-- CHAPTER 7: API REFERENCE -->
+  <div class="chapter" id="ch7">
+    <h2>07 — API Reference & Endpoints</h2>
+    <p>Complete reference for all 44 Resonance API endpoints. Base URL: <code>http://localhost:5006</code></p>
+
+    <div class="section">
+      <h3>💬 Chat & Core</h3>
+      <table>
+        <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>GET</td><td><code>/</code></td><td>Health check — returns app name, version, status</td></tr>
+          <tr><td>POST</td><td><code>/api/chat/stream</code></td><td>Send message, receive SSE streaming response from Alex</td></tr>
+          <tr><td>POST</td><td><code>/api/chat/clear</code></td><td>Clear chat history (both UI and server-side)</td></tr>
+          <tr><td>GET</td><td><code>/api/health</code></td><td>Detailed health status including all subsystems</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h3>📎 File Upload</h3>
+      <table>
+        <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>POST</td><td><code>/api/upload</code></td><td>Upload file (PDF/DOCX/TXT) — extracted text injected into Alex's context</td></tr>
+          <tr><td>GET</td><td><code>/api/uploads</code></td><td>List all uploaded files</td></tr>
+          <tr><td>GET</td><td><code>/api/uploads/by-section/{section}</code></td><td>Files filtered by section tag</td></tr>
+          <tr><td>DELETE</td><td><code>/api/uploads/{filename}</code></td><td>Remove an uploaded file</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h3>👨‍👩‍👦 Parent Portal (17 endpoints)</h3>
+      <table>
+        <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>GET</td><td><code>/api/parent/config</code></td><td>Retrieve parent instructions, vocabulary, focus topics</td></tr>
+          <tr><td>POST</td><td><code>/api/parent/config</code></td><td>Save/merge parent instructions</td></tr>
+          <tr><td>POST</td><td><code>/api/parent/verify-pin</code></td><td>Verify 4-digit PIN</td></tr>
+          <tr><td>GET</td><td><code>/api/parent/progress</code></td><td>Session engagement history (last 100 entries)</td></tr>
+          <tr><td>POST</td><td><code>/api/parent/profile</code></td><td>Update student profile (weaknesses, strengths, interests)</td></tr>
+          <tr><td>POST</td><td><code>/api/parent/reset-profile</code></td><td>Reset student profile to defaults</td></tr>
+          <tr><td>GET</td><td><code>/api/parent/council-preview</code></td><td>Preview the current council prompt assembly</td></tr>
+          <tr><td>POST</td><td><code>/api/parent/council-overrides</code></td><td>Adjust individual agent intensities</td></tr>
+          <tr><td>POST</td><td><code>/api/parent/settings</code></td><td>Update Sandbox Mode, intelligence sync, report settings</td></tr>
+          <tr><td>POST</td><td><code>/api/parent/pin-reset</code></td><td>Change the 4-digit PIN</td></tr>
+          <tr><td>POST</td><td><code>/api/parent/report-upload</code></td><td>Upload clinical/educational report for AI analysis</td></tr>
+          <tr><td>GET</td><td><code>/api/parent/report-digest</code></td><td>Get AI-extracted insights from uploaded reports</td></tr>
+          <tr><td>POST</td><td><code>/api/parent/report-settings</code></td><td>Configure auto-digest and report preferences</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h3>🏥 Dr. Aris Integration (7 endpoints)</h3>
+      <table>
+        <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>GET</td><td><code>/api/parent/dr-aris/analysis</code></td><td>Structured developmental analysis from reports</td></tr>
+          <tr><td>GET</td><td><code>/api/parent/dr-aris/alerts</code></td><td>Urgent clinical flags</td></tr>
+          <tr><td>GET</td><td><code>/api/parent/dr-aris/proposals</code></td><td>List pending directive proposals</td></tr>
+          <tr><td>POST</td><td><code>/api/parent/dr-aris/proposals/{id}/approve</code></td><td>Approve a proposal — injects into Alex's prompt</td></tr>
+          <tr><td>POST</td><td><code>/api/parent/dr-aris/proposals/{id}/reject</code></td><td>Reject a proposal</td></tr>
+          <tr><td>GET</td><td><code>/api/parent/dr-aris/report</code></td><td>Full developmental report</td></tr>
+          <tr><td>POST</td><td><code>/api/dr-aris/boardroom-query</code></td><td>Ask Dr. Aris a clinical question directly</td></tr>
+          <tr><td>GET</td><td><code>/api/dr-aris/boardroom-history</code></td><td>Past boardroom consultations</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h3>📚 Study Tools (4 endpoints)</h3>
+      <table>
+        <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>POST</td><td><code>/api/study/mindmap</code></td><td>Generate mind map from a topic</td></tr>
+          <tr><td>POST</td><td><code>/api/study/summary</code></td><td>Generate study summary from a topic</td></tr>
+          <tr><td>POST</td><td><code>/api/study/conversation-mindmap</code></td><td>Generate mind map from chat history</td></tr>
+          <tr><td>POST</td><td><code>/api/study/conversation-summary</code></td><td>Generate study summary from chat history</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h3>📡 Nerve Center & Dashboard (4 + 4 endpoints)</h3>
+      <table>
+        <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>GET</td><td><code>/api/nerve-center/status</code></td><td>System-wide health</td></tr>
+          <tr><td>POST</td><td><code>/api/nerve-center/scan</code></td><td>Force infrastructure scan</td></tr>
+          <tr><td>GET</td><td><code>/api/nerve-center/review-queue</code></td><td>Items needing human review</td></tr>
+          <tr><td>GET</td><td><code>/api/dashboard/projects</code></td><td>All projects with status</td></tr>
+          <tr><td>GET</td><td><code>/api/dashboard/health</code></td><td>Infrastructure health metrics</td></tr>
+          <tr><td>GET</td><td><code>/api/dashboard/fiscal</code></td><td>API costs and token usage</td></tr>
+          <tr><td>POST</td><td><code>/api/dashboard/command</code></td><td>Execute operational commands</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <!-- CHAPTER 8: DEPLOYMENT, LAUNCH & TROUBLESHOOTING -->
+  <div class="chapter" id="ch8">
+    <h2>08 — Deployment, Launch & Troubleshooting</h2>
+
+    <div class="section">
+      <h3>🚀 Launch Protocol</h3>
+      <p>Resonance is a dual-service application (FastAPI backend + React/Vite frontend). Launch via the batch file:</p>
+      <ol class="step-list">
+        <li>Double-click <code>Launch_Resonance_V3.bat</code> (or the Desktop shortcut).</li>
+        <li>The script detects the Google Drive path, installs dependencies (<code>pip install -r requirements.txt</code>, <code>npm install</code>).</li>
+        <li>Activates the n8n workflow (<code>IT4LuCQm7Ph62Hf2</code>) via <code>n8n_lifecycle.py</code>.</li>
+        <li>Starts <code>server.py</code> on <strong>Port 5006</strong>.</li>
+        <li>Starts the Vite dev server on <strong>Port 5174+</strong>.</li>
+        <li>Opens the browser at <code>http://localhost:5174</code>.</li>
+      </ol>
+    </div>
+
+    <div class="section">
+      <h3>🔧 Environment Variables</h3>
+      <table>
+        <thead><tr><th>Variable</th><th>Purpose</th><th>Required</th></tr></thead>
+        <tbody>
+          <tr><td><code>GEMINI_API_KEY</code></td><td>Google Gemini API key for AI responses</td><td>Yes</td></tr>
+          <tr><td><code>SUPABASE_URL</code></td><td>Supabase project URL for memory persistence</td><td>Optional</td></tr>
+          <tr><td><code>SUPABASE_KEY</code></td><td>Supabase anon key</td><td>Optional</td></tr>
+          <tr><td><code>N8N_WEBHOOK_URL</code></td><td>n8n webhook for orchestrator bridge</td><td>Optional</td></tr>
+          <tr><td><code>LANGSMITH_API_KEY</code></td><td>LangSmith tracing key for prompt evaluation</td><td>Optional</td></tr>
+          <tr><td><code>RESONANCE_PORT</code></td><td>Override default port 5006</td><td>No</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h3>🖥️ Multi-PC Portability</h3>
+      <p>Resonance runs on any Windows PC with access to the Google Drive sync folder:</p>
+      <ul class="feature-list">
+        <li><strong>Auto-Sync</strong> — <code>create_resonance_shortcut.ps1</code> re-detects the Drive path on every launch.</li>
+        <li><strong>Portable Python</strong> — The batch file cascades through Python detection, filtering out the Windows Store alias.</li>
+        <li><strong>npm.cmd Fix</strong> — Uses <code>npm.cmd</code> instead of <code>npm</code> to bypass PowerShell execution policy blocks.</li>
+        <li><strong>PNG to ICO</strong> — Converts the generated avatar into a high-res Windows icon for the Desktop shortcut.</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h3>🔥 Common Issues & Fixes</h3>
+      <table>
+        <thead><tr><th>Issue</th><th>Cause</th><th>Fix</th></tr></thead>
+        <tbody>
+          <tr><td>Port 5006 already in use</td><td>Previous instance not closed</td><td>Run <code>netstat -ano | findstr :5006</code> then <code>taskkill /PID [PID] /F</code></td></tr>
+          <tr><td>Vite opens on port 5177+</td><td>Ports 5173-5176 hijacked by background processes</td><td>Run <code>cleanup_ports.ps1</code> to kill dangling processes</td></tr>
+          <tr><td>Alex doesn't respond</td><td>Missing <code>GEMINI_API_KEY</code> in <code>.env</code></td><td>Add key to <code>Resonance/.env</code></td></tr>
+          <tr><td>Parent Portal PIN rejected</td><td>Default PIN is <code>1234</code></td><td>Reset via <code>POST /api/parent/pin-reset</code> with <code>current_pin: "1234"</code></td></tr>
+          <tr><td>Council prompt not loading</td><td><code>council_engine.py</code> not in path</td><td>Ensure Sentinel_Bridge subfolder is in Resonance directory</td></tr>
+          <tr><td>Windows Store Python launches</td><td>WindowsApps alias intercepting</td><td>The V3 batch file automatically bypasses this — update to <code>Launch_Resonance_V3.bat</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h3>🛡️ V3 Resilience Stack</h3>
+      <p>Resonance inherits the full Meta App Factory V3 auto-heal stack:</p>
+      <div class="flow-diagram">
+        <div class="flow-node green">auto_heal.py<small style="display:block;font-size:10px">Retry + Backoff</small></div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-node amber">circuit_breaker.py<small style="display:block;font-size:10px">5-fail Cutoff</small></div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-node teal">local_state_manager<small style="display:block;font-size:10px">UUID Buffer</small></div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-node purple">preflight.py<small style="display:block;font-size:10px">Watchdog Check</small></div>
+      </div>
+      <p>All API calls to Gemini, n8n, and Supabase are wrapped in <code>healed_post()</code>. If the circuit breaker opens, payloads are buffered locally and replayed when connectivity returns.</p>
+    </div>
+
+    <div class="callout tip">
+      <div class="callout-title">💡 Quick Start Checklist</div>
+      <ol class="step-list">
+        <li>Ensure Google Drive is syncing the <code>Meta_App_Factory/Resonance</code> folder</li>
+        <li>Add <code>GEMINI_API_KEY</code> to <code>Resonance/.env</code></li>
+        <li>Double-click <code>Launch_Resonance_V3.bat</code></li>
+        <li>Chat with Alex at <code>http://localhost:5174</code></li>
+        <li>Access Parent Portal via the 🔒 icon (default PIN: 1234)</li>
+      </ol>
+    </div>
+  </div>
+
+</div> <!-- end .content -->
+</body>
+</html>
