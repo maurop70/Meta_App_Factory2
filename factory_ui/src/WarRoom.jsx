@@ -14,6 +14,7 @@ const AGENT_STYLES = {
   CFO:       { icon: '💰', color: '#22c55e', bg: 'rgba(34,197,94,0.08)' },
   CRITIC:    { icon: '🔍', color: '#ef4444', bg: 'rgba(239,68,68,0.08)' },
   ARCHITECT: { icon: '🏗️', color: '#06b6d4', bg: 'rgba(6,182,212,0.08)' },
+  DR_ARIS:   { icon: '🩻', color: '#14b8a6', bg: 'rgba(20,184,166,0.08)' },
   SYSTEM:    { icon: '⚡', color: '#eab308', bg: 'rgba(234,179,8,0.08)' },
   COMMANDER: { icon: '⚡', color: '#f97316', bg: 'rgba(249,115,22,0.12)' },
 };

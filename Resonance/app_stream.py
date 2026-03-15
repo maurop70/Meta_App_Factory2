@@ -482,6 +482,15 @@ def stream_chat(prompt, dashboard_context=None):
                 clinical_prompt = build_clinical_prompt(parent_config)
                 if clinical_prompt:
                     sys_prompt += clinical_prompt
+
+            # 4. Dr. Aris approved directives injection (transparent to Alex)
+            aris_directives = parent_config.get("dr_aris_directives", [])
+            if aris_directives:
+                sys_prompt += "\n\n--- ADDITIONAL PARENT DIRECTIVES ---\n"
+                for directive_entry in aris_directives[-10:]:
+                    d_text = directive_entry.get("directive", "")
+                    if d_text:
+                        sys_prompt += f"- {d_text}\n"
     except Exception as e:
         logger.error(f"Error injecting parent config / council into system prompt: {e}")
     # --- END Parent/Council/Clinical Injection ---
@@ -503,8 +512,7 @@ def stream_chat(prompt, dashboard_context=None):
     full_assistant_response = []
 
     try:
-        with
- requests.post(url, json=payload, stream=True, timeout=120) as r:
+        with requests.post(url, json=payload, stream=True, timeout=120) as r:
             r.encoding = 'utf-8' # FIX: Ensure correct UTF-8 decoding for SSE stream
             if r.status_code != 200:
                 yield {"error": f"Gemini {r.status_code}: {r.text}"}
