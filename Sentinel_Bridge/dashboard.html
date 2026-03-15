@@ -785,15 +785,22 @@ async function uploadAndParse(input) {
         } else {
             const cat = data.category || 'Unknown';
             const conf = ((data.confidence || 0) * 100).toFixed(0);
-            const dest = data.routing?.destination || 'index';
+            const count = data.activities_extracted || 0;
+            const reminders = data.reminders_created || [];
             banner.style.background = 'rgba(34,197,94,0.08)';
             banner.style.border = '1px solid rgba(34,197,94,0.2)';
-            banner.innerHTML = `✅ <strong>${cat}</strong> (${conf}%) → ${dest}` +
-                (data.reminder_created ? ` | Reminder: ${data.reminder_created.activity.slice(0,60)}` : '');
-            showToast(`✅ ${cat} (${conf}%) → reminder created`);
+            if (count > 0) {
+                const preview = reminders.slice(0, 3).map(r => r.activity).join(' • ');
+                const more = count > 3 ? ` + ${count - 3} more` : '';
+                banner.innerHTML = `✅ <strong>${count} activities</strong> extracted (${cat} ${conf}%)<br><span style="font-size:11px;color:var(--text-secondary);">${preview}${more}</span>`;
+                showToast(`✅ ${count} activities → ${count} reminders created`);
+            } else {
+                banner.innerHTML = `✅ <strong>${cat}</strong> (${conf}%) — no activities found`;
+                showToast(`✅ ${cat} (${conf}%) — parsed, no activities`);
+            }
             await loadAll();
         }
-        setTimeout(() => { banner.style.display = 'none'; }, 8000);
+        setTimeout(() => { banner.style.display = 'none'; }, 10000);
     } catch(e) {
         banner.style.background = 'rgba(239,68,68,0.08)';
         banner.style.border = '1px solid rgba(239,68,68,0.2)';

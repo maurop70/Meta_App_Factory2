@@ -898,7 +898,10 @@ except ImportError:
 
 @app.post("/api/documents/upload")
 async def upload_document(file: UploadFile = File(...)):
-    """Parse an uploaded document and optionally create a reminder from it."""
+    """
+    Parse an uploaded document, extract all activities, and
+    create a separate reminder for each one.
+    """
     if not PARSER_AVAILABLE:
         raise HTTPException(status_code=503, detail="DocumentParserService not available")
 
@@ -910,38 +913,62 @@ async def upload_document(file: UploadFile = File(...)):
     with open(dest, "wb") as f:
         f.write(content)
 
+    # Step 1: Standard parse (category, summary, routing)
     result = _doc_parser.parse(str(dest), source_app="Sentinel_Bridge")
-    if result.get("status") == "parsed":
-        result = _doc_router.route(result)
-        _doc_parser.log_to_master_index(result)
+    if result.get("status") != "parsed":
+        return result
 
-        # Auto-create a reminder from parsed content
-        summary = result["extracted"].get("summary", result["file_name"])
-        entities = result["extracted"].get("entities", {})
-        action_items = entities.get("action_items", [])
-        dates = entities.get("dates", [])
+    result = _doc_router.route(result)
+    _doc_parser.log_to_master_index(result)
 
-        activity = f"📄 {result['category']}: {summary[:80]}"
-        if action_items:
-            activity += f" | Action: {action_items[0][:50]}"
+    # Step 2: Extract individual activities from document text
+    raw_text = result["extracted"].get("raw_text_preview", "")
+    # Re-read full text for activity extraction
+    try:
+        with open(dest, "r", encoding="utf-8", errors="replace") as f:
+            full_text = f.read()
+    except Exception:
+        full_text = raw_text
 
+    activities = _doc_parser.extract_activities(full_text, file_name=file.filename)
+
+    # Step 3: Create one reminder per activity
+    created_reminders = []
+    now = datetime.now(timezone.utc)
+
+    for act in activities:
         reminder = {
             "id": str(uuid.uuid4())[:8],
-            "activity": activity,
-            "category": result.get("category", "AI"),
+            "activity": act["activity"],
+            "description": act.get("description", ""),
+            "category": act.get("category", result.get("category", "AI")),
             "confidence": result.get("confidence", 0.0),
-            "time": dates[0] if dates else datetime.now(timezone.utc).isoformat(),
+            "time": act.get("due_date") or now.isoformat(),
             "source": "document_parser",
-            "priority": "high" if result["category"] in ("Legal", "Finance") else "normal",
+            "priority": act.get("priority", "normal"),
             "status": "pending",
-            "raw_text": summary,
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "raw_text": act.get("description", act["activity"]),
+            "created_at": now.isoformat(),
             "parse_id": result["parse_id"],
+            "source_file": file.filename,
         }
         reminders_store.append(reminder)
-        save_reminders(reminders_store)
+        created_reminders.append(reminder)
 
-        result["reminder_created"] = reminder
+        # Push notification for high-priority activities
+        if act.get("priority") == "high":
+            await dispatcher.send_reminder(
+                category=act.get("category", "AI"),
+                activity=act["activity"],
+                time_str=act.get("due_date", "No due date"),
+                priority="high",
+                reminder_id=reminder["id"],
+            )
+
+    save_reminders(reminders_store)
+
+    result["activities_extracted"] = len(created_reminders)
+    result["reminders_created"] = created_reminders
 
     return result
 
