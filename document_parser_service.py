@@ -319,6 +319,140 @@ Respond ONLY with valid JSON, no markdown fences."""
         }
 
     # ═══════════════════════════════════════════════════════
+    #  ACTIVITY EXTRACTION (Sentinel Bridge integration)
+    # ═══════════════════════════════════════════════════════
+
+    def extract_activities(self, raw_text: str, file_name: str = "") -> list[dict]:
+        """
+        Extract individual activities/tasks from document text.
+
+        Each activity is returned as:
+            {
+                "activity": "short action title",
+                "description": "detailed description",
+                "due_date": "ISO date or null",
+                "category": "one of CATEGORIES",
+                "priority": "high|normal|low"
+            }
+
+        Uses Gemini for intelligent extraction, falls back to
+        regex-based extraction if unavailable.
+        """
+        api_key = os.getenv("GEMINI_API_KEY", "")
+        if not api_key:
+            logger.warning("GEMINI_API_KEY not set — using fallback activity extraction")
+            return self._fallback_extract_activities(raw_text)
+
+        prompt = f"""You are analyzing a document to extract EVERY individual task, activity, 
+obligation, deadline, action item, or scheduled event mentioned.
+
+For EACH activity found, return a JSON object with:
+- "activity": short title (max 80 chars)
+- "description": 1-2 sentence detailed description of what needs to happen
+- "due_date": ISO date string (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS) if any date/deadline is mentioned, otherwise null
+- "category": one of {CATEGORIES} — classify what business domain this activity belongs to
+- "priority": "high" if it's urgent/legal/financial, "normal" otherwise, "low" if informational
+
+Return a JSON array of these objects. If no activities are found, return an empty array [].
+
+Document filename: {file_name}
+Current date for reference: {datetime.now().strftime('%Y-%m-%d')}
+
+Document text (first 4000 chars):
+{raw_text[:4000]}
+
+Respond ONLY with a valid JSON array, no markdown fences."""
+
+        try:
+            import requests
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+            payload = {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {"temperature": 0.2, "maxOutputTokens": 4096},
+            }
+            r = requests.post(url, json=payload, timeout=45)
+            if r.status_code != 200:
+                logger.warning(f"Gemini API error: {r.status_code}")
+                return self._fallback_extract_activities(raw_text)
+
+            response_text = r.json()["candidates"][0]["content"]["parts"][0]["text"]
+            response_text = response_text.strip()
+            if response_text.startswith("```"):
+                response_text = response_text.split("\n", 1)[1].rsplit("```", 1)[0]
+
+            activities = json.loads(response_text)
+            if not isinstance(activities, list):
+                activities = [activities]
+
+            # Validate and sanitize each activity
+            validated = []
+            for act in activities:
+                validated.append({
+                    "activity": str(act.get("activity", "Untitled"))[:120],
+                    "description": str(act.get("description", ""))[:300],
+                    "due_date": act.get("due_date"),
+                    "category": act.get("category", "Other") if act.get("category") in CATEGORIES else "Other",
+                    "priority": act.get("priority", "normal") if act.get("priority") in ("high", "normal", "low") else "normal",
+                })
+
+            logger.info(f"Extracted {len(validated)} activities from {file_name}")
+            return validated
+
+        except Exception as e:
+            logger.warning(f"AI activity extraction failed ({e}) — using fallback")
+            return self._fallback_extract_activities(raw_text)
+
+    def _fallback_extract_activities(self, text: str) -> list[dict]:
+        """Regex-based fallback for activity extraction when Gemini is unavailable."""
+        import re
+        activities = []
+
+        # Look for bullet points, numbered lists, action items
+        patterns = [
+            r'(?:^|\n)\s*[\-\*•]\s+(.+)',           # bullet points
+            r'(?:^|\n)\s*\d+[\.\)]\s+(.+)',           # numbered lists
+            r'(?:action item|TODO|TASK|deadline)[:\s]+(.+)',  # explicit markers
+            r'(?:must|shall|will|should)\s+(.{10,80})',       # obligation verbs
+        ]
+
+        seen = set()
+        for pat in patterns:
+            for match in re.finditer(pat, text, re.IGNORECASE):
+                item = match.group(1).strip()[:120]
+                if item and item.lower() not in seen and len(item) > 5:
+                    seen.add(item.lower())
+
+                    # Try to extract a date nearby
+                    date_match = re.search(
+                        r'(\d{4}-\d{2}-\d{2}|\d{1,2}/\d{1,2}/\d{2,4})',
+                        text[max(0, match.start()-50):match.end()+100]
+                    )
+                    due = None
+                    if date_match:
+                        try:
+                            raw_date = date_match.group(1)
+                            if '/' in raw_date:
+                                parts = raw_date.split('/')
+                                if len(parts[2]) == 2:
+                                    parts[2] = '20' + parts[2]
+                                due = f"{parts[2]}-{parts[0].zfill(2)}-{parts[1].zfill(2)}"
+                            else:
+                                due = raw_date
+                        except Exception:
+                            pass
+
+                    cat = self._keyword_categorize(item).get("category", "Other")
+                    activities.append({
+                        "activity": item,
+                        "description": item,
+                        "due_date": due,
+                        "category": cat,
+                        "priority": "normal",
+                    })
+
+        return activities[:20]  # Cap at 20 activities
+
+    # ═══════════════════════════════════════════════════════
     #  UTILITIES
     # ═══════════════════════════════════════════════════════
 
