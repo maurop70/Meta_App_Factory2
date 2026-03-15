@@ -12,7 +12,7 @@ import subprocess
 
 from auto_heal import auto_heal, diagnose
 
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse, FileResponse
 from pydantic import BaseModel
@@ -394,12 +394,48 @@ def get_chat_history(limit: int = 20):
         return {"messages": [], "source": "error", "error": str(e)}
 
 
+# ── Document Parser Upload ────────────────────────────────────
+try:
+    from document_parser_service import DocumentParserService
+    from document_router import DocumentRouter
+    _doc_parser = DocumentParserService()
+    _doc_router = DocumentRouter()
+    PARSER_AVAILABLE = True
+    logger.info("DocumentParserService loaded.")
+except ImportError:
+    PARSER_AVAILABLE = False
+    logger.warning("DocumentParserService not available.")
+
+
+@app.post("/api/documents/upload")
+async def upload_document(file: UploadFile = File(...)):
+    """Parse an uploaded document via DocumentParserService and route it."""
+    if not PARSER_AVAILABLE:
+        return JSONResponse({"error": "DocumentParserService not available."}, status_code=503)
+
+    upload_dir = os.path.join(SCRIPT_DIR, "uploads")
+    os.makedirs(upload_dir, exist_ok=True)
+    dest = os.path.join(upload_dir, file.filename)
+
+    content = await file.read()
+    with open(dest, "wb") as f:
+        f.write(content)
+
+    result = _doc_parser.parse(dest, source_app="Meta_App_Factory")
+    if result.get("status") == "parsed":
+        result = _doc_router.route(result)
+        _doc_parser.log_to_master_index(result)
+
+    return result
+
+
 @app.get("/api/health")
 def health_check():
     return {
         "status": "healthy",
         "streaming": STREAMING_AVAILABLE,
         "memory": STREAMING_AVAILABLE and MEMORY_AVAILABLE,
+        "parser": PARSER_AVAILABLE if 'PARSER_AVAILABLE' in dir() else False,
     }
 
 

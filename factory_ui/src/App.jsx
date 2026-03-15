@@ -449,18 +449,35 @@ function BuilderChat({ registry, onAtomizerUpdate, externalCommand, onBuildCompl
     }
   };
 
-  const handleFileUpload = (e) => {
+  const [parseResult, setParseResult] = useState(null);
+
+  const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const content = ev.target.result;
-      const truncated = content.length > 3000 ? content.slice(0, 3000) + '\n...(truncated)' : content;
-      setInput(prev => prev + `\n\n--- Uploaded: ${file.name} ---\n${truncated}`);
-      inputRef.current?.focus();
-    };
-    reader.readAsText(file);
     e.target.value = '';
+
+    // POST to DocumentParserService
+    const fd = new FormData();
+    fd.append('file', file);
+    setParseResult({ loading: true, file: file.name });
+
+    try {
+      const res = await fetch(`${API}/api/documents/upload`, { method: 'POST', body: fd });
+      const data = await res.json();
+      setParseResult(data);
+
+      // Also inject summary into chat input for context
+      const summary = data.extracted?.summary || data.category || 'Parsed';
+      const routed = data.routing?.destination || 'index only';
+      setInput(prev => prev + `\n\n--- 📄 Parsed: ${file.name} ---\nCategory: ${data.category} (${(data.confidence * 100).toFixed(0)}%)\nRouted to: ${routed}\nSummary: ${summary}`);
+      inputRef.current?.focus();
+
+      // Auto-dismiss after 8s
+      setTimeout(() => setParseResult(null), 8000);
+    } catch (err) {
+      setParseResult({ error: err.message });
+      setTimeout(() => setParseResult(null), 5000);
+    }
   };
 
   return (
@@ -486,13 +503,30 @@ function BuilderChat({ registry, onAtomizerUpdate, externalCommand, onBuildCompl
           >
             {building ? '⚙️ Building...' : '🚀 Deploy'}
           </button>
-          <button className="action-btn upload" onClick={() => fileRef.current?.click()} title="Upload a file">
+          <button className="action-btn upload" onClick={() => fileRef.current?.click()} title="Upload & Parse Document">
             📎 Upload
           </button>
-          <input ref={fileRef} type="file" style={{ display: 'none' }} onChange={handleFileUpload} />
+          <input ref={fileRef} type="file" accept=".pdf,.docx,.txt,.csv,.md" style={{ display: 'none' }} onChange={handleFileUpload} />
           <button className="action-btn clear" onClick={clearChat}>Clear</button>
         </div>
       </div>
+
+      {parseResult && (
+        <div style={{ padding: '0.6rem 1rem', fontSize: '0.8rem', borderBottom: '1px solid rgba(99,102,241,0.15)', background: parseResult.loading ? 'rgba(99,102,241,0.08)' : parseResult.error ? 'rgba(239,68,68,0.08)' : 'rgba(34,197,94,0.08)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          {parseResult.loading ? (
+            <span>⏳ Parsing <strong>{parseResult.file}</strong>...</span>
+          ) : parseResult.error ? (
+            <span>❌ {parseResult.error}</span>
+          ) : (
+            <>
+              <span>✅ <strong>{parseResult.category}</strong> ({(parseResult.confidence * 100).toFixed(0)}%)</span>
+              <span style={{ color: '#64748b' }}>→ {parseResult.routing?.destination || 'index'}</span>
+              <span style={{ flex: 1 }} />
+              <button onClick={() => setParseResult(null)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.9rem' }}>✕</button>
+            </>
+          )}
+        </div>
+      )}
 
       <div className="chat-messages">
         {messages.length === 0 && (
