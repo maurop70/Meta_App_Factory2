@@ -28,6 +28,33 @@ WEBHOOK_TYPES = {
 
 REPORT = {"scanned": 0, "with_webhooks": 0, "updated": 0, "skipped": 0, "errors": 0, "details": []}
 
+# ── Checksum Handshake (Resilience Patch v3.0) ──────────
+import hashlib
+
+def compute_payload_hash(payload: dict) -> str:
+    """Compute SHA-256 hash of a normalized JSON payload."""
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def verify_payload_hash(payload: dict, expected_hash: str) -> dict:
+    """
+    Verify payload integrity via SHA-256 checksum handshake.
+    Used by Specialist - CFO (V2) workflow to guarantee data integrity.
+
+    Returns:
+        {"valid": True/False, "computed": str, "expected": str, "action": str}
+    """
+    computed = compute_payload_hash(payload)
+    valid = computed == expected_hash
+    return {
+        "valid": valid,
+        "computed": computed,
+        "expected": expected_hash,
+        "action": "accepted" if valid else "autonomous_retry",
+    }
+
+
 
 def fetch_all_workflows():
     """Fetch all workflows from n8n API."""

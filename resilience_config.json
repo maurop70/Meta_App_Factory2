@@ -25,5 +25,18 @@
     "auto_engage": true,
     "notification_topic": "antigravity-security",
     "log_to_error_aggregator": true
+  },
+  "n8n_backoff": {
+    "_comment": "Resilience Patch v3.0 — aggressive throttle to prevent IP rate-limiting",
+    "base_seconds": 30,
+    "max_seconds": 300,
+    "max_retries": 5,
+    "doubling_sequence": "30s → 60s → 120s → 240s → 300s"
+  },
+  "quarantine": {
+    "enabled": true,
+    "file": "data/quarantine.json",
+    "max_items": 200,
+    "repair_agent": "aegis_agent"
   }
 }

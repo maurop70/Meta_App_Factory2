@@ -209,6 +209,71 @@ def healed_post(url: str, payload: dict, project: str = "child_app",
 
 
 # ═══════════════════════════════════════════════════════════
+#  N8N-SPECIFIC THROTTLED POST (Resilience Patch v3.0)
+#  Backoff: 30s → 60s → 120s → 240s (cap 300s)
+# ═══════════════════════════════════════════════════════════
+
+def _load_n8n_backoff_config() -> dict:
+    """Load n8n-specific backoff config from resilience_config.json."""
+    try:
+        cfg_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "resilience_config.json")
+        with open(cfg_path) as f:
+            cfg = json.load(f)
+        return cfg.get("n8n_backoff", {})
+    except Exception:
+        return {}
+
+
+def healed_post_n8n(url: str, payload: dict, project: str = "n8n_bridge",
+                    timeout: int = 60) -> str:
+    """
+    N8N-specific auto-healing POST with aggressive exponential backoff.
+
+    Designed to prevent IP rate-limiting on n8n cloud:
+      - Base: 30s (vs default 2s)
+      - Doubling: 30s → 60s → 120s → 240s
+      - Max: 300s (5 minutes)
+      - Retries: 5 (vs default 3)
+
+    Reads backoff profile from resilience_config.json for hot-configurability.
+    """
+    from factory import safe_post
+
+    n8n_cfg = _load_n8n_backoff_config()
+    base = n8n_cfg.get("base_seconds", 30)
+    cap = n8n_cfg.get("max_seconds", 300)
+    retries = n8n_cfg.get("max_retries", 5)
+
+    # Attempt 1
+    status = safe_post(url, payload, project=project, timeout=timeout)
+    if status == "sent":
+        return "sent"
+    if status == "buffered":
+        _log_heal_event(project, url, "buffered_on_first", None)
+        return "buffered"
+
+    # Retry with n8n-throttled backoff: 30, 60, 120, 240, 300
+    for attempt in range(1, retries + 1):
+        wait = min(base * (2 ** (attempt - 1)), cap)
+        logger.info(f"[Auto-Heal/n8n] {project}: retry {attempt}/{retries} in {wait}s")
+        time.sleep(wait)
+
+        status = safe_post(url, payload, project=project, timeout=timeout)
+        if status == "sent":
+            _log_heal_event(project, url, "healed_n8n", attempt)
+            return "healed"
+        if status == "buffered":
+            _log_heal_event(project, url, "buffered_n8n_retry", attempt)
+            return "buffered"
+
+    # All retries exhausted
+    diag = diagnose()
+    _log_heal_event(project, url, "escalated_n8n", retries, diag)
+    logger.error(f"[Auto-Heal/n8n] {project}: ESCALATED after {retries} n8n retries. Verdict: {diag['verdict']}")
+    return "escalated"
+
+
+# ═══════════════════════════════════════════════════════════
 #  AUTO HEAL DECORATOR — wrap any function with self-repair
 # ═══════════════════════════════════════════════════════════
 
