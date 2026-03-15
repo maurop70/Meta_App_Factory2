@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -665,6 +665,12 @@
             <td><code>factory.py</code> + <code>local_state_manager.py</code></td>
             <td>All payloads are UUID-stamped and logged to <code>local_pending_sync.json</code> before POST. If cloud is down, data queues locally.</td>
             <td>Watchdog returns RED or timeout</td>
+          </tr>
+          <tr>
+            <td><strong>Layer 4</strong><br>Aegis Guardian</td>
+            <td><code>agents/aegis_agent.py</code></td>
+            <td>Collision resolution for overlapping activities. Quarantine lane for malformed n8n data → auto-repair (date normalization, field completion).</td>
+            <td>Overlapping entries or malformed payload</td>
           </tr>
         </tbody>
       </table>

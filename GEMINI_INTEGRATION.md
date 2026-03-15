@@ -179,3 +179,42 @@ finally:
 - [ ] `.gitignore` includes all secret files
 - [ ] Debug logging for key length and model attempts
 - [ ] `resp.close()` in finally block
+- [ ] Pre-Action Audit passed before code generation
+
+---
+
+## 7. Pre-Action Audit Protocol (Binding Protocol v3.0)
+
+> **MANDATORY** — Every code generation or file modification MUST pass this audit.
+
+### Before Writing Any New File
+
+```python
+# Pre-Action Audit — verify target does not already exist
+import os
+target = "path/to/new_file.py"
+if os.path.exists(target):
+    # STOP — read existing content first
+    with open(target) as f:
+        existing = f.read()
+    # Generate a checksum for rollback capability
+    import hashlib
+    checksum = hashlib.sha256(existing.encode()).hexdigest()[:16]
+    print(f"⚠️ Pre-existing file detected: {target} (SHA: {checksum})")
+    # Decision: merge, skip, or overwrite with backup
+```
+
+### Before Modifying Any Existing File
+
+1. **Read** the entire file content
+2. **Checksum** the current content (`SHA-256[:16]`)
+3. **Validate** that your proposed changes don't conflict with recent modifications
+4. **Backup** — if overwriting, store the checksum in `auto_heal_log.json` for rollback
+
+### Audit Checklist (REQUIRED)
+
+- [ ] Target file existence verified
+- [ ] Existing content read and checksummed
+- [ ] No field name conflicts with existing code
+- [ ] Backup checksum logged for modified files
+- [ ] New imports don't shadow existing ones

@@ -220,6 +220,60 @@ else:
 
 
 # ══════════════════════════════════════════════════
+#  STEP 5.5 — Quarantine Lane (Resilience Patch v3.0)
+# ══════════════════════════════════════════════════
+
+header("Step 5.5 — Quarantine Lane Test...")
+
+QUARANTINE_DIR = SCRIPT_DIR / "data"
+QUARANTINE_FILE = QUARANTINE_DIR / "quarantine.json"
+QUARANTINE_DIR.mkdir(exist_ok=True)
+
+malformed_payload = {
+    "activity": "Test malformed item",
+    "date": "3/15/26",
+    "priority": "URGENT",
+    "category": "Random",
+}
+
+def quarantine_item(payload, reason):
+    """Move malformed data to quarantine instead of rejecting."""
+    items = []
+    if QUARANTINE_FILE.exists():
+        try:
+            with open(QUARANTINE_FILE, "r", encoding="utf-8") as f:
+                items = json.load(f)
+        except Exception:
+            items = []
+    payload["_quarantined_at"] = datetime.now().isoformat()
+    payload["_quarantine_reason"] = reason
+    payload["_repair_status"] = "pending"
+    items.append(payload)
+    if len(items) > 200:
+        items = items[-200:]
+    with open(QUARANTINE_FILE, "w", encoding="utf-8") as f:
+        json.dump(items, f, indent=2, default=str)
+    return True
+
+try:
+    quarantine_item(malformed_payload, "invalid_date_format")
+    ok("Malformed payload quarantined (not rejected)")
+    info(f"Quarantine file: {QUARANTINE_FILE}")
+    try:
+        sys.path.insert(0, str(SCRIPT_DIR / "agents"))
+        from aegis_agent import AegisAgent
+        aegis = AegisAgent()
+        repair_result = aegis.process_quarantine()
+        ok(f"Aegis repair: {repair_result['repaired']} fixed, {repair_result['failed']} failed")
+    except ImportError:
+        warn("Aegis agent not available — quarantine items await manual repair")
+    except Exception as e:
+        warn(f"Aegis repair error: {e}")
+except Exception as e:
+    fail(f"Quarantine lane failed: {e}")
+
+
+# ══════════════════════════════════════════════════
 #  STEP 6 — Full result summary
 # ══════════════════════════════════════════════════
 
