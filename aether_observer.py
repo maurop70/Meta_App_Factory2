@@ -276,6 +276,79 @@ def observe(execution_window: int = 50) -> dict:
         return {"status": "paused_monitoring", "rate": rate}
 
 
+# ── Document File Watcher ─────────────────────────────────
+# Monitors project folders for new documents and auto-routes
+# them through DocumentParserService.
+
+WATCH_EXTENSIONS = {".pdf", ".docx", ".doc", ".txt", ".csv"}
+WATCH_POLL_INTERVAL = 30  # seconds
+
+# Directories to watch (all first-level subdirectories of the Factory)
+_WATCH_ROOT = SCRIPT_DIR
+
+
+def _start_file_watcher():
+    """Start a background thread that watches for new documents."""
+    import threading
+
+    def _watcher_loop():
+        try:
+            from document_parser_service import DocumentParserService
+            from document_router import DocumentRouter
+        except ImportError:
+            print(f"[{timestamp()}] ⚠️ FileWatcher: DocumentParserService not found — watcher disabled")
+            return
+
+        parser = DocumentParserService()
+        router = DocumentRouter()
+        seen_files = set()
+
+        print(f"[{timestamp()}] 📂 FileWatcher: Active — monitoring {_WATCH_ROOT}")
+
+        while True:
+            try:
+                # Walk all project subdirectories
+                for dirpath, dirnames, filenames in os.walk(_WATCH_ROOT):
+                    # Skip hidden dirs, node_modules, __pycache__, .git
+                    dirnames[:] = [d for d in dirnames if not d.startswith('.')
+                                   and d not in ('node_modules', '__pycache__', 'dist', '.git')]
+                    for fname in filenames:
+                        ext = os.path.splitext(fname)[1].lower()
+                        if ext not in WATCH_EXTENSIONS:
+                            continue
+                        full = os.path.join(dirpath, fname)
+                        if full in seen_files:
+                            continue
+                        seen_files.add(full)
+
+                        # Determine source app from directory
+                        rel = os.path.relpath(dirpath, _WATCH_ROOT)
+                        source_app = rel.split(os.sep)[0] if rel != '.' else 'Meta_App_Factory'
+
+                        print(f"[{timestamp()}] 📄 FileWatcher: New document detected → {fname} ({source_app})")
+                        log_event({"event": "file_detected", "file": fname, "source_app": source_app})
+
+                        result = parser.parse(full, source_app=source_app)
+                        if result.get("status") == "parsed":
+                            result = router.route(result)
+                            parser.log_to_master_index(result)
+                            print(f"[{timestamp()}]    ✅ Parsed → {result['category']} → {result['routing'].get('destination', 'index')}")
+                        elif result.get("status") == "skipped":
+                            pass  # Already parsed (dedup)
+                        else:
+                            print(f"[{timestamp()}]    ⚠️ Parse issue: {result.get('error', 'unknown')}")
+
+            except Exception as e:
+                print(f"[{timestamp()}] [FileWatcher ERROR] {e}")
+
+            time.sleep(WATCH_POLL_INTERVAL)
+
+    t = threading.Thread(target=_watcher_loop, daemon=True, name="DocumentFileWatcher")
+    t.start()
+    print(f"[{timestamp()}] 📂 FileWatcher thread started (poll every {WATCH_POLL_INTERVAL}s)")
+    return t
+
+
 # ── Entry Point ─────────────────────────────────────────
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Aether Live Verification Observer")
@@ -284,16 +357,24 @@ if __name__ == "__main__":
     parser.add_argument("--once", action="store_true", help="Run a single observation and exit")
     parser.add_argument("--interval", type=int, default=POLL_INTERVAL,
                         help=f"Poll interval in seconds (default: {POLL_INTERVAL}s)")
+    parser.add_argument("--watch", action="store_true",
+                        help="Enable document file watcher for all project folders")
     args = parser.parse_args()
 
     print(f"\n{'=' * 60}")
-    print(f"  🔭 AETHER LIVE VERIFICATION OBSERVER v2.1")
+    print(f"  🔭 AETHER LIVE VERIFICATION OBSERVER v2.2")
     print(f"  Target: {TARGET_WORKFLOW_NAME}")
     print(f"  Window: {args.executions} executions")
     print(f"  Threshold: {FAILURE_RATE_THRESHOLD}% failure rate")
     print(f"  Self-Heal: Auto-adjust cooldown → Soft Pause")
+    print(f"  File Watcher: {'ENABLED' if args.watch else 'DISABLED'}")
     print(f"  Log: {OBSERVER_LOG}")
     print(f"{'=' * 60}")
+
+    # ── Start Document File Watcher (if enabled) ──────────
+    _file_watcher_thread = None
+    if args.watch:
+        _file_watcher_thread = _start_file_watcher()
 
     if args.once:
         result = observe(args.executions)
@@ -313,6 +394,8 @@ if __name__ == "__main__":
 
         except KeyboardInterrupt:
             print(f"\n[{timestamp()}] Aether Observer stopped.")
+            if _file_watcher_thread:
+                _file_watcher_thread.join(timeout=2)
             sys.exit(0)
         except Exception as e:
             print(f"[{timestamp()}] [ERROR] {e}")
@@ -322,3 +405,4 @@ if __name__ == "__main__":
 
 # V3 MIGRATION COMPLETE
 # V3 AUTO-HEAL ACTIVE
+# V2.2: + DocumentFileWatcher integration
