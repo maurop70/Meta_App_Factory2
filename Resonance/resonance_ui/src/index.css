@@ -3075,3 +3075,250 @@ body {
 .nudge-dismiss:hover {
   color: var(--error-color);
 }
+
+/* ══════════════════════════════════════════════════════
+   DR. ARIS — Clinical Psychologist Agent Styles
+   ══════════════════════════════════════════════════════ */
+
+.dr-aris-tab {
+  animation: fade-in 0.3s ease-out;
+}
+
+.aris-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.aris-header h3 {
+  color: #00BCD4;
+  margin: 0 0 4px;
+}
+
+.aris-run-button {
+  background: linear-gradient(135deg, #00BCD4, #00897B) !important;
+  border: none !important;
+  padding: 10px 20px !important;
+  font-weight: 600 !important;
+  white-space: nowrap;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 2px 10px rgba(0, 188, 212, 0.2);
+}
+
+.aris-run-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0, 188, 212, 0.35) !important;
+}
+
+.aris-run-button:disabled {
+  opacity: 0.6;
+}
+
+.aris-empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  background: var(--bg-secondary);
+  border: 1px dashed rgba(0, 188, 212, 0.25);
+  border-radius: 12px;
+}
+
+/* Profile Card */
+.aris-profile-card {
+  background: var(--bg-secondary);
+  border: 1px solid rgba(0, 188, 212, 0.15);
+  border-radius: 12px;
+  padding: 18px;
+  margin-bottom: 16px;
+}
+
+.aris-profile-card h4 {
+  color: #00BCD4;
+  margin: 0 0 4px;
+}
+
+.aris-profile-grid {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.aris-profile-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 14px;
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  border-left: 3px solid rgba(0, 188, 212, 0.4);
+}
+
+.aris-profile-list {
+  border-left-color: rgba(0, 188, 212, 0.25);
+}
+
+.aris-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+
+.aris-value {
+  font-size: 0.9rem;
+  color: var(--text-normal);
+  line-height: 1.4;
+}
+
+/* Alerts Panel */
+.aris-alerts-panel {
+  margin-bottom: 16px;
+}
+
+.aris-alerts-panel h4 {
+  color: #F44336;
+  margin: 0 0 10px;
+}
+
+.aris-alert-card {
+  background: var(--bg-secondary);
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 8px;
+  border-left: 4px solid;
+}
+
+.aris-alert-critical {
+  border-left-color: #F44336;
+  background: rgba(244, 67, 54, 0.06);
+}
+
+.aris-alert-warning {
+  border-left-color: #FF9800;
+  background: rgba(255, 152, 0, 0.06);
+}
+
+.aris-alert-info {
+  border-left-color: #2196F3;
+  background: rgba(33, 150, 243, 0.06);
+}
+
+.aris-alert-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.aris-severity-badge {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  letter-spacing: 0.5px;
+}
+
+.aris-alert-evidence {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  font-style: italic;
+  margin: 4px 0;
+  line-height: 1.5;
+}
+
+/* Proposals Panel */
+.aris-proposals-panel {
+  margin-bottom: 16px;
+}
+
+.aris-proposals-panel h4 {
+  color: #00BCD4;
+  margin: 0 0 6px;
+}
+
+.aris-proposal-card {
+  background: var(--bg-secondary);
+  border: 1px solid rgba(0, 188, 212, 0.12);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 10px;
+  transition: border-color 0.2s ease;
+}
+
+.aris-proposal-card:hover {
+  border-color: rgba(0, 188, 212, 0.3);
+}
+
+.aris-proposal-approved {
+  border-left: 4px solid #4CAF50;
+  background: rgba(76, 175, 80, 0.04);
+}
+
+.aris-proposal-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.aris-proposal-description {
+  font-size: 0.85rem;
+  color: var(--text-normal);
+  line-height: 1.5;
+  margin: 0 0 10px;
+}
+
+.aris-proposal-directive {
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  border-left: 3px solid rgba(0, 188, 212, 0.35);
+}
+
+.aris-directive-text {
+  font-size: 0.85rem;
+  font-style: italic;
+  color: #B0BEC5;
+  margin: 4px 0 0;
+  line-height: 1.4;
+}
+
+.aris-proposal-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.proposal-approve-btn {
+  background: rgba(76, 175, 80, 0.15) !important;
+  border: 1px solid rgba(76, 175, 80, 0.3) !important;
+  color: #4CAF50 !important;
+  font-weight: 600 !important;
+  padding: 8px 16px !important;
+}
+
+.proposal-approve-btn:hover {
+  background: rgba(76, 175, 80, 0.25) !important;
+  border-color: rgba(76, 175, 80, 0.5) !important;
+}
+
+.proposal-reject-btn {
+  background: rgba(244, 67, 54, 0.1) !important;
+  border: 1px solid rgba(244, 67, 54, 0.2) !important;
+  color: #E57373 !important;
+  font-weight: 500 !important;
+  padding: 8px 16px !important;
+}
+
+.proposal-reject-btn:hover {
+  background: rgba(244, 67, 54, 0.2) !important;
+  border-color: rgba(244, 67, 54, 0.4) !important;
+}
+
+/* History */
+.aris-history {
+  margin-top: 8px;
+}

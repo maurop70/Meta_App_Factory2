@@ -397,6 +397,12 @@ SKILL_REGISTRY = {
         "endpoint": "/agent/cx-strategist",
         "use_cases": ["UX strategy", "customer journey", "feedback loops"],
     },
+    "dr-aris": {
+        "name": "Dr. Aris — Chief Behavioral Strategist",
+        "description": "Dual-role psychologist: B2B boardroom consulting (psychographics, market archetypes, nudge strategy) and B2C clinical sentinel (user safety, parental intervention)",
+        "endpoint": "/agent/dr-aris",
+        "use_cases": ["psychographic blueprints", "market segment analysis", "behavioral nudge strategy", "clinical user safety"],
+    },
 }
 
 

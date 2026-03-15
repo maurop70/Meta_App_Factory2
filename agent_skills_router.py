@@ -31,13 +31,14 @@ class AgentRequest(BaseModel):
     context: dict = {}
 
 
-# Registry for the 18 agents (V7: + news-bureau-chief)
+# Registry for the 19 agents (V8: + dr-aris)
 AGENTS = [
     "ceo", "cfo", "cto", "cmo", "deep-crawler", "the-critic",
     "the-librarian", "compliance-officer", "data-architect",
     "researcher", "graphic-designer", "presentation-expert",
     "cx-strategist", "aether-architect", "delegate-orchestrator",
-    "unified-eq-specialist", "geotalent-scout", "news-bureau-chief"
+    "unified-eq-specialist", "geotalent-scout", "news-bureau-chief",
+    "dr-aris"
 ]
 
 # System Core Skills — foundational agents that power the factory

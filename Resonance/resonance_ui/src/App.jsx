@@ -332,6 +332,14 @@ function ParentPanel({ onLockAndReturn, parentConfig, saveParentConfig, parentPr
   const [showDigest, setShowDigest] = useState(false);
   const [intelligenceEnabled, setIntelligenceEnabled] = useState(reportIntel.enabled !== false);
 
+  // Dr. Aris (Psychologist Agent) state
+  const [arisReport, setArisReport] = useState(null);
+  const [arisLoading, setArisLoading] = useState(false);
+  const [arisActionFeedback, setArisActionFeedback] = useState('');
+  const [showArisHistory, setShowArisHistory] = useState(false);
+
+
+
   useEffect(() => {
     setInstructionsInput(parentConfig.instructions || '');
   }, [parentConfig.instructions]);
@@ -350,6 +358,7 @@ function ParentPanel({ onLockAndReturn, parentConfig, saveParentConfig, parentPr
     if (activeTab === 'council') fetchCouncilPreview();
     if (activeTab === 'settings') { fetchAllUploads(); fetchDigest(); }
     if (activeTab === 'reports') fetchDigest();
+    if (activeTab === 'dr_aris') fetchArisReport();
   }, [activeTab, fetchParentProgress]);
 
   const handleSave = async (field, value) => {
@@ -564,6 +573,56 @@ function ParentPanel({ onLockAndReturn, parentConfig, saveParentConfig, parentPr
     }
   };
 
+  // ── Dr. Aris Handlers ─────────────────────────────────
+  const fetchArisReport = async () => {
+    try {
+      const res = await fetch(`${API}/api/parent/dr-aris/report`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setArisReport(data);
+    } catch (e) {
+      console.error('Failed to fetch Dr. Aris report:', e);
+    }
+  };
+
+  const runArisAnalysis = async () => {
+    setArisLoading(true);
+    setArisActionFeedback('');
+    try {
+      const res = await fetch(`${API}/api/parent/dr-aris/analysis`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setArisReport(data);
+      setArisActionFeedback('✅ Analysis complete.');
+    } catch (e) {
+      setArisActionFeedback(`❌ Analysis failed: ${e.message}`);
+    } finally {
+      setArisLoading(false);
+      setTimeout(() => setArisActionFeedback(''), 5000);
+    }
+  };
+
+  const handleArisProposal = async (proposalId, action) => {
+    setArisActionFeedback('');
+    try {
+      const res = await fetch(`${API}/api/parent/dr-aris/proposals/${proposalId}/${action}`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+      setArisActionFeedback(action === 'approve'
+        ? '✅ Proposal approved — Alex\'s behavior will be updated.'
+        : '❌ Proposal rejected — preference logged.');
+      fetchArisReport();
+    } catch (e) {
+      setArisActionFeedback(`❌ ${e.message}`);
+    } finally {
+      setTimeout(() => setArisActionFeedback(''), 5000);
+    }
+  };
+
+
+
   const handleResetProfile = async () => {
     setResetFeedback('');
     try {
@@ -643,6 +702,7 @@ function ParentPanel({ onLockAndReturn, parentConfig, saveParentConfig, parentPr
         <button className={`parent-tab-button ${activeTab === 'vocabulary' ? 'active' : ''}`} onClick={() => setActiveTab('vocabulary')}>Vocabulary</button>
         <button className={`parent-tab-button ${activeTab === 'progress' ? 'active' : ''}`} onClick={() => setActiveTab('progress')}>Progress</button>
         <button className={`parent-tab-button ${activeTab === 'reports' ? 'active' : ''}`} onClick={() => setActiveTab('reports')}>🏥 Reports</button>
+        <button className={`parent-tab-button ${activeTab === 'dr_aris' ? 'active' : ''}`} onClick={() => setActiveTab('dr_aris')}>🩻 Dr. Aris</button>
         <button className={`parent-tab-button ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>⚙️ Settings</button>
       </nav>
 
@@ -1034,6 +1094,169 @@ function ParentPanel({ onLockAndReturn, parentConfig, saveParentConfig, parentPr
                   )}
                 </div>
               </div>
+            )}
+          </div>
+        )}
+
+        {/* ── DR. ARIS (PSYCHOLOGIST AGENT) ───────────── */}
+        {activeTab === 'dr_aris' && (
+          <div className="dr-aris-tab">
+            <div className="aris-header">
+              <div>
+                <h3>🩻 Dr. Aris — Clinical Observer</h3>
+                <p className="text-muted">AI-powered behavioral analysis and intervention recommendations. Dr. Aris runs silently in the background — Alex is never aware of these reports.</p>
+              </div>
+              <button className="save-button aris-run-button" onClick={runArisAnalysis} disabled={arisLoading}>
+                {arisLoading ? '⏳ Analyzing...' : '🔬 Run Analysis'}
+              </button>
+            </div>
+
+            {arisActionFeedback && <div className="save-feedback" style={{ marginBottom: '12px' }}>{arisActionFeedback}</div>}
+
+            {!arisReport || !arisReport.last_analysis ? (
+              <div className="aris-empty-state">
+                <p>No analysis has been run yet. Click <strong>Run Analysis</strong> to generate Dr. Aris's first assessment.</p>
+                <p className="text-muted">Dr. Aris will analyze the student profile, conversation hints, and session history to provide clinical insights.</p>
+              </div>
+            ) : (
+              <>
+                {/* Psychological Profile Card */}
+                <div className="aris-profile-card">
+                  <h4>🧠 Psychological Profile</h4>
+                  <p className="text-muted" style={{ fontSize: '0.75rem' }}>Last analysis: {new Date(arisReport.last_analysis).toLocaleString()}</p>
+                  {arisReport.psychological_profile && Object.keys(arisReport.psychological_profile).length > 0 ? (
+                    <div className="aris-profile-grid">
+                      {arisReport.psychological_profile.attachment_style && (
+                        <div className="aris-profile-item">
+                          <span className="aris-label">Attachment Style</span>
+                          <span className="aris-value">{arisReport.psychological_profile.attachment_style}</span>
+                        </div>
+                      )}
+                      {arisReport.psychological_profile.emotional_baseline && (
+                        <div className="aris-profile-item">
+                          <span className="aris-label">Emotional Baseline</span>
+                          <span className="aris-value">{arisReport.psychological_profile.emotional_baseline}</span>
+                        </div>
+                      )}
+                      {arisReport.psychological_profile.social_readiness && (
+                        <div className="aris-profile-item">
+                          <span className="aris-label">Social Readiness</span>
+                          <span className="aris-value">{arisReport.psychological_profile.social_readiness}</span>
+                        </div>
+                      )}
+                      {arisReport.psychological_profile.anxiety_markers?.length > 0 && (
+                        <div className="aris-profile-item aris-profile-list">
+                          <span className="aris-label">Anxiety Markers</span>
+                          <div className="chip-grid">{arisReport.psychological_profile.anxiety_markers.map((m, i) => (
+                            <span key={i} className="chip chip-stress chip-active">{m}</span>
+                          ))}</div>
+                        </div>
+                      )}
+                      {arisReport.psychological_profile.cognitive_strengths?.length > 0 && (
+                        <div className="aris-profile-item aris-profile-list">
+                          <span className="aris-label">Cognitive Strengths</span>
+                          <div className="chip-grid">{arisReport.psychological_profile.cognitive_strengths.map((s, i) => (
+                            <span key={i} className="chip chip-learn chip-active">{s}</span>
+                          ))}</div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-muted">No profile data available. Run an analysis to generate.</p>
+                  )}
+                </div>
+
+                {/* Alerts Panel */}
+                {arisReport.alerts?.length > 0 && (
+                  <div className="aris-alerts-panel">
+                    <h4>🚨 Behavioral Alerts</h4>
+                    {arisReport.alerts.map((alert, i) => (
+                      <div key={i} className={`aris-alert-card aris-alert-${alert.severity}`}>
+                        <div className="aris-alert-header">
+                          <span className={`aris-severity-badge severity-${alert.severity === 'critical' ? 'high' : alert.severity === 'warning' ? 'medium' : 'low'}`}>
+                            {alert.severity.toUpperCase()}
+                          </span>
+                          <strong>{alert.pattern}</strong>
+                        </div>
+                        <p className="aris-alert-evidence">"{alert.evidence}"</p>
+                        <span className="text-muted" style={{ fontSize: '0.7rem' }}>{new Date(alert.detected_at).toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* System Update Proposals */}
+                <div className="aris-proposals-panel">
+                  <h4>📋 System Update Proposals</h4>
+                  <p className="text-muted">Dr. Aris recommends the following adjustments to Alex's behavior. Approve to apply, or reject to dismiss.</p>
+                  {(arisReport.proposals || []).filter(p => p.status === 'pending').length === 0 ? (
+                    <p className="text-muted" style={{ fontStyle: 'italic' }}>No pending proposals. Run a new analysis to generate recommendations.</p>
+                  ) : (
+                    (arisReport.proposals || []).filter(p => p.status === 'pending').map(proposal => (
+                      <div key={proposal.id} className="aris-proposal-card">
+                        <div className="aris-proposal-header">
+                          <span className={`aris-severity-badge severity-${proposal.severity === 'critical' ? 'high' : proposal.severity === 'warning' ? 'medium' : 'low'}`}>
+                            {proposal.severity?.toUpperCase()}
+                          </span>
+                          <strong>{proposal.title}</strong>
+                        </div>
+                        <p className="aris-proposal-description">{proposal.description}</p>
+                        <div className="aris-proposal-directive">
+                          <span className="aris-label">Proposed Directive for Alex:</span>
+                          <p className="aris-directive-text">"{proposal.proposed_directive}"</p>
+                        </div>
+                        <div className="aris-proposal-actions">
+                          <button className="save-button proposal-approve-btn" onClick={() => handleArisProposal(proposal.id, 'approve')}>✅ Approve</button>
+                          <button className="reset-button proposal-reject-btn" onClick={() => handleArisProposal(proposal.id, 'reject')}>❌ Reject</button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+
+                  {/* Approved proposals */}
+                  {(arisReport.proposals || []).filter(p => p.status === 'approved').length > 0 && (
+                    <div style={{ marginTop: '16px' }}>
+                      <h5 style={{ color: '#4CAF50' }}>✅ Active Directives (Approved)</h5>
+                      {(arisReport.proposals || []).filter(p => p.status === 'approved').map(proposal => (
+                        <div key={proposal.id} className="aris-proposal-card aris-proposal-approved">
+                          <strong>{proposal.title}</strong>
+                          <p className="aris-directive-text" style={{ margin: '4px 0' }}>"{proposal.proposed_directive}"</p>
+                          <span className="text-muted" style={{ fontSize: '0.7rem' }}>Approved {new Date(proposal.approved_at).toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Analysis History */}
+                <div className="aris-history">
+                  <button className="save-button" onClick={() => setShowArisHistory(!showArisHistory)} style={{ marginTop: '12px' }}>
+                    {showArisHistory ? 'Hide' : '📜 Show'} Analysis History
+                  </button>
+                  {showArisHistory && (arisReport.analysis_history || []).length > 0 && (
+                    <table className="progress-table" style={{ marginTop: '8px' }}>
+                      <thead>
+                        <tr>
+                          <th>Timestamp</th>
+                          <th>Profile Summary</th>
+                          <th>Proposals</th>
+                          <th>Alerts</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(arisReport.analysis_history || []).slice(-10).reverse().map((entry, i) => (
+                          <tr key={i}>
+                            <td>{new Date(entry.timestamp).toLocaleString()}</td>
+                            <td>{entry.profile_summary}</td>
+                            <td>{entry.proposals_generated}</td>
+                            <td>{entry.alerts_found}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </>
             )}
           </div>
         )}
