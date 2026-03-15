@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -994,7 +994,8 @@
 
       <ol class="step-list">
         <li><strong>Prepare Materials</strong> — Gather all documents (pitch decks, financials, research PDFs). Rename them with a clear convention: <code>PROJECT_type_version.ext</code></li>
-        <li><strong>Upload via Builder Chat</strong> — Open the Meta App Factory UI → Builder Chat → click <strong>📎 Upload</strong>. The file content is injected into the prompt context (max 3000 chars, truncated with notice).</li>
+        <li><strong>Upload via Builder Chat</strong> — Open the Meta App Factory UI → Builder Chat → click <strong>📎 Upload</strong>. The file is sent to the <code>DocumentParserService</code> for AI-powered text extraction (PDF, DOCX, TXT, CSV) and automatic categorization (Legal, Finance, Ops, Medical, Technical). A parse result toast appears showing category, confidence score, and routing destination. The summary is injected into the chat context for immediate analysis.</li>
+        <li><strong>Upload via Sentinel Bridge</strong> — Sentinel's dashboard (Actions → 📄 Upload &amp; Parse Document) extracts every individual task, obligation, and deadline from the document using Gemini AI, and creates a <em>separate reminder for each</em> — with its own description, due date, category, and priority. High-priority items trigger push notifications.</li>
         <li><strong>Trigger the Critic's Audit</strong> — Prompt: <em>"Analyze the uploaded document. Run a full CRITIC audit — stress-test the assumptions, identify gaps, and score confidence 1-10."</em> The system routes to the CRITIC agent via the Elite Council.</li>
         <li><strong>Review the Draft Summary</strong> — The Council returns a <code>draft_summary</code> with actionable insights. You can <strong>approve</strong> to proceed or <strong>pivot</strong> with new instructions.</li>
         <li><strong>Store to Vector Memory</strong> — Key findings are automatically stored via the <code>vector_memory</code> tool (ChromaDB). Future prompts can reference: <em>"Recall the CRITIC's analysis from last week."</em></li>
@@ -1130,7 +1131,7 @@
       <div class="callout">
         <div class="callout-title">🔗 Integrated System</div>
         The War Room uses the <strong>same n8n specialist webhooks</strong> as Builder Chat — the <code>AGENT_REGISTRY</code> in <code>n8n_bridge.py</code>. Each agent receives a role-scoped prompt (strategy for CEO, market analysis for CMO, financials for CFO, weakness identification for CRITIC). The Critic's response is parsed for an <code>X/10</code> score which auto-updates the Persuasion Meter. If any agent is unreachable after 3 retries, a <strong>⚠️ [Cached]</strong> fallback response is shown.
-      </div>�══════════════════════════════════ -->
+      </div>�══════════════════════════════════ -->
   <div class="chapter" id="ch5">
     <div class="chapter-number">Chapter 05</div>
     <h2>Real-Time War Room (Phase 2)</h2>
