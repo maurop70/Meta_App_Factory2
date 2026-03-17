@@ -475,11 +475,14 @@
             <div class="card">
                 <div class="card-title">⚡ Actions</div>
                 <div style="display:flex;flex-direction:column;gap:6px;">
+                    <button class="btn btn-ghost" onclick="document.getElementById('docUploadInput').click()" style="width:100%;">📄 Upload & Parse Document</button>
+                    <input type="file" id="docUploadInput" accept=".pdf,.docx,.txt,.csv,.md" style="display:none;" onchange="uploadAndParse(this)">
                     <button class="btn btn-ghost" onclick="forcePoll()" style="width:100%;">🔄 Force Calendar Poll</button>
                     <button class="btn btn-ghost" onclick="testNotification()" style="width:100%;">📲 Test Notification</button>
                     <button class="btn btn-ghost" onclick="reconnectTunnel()" style="width:100%;">🔗 Reconnect Tunnel</button>
                     <button class="btn btn-ghost" onclick="reauthorize()" style="width:100%;">🔑 Re-authorize Calendars</button>
                 </div>
+                <div id="parseResultBanner" style="display:none;margin-top:10px;padding:10px 14px;border-radius:8px;font-size:12px;"></div>
             </div>
         </div>
     </div>
@@ -758,6 +761,54 @@ async function markDone(id) { await fetch(`${API}/api/reminders/${id}/done`,{met
 async function forcePoll() { showToast('🔄 Polling...'); await fetch(`${API}/api/calendar/poll`,{method:'POST'}); showToast('✅ Poll complete'); await loadAll(); }
 async function testNotification() { showToast('📲 Sending...'); const r = await fetch(`${API}/api/notifications/test`,{method:'POST'}); const data = await r.json(); showToast(data.status==='delivered'?'✅ Check your phone!':'❌ Failed'); }
 function reauthorize() { window.open('/api/auth/google?account=work','_blank'); }
+
+// ── Document Upload & Parse ──
+async function uploadAndParse(input) {
+    const file = input.files?.[0]; if (!file) return;
+    input.value = '';
+    showToast('📄 Parsing ' + file.name + '...');
+    const banner = document.getElementById('parseResultBanner');
+    banner.style.display = 'block';
+    banner.style.background = 'rgba(99,102,241,0.08)';
+    banner.style.border = '1px solid rgba(99,102,241,0.2)';
+    banner.textContent = '⏳ Parsing ' + file.name + '...';
+    try {
+        const fd = new FormData();
+        fd.append('file', file);
+        const r = await fetch(API + '/api/documents/upload', { method:'POST', body:fd });
+        const data = await r.json();
+        if (data.error) {
+            banner.style.background = 'rgba(239,68,68,0.08)';
+            banner.style.border = '1px solid rgba(239,68,68,0.2)';
+            banner.textContent = '❌ ' + data.error;
+            showToast('❌ Parse failed');
+        } else {
+            const cat = data.category || 'Unknown';
+            const conf = ((data.confidence || 0) * 100).toFixed(0);
+            const count = data.activities_extracted || 0;
+            const reminders = data.reminders_created || [];
+            banner.style.background = 'rgba(34,197,94,0.08)';
+            banner.style.border = '1px solid rgba(34,197,94,0.2)';
+            if (count > 0) {
+                const preview = reminders.slice(0, 3).map(r => r.activity).join(' • ');
+                const more = count > 3 ? ` + ${count - 3} more` : '';
+                banner.innerHTML = `✅ <strong>${count} activities</strong> extracted (${cat} ${conf}%)<br><span style="font-size:11px;color:var(--text-secondary);">${preview}${more}</span>`;
+                showToast(`✅ ${count} activities → ${count} reminders created`);
+            } else {
+                banner.innerHTML = `✅ <strong>${cat}</strong> (${conf}%) — no activities found`;
+                showToast(`✅ ${cat} (${conf}%) — parsed, no activities`);
+            }
+            await loadAll();
+        }
+        setTimeout(() => { banner.style.display = 'none'; }, 10000);
+    } catch(e) {
+        banner.style.background = 'rgba(239,68,68,0.08)';
+        banner.style.border = '1px solid rgba(239,68,68,0.2)';
+        banner.textContent = '❌ ' + e.message;
+        showToast('❌ Upload error');
+        setTimeout(() => { banner.style.display = 'none'; }, 5000);
+    }
+}
 
 // ── Edit Modal ─────────
 function populateEditCategorySelect() {

@@ -186,7 +186,6 @@ def get_secret(key: str, default: str = "", env_path: str = None) -> str:
     script_dir = os.path.dirname(os.path.abspath(__file__))
     for candidate in [
         os.path.join(script_dir, ".env"),
-        os.path.join(script_dir, "..", ".env"),
     ]:
         if os.path.exists(candidate):
             env_data = _parse_env_file(candidate)

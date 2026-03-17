@@ -87,6 +87,7 @@ function setupDashboard() {
   buildBoardroomFeed(ss);
   buildSystemHealth(ss);
   buildDelegateAI(ss);
+  buildAppTemplate(ss);
   
   // Remove default Sheet1 if it still exists
   const defaultSheet = ss.getSheetByName("Sheet1");
@@ -675,3 +676,111 @@ function showAbout() {
     "For support, contact the CEO via Boardroom_Exchange."
   );
 }
+
+// ══════════════════════════════════════════════════
+//  AETHER UNIVERSAL SYNC & WEBHOOK LISTENER
+// ══════════════════════════════════════════════════
+
+const GLOBAL_BRAND = {
+  name: "Antigravity-AI",
+  darkBg: '#0a0a0f',
+  gold: '#d4a574',
+  white: '#ffffff',
+  silver: '#9ca3af',
+  emeraldLight: '#14b8a6',
+  fontPrimary: 'Outfit',
+  fontSecondary: 'Inter'
+};
+
+function doPost(e) {
+  try {
+    const payload = JSON.parse(e.postData.contents);
+    
+    // 1. Identify App / Agent
+    const appId = payload.App_ID || payload.Agent_Name || "Default_Agent_Pulse";
+    
+    // 2. Provision Sheet if Missing
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let targetSheet = ss.getSheetByName(appId);
+    
+    if (!targetSheet) {
+      targetSheet = provisionAppSheet(ss, appId);
+    }
+    
+    // 3. Route Data
+    updateAppSheet(targetSheet, payload);
+    
+    // 4. Cross-App Data Reflection (sync brand)
+    syncBrandIdentity(ss);
+    
+    return ContentService.createTextOutput(JSON.stringify({ status: "success", synced_entity: appId, pulse_received: true }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({ status: "error", message: error.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function provisionAppSheet(ss, appId) {
+  let template = ss.getSheetByName("App_Template");
+  if (!template) {
+    template = buildAppTemplate(ss);
+  }
+  const newSheet = template.copyTo(ss);
+  newSheet.setName(appId);
+  newSheet.setTabColor(GLOBAL_BRAND.emeraldLight);
+  newSheet.showSheet();
+  return newSheet;
+}
+
+function buildAppTemplate(ss) {
+  let sheet = ss.getSheetByName("App_Template");
+  if (!sheet) {
+    sheet = ss.insertSheet("App_Template");
+  } else {
+    return sheet;
+  }
+  
+  // Hide the template so it doesn't clutter the UI
+  sheet.hideSheet();
+  
+  sheet.getRange("A1:C1").merge().setValue("APP DYNAMICS: {APP_ID}")
+    .setBackground(GLOBAL_BRAND.darkBg).setFontColor(GLOBAL_BRAND.gold)
+    .setFontSize(16).setFontWeight("bold").setHorizontalAlignment("center");
+    
+  sheet.getRange("A2:C2").merge()
+    .setValue("Automatically provisioned by Aether Universal Sync")
+    .setBackground(CONFIG.colors.accentBg).setFontColor(CONFIG.colors.accentText)
+    .setFontSize(9).setHorizontalAlignment("center");
+    
+  sheet.getRange("A4:A7").setValues([["Status"], ["ROI Metrics"], ["Friction Zones"], ["Config Version"]]).setFontWeight("bold");
+  sheet.getRange("B4:B7").setValues([["Pending Pulse"], ["Calculating..."], ["None logged"], ["v1.0.0"]]);
+  
+  sheet.setColumnWidth(1, 150);
+  sheet.setColumnWidth(2, 400);
+  sheet.setColumnWidth(3, 200);
+  return sheet;
+}
+
+function updateAppSheet(sheet, payload) {
+  sheet.getRange("A1").setValue("APP DYNAMICS: " + (payload.App_ID || payload.Agent_Name || "Orphaned App"));
+  if (payload.Status) sheet.getRange("B4").setValue(payload.Status);
+  if (payload.ROI_Metrics) sheet.getRange("B5").setValue(payload.ROI_Metrics);
+  if (payload.Friction_Zones) sheet.getRange("B6").setValue(payload.Friction_Zones);
+  if (payload.Version) sheet.getRange("B7").setValue(payload.Version);
+  
+  sheet.getRange("C4").setValue("Last Pulse:");
+  sheet.getRange("C5").setValue(localTimestamp());
+}
+
+function syncBrandIdentity(ss) {
+  const sheets = ss.getSheets();
+  sheets.forEach(sheet => {
+    // Ensure all app-specific generated sheets retain the latest identity standards
+    const a1 = sheet.getRange("A1");
+    if (a1.getValue().toString().includes("APP DYNAMICS")) {
+      a1.setBackground(GLOBAL_BRAND.darkBg).setFontColor(GLOBAL_BRAND.gold);
+    }
+  });
+}
+

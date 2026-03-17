@@ -1,0 +1,91 @@
+{
+  "name": "Aether Universal Pulse - Subworkflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "1",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AETHER_DASHBOARD_WEBHOOK_URL }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "App_ID",
+              "value": "={{ $node['Execute Workflow Trigger'].json.App_ID }}"
+            },
+            {
+              "name": "Agent_Name",
+              "value": "={{ $node['Execute Workflow Trigger'].json.Agent_Name }}"
+            },
+            {
+              "name": "Status",
+              "value": "={{ $node['Execute Workflow Trigger'].json.Status }}"
+            },
+            {
+              "name": "ROI_Metrics",
+              "value": "={{ $node['Execute Workflow Trigger'].json.ROI_Metrics }}"
+            },
+            {
+              "name": "Friction_Zones",
+              "value": "={{ $node['Execute Workflow Trigger'].json.Friction_Zones }}"
+            },
+            {
+              "name": "Version",
+              "value": "={{ $node['Execute Workflow Trigger'].json.Version }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2",
+      "name": "Sync to Aether Master Dashboard",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        500,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Sync to Aether Master Dashboard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "instanceId": "delegate-ai-genesis",
+    "templateCredsSetupCompleted": true
+  },
+  "tags": [
+    {
+      "name": "delegate-ai"
+    },
+    {
+      "name": "project-genesis"
+    },
+    {
+      "name": "aether-pulse"
+    }
+  ]
+}
