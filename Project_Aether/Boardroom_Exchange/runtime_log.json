@@ -1,0 +1,52 @@
+[
+  {
+    "session_id": "a91e9886",
+    "timestamp": "2026-03-16T17:01:16.170126",
+    "input_prompt": "\n    Perform a comprehensive feasibility and market study for 'Meta App Factory' (an autonomous AI v",
+    "classified_to": "CEO",
+    "resolved_to": "CEO",
+    "confidence": 1.0,
+    "status": "DISPATCHED",
+    "duration_ms": 0.03
+  },
+  {
+    "session_id": "400d0e4a",
+    "timestamp": "2026-03-16T17:01:18.914079",
+    "input_prompt": "\n    Perform a comprehensive feasibility and market study for 'Meta App Factory' (an autonomous AI v",
+    "classified_to": "CFO",
+    "resolved_to": "CFO",
+    "confidence": 1.0,
+    "status": "DISPATCHED",
+    "duration_ms": 0.01
+  },
+  {
+    "session_id": "d49e1497",
+    "timestamp": "2026-03-16T17:01:20.388162",
+    "input_prompt": "\n    Perform a comprehensive feasibility and market study for 'Meta App Factory' (an autonomous AI v",
+    "classified_to": "CMO",
+    "resolved_to": "DEEP_CRAWLER",
+    "confidence": 1.0,
+    "status": "DISPATCHED",
+    "duration_ms": 0.01
+  },
+  {
+    "session_id": "0a2efe18",
+    "timestamp": "2026-03-16T17:01:22.527863",
+    "input_prompt": "\n    Perform a comprehensive feasibility and market study for 'Meta App Factory' (an autonomous AI v",
+    "classified_to": "CTO",
+    "resolved_to": "CTO",
+    "confidence": 1.0,
+    "status": "DISPATCHED",
+    "duration_ms": 0.01
+  },
+  {
+    "session_id": "963f1f7d",
+    "timestamp": "2026-03-16T17:01:24.785705",
+    "input_prompt": "\n    Perform a comprehensive feasibility and market study for 'Meta App Factory' (an autonomous AI v",
+    "classified_to": "THE_CRITIC",
+    "resolved_to": "THE_CRITIC",
+    "confidence": 1.0,
+    "status": "DISPATCHED",
+    "duration_ms": 0.04
+  }
+]

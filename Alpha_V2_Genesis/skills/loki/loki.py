@@ -64,6 +64,14 @@ except ImportError:
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("LokiSkill")
 
+# Ensure Alpha root is at the top of sys.path for utils.* resolution
+# (V3 resilience block inserts Meta_App_Factory which also has a utils/ dir)
+import sys as _sys2
+_alpha_root2 = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if _alpha_root2 in _sys2.path:
+    _sys2.path.remove(_alpha_root2)
+_sys2.path.insert(0, _alpha_root2)
+
 from utils.system_alerts import play_alert_sound, show_popup
 from skills.opinion.opinion import OpinionAgent
 

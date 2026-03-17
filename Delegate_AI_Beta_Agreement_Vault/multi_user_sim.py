@@ -274,8 +274,7 @@ def task2_upload_ndas():
         print(f"     By: {uploader['name']} ({uploader['role']})")
 
         try:
-            r =
- requests.post(f"{API}/vault/encrypt", json={
+            r = requests.post(f"{API}/vault/encrypt", json={
                 "agreement_id": nda["id"],
                 "content": nda["content"],
                 "party_a": nda["party_a"],
@@ -367,8 +366,7 @@ def task3_access_control():
 
     try:
         # Attempt to retrieve a non-existent private document
-        r =
- requests.post(f"{API}/vault/retrieve", json={
+        r = requests.post(f"{API}/vault/retrieve", json={
             "agreement_id": private_folder_id,
         }, timeout=10)
 

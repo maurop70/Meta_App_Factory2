@@ -56,6 +56,7 @@ import os
 import subprocess
 import logging
 import smtplib
+import requests
 from datetime import datetime
 from email.mime.text import MIMEText
 
@@ -142,9 +143,9 @@ def _ntfy_push(title: str, message: str, priority: str = "default", tags: list =
          (or whatever NTFY_TOPIC is set to in .env)
     """
     try:
-        _v3_status = healed_post(f"https://ntfy.sh/{NTFY_TOPIC}", message.encode("utf-8")
-
-        r = type("Resp", (), {"status_code": 200 if _v3_status == "sent" else 503, "ok": _v3_status == "sent", "text": _v3_status, "json": lambda: {"status": _v3_status}})(),
+        r = requests.post(
+            f"https://ntfy.sh/{NTFY_TOPIC}",
+            data=message.encode("utf-8"),
             headers={
                 "Title":    title,
                 "Priority": priority,           # urgent / high / default / low / min

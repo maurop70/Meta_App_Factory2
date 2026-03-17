@@ -46,9 +46,8 @@
   }
 
   /* Print styles */
-  @media print {
-    body { background: white; color: #1e293b; }
-    .cover { page-break-after: always; }
+  
+    .cover { page-break-after: always; height: 100vh !important; display: flex !important; flex-direction: column !important; justify-content: center !important; align-items: center !important;}
     .chapter { page-break-before: always; }
     .no-print { display: none; }
   }
@@ -567,6 +566,62 @@
   }
   .toc a:hover { background: rgba(59, 130, 246, 0.08); }
   .toc a span.num { color: var(--blue); font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+
+@media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+  body {
+    background: #0b0f1a !important;
+    color: #e2e8f0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .cover {
+    page-break-after: always;
+    height: 100vh !important; display: flex !important; flex-direction: column !important; justify-content: center !important; align-items: center !important;
+    background: radial-gradient(ellipse at 30% 20%, rgba(59,130,246,0.12) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 80%, rgba(139,92,246,0.1) 0%, transparent 50%),
+                #0b0f1a !important;
+  }
+  .chapter { page-break-before: always; }
+  .chapter:first-of-type { page-break-before: avoid; }
+  .section { page-break-inside: avoid; }
+  .board-card, .persona, .kpi, .callout, .diagram {
+    page-break-inside: avoid;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  table { page-break-inside: avoid; }
+  tr { page-break-inside: avoid; }
+  th, td {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .board-grid { page-break-inside: avoid; }
+  .flow-node, .cover-stat, .cover-badge, .trait {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  ol.step-list li { page-break-inside: avoid; }
+  ol.step-list li::before {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  h2, h3 { page-break-after: avoid; }
+  .no-print { display: none; }
+  .cover h1 {
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
+  .cover-footer { position: static !important; margin-top: auto !important; margin-bottom: 20px !important; }
 </style>
 </head>
 <body>

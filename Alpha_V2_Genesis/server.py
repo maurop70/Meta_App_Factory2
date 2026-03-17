@@ -1005,8 +1005,7 @@ def ensure_n8n_workflows_active():
                 continue
             
             # Activate it
-            r =
- requests.post(f"{base}/workflows/{wid}/activate", headers=headers, timeout=10)
+            r = requests.post(f"{base}/workflows/{wid}/activate", headers=headers, timeout=10)
             if r.status_code == 200:
                 print(f"  [N8N Guard] Re-activated: {name}")
                 activated += 1

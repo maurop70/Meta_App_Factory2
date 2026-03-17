@@ -277,8 +277,7 @@ class GeoTalentScout:
             all_results = []
             for query in queries:
                 try:
-                    resp =
- requests.post("https://api.tavily.com/search", json={
+                    resp = requests.post("https://api.tavily.com/search", json={
                         "api_key": api_key,
                         "query": query,
                         "search_depth": "advanced",

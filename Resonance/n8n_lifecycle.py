@@ -117,8 +117,7 @@ def set_workflow_active(workflow_id, active: bool, api_key: str, name: str = "")
     url = f"{N8N_BASE}/workflows/{workflow_id}/{'activate' if active else 'deactivate'}"
     headers = {"X-N8N-API-KEY": api_key, "Content-Type": "application/json"}
     try:
-        resp =
- requests.post(url, headers=headers, timeout=10)
+        resp = requests.post(url, headers=headers, timeout=10)
         verb = "ACTIVATED" if active else "DEACTIVATED"
         if resp.status_code == 200:
             print(f"  ✅ {verb}: {name or workflow_id}")

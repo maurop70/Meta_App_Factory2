@@ -899,8 +899,7 @@ CRITICAL: You MUST return one of the JSON actions above to produce real output. 
                 "you MUST return ONLY the JSON action — no explanation, no markdown fencing, just raw JSON."
             )
 
-            r =
- requests.post("https://api.anthropic.com/v1/messages", headers={
+            r = requests.post("https://api.anthropic.com/v1/messages", headers={
                 "x-api-key": anthropic_key,
                 "anthropic-version": "2023-06-01",
                 "content-type": "application/json"
