@@ -63,17 +63,27 @@ if exist bootstrap_env.bat (
 echo  [1/3] Starting Backend on port 8000...
 start "Meta Factory Backend" /min "%PYTHON%" api.py
 
-:: ── Start Frontend UI (port 5173) ─────────────────────────
-echo  [2/3] Starting Factory UI on port 5173...
+:: ── Start n8n Credential Watchdog (V3 Active Self-Repair) ──
+echo  [1.5/3] Starting N8N Watchdog Daemon...
+start "V3 Watchdog Daemon" /min "%PYTHON%" n8n_watchdog.py --daemon
+
+:: ── Start Frontend UI (Auto-detect port 5173 vs 5174) ────
+echo  [2/3] Starting Factory UI...
 cd factory_ui
 if not exist node_modules npm.cmd install
-start "Meta Factory UI" /min cmd /k "npm.cmd run dev -- --host --port 5173"
+set PORT=5173
+netstat -ano | findstr ":5173 " >nul
+if %errorlevel% equ 0 (
+    echo  [WARN] Port 5173 is in use (likely Alpha_V2). Auto-healing to port 5174...
+    set PORT=5174
+)
+start "Meta Factory UI" /min cmd /k "npm.cmd run dev -- --host --port %PORT%"
 cd ..
 
 :: ── Open Browser ──────────────────────────────────────────
 echo  [3/3] Opening browser...
 ping 127.0.0.1 -n 4 >nul
-start http://localhost:5173
+start http://localhost:%PORT%
 
 echo.
 echo  ===================================================
@@ -88,6 +98,7 @@ pause >nul
 :: ── CLEANUP ───────────────────────────────────────────────
 echo  Shutting down...
 taskkill /FI "WINDOWTITLE eq Meta Factory Backend" /F 2>nul
+taskkill /FI "WINDOWTITLE eq V3 Watchdog Daemon" /F 2>nul
 taskkill /FI "WINDOWTITLE eq Meta Factory UI" /F 2>nul
 echo  Meta App Factory stopped.
 pause

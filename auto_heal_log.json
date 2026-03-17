@@ -278,5 +278,2111 @@
       "credentials": "valid",
       "buffer_pending": 1
     }
+  },
+  {
+    "timestamp": "2026-03-17T09:38:54.385606",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T09:53:48.542309",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T09:54:10.671080",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T09:55:35.906466",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T09:55:55.671484",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T09:58:28.816526",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "DEGRADED",
+      "watchdog": "yellow",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T09:58:52.598494",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T10:10:12.251859",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T10:10:33.183656",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T10:10:51.667342",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T10:11:09.993352",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T10:11:12.532799",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T10:11:32.036326",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T10:34:11.007091",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "DEGRADED",
+      "watchdog": "yellow",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T10:34:11.297974",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T10:34:28.115693",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T10:34:36.154400",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T10:34:36.224794",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T10:34:52.174147",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T10:35:06.505486",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "DEGRADED",
+      "watchdog": "yellow",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T10:35:26.818607",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T10:35:30.432831",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T10:35:50.995460",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "DEGRADED",
+      "watchdog": "yellow",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T10:40:53.075468",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T10:41:16.304243",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T10:46:06.930792",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T10:46:20.855970",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T10:46:29.748201",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "DEGRADED",
+      "watchdog": "yellow",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T10:46:39.068438",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T10:46:43.189787",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T10:47:02.098659",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T10:51:10.195219",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T10:51:10.482007",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T10:51:33.039238",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "DEGRADED",
+      "watchdog": "yellow",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T10:51:35.462476",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "DEGRADED",
+      "watchdog": "yellow",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T10:51:35.554797",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "DEGRADED",
+      "watchdog": "yellow",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T10:51:59.554564",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "DEGRADED",
+      "watchdog": "yellow",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T10:59:47.316055",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T10:59:47.484543",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:00:05.614534",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:00:10.219807",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:00:11.087928",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:00:28.188583",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:16:07.142385",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:16:19.370959",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:16:26.756671",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:17:17.142672",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:17:17.452186",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "DEGRADED",
+      "watchdog": "yellow",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:17:36.800916",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:17:40.629766",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:17:41.186929",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:17:44.645969",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:18:01.002307",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:18:05.379717",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:18:09.064215",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "DEGRADED",
+      "watchdog": "yellow",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:18:30.465213",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "DEGRADED",
+      "watchdog": "yellow",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:18:30.748676",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:18:50.427256",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "DEGRADED",
+      "watchdog": "yellow",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:18:55.480798",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:18:59.830208",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:19:08.032867",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "DEGRADED",
+      "watchdog": "yellow",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:19:14.817219",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "DEGRADED",
+      "watchdog": "yellow",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:19:23.367374",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:19:27.197282",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:19:32.177051",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:19:51.120040",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "DEGRADED",
+      "watchdog": "yellow",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:20:08.664865",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "DEGRADED",
+      "watchdog": "yellow",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:20:18.073233",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "DEGRADED",
+      "watchdog": "yellow",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:20:18.490940",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "DEGRADED",
+      "watchdog": "yellow",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:20:35.716524",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "DEGRADED",
+      "watchdog": "yellow",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:20:37.746514",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "DEGRADED",
+      "watchdog": "yellow",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:20:41.993284",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:20:42.823797",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:20:52.175591",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:21:01.722912",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:21:14.628525",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:23:10.346676",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:23:30.321673",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:23:33.297898",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:23:53.613798",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:51:38.675928",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "DEGRADED",
+      "watchdog": "yellow",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:51:39.204715",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:52:00.173993",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:52:03.606259",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "DEGRADED",
+      "watchdog": "yellow",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:52:05.089775",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "DEGRADED",
+      "watchdog": "yellow",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:52:11.688668",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "DEGRADED",
+      "watchdog": "yellow",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:52:25.402160",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:52:32.366613",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:52:36.168225",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T11:52:56.120225",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T12:17:14.436199",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "DEGRADED",
+      "watchdog": "yellow",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T12:17:36.588095",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T12:21:33.687337",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T12:21:56.241745",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T12:22:05.462233",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T12:22:27.581447",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T12:47:13.943608",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T12:47:38.664554",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "DEGRADED",
+      "watchdog": "yellow",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T12:52:11.623613",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "DEGRADED",
+      "watchdog": "yellow",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T12:52:34.526067",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T13:10:45.080132",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T13:11:04.975803",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T13:11:06.914846",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T13:11:24.485032",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T13:11:26.587720",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T13:11:45.149443",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T13:15:51.027146",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "DEGRADED",
+      "watchdog": "yellow",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T13:16:07.697376",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T13:16:13.072912",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T13:16:26.783244",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T13:16:29.177977",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T13:16:46.446613",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T13:16:48.474166",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T13:17:09.031972",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "DEGRADED",
+      "watchdog": "yellow",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T13:17:13.671674",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T13:17:37.812556",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T13:19:01.824002",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T13:19:21.602211",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T13:19:23.094842",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T13:19:41.579011",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T13:19:43.371364",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "DEGRADED",
+      "watchdog": "yellow",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T13:20:03.629781",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T13:20:04.273857",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T13:20:25.878001",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T13:22:16.737202",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T13:22:38.643037",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T13:22:43.548610",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T13:22:44.235089",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T13:23:03.271631",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T13:23:04.206034",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T13:24:05.559747",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T13:24:24.692222",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T13:24:26.366232",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T13:24:46.127868",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "DEGRADED",
+      "watchdog": "yellow",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T13:54:07.726153",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T13:54:29.977492",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T14:33:52.140919",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T14:34:09.933910",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "DEGRADED",
+      "watchdog": "yellow",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T14:34:12.720650",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T14:34:31.436287",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T14:35:27.740485",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T14:35:45.869356",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T14:35:48.291216",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T14:36:06.488849",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T14:36:24.392503",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T14:36:43.627685",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T14:36:44.764543",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T14:37:03.809157",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T14:37:04.239008",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T14:37:25.119636",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T14:37:37.079632",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T14:37:37.393045",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T14:37:58.381132",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T14:37:58.807750",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T14:38:19.510904",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T14:38:39.135004",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T14:38:39.399723",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T14:38:46.727142",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T14:39:03.951279",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T14:39:08.001230",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T14:39:08.224233",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
+  },
+  {
+    "timestamp": "2026-03-17T14:39:27.562225",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 1
+    }
   }
 ]

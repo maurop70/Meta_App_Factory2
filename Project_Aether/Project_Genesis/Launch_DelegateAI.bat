@@ -14,6 +14,7 @@ echo.
 REM ── Locate Google Drive ──
 set "GDRIVE="
 for %%D in (
+    "%USERPROFILE%\My Drive (maurotgs@gmail.com)"
     "%USERPROFILE%\My Drive"
     "%USERPROFILE%\Google Drive"
     "G:\My Drive"

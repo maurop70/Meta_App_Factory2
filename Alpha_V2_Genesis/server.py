@@ -89,7 +89,6 @@ except ImportError as e:
     print(f"⚠️ WARNING: Memory engine not available: {e}")
 
 # 1. BRAIN INITIALIZATION
-load_dotenv()
 
 app = Flask(__name__)
 # ENABLE CORS FOR ALL ROUTES AND ORIGINS
@@ -240,6 +239,11 @@ def get_ledger():
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    """Simple health check endpoint for the frontend."""
+    return jsonify({"status": "ok", "message": "Alpha Server Online"}), 200
 
 @app.route('/api/ledger/refresh', methods=['POST'])
 def refresh_ledger():
@@ -405,6 +409,8 @@ def sync_to_portfolio(entry):
         print(f"⚠️ Sync to Portfolio failed: {e}")
 
 
+
+
 @app.route('/api/executions', methods=['GET'])
 def get_executions():
     """Returns the history of recorded trade executions."""
@@ -517,10 +523,7 @@ def ocr_execution():
             }
         }
         
-        _v3_status = healed_post(url, payload)
-
-        
-        res = type("Resp", (), {"status_code": 200 if _v3_status == "sent" else 503, "ok": _v3_status == "sent", "text": _v3_status, "json": lambda: {"status": _v3_status}})()
+        res = requests.post(url, json=payload, headers={"Content-Type": "application/json"})
         res_data = res.json()
         
         if res.status_code != 200:
@@ -1025,71 +1028,14 @@ def ensure_n8n_workflows_active():
 if __name__ == '__main__':
     public_url = None
 
-    if not NGROK_TOKEN:
-        print("⚠️ WARNING: NGROK_AUTH_TOKEN missing from vault/.env — running in LOCAL-ONLY mode.")
-    else:
-        print("Initializing Ngrok Tunnel...")
-        try:
-            ngrok.set_auth_token(NGROK_TOKEN)
-            tunnels = ngrok.get_tunnels()
-            for t in tunnels:
-                ngrok.disconnect(t.public_url)
-
-            public_url = ngrok.connect(PORT).public_url
-            print(f"Tunnel Live: {public_url}")
-
-            # ── Static URL Detection ────────────────────────────
-            # Load the previously known URL from connection_info.json
-            conn_info_path  = os.path.join(RUNTIME_DIR, "connection_info.json")
-            previous_url    = None
-            try:
-                if os.path.exists(conn_info_path):
-                    with open(conn_info_path, "r") as f:
-                        ci = json.load(f)
-                        previous_url = ci.get("ngrok_url")
-            except Exception:
-                pass
-
-            url_changed = (previous_url != public_url)
-
-            if url_changed:
-                print(f"🔄 URL CHANGED: {previous_url} → {public_url}")
-                print("   Reprogramming N8N workflows with new URL...")
-                self_heal_n8n(public_url)
-                heal_ledger_cron(public_url)
-            else:
-                print(f"✅ Static URL confirmed: {public_url} (no N8N reprogramming needed)")
-
-            # Always update connection_info.json with current status
-            conn_data = {
-                "ngrok_url":        public_url,
-                "last_updated":     __import__('datetime').datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
-                "system_status":    "STABLE",
-                "url_is_static":    not url_changed,
-                "macro_sensor":     "ACTIVE",
-                "genesis_fallback": "ENABLED"
-            }
-            os.makedirs(os.path.dirname(conn_info_path), exist_ok=True)
-            with open(conn_info_path, "w") as f:
-                json.dump(conn_data, f, indent=4)
-
-            # Verify tunnel responds
-            try:
-                test_resp = requests.get(public_url, timeout=10)
-                if test_resp.status_code == 200:
-                    print("✅ Tunnel Verification: SUCCESS")
-            except Exception:
-                print("⚠️ Tunnel verification timed out — continuing anyway")
-
-        except Exception as e:
-            print(f"⚠️ Ngrok tunnel failed: {e}")
-            print("   Continuing in LOCAL-ONLY mode (no remote access).")
-
+    print("🚀 Ngrok & N8N Webhook Sync Disabled for Stability (LOCAL-ONLY mode).")
+    
     # CHECK N8N WORKFLOW HEALTH (auto-activate any offline workflows)
     ensure_n8n_workflows_active()
 
     # PERFORM WARM-UP (runs regardless of ngrok status)
-    warm_up_system()
+    import threading
+    threading.Thread(target=warm_up_system, daemon=True).start()
 
     # Register graceful shutdown hook (deactivates N8N even on force-close)
     try:

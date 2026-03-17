@@ -272,7 +272,7 @@ def main():
     if pitch_result.get("slides", 0) > 0:
         print(f"  -> Slides: {pitch_result['slides']}")
         print(f"  -> Tone: {pitch_result['tone']}")
-        print(f"  -> Focus: {', '.join(pitch_result['focus_areas'])}")
+        print(f"  -> Focus: {', '.join(pitch_result['focus'])}")
         quality_checks += 3
         quality_total += 3
     else:
@@ -283,11 +283,9 @@ def main():
     print("[2b] Converting to PPTX (16:9 widescreen)...")
     GDRIVE_OUTPUT.mkdir(parents=True, exist_ok=True)
     pptx_path = GDRIVE_OUTPUT / "Delegate_AI_Investor_Pitch.pptx"
-    pptx_result = build_pptx(pitch_result["path"], pptx_path)
-
+    pptx_result = build_pptx(pitch_result["json_path"], pptx_path)
+    
     if pptx_result:
-        print(f"  -> PPTX: {pptx_result}")
-        quality_checks += 2
         quality_total += 2
     else:
         print("  -> PPTX skipped (python-pptx not installed)")
@@ -310,7 +308,7 @@ def main():
     log_to_ledger(
         exec_time, quality_score,
         fin_result.get("path", "N/A"),
-        pitch_result.get("path", "N/A"),
+        pitch_result.get("json_path", "N/A"),
     )
     print(f"  -> Logged: {exec_time:.1f}s execution, Q={quality_score}/10.0")
 
@@ -321,7 +319,7 @@ def main():
     print("=" * 60)
     print()
     print(f"  Financial:  {fin_result.get('path', 'N/A')}")
-    print(f"  Pitch:      {pitch_result.get('path', 'N/A')}")
+    print(f"  Pitch:      {pitch_result.get('json_path', 'N/A')}")
     if pptx_result:
         print(f"  PPTX:       {pptx_result}")
     print()

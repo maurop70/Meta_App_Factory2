@@ -1208,9 +1208,9 @@ function App() {
       setLoading(false);
     } catch (err) {
       console.error("Fetch error:", err);
-      if (retryCount < 5) {
+      if (retryCount < 15) {
         // Retry after 2 seconds
-        console.log(`Retrying connection... (${retryCount + 1}/5)`);
+        console.log(`Waiting for Server... (${retryCount + 1}/15)`);
         setTimeout(() => fetchAnalysis(retryCount + 1), 2000);
       } else {
         setError("❌ Server Error: Run 'python server.py' in the Alpha_V2_Genesis folder.");

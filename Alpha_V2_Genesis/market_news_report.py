@@ -211,9 +211,8 @@ def generate_news_report(market_snapshot=None):
 
     try:
         logger.info("Generating Market News Intelligence Report via Gemini...")
-        _v3_status = healed_post(url, payload)
-
-        resp = type("Resp", (), {"status_code": 200 if _v3_status == "sent" else 503, "ok": _v3_status == "sent", "text": _v3_status, "json": lambda: {"status": _v3_status}})()
+        import requests
+        resp = requests.post(url, json=payload, headers={"Content-Type": "application/json"})
 
         if resp.status_code != 200:
             logger.error(f"Gemini API {resp.status_code}: {resp.text[:300]}")
