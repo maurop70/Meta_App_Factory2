@@ -36,6 +36,171 @@ sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 logger = logging.getLogger("aether.brand_guardian")
 
+# ── Master Brand Path ────────────────────────────────────
+MASTER_BRAND_PATH = os.path.join(FACTORY_DIR, "antigravity.brand.json")
+
+
+class BrandRegistry:
+    """
+    Two-tier brand resolution engine.
+
+    Tier 1 (Factory): Apps built with Meta_App_Factory default to Antigravity
+                       brand unless the user provides a custom brand_identity.json.
+    Tier 2 (Venture): Projects bootstrapped via Venture Studio MUST have a
+                       user-defined or CMO/Designer-generated brand. Never
+                       silently defaults to Antigravity.
+
+    Usage:
+        registry = BrandRegistry()
+        brand = registry.resolve("projects/DelegateAI", tier="factory")
+        brand = registry.resolve("projects/ClientCorp", tier="venture")
+    """
+
+    def __init__(self, master_brand_path=None):
+        self.master_brand_path = master_brand_path or MASTER_BRAND_PATH
+        self._master_brand = None
+
+    @property
+    def master_brand(self):
+        """Lazy-load the Antigravity master brand."""
+        if self._master_brand is None:
+            if os.path.exists(self.master_brand_path):
+                try:
+                    with open(self.master_brand_path, "r", encoding="utf-8") as f:
+                        self._master_brand = json.load(f)
+                except Exception as e:
+                    logger.error("Failed to load master brand: %s", e)
+                    self._master_brand = {}
+            else:
+                logger.warning("Master brand file not found: %s", self.master_brand_path)
+                self._master_brand = {}
+        return self._master_brand
+
+    def resolve(self, project_dir, tier="factory"):
+        """
+        Resolve the correct brand for a project.
+
+        Args:
+            project_dir: Path to the project directory
+            tier: "factory" (defaults to Antigravity) or "venture" (requires user brand)
+
+        Returns:
+            dict: Brand identity data, or None if venture project has no brand defined
+
+        Logic:
+            1. If soul/brand_identity.json exists AND has a non-empty company_name → use it
+            2. If tier is "factory" → fall back to Antigravity master brand
+            3. If tier is "venture" → return None (forces user/CMO to define brand)
+        """
+        # Check for project-specific brand
+        soul_path = os.path.join(project_dir, "soul", "brand_identity.json")
+        if os.path.exists(soul_path):
+            try:
+                with open(soul_path, "r", encoding="utf-8") as f:
+                    project_brand = json.load(f)
+                # Only use it if the user has actually filled it in
+                if project_brand.get("company_name", "").strip():
+                    logger.info("Brand resolved: project-specific (%s)", project_brand["company_name"])
+                    return project_brand
+            except Exception as e:
+                logger.error("Failed to load project brand: %s", e)
+
+        # Tier-based fallback
+        if tier == "factory":
+            logger.info("Brand resolved: Antigravity master (factory default)")
+            return dict(self.master_brand)  # Return a copy
+        else:
+            # Venture: no silent default — force user input
+            logger.warning("No brand defined for venture project: %s", project_dir)
+            return None
+
+    def create_brand(self, project_dir, brand_data):
+        """
+        Write a brand_identity.json into a project's soul/ directory.
+
+        Args:
+            project_dir: Path to the project directory
+            brand_data: dict with brand identity fields
+
+        Returns:
+            str: Path to the created brand file
+        """
+        soul_dir = os.path.join(project_dir, "soul")
+        os.makedirs(soul_dir, exist_ok=True)
+
+        # Add metadata
+        brand_data.setdefault("created_at", datetime.now().isoformat())
+        brand_data["last_updated"] = datetime.now().isoformat()
+        brand_data.setdefault("tier", "custom")
+
+        brand_path = os.path.join(soul_dir, "brand_identity.json")
+        with open(brand_path, "w", encoding="utf-8") as f:
+            json.dump(brand_data, f, indent=2)
+
+        logger.info("Brand created for %s: %s", project_dir, brand_data.get("company_name", ""))
+        return brand_path
+
+    def list_brands(self):
+        """
+        List all registered brand files across projects and the factory root.
+
+        Returns:
+            list[dict]: Each entry has 'project', 'company_name', 'tier', 'path'
+        """
+        brands = []
+
+        # Master brand
+        if self.master_brand:
+            brands.append({
+                "project": "Meta_App_Factory",
+                "company_name": self.master_brand.get("company_name", ""),
+                "tier": "master",
+                "path": self.master_brand_path,
+            })
+
+        # Scan projects/ directory
+        projects_dir = os.path.join(FACTORY_DIR, "projects")
+        if os.path.isdir(projects_dir):
+            for entry in os.listdir(projects_dir):
+                soul_path = os.path.join(projects_dir, entry, "soul", "brand_identity.json")
+                if os.path.exists(soul_path):
+                    try:
+                        with open(soul_path, "r", encoding="utf-8") as f:
+                            data = json.load(f)
+                        brands.append({
+                            "project": entry,
+                            "company_name": data.get("company_name", "(empty)"),
+                            "tier": data.get("tier", "custom"),
+                            "path": soul_path,
+                        })
+                    except Exception:
+                        brands.append({
+                            "project": entry,
+                            "company_name": "(error reading)",
+                            "tier": "unknown",
+                            "path": soul_path,
+                        })
+
+        # Scan Aether projects (non-standard locations)
+        aether_dir = os.path.join(FACTORY_DIR, "Aether")
+        if os.path.isdir(aether_dir):
+            for entry in os.listdir(aether_dir):
+                soul_path = os.path.join(aether_dir, entry, "soul", "brand_identity.json")
+                if os.path.exists(soul_path):
+                    try:
+                        with open(soul_path, "r", encoding="utf-8") as f:
+                            data = json.load(f)
+                        brands.append({
+                            "project": f"Aether/{entry}",
+                            "company_name": data.get("company_name", "(empty)"),
+                            "tier": data.get("tier", "venture"),
+                            "path": soul_path,
+                        })
+                    except Exception:
+                        pass
+
+        return brands
+
 
 class BrandGuardian:
     """

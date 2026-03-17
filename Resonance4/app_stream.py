@@ -148,8 +148,7 @@ def stream_chat(prompt, project_name="App", dashboard_context=None, agent_overri
 
     full_response = []
     try:
-        with
- requests.post(url, json=payload, stream=True, timeout=120) as resp:
+        with requests.post(url, json=payload, stream=True, timeout=120) as resp:
             if resp.status_code != 200:
                 yield {"error": f"API error ({resp.status_code})."}
                 return

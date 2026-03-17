@@ -201,6 +201,19 @@ except ImportError as e:
     DIGEST_AVAILABLE = False
     logger.warning(f"Report Digest engine not available: {e}")
 
+# ── Dr. Aris (Psychologist Agent) Import ───────────────
+try:
+    from dr_aris_engine import (
+        analyze_profile, get_alerts as get_aris_alerts, get_proposals as get_aris_proposals,
+        approve_proposal, reject_proposal, get_dr_aris_report,
+        boardroom_query, get_boardroom_history
+    )
+    DR_ARIS_AVAILABLE = True
+    logger.info("Dr. Aris psychologist engine loaded.")
+except ImportError as e:
+    DR_ARIS_AVAILABLE = False
+    logger.warning(f"Dr. Aris engine not available: {e}")
+
 # ── Nerve Center (Self-Healing Engine) Import ──────────
 try:
     from nerve_center import NerveCenter, start_background_monitor, get_nerve_instance
@@ -641,6 +654,90 @@ def update_report_settings(req: ReportSettingsRequest):
     config["report_intelligence"] = report_intel
     _save_parent_config(config)
     return JSONResponse({"status": "ok", "enabled": report_intel["enabled"]})
+
+# ── Dr. Aris (Psychologist Agent) API Endpoints ─────────
+
+@app.get("/api/parent/dr-aris/analysis")
+def dr_aris_analysis():
+    """Triggers a full Dr. Aris analysis and returns the report (profile, alerts, proposals)."""
+    if not DR_ARIS_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Dr. Aris engine not available.")
+    try:
+        report = analyze_profile()
+        return JSONResponse(report)
+    except Exception as e:
+        logger.error(f"Dr. Aris analysis error: {e}")
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {e}")
+
+@app.get("/api/parent/dr-aris/alerts")
+def dr_aris_alerts():
+    """Returns current behavioral alerts flagged by Dr. Aris."""
+    if not DR_ARIS_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Dr. Aris engine not available.")
+    return JSONResponse({"alerts": get_aris_alerts()})
+
+@app.get("/api/parent/dr-aris/proposals")
+def dr_aris_proposals():
+    """Returns all system update proposals with their current status."""
+    if not DR_ARIS_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Dr. Aris engine not available.")
+    return JSONResponse({"proposals": get_aris_proposals()})
+
+@app.post("/api/parent/dr-aris/proposals/{proposal_id}/approve")
+def dr_aris_approve(proposal_id: str):
+    """Approves a Dr. Aris proposal — injects the directive into Alex's config."""
+    if not DR_ARIS_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Dr. Aris engine not available.")
+    result = approve_proposal(proposal_id)
+    if result.get("status") == "error":
+        raise HTTPException(status_code=404, detail=result.get("message"))
+    return JSONResponse(result)
+
+@app.post("/api/parent/dr-aris/proposals/{proposal_id}/reject")
+def dr_aris_reject(proposal_id: str):
+    """Rejects a Dr. Aris proposal — logs the preference for future refinement."""
+    if not DR_ARIS_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Dr. Aris engine not available.")
+    result = reject_proposal(proposal_id)
+    if result.get("status") == "error":
+        raise HTTPException(status_code=404, detail=result.get("message"))
+    return JSONResponse(result)
+
+@app.get("/api/parent/dr-aris/report")
+def dr_aris_full_report():
+    """Returns the full cached Dr. Aris report without triggering a new analysis."""
+    if not DR_ARIS_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Dr. Aris engine not available.")
+    return JSONResponse(get_dr_aris_report())
+
+# ── Dr. Aris Module 1: Boardroom Consultant (B2B) ──────
+
+class BoardroomQueryRequest(BaseModel):
+    query: str
+    context: str = ""
+
+@app.post("/api/dr-aris/boardroom-query")
+def dr_aris_boardroom(req: BoardroomQueryRequest):
+    """Module 1: Strategic psychological consultation. Uses ONLY general market knowledge — never individual user data."""
+    if not DR_ARIS_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Dr. Aris engine not available.")
+    try:
+        result = boardroom_query(req.query, req.context)
+        if result.get("status") == "error":
+            raise HTTPException(status_code=500, detail=result.get("message"))
+        return JSONResponse(result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Dr. Aris Boardroom error: {e}")
+        raise HTTPException(status_code=500, detail=f"Boardroom consultation failed: {e}")
+
+@app.get("/api/dr-aris/boardroom-history")
+def dr_aris_boardroom_log():
+    """Returns the boardroom consultation history (no individual user data)."""
+    if not DR_ARIS_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Dr. Aris engine not available.")
+    return JSONResponse(get_boardroom_history())
 
 # ── Nerve Center (Self-Healing) API Endpoints ───────────
 

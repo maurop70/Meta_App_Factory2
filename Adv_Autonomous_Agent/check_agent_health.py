@@ -35,6 +35,7 @@ def _v3_preflight():
 import sys
 import os
 import json
+import requests
 
 # Add project root to path to import bridge
 PROJECT_DIR = r"C:\Users\mpetr\My Drive\Antigravity-AI Agents\Meta_App_Factory\Adv_Autonomous_Agent"
@@ -70,9 +71,7 @@ for role, url in AGENT_REGISTRY.items():
         # Send a harmless 'health_check' prompt
         # We use a short timeout because we just want to know if it's hitting a 404 or 500
         # A 200 active response is good.
-        _v3_status = healed_post(url, {"prompt": "PING (Health Check)
-
-        resp = type("Resp", (), {"status_code": 200 if _v3_status == "sent" else 503, "ok": _v3_status == "sent", "text": _v3_status, "json": lambda: {"status": _v3_status}})()"}, timeout=5)
+        resp = requests.post(url, json={"prompt": "PING (Health Check)"}, timeout=5)
         
         if resp.status_code == 200:
             print("[OK] ONLINE")

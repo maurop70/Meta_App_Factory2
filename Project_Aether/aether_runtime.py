@@ -84,16 +84,11 @@ WEBHOOK_MAP = {
     "THE_CRITIC": "https://humanresource.app.n8n.cloud/webhook/critic-v2",
     "COMPLIANCE_OFFICER": "https://humanresource.app.n8n.cloud/webhook/gemini-flash",
     "DATA_ARCHITECT": "https://humanresource.app.n8n.cloud/webhook/gemini-flash",
+    "GRAPHIC_DESIGNER": "https://humanresource.app.n8n.cloud/webhook/gemini-flash",
 }
 
-# Fallback routing for placeholder agents
-FALLBACK_ROUTES = {
-    "CMO": "DEEP_CRAWLER",
-    "RESEARCHER": "DEEP_CRAWLER",
-    "GRAPHIC_DESIGNER": "CEO",
-    "PRESENTATION_EXPERT": "CEO",
-    "CX_STRATEGIST": "CEO",
-}
+# Fallback routing for placeholder agents (all agents now active)
+FALLBACK_ROUTES = {}
 
 
 # ══════════════════════════════════════════════════
@@ -222,6 +217,8 @@ class IntentClassifier:
         (["index", "master_index", "sync", "register", "catalog", "documentation", "librarian"], "THE_LIBRARIAN"),
         # Marketing / Brand
         (["market", "brand", "campaign", "customer", "engagement", "competitor"], "CMO"),
+        # Visual Design / Creative
+        (["design", "logo", "visual", "graphic", "icon", "brochure", "render", "schematic", "asset", "image", "illustration"], "GRAPHIC_DESIGNER"),
     ]
 
     def classify(self, prompt: str) -> tuple:

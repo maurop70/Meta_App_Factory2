@@ -732,6 +732,283 @@ function RefinePanel({ registry }) {
   );
 }
 
+// ── BRAND STUDIO PANEL ────────────────────────────────────
+function BrandStudioPanel({ registry }) {
+  const [selectedProject, setSelectedProject] = useState('');
+  const [activeMode, setActiveMode] = useState(null);
+  const [currentBrand, setCurrentBrand] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState(null);
+  const [description, setDescription] = useState('');
+  const fileRef = useRef(null);
+
+  // Auto-select first project
+  useEffect(() => {
+    if (!selectedProject && registry.length) {
+      setSelectedProject(registry[0].name);
+    }
+  }, [registry, selectedProject]);
+
+  // Load current brand when project changes
+  useEffect(() => {
+    if (!selectedProject) return;
+    fetch(`${API_BASE}/api/brand/${encodeURIComponent(selectedProject)}`)
+      .then(r => r.json())
+      .then(data => setCurrentBrand(data.brand || null))
+      .catch(() => setCurrentBrand(null));
+  }, [selectedProject]);
+
+  const handleAIGenerate = async () => {
+    if (!selectedProject || loading) return;
+    setLoading(true);
+    setStatus({ type: 'info', text: '🤖 CMO + Graphic Designer generating your brand...' });
+    try {
+      const res = await fetch(`${API_BASE}/api/brand/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project_name: selectedProject }),
+      });
+      const data = await res.json();
+      if (data.status === 'ok') {
+        setCurrentBrand(data.brand);
+        setStatus({ type: 'success', text: `✅ Brand generated for ${data.brand?.company_name || selectedProject}` });
+      } else {
+        setStatus({ type: 'error', text: `❌ ${data.message || 'Generation failed'}` });
+      }
+    } catch (err) {
+      setStatus({ type: 'error', text: `❌ Connection failed: ${err.message}` });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedProject) return;
+    e.target.value = '';
+    setLoading(true);
+    setStatus({ type: 'info', text: `📤 Extracting brand from ${file.name}...` });
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('project_name', selectedProject);
+    try {
+      const res = await fetch(`${API_BASE}/api/brand/upload`, { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.status === 'ok') {
+        setCurrentBrand(data.brand);
+        setStatus({ type: 'success', text: `✅ Brand extracted from ${file.name}` });
+      } else {
+        setStatus({ type: 'error', text: `❌ ${data.message || 'Upload failed'}` });
+      }
+    } catch (err) {
+      setStatus({ type: 'error', text: `❌ Upload error: ${err.message}` });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDescribe = async () => {
+    if (!description.trim() || !selectedProject || loading) return;
+    setLoading(true);
+    setStatus({ type: 'info', text: '💬 Translating your vision into a brand identity...' });
+    try {
+      const res = await fetch(`${API_BASE}/api/brand/describe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project_name: selectedProject, description: description.trim() }),
+      });
+      const data = await res.json();
+      if (data.status === 'ok') {
+        setCurrentBrand(data.brand);
+        setDescription('');
+        setStatus({ type: 'success', text: `✅ Brand created from your description` });
+      } else {
+        setStatus({ type: 'error', text: `❌ ${data.message || 'Failed'}` });
+      }
+    } catch (err) {
+      setStatus({ type: 'error', text: `❌ Error: ${err.message}` });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const brandColors = currentBrand?.colors || {};
+  const brandFonts = currentBrand?.fonts || {};
+  const hasBrand = currentBrand && currentBrand.company_name;
+
+  return (
+    <div className="brand-studio">
+      <div className="brand-studio-header">
+        <div>
+          <h3>🎨 Brand Studio</h3>
+          <p className="brand-subtitle">Define your project's visual identity — no code needed</p>
+        </div>
+      </div>
+
+      {/* Project Selector */}
+      <div className="brand-project-selector">
+        <label>Target Project</label>
+        <select
+          value={selectedProject}
+          onChange={e => { setSelectedProject(e.target.value); setStatus(null); }}
+          className="brand-select"
+        >
+          {registry.map(app => (
+            <option key={app.name} value={app.name}>
+              {app.name} — {app.type} {app.status === 'active' ? '🟢' : '⚪'}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Status Banner */}
+      {status && (
+        <div className={`brand-status-banner ${status.type}`}>
+          {status.text}
+          <button className="brand-dismiss" onClick={() => setStatus(null)}>✕</button>
+        </div>
+      )}
+
+      {/* Three Mode Cards */}
+      <div className="brand-mode-cards">
+        {/* AI Creates */}
+        <div
+          className={`brand-mode-card ai ${activeMode === 'ai' ? 'active' : ''}`}
+          onClick={() => setActiveMode('ai')}
+        >
+          <div className="mode-icon">🤖</div>
+          <h4>AI Creates</h4>
+          <p>Let CMO & Graphic Designer autonomously generate your brand identity, palette, and logo brief</p>
+          <button
+            className="brand-action-btn ai-btn"
+            onClick={(e) => { e.stopPropagation(); handleAIGenerate(); }}
+            disabled={loading}
+          >
+            {loading && activeMode === 'ai' ? '⏳ Generating...' : '⚡ Generate Brand'}
+          </button>
+        </div>
+
+        {/* Upload */}
+        <div
+          className={`brand-mode-card upload ${activeMode === 'upload' ? 'active' : ''}`}
+          onClick={() => setActiveMode('upload')}
+        >
+          <div className="mode-icon">📤</div>
+          <h4>I'll Provide</h4>
+          <p>Upload your existing logo, brand guide, or identity documents</p>
+          <div
+            className="brand-drop-zone"
+            onClick={(e) => { e.stopPropagation(); fileRef.current?.click(); }}
+          >
+            <span>Drop files here or click to browse</span>
+            <span className="drop-formats">PNG, PDF, DOCX, JSON</span>
+          </div>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".png,.jpg,.jpeg,.pdf,.docx,.json,.svg"
+            style={{ display: 'none' }}
+            onChange={handleUpload}
+          />
+        </div>
+
+        {/* Describe */}
+        <div
+          className={`brand-mode-card describe ${activeMode === 'describe' ? 'active' : ''}`}
+          onClick={() => setActiveMode('describe')}
+        >
+          <div className="mode-icon">💬</div>
+          <h4>Describe It</h4>
+          <p>Tell us your vision in plain language and we'll bring it to life</p>
+          <textarea
+            className="brand-textarea"
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            onClick={e => e.stopPropagation()}
+            placeholder="My brand should feel modern, trustworthy, with dark tones and gold accents..."
+            rows={3}
+          />
+          <button
+            className="brand-action-btn describe-btn"
+            onClick={(e) => { e.stopPropagation(); handleDescribe(); }}
+            disabled={loading || !description.trim()}
+          >
+            {loading && activeMode === 'describe' ? '⏳ Creating...' : '✨ Create from Description'}
+          </button>
+        </div>
+      </div>
+
+      {/* Brand Preview */}
+      <div className="brand-preview">
+        <div className="brand-preview-header">
+          <h4>Current Brand Identity</h4>
+          <span className={`brand-badge ${hasBrand ? 'active' : 'empty'}`}>
+            {hasBrand ? '✅ Brand Active' : '⚠️ No Brand Defined'}
+          </span>
+        </div>
+
+        {hasBrand ? (
+          <div className="brand-preview-content">
+            <div className="brand-preview-row">
+              <div className="brand-info-block">
+                <span className="brand-label">Company</span>
+                <span className="brand-value">{currentBrand.company_name}</span>
+              </div>
+              {currentBrand.tagline && (
+                <div className="brand-info-block">
+                  <span className="brand-label">Tagline</span>
+                  <span className="brand-value">{currentBrand.tagline}</span>
+                </div>
+              )}
+              <div className="brand-info-block">
+                <span className="brand-label">Tone</span>
+                <span className="brand-value">{currentBrand.tone_of_voice || '—'}</span>
+              </div>
+            </div>
+
+            <div className="brand-preview-row">
+              <div className="brand-info-block">
+                <span className="brand-label">Color Palette</span>
+                <div className="brand-color-palette">
+                  {Object.entries(brandColors).map(([name, hex]) => (
+                    <div key={name} className="color-swatch" title={`${name}: ${hex}`}>
+                      <div className="color-circle" style={{ background: hex }} />
+                      <span className="color-name">{name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="brand-preview-row">
+              <div className="brand-info-block">
+                <span className="brand-label">Typography</span>
+                <div className="brand-fonts">
+                  {Object.entries(brandFonts).map(([role, name]) => (
+                    <span key={role} className="font-tag">{role}: <strong>{name}</strong></span>
+                  ))}
+                </div>
+              </div>
+              {currentBrand.visual_style && (
+                <div className="brand-info-block">
+                  <span className="brand-label">Visual Style</span>
+                  <span className="brand-value">{currentBrand.visual_style}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="brand-empty-state">
+            <div className="empty-icon">🎨</div>
+            <p>No brand identity defined for <strong>{selectedProject}</strong></p>
+            <p className="empty-hint">Choose a mode above to create your brand</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── MAIN APP ────────────────────────────────────────────────
 function App() {
   const [activeView, setActiveView] = useState('systemmap');
@@ -771,6 +1048,7 @@ function App() {
     { icon: '📦', label: 'App Registry', view: 'registry' },
     { icon: '🎮', label: 'Command Palette', view: 'commands' },
     { icon: '🧠', label: 'Agent Status', view: 'agents' },
+    { icon: '🎨', label: 'Brand Studio', view: 'brand', badge: 'NEW' },
     { icon: '🔧', label: 'Refine App', view: 'refine' },
     { icon: '⚛️', label: 'Atomizer', view: 'atomizer' },
     { icon: '📊', label: 'Telemetry', view: 'telemetry', badge: 'Beta' },
@@ -895,6 +1173,11 @@ function App() {
         {/* Refine App */}
         {activeView === 'refine' && (
           <RefinePanel registry={registry} />
+        )}
+
+        {/* Brand Studio */}
+        {activeView === 'brand' && (
+          <BrandStudioPanel registry={registry} />
         )}
 
         {/* Agent Status */}

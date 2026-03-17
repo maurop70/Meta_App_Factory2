@@ -223,8 +223,7 @@ class DesignReasoning:
                 f'{{"visual_focus":"...","iconography":["..."],"layout":"..."}}'
             )
 
-            resp =
- requests.post(url, json={
+            resp = requests.post(url, json={
                 "contents": [{"role": "user", "parts": [{"text": prompt}]}],
                 "generationConfig": {
                     "temperature": 0.3,

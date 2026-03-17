@@ -92,9 +92,12 @@ def create_symlink(source, target):
             return f"error: {e}"
 
 
-def bootstrap_project(project_name: str, sector: str = "general", run_test: bool = True):
+def bootstrap_project(project_name: str, sector: str = "general", tier: str = "venture", run_test: bool = True):
     """
     Create a new Venture Studio project with full V3 inheritance.
+
+    Args:
+        tier: "factory" (inherits Antigravity brand) or "venture" (empty brand, user must define)
     """
     name = safe_name(project_name)
     project_dir = os.path.join(PROJECTS_DIR, name)
@@ -116,17 +119,33 @@ def bootstrap_project(project_name: str, sector: str = "general", run_test: bool
     soul_dir = os.path.join(project_dir, "soul")
     os.makedirs(soul_dir, exist_ok=True)
 
-    # Brand Identity
-    brand = dict(DEFAULT_BRAND)
-    brand["company_name"] = project_name
-    brand["sector"] = sector
-    brand["created_at"] = datetime.now().isoformat()
-    brand["last_updated"] = datetime.now().isoformat()
+    # Brand Identity — tier-aware
+    if tier == "factory":
+        # Factory apps: inherit Antigravity master brand
+        master_brand_path = os.path.join(FACTORY_DIR, "antigravity.brand.json")
+        if os.path.exists(master_brand_path):
+            with open(master_brand_path, "r", encoding="utf-8") as f:
+                brand = json.load(f)
+            brand["tier"] = "factory"
+            brand["last_updated"] = datetime.now().isoformat()
+        else:
+            brand = dict(DEFAULT_BRAND)
+            brand["company_name"] = "Antigravity-AI"
+            brand["tier"] = "factory"
+    else:
+        # Venture projects: empty brand — forces user/CMO input
+        brand = dict(DEFAULT_BRAND)
+        brand["company_name"] = ""  # Intentionally blank
+        brand["tier"] = "venture"
+        brand["sector"] = sector
+        brand["created_at"] = datetime.now().isoformat()
+        brand["last_updated"] = datetime.now().isoformat()
 
     brand_path = os.path.join(soul_dir, "brand_identity.json")
     with open(brand_path, "w", encoding="utf-8") as f:
         json.dump(brand, f, indent=2)
-    print(f"  🧬 Soul initialized:")
+    brand_tier_label = "Antigravity (inherited)" if tier == "factory" else "EMPTY — requires user input"
+    print(f"  🧬 Soul initialized ({brand_tier_label}):")
     print(f"     └── soul/brand_identity.json")
 
     # Market Intel DB (empty)
@@ -221,7 +240,11 @@ def bootstrap_project(project_name: str, sector: str = "general", run_test: bool
     print(f"     │   └── market_crawler.py")
     print(f"     └── [V3 infrastructure links]")
     print(f"\n  Next Steps:")
-    print(f"     1. Edit soul/brand_identity.json with your brand")
+    if tier == "venture":
+        print(f"     1. Edit soul/brand_identity.json with your brand")
+        print(f"        OR let CMO/Graphic Designer generate one via Aether")
+    else:
+        print(f"     1. Brand inherited from Antigravity (override in soul/brand_identity.json)")
     print(f"     2. Run: python projects/{name}/main.py")
     print(f"{'='*60}\n")
 
@@ -350,7 +373,9 @@ if __name__ == "__main__":
     )
     parser.add_argument("project_name", help="Name for the new project")
     parser.add_argument("--sector", default="general", help="Business sector (e.g., fintech, fashion, healthtech)")
+    parser.add_argument("--tier", default="venture", choices=["factory", "venture"],
+                        help="Brand tier: 'factory' inherits Antigravity brand, 'venture' requires user brand")
     parser.add_argument("--no-test", action="store_true", help="Skip preflight validation")
     args = parser.parse_args()
 
-    bootstrap_project(args.project_name, sector=args.sector, run_test=not args.no_test)
+    bootstrap_project(args.project_name, sector=args.sector, tier=args.tier, run_test=not args.no_test)

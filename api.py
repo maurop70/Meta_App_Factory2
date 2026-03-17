@@ -1277,6 +1277,230 @@ async def audit_master_index():
     return {"status": "no_challenger", "analysis": analysis}
 
 
+# ── Brand Studio API ──────────────────────────────────────
+# Import BrandRegistry for the Brand Studio panel
+try:
+    sys.path.insert(0, os.path.join(SCRIPT_DIR, "Project_Aether"))
+    from brand_guardian import BrandRegistry
+    _brand_registry = BrandRegistry()
+    BRAND_READY = True
+    logger.info("BrandRegistry loaded.")
+except ImportError:
+    BRAND_READY = False
+    _brand_registry = None
+    logger.warning("BrandRegistry not available.")
+
+
+class BrandDescribeRequest(BaseModel):
+    project_name: str
+    description: str
+
+
+class BrandGenerateRequest(BaseModel):
+    project_name: str
+
+
+@app.get("/api/brand/{project_name}")
+def get_brand(project_name: str):
+    """Return current brand identity for a project."""
+    if not BRAND_READY:
+        return {"brand": None, "error": "BrandRegistry not available"}
+    # Search for project directory
+    for search_root in [SCRIPT_DIR, os.path.join(SCRIPT_DIR, "projects")]:
+        project_dir = os.path.join(search_root, project_name)
+        if os.path.isdir(project_dir):
+            brand = _brand_registry.resolve(project_dir, tier="factory")
+            return {"brand": brand}
+    # Check if it's the Factory root itself
+    if project_name in ("Meta_App_Factory", "Antigravity"):
+        return {"brand": _brand_registry.master_brand}
+    return {"brand": None}
+
+
+@app.post("/api/brand/generate")
+def brand_generate(req: BrandGenerateRequest):
+    """AI-generate a brand identity for a project using CMO + Designer pattern."""
+    if not BRAND_READY:
+        return {"status": "error", "message": "BrandRegistry not available"}
+    # Resolve project directory
+    project_dir = None
+    for search_root in [SCRIPT_DIR, os.path.join(SCRIPT_DIR, "projects")]:
+        candidate = os.path.join(search_root, req.project_name)
+        if os.path.isdir(candidate):
+            project_dir = candidate
+            break
+    if not project_dir:
+        return {"status": "error", "message": f"Project '{req.project_name}' not found"}
+
+    # Generate brand using CMO agent via n8n (or fallback to template)
+    from datetime import datetime
+    brand_data = {
+        "company_name": req.project_name,
+        "mission": f"AI-powered solutions for {req.project_name}",
+        "tagline": f"{req.project_name} — Built by AI, designed for humans",
+        "sector": "AI/Technology",
+        "colors": {
+            "primary": "#06b6d4",
+            "secondary": "#8b5cf6",
+            "accent": "#f59e0b",
+            "background": "#0a0a0f",
+            "surface": "#111827",
+            "text": "#e2e8f0",
+        },
+        "fonts": {"heading": "Outfit", "body": "Inter", "mono": "JetBrains Mono"},
+        "tone_of_voice": "Professional, innovative, approachable",
+        "visual_style": "Modern, clean, dark-mode-first with vibrant accents",
+        "tier": "ai-generated",
+        "created_at": datetime.now().isoformat(),
+        "last_updated": datetime.now().isoformat(),
+    }
+
+    try:
+        # Try to enrich via CMO agent
+        cmo_url = "https://humanresource.app.n8n.cloud/webhook/cmo-v2"
+        cmo_prompt = (
+            f"Generate a brand identity for a project called '{req.project_name}'. "
+            f"Return JSON with: company_name, tagline, mission, colors (primary/secondary/accent hex), "
+            f"fonts (heading/body), tone_of_voice, visual_style."
+        )
+        import requests as _req
+        resp = _req.post(cmo_url, json={"prompt": cmo_prompt, "sessionId": "brand-studio"}, timeout=15)
+        if resp.status_code == 200:
+            cmo_data = resp.json()
+            cmo_text = cmo_data.get("text") or cmo_data.get("output") or ""
+            # Try to extract JSON from CMO response
+            if "{" in cmo_text:
+                import re
+                json_match = re.search(r'\{[^{}]*\}', cmo_text, re.DOTALL)
+                if json_match:
+                    try:
+                        enriched = json.loads(json_match.group())
+                        brand_data.update({k: v for k, v in enriched.items() if v})
+                    except json.JSONDecodeError:
+                        pass
+    except Exception as e:
+        logger.warning(f"CMO enrichment failed, using template: {e}")
+
+    # Save to project
+    brand_path = _brand_registry.create_brand(project_dir, brand_data)
+    return {"status": "ok", "brand": brand_data, "path": brand_path}
+
+
+@app.post("/api/brand/upload")
+async def brand_upload(file: UploadFile = File(...), project_name: str = ""):
+    """Extract brand identity from an uploaded file (JSON, image, or document)."""
+    if not BRAND_READY:
+        return {"status": "error", "message": "BrandRegistry not available"}
+    if not project_name:
+        return {"status": "error", "message": "project_name is required"}
+
+    # Resolve project directory
+    project_dir = None
+    for search_root in [SCRIPT_DIR, os.path.join(SCRIPT_DIR, "projects")]:
+        candidate = os.path.join(search_root, project_name)
+        if os.path.isdir(candidate):
+            project_dir = candidate
+            break
+    if not project_dir:
+        return {"status": "error", "message": f"Project '{project_name}' not found"}
+
+    content = await file.read()
+    filename = file.filename or "upload"
+
+    from datetime import datetime
+    # Handle JSON files directly
+    if filename.endswith(".json"):
+        try:
+            brand_data = json.loads(content.decode("utf-8"))
+            brand_data["tier"] = "user-provided"
+            brand_data["last_updated"] = datetime.now().isoformat()
+            brand_path = _brand_registry.create_brand(project_dir, brand_data)
+            return {"status": "ok", "brand": brand_data, "path": brand_path}
+        except json.JSONDecodeError:
+            return {"status": "error", "message": "Invalid JSON in uploaded file"}
+
+    # For images/PDFs: save to soul/ and create placeholder brand
+    soul_dir = os.path.join(project_dir, "soul")
+    os.makedirs(soul_dir, exist_ok=True)
+    asset_path = os.path.join(soul_dir, filename)
+    with open(asset_path, "wb") as f:
+        f.write(content)
+
+    brand_data = {
+        "company_name": project_name,
+        "logo_path": asset_path,
+        "tier": "user-provided",
+        "source_file": filename,
+        "colors": {},
+        "fonts": {},
+        "tone_of_voice": "",
+        "visual_style": "",
+        "created_at": datetime.now().isoformat(),
+        "last_updated": datetime.now().isoformat(),
+    }
+    brand_path = _brand_registry.create_brand(project_dir, brand_data)
+    return {"status": "ok", "brand": brand_data, "path": brand_path, "asset_saved": asset_path}
+
+
+@app.post("/api/brand/describe")
+def brand_describe(req: BrandDescribeRequest):
+    """Create brand identity from a natural language description."""
+    if not BRAND_READY:
+        return {"status": "error", "message": "BrandRegistry not available"}
+
+    # Resolve project directory
+    project_dir = None
+    for search_root in [SCRIPT_DIR, os.path.join(SCRIPT_DIR, "projects")]:
+        candidate = os.path.join(search_root, req.project_name)
+        if os.path.isdir(candidate):
+            project_dir = candidate
+            break
+    if not project_dir:
+        return {"status": "error", "message": f"Project '{req.project_name}' not found"}
+
+    from datetime import datetime
+    # Use CMO agent to interpret the description
+    brand_data = {
+        "company_name": req.project_name,
+        "tier": "described",
+        "source_description": req.description,
+        "colors": {"primary": "#06b6d4", "secondary": "#14b8a6", "accent": "#d4a574", "background": "#0a0a0f", "text": "#e2e8f0"},
+        "fonts": {"heading": "Outfit", "body": "Inter"},
+        "tone_of_voice": "Professional, innovative",
+        "visual_style": req.description,
+        "created_at": datetime.now().isoformat(),
+        "last_updated": datetime.now().isoformat(),
+    }
+
+    try:
+        cmo_url = "https://humanresource.app.n8n.cloud/webhook/cmo-v2"
+        cmo_prompt = (
+            f"A user described their brand vision for '{req.project_name}' as: \"{req.description}\"\n\n"
+            f"Based on that description, generate a brand identity. Return JSON with: "
+            f"company_name, tagline, mission, colors (primary/secondary/accent as hex), "
+            f"fonts (heading/body), tone_of_voice, visual_style."
+        )
+        import requests as _req
+        resp = _req.post(cmo_url, json={"prompt": cmo_prompt, "sessionId": "brand-studio"}, timeout=15)
+        if resp.status_code == 200:
+            cmo_data = resp.json()
+            cmo_text = cmo_data.get("text") or cmo_data.get("output") or ""
+            if "{" in cmo_text:
+                import re
+                json_match = re.search(r'\{[^{}]*\}', cmo_text, re.DOTALL)
+                if json_match:
+                    try:
+                        enriched = json.loads(json_match.group())
+                        brand_data.update({k: v for k, v in enriched.items() if v})
+                    except json.JSONDecodeError:
+                        pass
+    except Exception as e:
+        logger.warning(f"CMO interpretation failed, using defaults: {e}")
+
+    brand_path = _brand_registry.create_brand(project_dir, brand_data)
+    return {"status": "ok", "brand": brand_data, "path": brand_path}
+
+
 # ── Startup: Auto-start incoming watcher ──────────────────
 @app.on_event("startup")
 async def _startup_watcher():

@@ -1,7 +1,7 @@
 """
 v3_autoheal_inject.py — Inject Auto-Heal into all V3-migrated files
 """
-import os, sys, re
+import os, sys, re, py_compile
 sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
 FACTORY_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -11,12 +11,14 @@ SKIP_FILES = {
     "webhook_hardener.py", "cloud_surgery_audit.py", "env_updater.py",
     "v3_execute.py", "v3_retrofit.py", "v3_migration.py",
     "v3_autoheal_inject.py", "auto_heal.py", "__init__.py",
+    "v3_safety_check.py",
 }
 
 IMPORT_LINE = "from auto_heal import healed_post, auto_heal, diagnose"
 injected = 0
 skipped = 0
 already = 0
+rolled_back = 0
 
 for root, dirs, files in os.walk(FACTORY_DIR):
     dirs[:] = [d for d in dirs if d not in {"__pycache__", ".git", "node_modules", "pending_sync"}]
@@ -27,6 +29,7 @@ for root, dirs, files in os.walk(FACTORY_DIR):
         try:
             with open(fpath, "r", encoding="utf-8", errors="replace") as fp:
                 content = fp.read()
+                original = content
         except:
             continue
 
@@ -77,8 +80,19 @@ for root, dirs, files in os.walk(FACTORY_DIR):
         with open(fpath, "w", encoding="utf-8") as fp:
             fp.write(content)
 
+        # SAFETY: Validate syntax — rollback if broken
+        try:
+            py_compile.compile(fpath, doraise=True)
+        except py_compile.PyCompileError:
+            with open(fpath, "w", encoding="utf-8") as fp:
+                fp.write(original)
+            rel = os.path.relpath(fpath, FACTORY_DIR)
+            print(f"  🔴 ROLLED BACK: {rel} (syntax error after injection)")
+            rolled_back += 1
+            continue
+
         rel = os.path.relpath(fpath, FACTORY_DIR)
         print(f"  ✅ {rel}")
         injected += 1
 
-print(f"\n  Injected: {injected} | Already done: {already} | Skipped: {skipped}")
+print(f"\n  Injected: {injected} | Already done: {already} | Skipped: {skipped} | Rolled back: {rolled_back}")

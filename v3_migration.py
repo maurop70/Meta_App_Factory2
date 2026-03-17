@@ -11,6 +11,7 @@ import sys
 import re
 import json
 import time
+import py_compile
 from datetime import datetime
 
 sys.stdout.reconfigure(encoding='utf-8', errors='replace')
@@ -23,6 +24,7 @@ SKIP_FILES = {
     "app_generator.py", "child_app_template.py", "swdr_heartbeat.py",
     "webhook_hardener.py", "cloud_surgery_audit.py", "env_updater.py",
     "v3_execute.py", "v3_retrofit.py", "v3_migration.py",
+    "v3_safety_check.py", "v3_autoheal_inject.py",
 }
 
 
@@ -102,7 +104,7 @@ def migrate_file(fpath: str) -> dict:
         r'(?:,\s*headers\s*=\s*[^,\)]+)?'  # optional headers
         r'(?:,\s*timeout\s*=\s*[^,\)]+)?'  # optional timeout
         r'\s*\)',
-        re.MULTILINE
+        re.MULTILINE | re.DOTALL
     )
 
     def _replace_post(m):
@@ -128,7 +130,7 @@ def migrate_file(fpath: str) -> dict:
         r'(?:,\s*headers\s*=\s*[^,\)]+)?'
         r'(?:,\s*timeout\s*=\s*[^,\)]+)?'
         r'\s*\)',
-        re.MULTILINE
+        re.MULTILINE | re.DOTALL
     )
 
     def _replace_bare(m):
@@ -148,7 +150,7 @@ def migrate_file(fpath: str) -> dict:
         r'(?:,\s*headers\s*=\s*[^,\)]+)?'
         r'(?:,\s*timeout\s*=\s*[^,\)]+)?'
         r'\s*\)',
-        re.MULTILINE
+        re.MULTILINE | re.DOTALL
     )
 
     def _replace_data_post(m):
@@ -209,6 +211,19 @@ def migrate_file(fpath: str) -> dict:
     if content != original and changes:
         with open(fpath, "w", encoding="utf-8") as f:
             f.write(content)
+
+        # SAFETY: Validate syntax after writing — rollback if broken
+        try:
+            py_compile.compile(fpath, doraise=True)
+        except py_compile.PyCompileError as e:
+            # ROLLBACK — restore original content
+            with open(fpath, "w", encoding="utf-8") as f:
+                f.write(original)
+            result["changes"] = changes
+            result["status"] = "ROLLED_BACK"
+            result["error"] = f"Syntax error after migration — rolled back: {e}"
+            return result
+
         result["changes"] = changes
         result["status"] = "migrated"
     else:

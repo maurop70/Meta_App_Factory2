@@ -1,0 +1,13 @@
+{
+  "url": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+  "payload": {
+    "timestamp": 1773682150.591422,
+    "spx": 6702.81,
+    "vix": 24.04,
+    "iv_rank": 22.8,
+    "trend_5d_pct": -1.16,
+    "news_count": 10
+  },
+  "project": "child_app",
+  "queued_at": "20260316_132938"
+}

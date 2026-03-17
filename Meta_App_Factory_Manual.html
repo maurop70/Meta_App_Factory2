@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meta App Factory — CTO Technical Manual</title>
+<style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@page{size:A4;margin:0}*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0b0f1a;--bg-card:rgba(15,23,42,0.7);--bg-section:rgba(15,23,42,0.5);--border:rgba(100,116,139,0.2);--text:#e2e8f0;--text-dim:#94a3b8;--text-muted:#64748b;--heading:#f1f5f9;--green:#22c55e;--green-glow:rgba(34,197,94,0.15);--yellow:#eab308;--red:#ef4444;--blue:#3b82f6;--blue-glow:rgba(59,130,246,0.12);--purple:#8b5cf6;--purple-glow:rgba(139,92,246,0.12);--cyan:#06b6d4;--orange:#f97316;--accent:linear-gradient(135deg,#3b82f6,#8b5cf6)}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);line-height:1.7;font-size:15px;-webkit-font-smoothing:antialiased}
+.cover{page-break-after:always}.chapter{page-break-before:always}.no-print{display:none}}
+.cover{min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:60px 40px;position:relative;overflow:hidden;background:radial-gradient(ellipse at 30% 20%,rgba(59,130,246,0.12) 0%,transparent 50%),radial-gradient(ellipse at 70% 80%,rgba(139,92,246,0.1) 0%,transparent 50%),radial-gradient(ellipse at 50% 50%,rgba(6,182,212,0.06) 0%,transparent 60%),var(--bg)}
+.cover::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 49px,rgba(100,116,139,0.03) 50px);pointer-events:none}
+.cover-badge{padding:8px 20px;border-radius:24px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.25);color:var(--blue);font-size:12px;font-weight:600;letter-spacing:2px;text-transform:uppercase;margin-bottom:32px}
+.cover-icon{font-size:72px;margin-bottom:24px;filter:drop-shadow(0 0 40px rgba(59,130,246,0.3))}
+.cover h1{font-size:42px;font-weight:800;letter-spacing:-1.5px;background:linear-gradient(135deg,#e2e8f0,#3b82f6,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;max-width:700px;line-height:1.15;margin-bottom:16px}
+.cover-subtitle{font-size:18px;color:var(--text-dim);max-width:560px;margin-bottom:48px}
+.cover-meta{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;max-width:640px;width:100%}
+.cover-stat{padding:16px;border-radius:12px;background:var(--bg-card);border:1px solid var(--border)}
+.cover-stat .val{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:var(--blue)}
+.cover-stat .lbl{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);margin-top:4px}
+.cover-footer{position:absolute;bottom:40px;font-size:12px;color:var(--text-muted);letter-spacing:0.5px}
+.content{max-width:900px;margin:0 auto;padding:60px 40px 120px}
+.chapter{margin-bottom:80px}
+.chapter-number{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:3px;color:var(--blue);margin-bottom:8px}
+.chapter h2{font-size:30px;font-weight:700;letter-spacing:-0.5px;color:var(--heading);margin-bottom:8px}
+.chapter-desc{font-size:15px;color:var(--text-dim);margin-bottom:40px;border-bottom:1px solid var(--border);padding-bottom:24px}
+.section{margin-bottom:48px}
+.section h3{font-size:20px;font-weight:600;color:var(--heading);margin-bottom:16px;display:flex;align-items:center;gap:10px}
+.section h3 .icon{font-size:22px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:var(--bg-card);border:1px solid var(--border)}
+p{margin-bottom:16px;color:var(--text)}
+table{width:100%;border-collapse:collapse;margin:20px 0;font-size:13px}
+th{text-align:left;padding:10px 14px;background:rgba(59,130,246,0.08);border-bottom:1px solid var(--border);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim)}
+td{padding:10px 14px;border-bottom:1px solid rgba(100,116,139,0.1);vertical-align:top}
+tr:hover td{background:rgba(59,130,246,0.04)}
+code{font-family:'JetBrains Mono',monospace;font-size:12px;background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;color:var(--cyan)}
+.callout{margin:24px 0;padding:16px 20px;border-radius:12px;border-left:4px solid var(--blue);background:rgba(59,130,246,0.06);font-size:13.5px}
+.callout.warn{border-left-color:var(--yellow);background:rgba(234,179,8,0.06)}
+.callout.success{border-left-color:var(--green);background:rgba(34,197,94,0.06)}
+.callout-title{font-weight:600;margin-bottom:4px;font-size:13px}
+.flow{display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap}
+.flow-node{padding:12px 20px;border-radius:12px;font-size:13px;font-weight:600;text-align:center;min-width:120px}
+.flow-node.core{background:linear-gradient(135deg,rgba(59,130,246,0.2),rgba(139,92,246,0.15));border:1.5px solid rgba(59,130,246,0.4);color:var(--blue)}
+.flow-node.agent{background:rgba(34,197,94,0.1);border:1.5px solid rgba(34,197,94,0.3);color:var(--green)}
+.flow-node.cloud{background:rgba(6,182,212,0.1);border:1.5px solid rgba(6,182,212,0.3);color:var(--cyan)}
+.flow-node.heal{background:rgba(234,179,8,0.1);border:1.5px solid rgba(234,179,8,0.3);color:var(--yellow)}
+.flow-node.danger{background:rgba(239,68,68,0.1);border:1.5px solid rgba(239,68,68,0.3);color:var(--red)}
+.flow-node.buffer{background:rgba(249,115,22,0.1);border:1.5px solid rgba(249,115,22,0.3);color:var(--orange)}
+.flow-node small{display:block;font-size:10px;font-weight:400;opacity:0.7;margin-top:3px}
+.flow-arrow{font-size:18px;color:var(--text-muted);padding:0 8px;flex-shrink:0}
+.vflow{display:flex;flex-direction:column;align-items:center;gap:0}
+.vflow .flow-arrow{transform:none;padding:4px 0;font-size:20px}
+.diagram{margin:32px 0;padding:32px;border-radius:16px;background:var(--bg-card);border:1px solid var(--border);overflow-x:auto}
+.diagram-title{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);margin-bottom:20px;text-align:center}
+.board-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin:24px 0}
+.board-card{padding:20px;border-radius:14px;background:var(--bg-card);border:1px solid var(--border);text-align:center;transition:transform 0.2s,box-shadow 0.2s}
+.board-card:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,0.3)}
+.board-card .card-icon{font-size:32px;margin-bottom:10px}
+.board-card .card-title{font-weight:700;font-size:14px;margin-bottom:4px;color:var(--heading)}
+.board-card .card-role{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px}
+.board-card .card-desc{font-size:12px;color:var(--text-dim);margin-top:8px;line-height:1.5}
+.toc{margin:24px 0}
+.toc a{display:flex;justify-content:space-between;padding:10px 16px;margin:4px 0;border-radius:8px;color:var(--text);text-decoration:none;font-size:14px;transition:background 0.2s}
+.toc a:hover{background:rgba(59,130,246,0.08)}
+.toc a span.num{color:var(--blue);font-weight:600;font-family:'JetBrains Mono',monospace}
+ol.step-list{counter-reset:step;list-style:none;padding:0}
+ol.step-list li{counter-increment:step;padding:14px 16px 14px 56px;margin:8px 0;border-radius:10px;background:var(--bg-card);border:1px solid var(--border);position:relative;font-size:14px}
+ol.step-list li::before{content:counter(step);position:absolute;left:16px;top:14px;width:26px;height:26px;border-radius:8px;background:var(--accent);color:white;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center}
+ol.step-list li strong{color:var(--heading)}
+.manual-footer{text-align:center;padding:40px;border-top:1px solid var(--border);color:var(--text-muted);font-size:12px}
+.kpi-bar{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:24px 0}
+.kpi{padding:20px;border-radius:12px;background:var(--bg-card);border:1px solid var(--border);text-align:center}
+.kpi .kpi-val{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700}
+.kpi .kpi-lbl{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-top:4px}
+.kpi.blue .kpi-val{color:var(--blue)}.kpi.green .kpi-val{color:var(--green)}.kpi.purple .kpi-val{color:var(--purple)}.kpi.cyan .kpi-val{color:var(--cyan)}.kpi.orange .kpi-val{color:var(--orange)}
+
+@media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+  body {
+    background: #0b0f1a !important;
+    color: #e2e8f0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .cover {
+    page-break-after: always;
+    height: 100vh !important; display: flex !important; flex-direction: column !important; justify-content: center !important; align-items: center !important;
+    background: radial-gradient(ellipse at 30% 20%, rgba(59,130,246,0.12) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 80%, rgba(139,92,246,0.1) 0%, transparent 50%),
+                #0b0f1a !important;
+  }
+  .chapter { page-break-before: always; }
+  .chapter:first-of-type { page-break-before: avoid; }
+  .section { page-break-inside: avoid; }
+  .board-card, .persona, .kpi, .callout, .diagram {
+    page-break-inside: avoid;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  table { page-break-inside: avoid; }
+  tr { page-break-inside: avoid; }
+  th, td {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .board-grid { page-break-inside: avoid; }
+  .flow-node, .cover-stat, .cover-badge, .trait {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  ol.step-list li { page-break-inside: avoid; }
+  ol.step-list li::before {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  h2, h3 { page-break-after: avoid; }
+  .no-print { display: none; }
+  .cover h1 {
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
+  .cover-footer { position: static !important; margin-top: auto !important; margin-bottom: 20px !important; }
+</style>
+</head>
+<body>
+
+<!-- COVER -->
+<div class="cover">
+  <div class="cover-badge">CTO TECHNICAL BRIEFING — MARCH 2026</div>
+  <div class="cover-icon">🏭</div>
+  <h1>Meta App Factory</h1>
+  <p class="cover-subtitle">
+    An autonomous AI-powered application factory that builds, deploys, monitors, and self-heals production software — from idea to running app in minutes.
+  </p>
+  <div class="cover-meta">
+    <div class="cover-stat"><div class="val">258</div><div class="lbl">Python Files</div></div>
+    <div class="cover-stat"><div class="val">6</div><div class="lbl">Live Apps</div></div>
+    <div class="cover-stat"><div class="val">18</div><div class="lbl">AI Agents</div></div>
+    <div class="cover-stat"><div class="val">V3.0</div><div class="lbl">Architecture</div></div>
+  </div>
+  <div class="cover-footer">
+    Antigravity Ventures — Confidential Technical Documentation<br>
+    March 2026 | Architecture: V3.0 Hardened
+  </div>
+</div>
+
+<!-- TOC -->
+<div class="content">
+  <div class="chapter">
+    <div class="chapter-number">Manual Contents</div>
+    <h2>Table of Contents</h2>
+    <div class="toc">
+      <a href="#ch1"><span class="num">01</span> What Is Meta App Factory?</a>
+      <a href="#ch2"><span class="num">02</span> Architecture Overview</a>
+      <a href="#ch3"><span class="num">03</span> The Application Portfolio</a>
+      <a href="#ch4"><span class="num">04</span> The AI Agent Network</a>
+      <a href="#ch5"><span class="num">05</span> The V3 Resilience Stack</a>
+      <a href="#ch6"><span class="num">06</span> Build & Deploy Pipeline</a>
+      <a href="#ch7"><span class="num">07</span> Infrastructure & DevOps</a>
+      <a href="#ch8"><span class="num">08</span> Security & Compliance</a>
+      <a href="#ch9"><span class="num">09</span> Commercialization Roadmap</a>
+    </div>
+  </div>
+
+  <!-- CH1: WHAT IS IT -->
+  <div class="chapter" id="ch1">
+    <div class="chapter-number">Chapter 01</div>
+    <h2>What Is Meta App Factory?</h2>
+    <p class="chapter-desc">
+      A self-contained AI development platform that generates, deploys, and autonomously maintains full-stack applications — eliminating the gap between idea and production software.
+    </p>
+
+    <div class="section">
+      <h3><span class="icon">⚡</span> The Core Proposition</h3>
+      <p>Meta App Factory is not a single application — it is an <strong>autonomous software factory</strong>. It combines:</p>
+      <table>
+        <thead><tr><th>Capability</th><th>What It Does</th><th>Traditional Equivalent</th></tr></thead>
+        <tbody>
+          <tr><td><strong>App Generation</strong></td><td>Creates full-stack apps from natural language prompts (FastAPI + React)</td><td>3-6 month dev cycle</td></tr>
+          <tr><td><strong>AI Agent Network</strong></td><td>18 specialist AI agents (CFO, CTO, CMO, Architect, etc.) that reason about strategy and code</td><td>Consulting team</td></tr>
+          <tr><td><strong>Self-Healing</strong></td><td>4-layer auto-repair: retry → circuit breaker → buffer → recovery sync</td><td>24/7 SRE team</td></tr>
+          <tr><td><strong>Cloud Orchestration</strong></td><td>n8n workflows for inter-app communication, data pipelines, and automation</td><td>Zapier/MuleSoft</td></tr>
+          <tr><td><strong>Autonomous Audit</strong></td><td>Leitner spaced-repetition error memory, Socratic challenger, code quality gates</td><td>QA department</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h3><span class="icon">🎯</span> Key Differentiators</h3>
+      <div class="kpi-bar">
+        <div class="kpi blue"><div class="kpi-val">~15 min</div><div class="kpi-lbl">Idea → Running App</div></div>
+        <div class="kpi green"><div class="kpi-val">Zero</div><div class="kpi-lbl">Data Loss Events</div></div>
+        <div class="kpi purple"><div class="kpi-val">256</div><div class="kpi-lbl">Files Hardened</div></div>
+      </div>
+      <div class="callout success">
+        <div class="callout-title">🔑 Why This Matters for Commercialization</div>
+        Every app we build inherits the entire V3 resilience stack automatically. New products ship with enterprise-grade reliability from day one — no additional engineering required.
+      </div>
+    </div>
+  </div>
+
+  <!-- CH2: ARCHITECTURE -->
+  <div class="chapter" id="ch2">
+    <div class="chapter-number">Chapter 02</div>
+    <h2>Architecture Overview</h2>
+    <p class="chapter-desc">
+      The system architecture — from the factory core to child apps, cloud orchestration, and the AI agent mesh.
+    </p>
+
+    <div class="section">
+      <h3><span class="icon">🏗️</span> System Stack</h3>
+      <table>
+        <thead><tr><th>Layer</th><th>Technology</th><th>Details</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Factory Core</strong></td><td>Python 3.14 + FastAPI</td><td><code>factory.py</code> (81 KB) — app generation, V3 injection, build pipeline</td></tr>
+          <tr><td><strong>Frontend</strong></td><td>React 18 + Vite</td><td>SSE streaming, dark premium UI, per-app React builds</td></tr>
+          <tr><td><strong>AI Engine</strong></td><td>Gemini 2.5 Flash + Claude</td><td>Multi-model: Gemini for generation, Claude for code execution</td></tr>
+          <tr><td><strong>Orchestrator</strong></td><td>n8n Cloud</td><td>Webhook bridges, workflow automation, inter-app messaging</td></tr>
+          <tr><td><strong>Persistence</strong></td><td>JSON + Supabase</td><td>Local-first with optional cloud sync via pgvector</td></tr>
+          <tr><td><strong>Resilience</strong></td><td>V3 Auto-Heal Stack</td><td>4-layer defense, circuit breaker, UUID-stamped buffer</td></tr>
+          <tr><td><strong>Security</strong></td><td>Fernet AES-128</td><td>Encrypted .env, vault client, zero-leak audit</td></tr>
+          <tr><td><strong>Containerization</strong></td><td>Docker</td><td>Auto-generated Dockerfile + docker-compose per app</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="diagram">
+      <div class="diagram-title">High-Level Architecture</div>
+      <div class="vflow">
+        <div class="flow-node core" style="min-width:280px">🏭 Meta App Factory<small>factory.py · api.py · launcher.py</small></div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow" style="gap:16px;flex-wrap:wrap">
+          <div class="flow-node agent">Alpha<small>Trading :5005</small></div>
+          <div class="flow-node agent">Resonance<small>EdTech :5006</small></div>
+          <div class="flow-node agent">Delegate AI<small>Legal :5007</small></div>
+          <div class="flow-node agent">Sentinel<small>Reminders :5009</small></div>
+          <div class="flow-node cloud">Aether<small>Agent Mesh</small></div>
+          <div class="flow-node heal">+ Future Apps<small>Auto-generated</small></div>
+        </div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow" style="gap:16px">
+          <div class="flow-node cloud">n8n Cloud<small>Orchestrator</small></div>
+          <div class="flow-node buffer">Google Drive<small>Cross-PC Sync</small></div>
+          <div class="flow-node core">GitHub<small>Version Control</small></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3><span class="icon">📁</span> Directory Structure</h3>
+      <table>
+        <thead><tr><th>Directory</th><th>Purpose</th><th>Key Files</th></tr></thead>
+        <tbody>
+          <tr><td><code>Meta_App_Factory/</code></td><td>Factory root — core infrastructure</td><td><code>factory.py</code>, <code>api.py</code>, <code>auto_heal.py</code></td></tr>
+          <tr><td><code>Alpha_V2_Genesis/</code></td><td>Trading intelligence dashboard</td><td><code>server.py</code>, <code>skills/loki/</code></td></tr>
+          <tr><td><code>Resonance/</code></td><td>AI educational companion</td><td><code>server.py</code>, <code>app_stream.py</code>, <code>resonance_ui/</code></td></tr>
+          <tr><td><code>Delegate_AI_*/</code></td><td>Agreement & delegation vault</td><td><code>server.py</code>, <code>vault_client.py</code></td></tr>
+          <tr><td><code>Sentinel_Bridge/</code></td><td>Autonomous reminder system</td><td><code>server.py</code>, <code>council_engine.py</code></td></tr>
+          <tr><td><code>Project_Aether/</code></td><td>Agent infrastructure & boardroom</td><td><code>C-Suite_Agents/</code>, <code>fiscal_oversight.py</code></td></tr>
+          <tr><td><code>Aether/</code></td><td>Creative director & report generation</td><td><code>creative_director.py</code>, architects</td></tr>
+          <tr><td><code>agents/</code></td><td>Factory-level agent definitions</td><td><code>aegis_agent.py</code>, collision resolution</td></tr>
+          <tr><td><code>factory_ui/</code></td><td>Factory control panel (React)</td><td><code>OmniDashboard.jsx</code></td></tr>
+          <tr><td><code>utils/</code></td><td>Shared utilities</td><td><code>jsx_validator.py</code>, <code>auth/</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- CH3: APP PORTFOLIO -->
+  <div class="chapter" id="ch3">
+    <div class="chapter-number">Chapter 03</div>
+    <h2>The Application Portfolio</h2>
+    <p class="chapter-desc">
+      Six live applications — each built by the factory, each inheriting V3 resilience, each a potential commercial product.
+    </p>
+
+    <div class="board-grid">
+      <div class="board-card">
+        <div class="card-icon">📈</div>
+        <div class="card-title">Alpha Architect</div>
+        <div class="card-role">Trading Intelligence · Port 5005</div>
+        <div class="card-desc">Options trading dashboard with Loki engine, MMM calculations, fragility index, trade journal, and AI strategy chat. Live market data integration.</div>
+      </div>
+      <div class="board-card">
+        <div class="card-icon">🧠</div>
+        <div class="card-title">Resonance</div>
+        <div class="card-role">EdTech Companion · Port 5006</div>
+        <div class="card-desc">Multi-agent educational AI with Council of Therapists, Parent Portal, clinical intelligence pipeline, study tools, and Dr. Aris behavioral analysis.</div>
+      </div>
+      <div class="board-card">
+        <div class="card-icon">📜</div>
+        <div class="card-title">Delegate AI</div>
+        <div class="card-role">Legal & Agreements · Port 5007</div>
+        <div class="card-desc">AI-powered agreement vault with Fernet AES-128 encryption, multi-user simulation, NDA management, and audit trail compliance.</div>
+      </div>
+      <div class="board-card">
+        <div class="card-icon">🛡️</div>
+        <div class="card-title">Sentinel Bridge</div>
+        <div class="card-role">Smart Reminders · Port 5009</div>
+        <div class="card-desc">Calendar-synced reminder system with voice-to-text, intelligent categorization, ntfy push notifications, and ML feedback loop.</div>
+      </div>
+      <div class="board-card">
+        <div class="card-icon">⚡</div>
+        <div class="card-title">Project Aether</div>
+        <div class="card-role">Agent Infrastructure</div>
+        <div class="card-desc">C-Suite boardroom with 13 specialist agent configs, executive delegation, web mining, compliance vault, and fiscal oversight.</div>
+      </div>
+      <div class="board-card" style="border-color:rgba(139,92,246,0.3)">
+        <div class="card-icon">🔮</div>
+        <div class="card-title" style="color:var(--purple)">+ Next Product</div>
+        <div class="card-role">Your Idea Here</div>
+        <div class="card-desc">Any new app inherits the full V3 stack: FastAPI backend, React frontend, auto-heal, n8n orchestration, Docker packaging, and AI agent mesh.</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3><span class="icon">🔌</span> Port Allocation</h3>
+      <table>
+        <thead><tr><th>Port</th><th>App</th><th>Protocol</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td><code>5005</code></td><td>Alpha_V2_Genesis</td><td>FastAPI + SSE</td><td>🟢 Active</td></tr>
+          <tr><td><code>5006</code></td><td>Resonance</td><td>FastAPI + SSE</td><td>🟢 Active</td></tr>
+          <tr><td><code>5007</code></td><td>Delegate AI</td><td>FastAPI</td><td>🟢 Active</td></tr>
+          <tr><td><code>5009</code></td><td>Sentinel Bridge</td><td>FastAPI</td><td>🟢 Active</td></tr>
+          <tr><td><code>8000</code></td><td>Meta App Factory</td><td>FastAPI (Factory API)</td><td>🟢 Active</td></tr>
+          <tr><td><code>5173-5176</code></td><td>Vite Dev Servers</td><td>React frontends</td><td>🟢 Dynamic</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- CH4: AI AGENTS -->
+  <div class="chapter" id="ch4">
+    <div class="chapter-number">Chapter 04</div>
+    <h2>The AI Agent Network</h2>
+    <p class="chapter-desc">
+      18 specialist AI agents powered by Gemini and Claude, orchestrated through n8n webhooks and the Project Aether boardroom.
+    </p>
+
+    <div class="board-grid">
+      <div class="board-card"><div class="card-icon">👔</div><div class="card-title">CEO</div><div class="card-role">Executive Strategy</div><div class="card-desc">Strategic direction, project prioritization, resource allocation</div></div>
+      <div class="board-card"><div class="card-icon">💰</div><div class="card-title">CFO</div><div class="card-role">Financial Architect</div><div class="card-desc">Revenue models, unit economics, XLSX projections with charts</div></div>
+      <div class="board-card"><div class="card-icon">💻</div><div class="card-title">CTO</div><div class="card-role">Technical Strategy</div><div class="card-desc">Stack decisions, scalability planning, tech debt management</div></div>
+      <div class="board-card"><div class="card-icon">📢</div><div class="card-title">CMO</div><div class="card-role">Go-to-Market</div><div class="card-desc">Brand positioning, audience strategy, campaign design</div></div>
+      <div class="board-card"><div class="card-icon">👥</div><div class="card-title">HR</div><div class="card-role">Team Building</div><div class="card-desc">Hiring roadmap, culture alignment, team composition</div></div>
+      <div class="board-card"><div class="card-icon">🔍</div><div class="card-title">Critic</div><div class="card-role">Quality Assurance</div><div class="card-desc">Stress-tests proposals, demands evidence, finds weaknesses</div></div>
+      <div class="board-card"><div class="card-icon">🏗️</div><div class="card-title">Architect</div><div class="card-role">System Design</div><div class="card-desc">Technical architecture, infrastructure decisions</div></div>
+      <div class="board-card"><div class="card-icon">⚙️</div><div class="card-title">COO</div><div class="card-role">Operations</div><div class="card-desc">Process optimization, operational workflows</div></div>
+      <div class="board-card"><div class="card-icon">🕷️</div><div class="card-title">Deep Crawler</div><div class="card-role">Web Intelligence</div><div class="card-desc">Tavily-powered deep web research, market scanning</div></div>
+      <div class="board-card"><div class="card-icon">📚</div><div class="card-title">Librarian</div><div class="card-role">Knowledge Management</div><div class="card-desc">Index synchronization, document routing, knowledge graphs</div></div>
+      <div class="board-card"><div class="card-icon">⚖️</div><div class="card-title">Compliance</div><div class="card-role">Regulatory</div><div class="card-desc">GDPR, data privacy, regulatory compliance checks</div></div>
+      <div class="board-card"><div class="card-icon">🗄️</div><div class="card-title">Data Architect</div><div class="card-role">Data Strategy</div><div class="card-desc">Schema design, data pipeline optimization</div></div>
+      <div class="board-card"><div class="card-icon">🎯</div><div class="card-title">Pitch Expert</div><div class="card-role">Investor Relations</div><div class="card-desc">Pitch deck structure, investor narrative, PPTX generation</div></div>
+      <div class="board-card"><div class="card-icon">⚛️</div><div class="card-title">Atomizer</div><div class="card-role">Task Decomposition</div><div class="card-desc">Breaks complex directives into atomic sub-tasks</div></div>
+      <div class="board-card"><div class="card-icon">🩺</div><div class="card-title">Dr. Aris</div><div class="card-role">Behavioral Science</div><div class="card-desc">Psychographic blueprints, behavioral nudge strategy</div></div>
+      <div class="board-card"><div class="card-icon">🎨</div><div class="card-title">Creative Director</div><div class="card-role">Design Reasoning</div><div class="card-desc">Design system decisions, UI reasoning, Gemini-powered iteration</div></div>
+      <div class="board-card"><div class="card-icon">📰</div><div class="card-title">News Bureau</div><div class="card-role">Signal Processing</div><div class="card-desc">Market news analysis, sentiment scoring, risk signals</div></div>
+      <div class="board-card"><div class="card-icon">🛡️</div><div class="card-title">Aegis Guardian</div><div class="card-role">Collision Resolution</div><div class="card-desc">Quarantine lane for malformed data, auto-repair, deduplication</div></div>
+    </div>
+
+    <div class="callout">
+      <div class="callout-title">🔗 Agent Communication</div>
+      Agents communicate through n8n Cloud webhooks authenticated via the <code>Antigravity_Full_v2</code> API key (267-char JWT). Each agent has a dedicated webhook endpoint on <code>humanresource.app.n8n.cloud</code>. Reports are exchanged through the Boardroom Exchange — a shared document system where agents post structured analyses.
+    </div>
+  </div>
+
+  <!-- CH5: V3 RESILIENCE -->
+  <div class="chapter" id="ch5">
+    <div class="chapter-number">Chapter 05</div>
+    <h2>The V3 Resilience Stack</h2>
+    <p class="chapter-desc">
+      Four-layer self-healing architecture that guarantees zero data loss and autonomous failure recovery.
+    </p>
+
+    <div class="section">
+      <h3><span class="icon">🛡️</span> Defense Layers</h3>
+      <table>
+        <thead><tr><th>Layer</th><th>Module</th><th>Trigger</th><th>Action</th></tr></thead>
+        <tbody>
+          <tr><td><strong>1. Auto-Heal</strong></td><td><code>auto_heal.py</code></td><td>Any POST failure</td><td>Retry 3× with exponential backoff (2s → 4s → 8s), then self-diagnose</td></tr>
+          <tr><td><strong>2. Circuit Breaker</strong></td><td><code>circuit_breaker.py</code></td><td>5 consecutive failures</td><td>OPEN circuit → block calls → 300s cooldown → HALF_OPEN test</td></tr>
+          <tr><td><strong>3. Safe Buffer</strong></td><td><code>factory.py</code> + <code>local_state_manager.py</code></td><td>Cloud unreachable</td><td>UUID-stamp payload → write to <code>local_pending_sync.json</code></td></tr>
+          <tr><td><strong>4. Recovery Sync</strong></td><td><code>recovery_sync.py</code></td><td>Cloud returns</td><td>Flush buffered payloads → confirm delivery → mark complete</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="diagram">
+      <div class="diagram-title">Self-Healing Flow</div>
+      <div class="vflow">
+        <div class="flow-node core">healed_post(url, payload)<small>Auto-Heal Layer</small></div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-node agent">Attempt 1: safe_post()<small>UUID-stamp → POST</small></div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow" style="gap:8px">
+          <div class="flow-node agent" style="min-width:130px">✅ "sent"<small>Delivered</small></div>
+          <div style="color:var(--text-muted);padding:8px">or</div>
+          <div class="flow-node danger" style="min-width:130px">❌ 5xx<small>Retry</small></div>
+        </div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-node heal">Retry 1→2→3 (2s, 4s, 8s)<small>Exponential backoff</small></div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow" style="gap:8px">
+          <div class="flow-node agent" style="min-width:130px">✅ "healed"<small>Self-repaired</small></div>
+          <div style="color:var(--text-muted);padding:8px">or</div>
+          <div class="flow-node buffer" style="min-width:160px">🟠 "buffered"<small>Queued locally</small></div>
+        </div>
+        <div class="flow-arrow">↓</div>
+        <div class="flow-node cloud">recovery_sync.py → Flush when cloud returns<small>Zero data loss guaranteed</small></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3><span class="icon">🔧</span> Safety Tooling (March 2026)</h3>
+      <table>
+        <thead><tr><th>Tool</th><th>Purpose</th><th>Command</th></tr></thead>
+        <tbody>
+          <tr><td><code>v3_safety_check.py</code></td><td>Syntax-validates all 258 Python files</td><td><code>python v3_safety_check.py</code></td></tr>
+          <tr><td><code>v3_migration.py</code></td><td>Safe logic migration with auto-rollback</td><td>Validates <code>py_compile</code> after each write</td></tr>
+          <tr><td><code>v3_autoheal_inject.py</code></td><td>Injects <code>healed_post()</code> with rollback</td><td>Reverts on syntax error</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- CH6: BUILD PIPELINE -->
+  <div class="chapter" id="ch6">
+    <div class="chapter-number">Chapter 06</div>
+    <h2>Build & Deploy Pipeline</h2>
+    <p class="chapter-desc">
+      How the factory creates new applications from natural language — from prompt to production.
+    </p>
+
+    <div class="section">
+      <h3><span class="icon">🚀</span> App Generation Flow</h3>
+      <ol class="step-list">
+        <li><strong>Prompt Intake</strong> — Describe the app in natural language via the Factory UI or API (<code>POST /api/build</code>)</li>
+        <li><strong>Blueprint Selection</strong> — Factory selects from templates: <code>gemini_reasoner</code>, <code>multi_agent_core</code>, <code>elite_council</code>, <code>file_factory</code>, <code>sentinel_bridge</code></li>
+        <li><strong>Code Generation</strong> — <code>app_generator.py</code> scaffolds the full stack: FastAPI server, React frontend, n8n webhook, requirements.txt</li>
+        <li><strong>V3 Injection</strong> — <code>v3_retrofit.py</code> injects the resilience header, preflight checks, and safe_post into every Python file</li>
+        <li><strong>Auto-Heal Layer</strong> — <code>v3_autoheal_inject.py</code> upgrades <code>safe_post()</code> to <code>healed_post()</code> with retry + diagnosis</li>
+        <li><strong>Docker Packaging</strong> — Auto-generates <code>Dockerfile</code>, <code>docker-compose.yml</code>, and <code>.dockerignore</code></li>
+        <li><strong>Validation</strong> — <code>v3_safety_check.py</code> compile-checks all generated files — rollback if any fail</li>
+        <li><strong>Registration</strong> — App added to <code>registry.json</code> with port, webhook, and n8n workflow ID</li>
+        <li><strong>Launch</strong> — Batch file auto-generated, desktop shortcut created, server started</li>
+      </ol>
+    </div>
+
+    <div class="section">
+      <h3><span class="icon">🎨</span> Refine Engine</h3>
+      <p>After initial generation, the <strong>Refine Engine</strong> (<code>refine_engine.py</code>, 37KB) iterates on the app using AI:</p>
+      <table>
+        <thead><tr><th>Feature</th><th>Details</th></tr></thead>
+        <tbody>
+          <tr><td>Gemini-powered iteration</td><td>Sends current code + user feedback → receives targeted diffs</td></tr>
+          <tr><td>JSX validation</td><td>Post-write Babel parse check — auto-revert on syntax errors</td></tr>
+          <tr><td>Multi-file editing</td><td>Can modify .py, .jsx, .css, .json, .yml simultaneously</td></tr>
+          <tr><td>Quality scoring</td><td>1-10 quality score per iteration, logged to MASTER_INDEX</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- CH7: INFRA -->
+  <div class="chapter" id="ch7">
+    <div class="chapter-number">Chapter 07</div>
+    <h2>Infrastructure & DevOps</h2>
+    <p class="chapter-desc">
+      Cross-machine portability, version control, and the operational backbone.
+    </p>
+
+    <div class="section">
+      <h3><span class="icon">☁️</span> Cross-Machine Sync</h3>
+      <p>The entire factory runs from <strong>Google Drive</strong>, enabling instant portability between any Windows PC:</p>
+      <table>
+        <thead><tr><th>Component</th><th>Mechanism</th></tr></thead>
+        <tbody>
+          <tr><td>Codebase</td><td>Google Drive sync → automatic on all connected PCs</td></tr>
+          <tr><td>Git Repository</td><td>GitHub (<code>maurop70/Meta_App_Factory2</code>) — <code>.system_core/</code> for git ops</td></tr>
+          <tr><td>Path Detection</td><td>Launch scripts auto-detect the Drive mount point (handles spaces, unicode)</td></tr>
+          <tr><td>Python Detection</td><td>Cascading detection bypasses Windows Store alias</td></tr>
+          <tr><td>Conflict Prevention</td><td><code>.gitignore</code> excludes <code>*.sync</code>, <code>*.sync-conflict-*</code>, Drive temp folders</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h3><span class="icon">📊</span> Operational Tooling</h3>
+      <table>
+        <thead><tr><th>Tool</th><th>File</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td>MASTER_INDEX</td><td><code>MASTER_INDEX.md</code></td><td>Living audit trail — all deployments, errors, healing cycles, and config changes</td></tr>
+          <tr><td>Leitner Memory</td><td><code>leitner_architect.py</code></td><td>Spaced-repetition error review (Level 1-5, auto-escalation)</td></tr>
+          <tr><td>Socratic Challenger</td><td><code>socratic_challenger.py</code></td><td>AI adversarial review — challenges proposals with 3 structured weaknesses</td></tr>
+          <tr><td>Watchdog</td><td><code>deploy_watchdog.py</code></td><td>Monitors deployment health, latency, circuit breaker state</td></tr>
+          <tr><td>Heartbeat</td><td><code>heartbeat.py</code></td><td>Periodic health pings across all services</td></tr>
+          <tr><td>Recovery Sync</td><td><code>recovery_sync.py</code></td><td>Flushes buffered payloads when cloud connectivity returns</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- CH8: SECURITY -->
+  <div class="chapter" id="ch8">
+    <div class="chapter-number">Chapter 08</div>
+    <h2>Security & Compliance</h2>
+    <p class="chapter-desc">
+      Encryption, credential management, and the zero-leak security model.
+    </p>
+
+    <div class="section">
+      <h3><span class="icon">🔐</span> Security Architecture</h3>
+      <table>
+        <thead><tr><th>Layer</th><th>Implementation</th><th>Details</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Secrets</strong></td><td>Fernet AES-128 (PBKDF2, 600K iterations)</td><td><code>env_encryption.py</code> — auto-encrypts <code>.env</code> → <code>.env.enc</code></td></tr>
+          <tr><td><strong>Vault</strong></td><td><code>vault_client.py</code></td><td>Application-level encrypted storage for agreement data</td></tr>
+          <tr><td><strong>API Auth</strong></td><td>n8n API Key (267-char JWT)</td><td><code>Antigravity_Full_v2</code> — governs all cloud communication</td></tr>
+          <tr><td><strong>Git Hygiene</strong></td><td>Comprehensive <code>.gitignore</code></td><td>13 categories: secrets, creds, tokens, auth dirs, sync artifacts</td></tr>
+          <tr><td><strong>Code Safety</strong></td><td><code>v3_safety_check.py</code></td><td>Pre/post-migration syntax validation with auto-rollback</td></tr>
+          <tr><td><strong>Audit Trail</strong></td><td><code>MASTER_INDEX.md</code></td><td>Every deployment, error, and healing event is permanently logged</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout warn">
+      <div class="callout-title">⚠️ Credential Lifecycle</div>
+      The V3 Auto-Heal engine includes credential decay detection. If the n8n API key expires or is rotated, the <code>diagnose()</code> function detects the 401 response and flags <code>CREDENTIAL_DECAY</code> — preventing silent failures across all child apps.
+    </div>
+  </div>
+
+  <!-- CH9: COMMERCIALIZATION -->
+  <div class="chapter" id="ch9">
+    <div class="chapter-number">Chapter 09</div>
+    <h2>Commercialization Roadmap</h2>
+    <p class="chapter-desc">
+      How the factory's capability translates into a scalable commercial venture.
+    </p>
+
+    <div class="section">
+      <h3><span class="icon">💎</span> Commercial-Ready Products</h3>
+      <table>
+        <thead><tr><th>Product</th><th>Market</th><th>Monetization</th><th>Readiness</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Alpha Architect</strong></td><td>Retail options traders</td><td>SaaS subscription ($49-199/mo)</td><td>🟢 MVP Complete</td></tr>
+          <tr><td><strong>Resonance</strong></td><td>Special education / therapy</td><td>B2B licensing to schools & clinics</td><td>🟢 MVP Complete</td></tr>
+          <tr><td><strong>Delegate AI</strong></td><td>Law firms / SMB legal</td><td>Per-seat SaaS ($29-99/mo)</td><td>🟡 Beta</td></tr>
+          <tr><td><strong>Sentinel Bridge</strong></td><td>Productivity / personal</td><td>Freemium + premium ($5-15/mo)</td><td>🟢 MVP Complete</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h3><span class="icon">🏗️</span> Platform Advantages</h3>
+      <div class="kpi-bar">
+        <div class="kpi green"><div class="kpi-val">10x</div><div class="kpi-lbl">Faster Time-to-Market</div></div>
+        <div class="kpi blue"><div class="kpi-val">$0</div><div class="kpi-lbl">Infrastructure Cost</div></div>
+        <div class="kpi purple"><div class="kpi-val">∞</div><div class="kpi-lbl">App Capacity</div></div>
+      </div>
+      <p>Every new product we conceive starts as a prompt and becomes a running, self-healing application within minutes. The factory handles:</p>
+      <ol class="step-list">
+        <li><strong>Code generation</strong> — Full-stack scaffolding from natural language description</li>
+        <li><strong>Resilience injection</strong> — V3 auto-heal, circuit breaker, safe buffer — all automatic</li>
+        <li><strong>AI agent assignment</strong> — CFO for pricing, CMO for positioning, Critic for quality gates</li>
+        <li><strong>Cloud orchestration</strong> — n8n workflows for data pipelines and inter-app communication</li>
+        <li><strong>Docker packaging</strong> — Production-ready containers with one command</li>
+        <li><strong>Monitoring</strong> — Self-healing nerve center, Leitner error memory, audit trail</li>
+      </ol>
+    </div>
+
+    <div class="callout success">
+      <div class="callout-title">🚀 The Vision</div>
+      Meta App Factory is a <strong>venture studio engine</strong>. We don't build one app — we build the machine that builds apps. Every product shares infrastructure, AI agents, and operational maturity. As the factory improves, every product improves automatically.
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="manual-footer">
+    <strong>Meta App Factory — CTO Technical Manual</strong><br>
+    Antigravity Ventures — Confidential<br>
+    Generated: March 2026 | Architecture: V3.0 Hardened | Files: 258 | Apps: 6 | Agents: 18<br><br>
+    <em>To save as PDF: Open in browser → Ctrl+P → Save as PDF</em>
+  </div>
+</div>
+
+</body>
+</html>

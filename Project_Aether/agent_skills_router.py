@@ -78,6 +78,13 @@ except ImportError:
 
 from aether_runtime import AetherRuntime, ConfigLoader, AgentRouter, IntentClassifier
 
+# Brand Registry for tandem brand-aware generation
+try:
+    from brand_guardian import BrandRegistry
+    _brand_registry = BrandRegistry()
+except ImportError:
+    _brand_registry = None
+
 # ══════════════════════════════════════════════════
 #  APP INIT
 # ══════════════════════════════════════════════════
@@ -117,6 +124,15 @@ class SkillRequest(BaseModel):
 class RouteRequest(BaseModel):
     """Request payload for auto-classification routing."""
     prompt: str
+    skip_critic: bool = False
+
+class GenerateAssetRequest(BaseModel):
+    """Request payload for tandem asset generation via Graphic Designer."""
+    prompt: str
+    style_preset: Optional[str] = "dark-premium"
+    output_path: Optional[str] = None
+    project_dir: Optional[str] = None
+    tier: Optional[str] = "factory"
     skip_critic: bool = False
 
 
@@ -380,10 +396,12 @@ SKILL_REGISTRY = {
         "use_cases": ["technical research", "competitive analysis", "trend identification"],
     },
     "graphic-designer": {
-        "name": "Graphic Designer — Visual Assets",
-        "description": "Logo design, brand assets, visual identity",
+        "name": "Graphic Designer — Creative Director",
+        "description": "Visual design, brand assets, technical schematics, marketing collateral. Produces structured creative briefs for tandem image generation.",
         "endpoint": "/agent/graphic-designer",
-        "use_cases": ["logo concepts", "brand guidelines", "visual assets"],
+        "tandem_endpoint": "/agent/graphic-designer/generate",
+        "status": "active",
+        "use_cases": ["logo design", "technical schematics", "brochure visuals", "product renders", "brand guidelines"],
     },
     "presentation-expert": {
         "name": "Presentation Expert — Pitch & Decks",
@@ -404,6 +422,100 @@ SKILL_REGISTRY = {
         "use_cases": ["psychographic blueprints", "market segment analysis", "behavioral nudge strategy", "clinical user safety"],
     },
 }
+
+
+@app.post("/agent/graphic-designer/generate")
+async def tandem_generate(request: GenerateAssetRequest):
+    """
+    Tandem Asset Generation — Graphic Designer + Image Generation Pipeline.
+    
+    Step 1: Routes to the Graphic Designer agent to produce a structured creative brief
+    Step 2: Logs the creative brief to Boardroom Exchange
+    Step 3: Returns the brief (ready for downstream image generation)
+    
+    This is the tandem orchestration endpoint: Antigravity (IDE agent) or any
+    external caller can invoke this to get a Designer-authored creative spec,
+    then use it with an image generation model.
+    """
+    if not runtime:
+        raise HTTPException(status_code=503, detail="Runtime not initialized")
+
+    # Build enriched prompt with style context
+    style_context = f"\nSTYLE PRESET: {request.style_preset}" if request.style_preset else ""
+    output_context = f"\nOUTPUT PATH: {request.output_path}" if request.output_path else ""
+
+    # Brand context injection
+    brand_context = ""
+    resolved_brand = None
+    if request.project_dir and _brand_registry:
+        resolved_brand = _brand_registry.resolve(request.project_dir, tier=request.tier or "factory")
+        if resolved_brand:
+            brand_colors = resolved_brand.get("colors", {})
+            brand_fonts = resolved_brand.get("fonts", {})
+            brand_context = (
+                f"\n\nBRAND IDENTITY (use these instead of defaults):"
+                f"\n  Company: {resolved_brand.get('company_name', '')}"
+                f"\n  Palette: {json.dumps(brand_colors)}"
+                f"\n  Fonts: {json.dumps(brand_fonts)}"
+                f"\n  Tone: {resolved_brand.get('tone_of_voice', '')}"
+                f"\n  Visual Style: {resolved_brand.get('visual_style', '')}"
+            )
+        else:
+            brand_context = "\n\nWARNING: No brand defined for this venture project. Use neutral/generic styling until a brand identity is provided."
+
+    enriched_prompt = (
+        f"Generate a structured creative brief for the following asset request. "
+        f"Return your response as a valid JSON creative brief following your output format spec.\n\n"
+        f"REQUEST: {request.prompt}{style_context}{output_context}{brand_context}"
+    )
+
+    # Dispatch to Graphic Designer agent
+    result = runtime.prompt(enriched_prompt, target="GRAPHIC_DESIGNER", skip_critic=request.skip_critic)
+
+    # Log to Boardroom Exchange
+    boardroom_dir = os.path.join(RUNTIME_DIR, "..", "Project_Aether", "Boardroom_Exchange")
+    os.makedirs(boardroom_dir, exist_ok=True)
+    brief_log_path = os.path.join(boardroom_dir, "creative_briefs.json")
+    
+    brief_entry = {
+        "session_id": result.get("session_id"),
+        "timestamp": datetime.now().isoformat(),
+        "request_prompt": request.prompt,
+        "style_preset": request.style_preset,
+        "output_path": request.output_path,
+        "status": result.get("status"),
+        "response_preview": str(result.get("response", ""))[:500],
+    }
+
+    existing_briefs = []
+    if os.path.exists(brief_log_path):
+        try:
+            with open(brief_log_path, "r") as f:
+                existing_briefs = json.load(f)
+        except (json.JSONDecodeError, IOError):
+            existing_briefs = []
+    
+    existing_briefs.append(brief_entry)
+    if len(existing_briefs) > 50:
+        existing_briefs = existing_briefs[-50:]
+    
+    with open(brief_log_path, "w") as f:
+        json.dump(existing_briefs, f, indent=2)
+
+    return {
+        "tandem_mode": True,
+        "agent": "Graphic Designer",
+        "session_id": result.get("session_id"),
+        "creative_brief": result.get("response"),
+        "style_preset": request.style_preset,
+        "output_path": request.output_path,
+        "brand": resolved_brand.get("company_name") if resolved_brand else None,
+        "brand_tier": request.tier,
+        "status": result.get("status"),
+        "critic_review": result.get("critic_review"),
+        "logged_to_boardroom": True,
+        "next_step": "Pass the creative_brief to an image generation model to produce the final asset.",
+    }
 
 
 @app.get("/skills")

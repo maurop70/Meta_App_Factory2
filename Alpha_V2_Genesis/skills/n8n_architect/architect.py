@@ -197,8 +197,7 @@ class N8NArchitect:
         """Activates a workflow."""
         endpoint = f"{self.base_url}/api/v1/workflows/{workflow_id}/activate"
         try:
-            resp =
- requests.post(endpoint, headers=self.headers, timeout=60)
+            resp = requests.post(endpoint, headers=self.headers, timeout=60)
             resp.raise_for_status()
             logger.info(f"Workflow {workflow_id} Activated.")
             return True

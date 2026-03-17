@@ -258,8 +258,7 @@ def stream_chat(prompt: str, project_name: str = "General", dashboard_context=No
         try:
             print(f"DEBUG: Trying {model_name} via {api_version}...")
             logger.info(f"Streaming request to {model_name} ({api_version}) (prompt: {prompt[:60]}...)")
-            resp =
- requests.post(url, json=payload, stream=True, timeout=120)
+            resp = requests.post(url, json=payload, stream=True, timeout=120)
             print(f"DEBUG: {model_name} → HTTP {resp.status_code}")
             if resp.status_code == 200:
                 logger.info(f"Connected to {model_name} successfully")
