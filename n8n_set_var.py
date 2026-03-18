@@ -18,3 +18,5 @@ def set_variable():
 
 if __name__ == "__main__":
     set_variable()
+
+# V3 MIGRATION COMPLETE

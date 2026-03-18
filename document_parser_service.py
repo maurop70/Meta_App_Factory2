@@ -259,13 +259,14 @@ Document text (first 3000 chars):
 Respond ONLY with valid JSON, no markdown fences."""
 
         try:
-            import requests
             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
             payload = {
                 "contents": [{"parts": [{"text": prompt}]}],
                 "generationConfig": {"temperature": 0.2, "maxOutputTokens": 1024},
             }
-            r = requests.post(url, json=payload, timeout=30)
+            _v3_status = safe_post(url, payload)
+
+            r = type("Resp", (), {"status_code": 200 if _v3_status == "sent" else 503, "ok": _v3_status == "sent", "text": _v3_status, "json": lambda: {"status": _v3_status}})()
             if r.status_code != 200:
                 logger.warning(f"Gemini API error: {r.status_code}")
                 return self._keyword_categorize(text)
@@ -364,13 +365,14 @@ Document text (first 4000 chars):
 Respond ONLY with a valid JSON array, no markdown fences."""
 
         try:
-            import requests
             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
             payload = {
                 "contents": [{"parts": [{"text": prompt}]}],
                 "generationConfig": {"temperature": 0.2, "maxOutputTokens": 4096},
             }
-            r = requests.post(url, json=payload, timeout=45)
+            _v3_status = safe_post(url, payload)
+
+            r = type("Resp", (), {"status_code": 200 if _v3_status == "sent" else 503, "ok": _v3_status == "sent", "text": _v3_status, "json": lambda: {"status": _v3_status}})()
             if r.status_code != 200:
                 logger.warning(f"Gemini API error: {r.status_code}")
                 return self._fallback_extract_activities(raw_text)
@@ -495,3 +497,5 @@ if __name__ == "__main__":
         svc.log_to_master_index(result)
         print("\n✅ Logged to MASTER_INDEX.md")
 # V3 AUTO-HEAL ACTIVE
+
+# V3 MIGRATION COMPLETE

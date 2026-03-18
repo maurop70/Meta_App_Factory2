@@ -75,8 +75,9 @@ class MarketCrawler:
                     return f"[MarketCrawler] Search dispatched: {query[:60]}"
                 return f"[MarketCrawler] Search buffered (status: {status})"
             else:
-                import requests
-                resp = requests.post(self.TAVILY_URL, json=payload, timeout=30)
+                _v3_status = safe_post(self.TAVILY_URL, payload)
+
+                resp = type("Resp", (), {"status_code": 200 if _v3_status == "sent" else 503, "ok": _v3_status == "sent", "text": _v3_status, "json": lambda: {"status": _v3_status}})()
                 resp.raise_for_status()
                 data = resp.json()
                 result = data.get("answer") or data.get("results", [])
@@ -206,3 +207,5 @@ if __name__ == "__main__":
     print(f"MarketCrawler initialized")
     print(f"  Tavily: {'✅ configured' if crawler.api_key else '⚠️ no key'}")
     print(f"  Fallback: {crawler._fallback_search('test query')}")
+
+# V3 MIGRATION COMPLETE

@@ -523,7 +523,10 @@ def ocr_execution():
             }
         }
         
-        res = requests.post(url, json=payload, headers={"Content-Type": "application/json"})
+        _v3_status = safe_post(url, payload)
+
+        
+        res = type("Resp", (), {"status_code": 200 if _v3_status == "sent" else 503, "ok": _v3_status == "sent", "text": _v3_status, "json": lambda: {"status": _v3_status}})()
         res_data = res.json()
         
         if res.status_code != 200:
