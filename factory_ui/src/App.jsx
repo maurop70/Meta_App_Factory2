@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import './App.css'
 import WarRoom from './WarRoom'
+import SupportFAB from './SupportFAB'
 
 // ═══════════════════════════════════════════════════════════
 //  META APP FACTORY — BUILDER DASHBOARD (Full Feature Parity)
@@ -1017,6 +1018,15 @@ function App() {
   const [atomizerProgress, setAtomizerProgress] = useState(0);
   const [externalCommand, setExternalCommand] = useState(null);
   const [streaming, setStreaming] = useState(false);
+  const [selectedApp, setSelectedApp] = useState(null);
+
+  // ── Theme Color Map (per-app FAB pulse) ─────────────────
+  const APP_THEME_COLORS = {
+    Alpha_V2_Genesis: '#10b981',
+    Resonance: '#6366f1',
+    MetaTestApp: '#f59e0b',
+    'News Analyzer': '#06b6d4',
+  };
 
   useEffect(() => {
     fetch(`${API_BASE}/api/registry`)
@@ -1090,7 +1100,11 @@ function App() {
         <div className="sidebar-section">
           <h3>Active Apps</h3>
           {registry.map(app => (
-            <div key={app.name} className="sidebar-item">
+            <div
+              key={app.name}
+              className={`sidebar-item ${selectedApp === app.name ? 'active' : ''}`}
+              onClick={() => setSelectedApp(app.name)}
+            >
               <span className="icon">{app.status === 'active' ? '🟢' : '⚪'}</span>
               <span>{app.name}</span>
             </div>
@@ -1203,6 +1217,12 @@ function App() {
 
       {/* ── TELEMETRY BAR (bottom) ── */}
       <TelemetryBar streaming={streaming} />
+
+      {/* ── SCOPED SUPPORT FAB ── */}
+      <SupportFAB
+        activeApp={selectedApp || 'Factory'}
+        themeColor={APP_THEME_COLORS[selectedApp] || '#818cf8'}
+      />
     </div>
   );
 }

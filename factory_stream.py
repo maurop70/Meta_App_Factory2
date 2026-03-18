@@ -169,8 +169,13 @@ def stream_chat(prompt, project_name="Factory", dashboard_context=None):
 
     url = (
         f"https://generativelanguage.googleapis.com/v1beta/models/"
-        f"gemini-2.5-flash:streamGenerateContent?alt=sse&key={api_key}"
+        f"gemini-2.5-flash:streamGenerateContent?alt=sse"
     )
+
+    headers = {
+        "Content-Type": "application/json",
+        "x-goog-api-key": api_key,
+    }
 
     payload = {
         "contents": contents,
@@ -181,9 +186,15 @@ def stream_chat(prompt, project_name="Factory", dashboard_context=None):
 
     try:
         logger.info(f"Factory stream: {prompt[:60]}...")
-        with requests.post(url, json=payload, stream=True, timeout=120) as resp:
+        with requests.post(url, json=payload, headers=headers, stream=True, timeout=120) as resp:
             if resp.status_code != 200:
-                yield {"error": f"Gemini API error ({resp.status_code})."}
+                error_detail = ""
+                try:
+                    error_detail = resp.json().get("error", {}).get("message", "")
+                except Exception:
+                    error_detail = resp.text[:200]
+                logger.error(f"Gemini API error {resp.status_code}: {error_detail}")
+                yield {"error": f"Gemini API error ({resp.status_code}). {error_detail}"}
                 return
 
             for line in resp.iter_lines(decode_unicode=True):

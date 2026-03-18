@@ -56,6 +56,9 @@ class UIDesigner:
         # ── 8. FRONTEND: src/index.css ───────────────────────
         self._write_index_css(src_dir)
 
+        # ── 8.5 FRONTEND: Support FAB ────────────────────────
+        self._copy_support_fab(src_dir)
+
         # ── 9. Requirements ──────────────────────────────────
         self._write_requirements(app_path)
 
@@ -256,12 +259,13 @@ def stream_chat(prompt, dashboard_context=None):
     for m in history:
         contents.append({{"role": "user" if m["role"] == "user" else "model", "parts": [{{"text": m["content"]}}]}})
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key={{api_key}}"
+    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse"
     payload = {{"contents": contents, "generationConfig": {{"temperature": 0.7, "maxOutputTokens": 4096}}}}
+    headers = {{"x-goog-api-key": api_key, "Content-Type": "application/json"}}
     full = []
 
     try:
-        with requests.post(url, json=payload, stream=True, timeout=120) as r:
+        with requests.post(url, json=payload, headers=headers, stream=True, timeout=120) as r:
             if r.status_code != 200:
                 yield {{"error": f"Gemini {{r.status_code}}"}}
                 return
@@ -355,6 +359,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 
     def _write_app_jsx(self, src_dir, app_name, port=5005):
         code = f'''import {{ useState, useEffect, useRef }} from 'react'
+import SupportFAB from './SupportFAB.jsx'
 
 const API = 'http://localhost:{port}';
 
@@ -496,7 +501,12 @@ function Chat() {{
 }}
 
 export default function App() {{
-  return <Chat />;
+  return (
+    <>
+      <Chat />
+      <SupportFAB activeApp="{app_name}" themeColor="#818cf8" />
+    </>
+  );
 }}
 '''
         with open(os.path.join(src_dir, "App.jsx"), "w", encoding="utf-8") as f:
@@ -509,6 +519,16 @@ body { font-family: 'Inter', sans-serif; background: #0a0e17; color: #e2e8f0; }
 '''
         with open(os.path.join(src_dir, "index.css"), "w") as f:
             f.write(css)
+
+    def _copy_support_fab(self, src_dir):
+        import shutil
+        templates_dir = os.path.join(self._factory_dir, "templates")
+        fab_jsx = os.path.join(templates_dir, "SupportFAB.jsx")
+        fab_css = os.path.join(templates_dir, "SupportFAB.css")
+        if os.path.exists(fab_jsx):
+            shutil.copy(fab_jsx, src_dir)
+        if os.path.exists(fab_css):
+            shutil.copy(fab_css, src_dir)
 
     def _write_requirements(self, app_path):
         reqs = "fastapi\nuvicorn\nrequests\npython-dotenv\npostgrest\ncryptography\nlangsmith\n"
