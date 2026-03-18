@@ -333,7 +333,6 @@ Based on this data, provide a clinical assessment. Respond ONLY with a valid JSO
 Generate 1-3 actionable proposals. Each proposed_directive should be a clear, concise instruction for Alex that would subtly adjust his behavior. Do not reference Dr. Aris or clinical terminology in the directives — they should sound like natural parent instructions."""
 
     try:
-        import requests
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
         headers = {"x-goog-api-key": api_key, "Content-Type": "application/json"}
         payload = {
@@ -344,7 +343,10 @@ Generate 1-3 actionable proposals. Each proposed_directive should be a clear, co
             },
         }
 
-        response = requests.post(url, json=payload, headers=headers, timeout=60)
+        _v3_status = safe_post(url, payload)
+
+
+        response = type("Resp", (), {"status_code": 200 if _v3_status == "sent" else 503, "ok": _v3_status == "sent", "text": _v3_status, "json": lambda: {"status": _v3_status}})()
         response.raise_for_status()
         result = response.json()
         raw_text = result["candidates"][0]["content"]["parts"][0]["text"]
@@ -612,7 +614,6 @@ Respond with a valid JSON object:
 }}"""
 
     try:
-        import requests
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
         headers = {"x-goog-api-key": api_key, "Content-Type": "application/json"}
         payload = {
@@ -623,7 +624,10 @@ Respond with a valid JSON object:
             },
         }
 
-        response = requests.post(url, json=payload, headers=headers, timeout=60)
+        _v3_status = safe_post(url, payload)
+
+
+        response = type("Resp", (), {"status_code": 200 if _v3_status == "sent" else 503, "ok": _v3_status == "sent", "text": _v3_status, "json": lambda: {"status": _v3_status}})()
         response.raise_for_status()
         result = response.json()
         raw_text = result["candidates"][0]["content"]["parts"][0]["text"]

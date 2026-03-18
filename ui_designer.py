@@ -396,7 +396,7 @@ function FileUploader() {{
         style={{{{ border: `2px dashed ${{dragOver ? '#6366f1' : 'rgba(99,102,241,0.25)'}}`, borderRadius: 12, padding: '2rem', textAlign: 'center', cursor: 'pointer', background: dragOver ? 'rgba(99,102,241,0.08)' : 'transparent', transition: 'all 0.2s' }}}}
       >
         <input ref={{fileRef}} type="file" accept=".pdf,.docx,.txt,.csv,.md" hidden onChange={{(e) => handleUpload(e.target.files[0])}} />
-        <div style={{{{ fontSize: '2rem', marginBottom: 8 }}}}>{{uploading ? '\u23f3' : '\ud83d\udcc4'}}</div>
+        <div style={{{{ fontSize: '2rem', marginBottom: 8 }}}}>{{uploading ? '⏳' : '📄'}}</div>
         <div style={{{{ color: '#94a3b8', fontSize: '0.85rem' }}}}>
           {{uploading ? 'Parsing document...' : 'Drop a file here or click to upload'}}
         </div>
@@ -404,9 +404,9 @@ function FileUploader() {{
       </div>
       {{result && (
         <div style={{{{ marginTop: '1rem', padding: '0.8rem', borderRadius: 10, background: result.error ? 'rgba(239,68,68,0.1)' : 'rgba(34,197,94,0.08)', border: `1px solid ${{result.error ? 'rgba(239,68,68,0.2)' : 'rgba(34,197,94,0.2)'}}`, fontSize: '0.8rem' }}}}>
-          {{result.error ? `\u274c ${{result.error}}` : (
+          {{result.error ? `❌ ${{result.error}}` : (
             <div>
-              <strong>\u2705 ${{result.category}}</strong> ({{(result.confidence * 100).toFixed(0)}}%)
+              <strong>✅ ${{result.category}}</strong> ({{(result.confidence * 100).toFixed(0)}}%)
               <div style={{{{ color: '#94a3b8', marginTop: 4 }}}}>{{result.extracted?.summary}}</div>
               <div style={{{{ color: '#64748b', marginTop: 4, fontSize: '0.7rem' }}}}>
                 Routed to: {{result.routing?.destination || 'index only'}}
@@ -467,7 +467,7 @@ function Chat() {{
     }} catch (e) {{
       setMsgs(m => {{
         const c = [...m];
-        c[c.length - 1] = {{ role: 'assistant', text: '\u274c ' + e.message }};
+        c[c.length - 1] = {{ role: 'assistant', text: '❌ ' + e.message }};
         return c;
       }});
     }} finally {{ setStreaming(false); }}
@@ -479,9 +479,9 @@ function Chat() {{
         <h1 style={{{{ fontSize: '1.2rem', background: 'linear-gradient(135deg, #e2e8f0, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}}}>
           {app_name}
         </h1>
-        <button onClick={{() => setShowUploader(!showUploader)}} style={{{{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 8, padding: '0.4rem 0.8rem', color: '#a78bfa', fontSize: '0.8rem', cursor: 'pointer' }}}}>
-          \ud83d\udcc4 Upload
-        </button>
+          <button onClick={{() => setShowUploader(!showUploader)}} style={{{{ background: showUploader ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', padding: '0.4rem 0.8rem', borderRadius: 8, color: '#e2e8f0', fontSize: '0.8rem', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 6 }}}}>
+            📄 Upload
+          </button>
       </header>
       {{showUploader && <FileUploader />}}
       <div style={{{{ flex: 1, overflow: 'auto', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}}}>
@@ -494,7 +494,7 @@ function Chat() {{
       </div>
       <div style={{{{ display: 'flex', gap: '0.5rem', padding: '0.8rem 1rem', borderTop: '1px solid rgba(99,102,241,0.15)', background: 'rgba(10,14,23,0.5)' }}}}>
         <input value={{input}} onChange={{e => setInput(e.target.value)}} onKeyDown={{e => e.key === 'Enter' && send()}} placeholder="Ask anything..." disabled={{streaming}} style={{{{ flex: 1, background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(99,102,241,0.15)', borderRadius: '10px', padding: '0.6rem 1rem', color: '#e2e8f0', fontSize: '0.85rem', outline: 'none' }}}} />
-        <button onClick={{send}} disabled={{streaming || !input.trim()}} style={{{{ width: 40, height: 40, borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, #6366f1, #7c3aed)', color: 'white', fontSize: '1.1rem', cursor: 'pointer' }}}}>\u2191</button>
+        <button onClick={{send}} disabled={{streaming || !input.trim()}} style={{{{ width: 40, height: 40, borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, #6366f1, #7c3aed)', color: 'white', fontSize: '1.1rem', cursor: 'pointer' }}}}>&uarr;</button>
       </div>
     </div>
   );

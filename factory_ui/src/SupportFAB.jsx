@@ -276,6 +276,61 @@ export default function SupportFAB({ activeApp, themeColor = '#818cf8' }) {
   const inputRef = useRef(null);
   const prevAppRef = useRef(activeApp);
 
+  const [audienceDetected, setAudienceDetected] = useState(null);
+  const [generatingProfile, setGeneratingProfile] = useState(false);
+  const audienceTimerRef = useRef(null);
+
+  const checkAudienceIntent = async (text) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/audience/detect`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      const data = await res.json();
+      if (data.detected && data.confidence >= 0.7) {
+        setAudienceDetected(data);
+        if (audienceTimerRef.current) clearTimeout(audienceTimerRef.current);
+        audienceTimerRef.current = setTimeout(() => setAudienceDetected(null), 15000);
+      }
+    } catch { /* silent */ }
+  };
+
+  const researchProfile = async () => {
+    if (!audienceDetected?.audience_hint || generatingProfile) return;
+    setGeneratingProfile(true);
+    setAudienceDetected(null);
+    setMessages(prev => [...prev, { role: 'system', text: `🔬 Researching audience profile: "${audienceDetected.audience_hint}"...` }]);
+    try {
+      const res = await fetch(`${API_BASE}/api/audience/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          audience_description: audienceDetected.audience_hint,
+          context: `Context: Active App ${activeApp}`
+        }),
+      });
+      const data = await res.json();
+      if (data.status === 'ok' && data.profile) {
+        const p = data.profile;
+        const profileCard =
+          `✅ **Audience Profile Generated: ${p.name}**\n` +
+          `📊 Age Range: ${p.age_range}\n` +
+          `💰 Income: ${p.income_bracket}\n\n` +
+          `**Pain Points:**\n` + p.pain_points.map(pt => `• ${pt}`).join('\n') + `\n\n` +
+          `**Values & Goals:**\n` + p.values.map(v => `• ${v}`).join('\n') + `\n\n` +
+          `*This context is now active for my recommendations.*`;
+        
+        setMessages(prev => [...prev, { role: 'assistant', text: profileCard }]);
+      }
+    } catch (e) {
+      setMessages(prev => [...prev, { role: 'assistant', text: `❌ Could not generate profile: ${e.message}` }]);
+    } finally {
+      setGeneratingProfile(false);
+    }
+  };
+
+
   // ── Context Isolation: clear on app change ────────────
   useEffect(() => {
     if (prevAppRef.current !== activeApp) {
@@ -306,6 +361,9 @@ export default function SupportFAB({ activeApp, themeColor = '#818cf8' }) {
 
     setInput('');
     setMessages(prev => [...prev, { role: 'user', text }]);
+
+    // Fire-and-forget audience check
+    checkAudienceIntent(text);
 
     // ── SYSTEM GUARD INTERCEPT ────────────────────────────
     const guardResponse = systemGuardCheck(text, appConfig);
@@ -438,6 +496,22 @@ export default function SupportFAB({ activeApp, themeColor = '#818cf8' }) {
             <div ref={scrollRef} />
           </div>
 
+
+          {audienceDetected && (
+            <div className="audience-detect-chip" style={{ margin: '0 0.8rem 0.8rem 0.8rem', padding: '0.6rem 0.8rem', background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.35)', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px', zIndex: 10 }}>
+              <span className="detect-icon" style={{fontSize:'1.1rem'}}>👥</span>
+              <div className="detect-text" style={{flex:1, fontSize:'0.75rem', color: '#cbd5e1'}}>
+                Audience detected: <strong style={{color: '#a78bfa'}}>{audienceDetected.audience_hint}</strong>
+              </div>
+              <button 
+                onClick={researchProfile}
+                disabled={generatingProfile}
+                style={{ background: 'linear-gradient(135deg, #6366f1, #7c3aed)', color: 'white', border: 'none', padding: '0.3rem 0.6rem', borderRadius: '6px', fontSize: '0.7rem', cursor: generatingProfile ? 'not-allowed' : 'pointer', opacity: generatingProfile ? 0.7 : 1 }}
+              >
+                {generatingProfile ? '...' : 'Research'}
+              </button>
+            </div>
+          )}
           <div className="support-drawer-input">
             <input
               ref={inputRef}

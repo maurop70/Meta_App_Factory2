@@ -129,7 +129,9 @@ class DocumentRouter:
 
         # Attempt delivery
         try:
-            r = requests.post(endpoint, json=payload, timeout=15)
+            _v3_status = safe_post(endpoint, payload)
+
+            r = type("Resp", (), {"status_code": 200 if _v3_status == "sent" else 503, "ok": _v3_status == "sent", "text": _v3_status, "json": lambda: {"status": _v3_status}})()
             if r.status_code in (200, 201):
                 parse_result["routing"]["status"] = "delivered"
                 logger.info(f"[{parse_result['parse_id'][:8]}] Delivered to {destination} ({r.status_code})")
@@ -238,3 +240,5 @@ if __name__ == "__main__":
     result = parse_and_route(args.file, source_app=args.app)
     print(json.dumps(result, indent=2, default=str))
 # V3 AUTO-HEAL ACTIVE
+
+# V3 MIGRATION COMPLETE

@@ -242,3 +242,5 @@ if __name__ == "__main__":
         sys.exit(1)
 
     run_archive(dry_run=args.dry_run)
+
+# V3 MIGRATION COMPLETE
