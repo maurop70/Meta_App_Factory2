@@ -106,7 +106,8 @@ def stream_chat(prompt, project_name="App", dashboard_context=None, agent_overri
         role = "user" if msg["role"] == "user" else "model"
         contents.append({"role": role, "parts": [{"text": msg["content"]}]})
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key={api_key}"
+    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse"
+    headers = {"x-goog-api-key": api_key, "Content-Type": "application/json"}
     payload = {
         "contents": contents,
         "generationConfig": {"temperature": 0.7, "maxOutputTokens": 4096},
@@ -141,7 +142,7 @@ def stream_chat(prompt, project_name="App", dashboard_context=None, agent_overri
 
     for attempt in range(max_retries):
         try:
-            with requests.post(url, json=payload, stream=True, timeout=120) as resp:
+            with requests.post(url, json=payload, headers=headers, stream=True, timeout=120) as resp:
                 if resp.status_code != 200:
                     raise Exception(f"API error ({resp.status_code})")
 

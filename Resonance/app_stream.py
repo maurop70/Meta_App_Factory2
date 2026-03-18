@@ -507,12 +507,13 @@ def stream_chat(prompt, dashboard_context=None):
     # Add the current user prompt to the context for Gemini
     contents_for_gemini_api.append({"role": "user", "parts": [{"text": prompt}]})
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key={api_key}"
+    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse"
+    headers = {"x-goog-api-key": api_key, "Content-Type": "application/json"}
     payload = {"contents": contents_for_gemini_api, "generationConfig": {"temperature": 0.7, "maxOutputTokens": 4096}}
     full_assistant_response = []
 
     try:
-        with requests.post(url, json=payload, stream=True, timeout=120) as r:
+        with requests.post(url, json=payload, headers=headers, stream=True, timeout=120) as r:
             r.encoding = 'utf-8' # FIX: Ensure correct UTF-8 decoding for SSE stream
             if r.status_code != 200:
                 yield {"error": f"Gemini {r.status_code}: {r.text}"}
