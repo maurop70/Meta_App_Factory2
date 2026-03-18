@@ -334,7 +334,8 @@ Generate 1-3 actionable proposals. Each proposed_directive should be a clear, co
 
     try:
         import requests
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+        headers = {"x-goog-api-key": api_key, "Content-Type": "application/json"}
         payload = {
             "contents": [{"parts": [{"text": analysis_prompt}]}],
             "generationConfig": {
@@ -343,7 +344,7 @@ Generate 1-3 actionable proposals. Each proposed_directive should be a clear, co
             },
         }
 
-        response = requests.post(url, json=payload, timeout=60)
+        response = requests.post(url, json=payload, headers=headers, timeout=60)
         response.raise_for_status()
         result = response.json()
         raw_text = result["candidates"][0]["content"]["parts"][0]["text"]
@@ -612,7 +613,8 @@ Respond with a valid JSON object:
 
     try:
         import requests
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+        headers = {"x-goog-api-key": api_key, "Content-Type": "application/json"}
         payload = {
             "contents": [{"parts": [{"text": boardroom_prompt}]}],
             "generationConfig": {
@@ -621,7 +623,7 @@ Respond with a valid JSON object:
             },
         }
 
-        response = requests.post(url, json=payload, timeout=60)
+        response = requests.post(url, json=payload, headers=headers, timeout=60)
         response.raise_for_status()
         result = response.json()
         raw_text = result["candidates"][0]["content"]["parts"][0]["text"]

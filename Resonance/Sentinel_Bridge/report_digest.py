@@ -176,7 +176,8 @@ Respond ONLY with a valid JSON object in this exact format (no markdown, no expl
 If a category has no relevant data, use an empty list []. Be specific and actionable — these will be used to guide an AI tutor's interaction style."""
 
     try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+        headers = {"x-goog-api-key": api_key, "Content-Type": "application/json"}
         payload = {
             "contents": [{"parts": [{"text": extraction_prompt}]}],
             "generationConfig": {
