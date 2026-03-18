@@ -20,7 +20,9 @@ import json
 import uuid
 import hashlib
 import threading
+import re
 from datetime import datetime
+from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
 sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
@@ -31,6 +33,9 @@ os.makedirs(PENDING_DIR, exist_ok=True)
 
 _lock = threading.Lock()
 
+# Keys that must NEVER be logged in URLs
+_SENSITIVE_PARAMS = {"key", "apikey", "api_key", "token", "secret", "password", "access_token"}
+
 
 class StateManager:
     """Thread-safe outgoing request state logger."""
@@ -38,6 +43,26 @@ class StateManager:
     def __init__(self, state_file=STATE_FILE):
         self.state_file = state_file
         self._ensure_state()
+
+    @staticmethod
+    def _sanitize_url(url: str) -> str:
+        """Strip sensitive query parameters (API keys, tokens) from a URL before logging."""
+        try:
+            parsed = urlparse(url)
+            params = parse_qs(parsed.query, keep_blank_values=True)
+            sanitized = {
+                k: ["[REDACTED]"] if k.lower() in _SENSITIVE_PARAMS else v
+                for k, v in params.items()
+            }
+            # Also catch inline key patterns like ?key=AIzaSy...
+            clean_query = urlencode(
+                {k: v[0] if len(v) == 1 else v for k, v in sanitized.items()},
+                doseq=True,
+            )
+            return urlunparse(parsed._replace(query=clean_query))
+        except Exception:
+            # Fallback: regex strip common key patterns
+            return re.sub(r'([?&])(key|apikey|api_key|token|secret)=[^&]+', r'\1\2=[REDACTED]', url)
 
     def _ensure_state(self):
         """Initialize state file if missing."""
@@ -85,7 +110,7 @@ class StateManager:
             "id": entry_id,
             "timestamp": datetime.now().isoformat(),
             "project": project,
-            "url": url,
+            "url": self._sanitize_url(url),
             "payload_hash": payload_hash,
             "status": "pending",
             "response_code": None,
