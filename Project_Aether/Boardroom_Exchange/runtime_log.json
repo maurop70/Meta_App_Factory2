@@ -48,5 +48,15 @@
     "confidence": 1.0,
     "status": "DISPATCHED",
     "duration_ms": 0.04
+  },
+  {
+    "session_id": "9334cb4c",
+    "timestamp": "2026-03-18T15:35:28.833378",
+    "input_prompt": "N8N Cloud Brain is still in Standby and the Active trades still do not have the right data in Alpha_",
+    "classified_to": "CEO",
+    "resolved_to": "CEO",
+    "confidence": 0.3,
+    "status": "DISPATCHED",
+    "duration_ms": 0.04
   }
 ]
