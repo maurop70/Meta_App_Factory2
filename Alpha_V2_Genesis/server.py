@@ -231,10 +231,27 @@ def get_ledger():
         if os.path.exists(LEDGER_MD_PATH):
             with open(LEDGER_MD_PATH, "r", encoding="utf-8") as f:
                 md_content = f.read()
+                
+        positions_out = state.get("positions", {})
+        if os.path.exists(PORTFOLIO_PATH):
+            with open(PORTFOLIO_PATH, "r", encoding="utf-8") as f:
+                try:
+                    ptf = json.load(f)
+                    for raw_pos in ptf.get("positions", []):
+                        pid = raw_pos.get("id")
+                        if pid in positions_out:
+                            if "original_thesis" not in positions_out[pid]:
+                                positions_out[pid]["original_thesis"] = {}
+                            for k in ['short_put_strike', 'long_put_strike', 'short_call_strike', 'long_call_strike', 'expiration_date', 'open_price', 'credit_received']:
+                                if k in raw_pos:
+                                    positions_out[pid]["original_thesis"][k] = raw_pos[k]
+                except Exception:
+                    pass
+
         return jsonify({
             "status":    "ok",
             "last_run":  state.get("last_run"),
-            "positions": state.get("positions", {}),
+            "positions": positions_out,
             "markdown":  md_content,
         })
     except Exception as e:
@@ -371,32 +388,108 @@ def sync_to_portfolio(entry):
                     journal = json.load(f)
             except: pass
         
-        journal_entry = {
-            "trade_id": entry.get('id', f"exec_{int(time.time())}"),
-            "strategy": entry.get('strategy', 'Unknown'),
-            "entry_date": datetime.now().strftime("%Y-%m-%d"),
-            "close_date": datetime.now().strftime("%Y-%m-%d") if entry.get('action') == 'CLOSE' else None,
-            "expiry": entry.get('strategy', '').split('(')[-1].split(')')[0] if '(' in entry.get('strategy', '') else "",
-            "credit_received": float(re.findall(r"[\d.]+", entry.get('credit_debit', '0'))[0] or 0),
-            "close_mark": 0,
-            "realized_pnl": 0,
-            "realized_pnl_pct": 0,
-            "days_held": 0,
-            "entry_rating": "OPEN" if entry.get('action') == 'OPEN' else "CLOSED",
-            "entry_score": 0,
-            "strikes": {},
-            "closes_at": datetime.now().isoformat() if entry.get('action') == 'CLOSE' else None,
-        }
-        
-        if len(strikes) == 4:
-            journal_entry["strikes"] = {
-                "short_call": int(strikes[0]),
-                "long_call": int(strikes[1]),
-                "short_put": int(strikes[2]),
-                "long_put": int(strikes[3])
+        if entry.get('action') == 'CLOSE':
+            # Find matching OPEN trade in journal and update it with close data
+            close_amount = float(re.findall(r"[\d.]+", entry.get('credit_debit', '0'))[0] or 0)
+            matched = False
+
+            # ── Robust matching helpers ──────────────────────────────
+            def _normalize_strategy(s):
+                """Strip Buy/Sell/Close prefix and normalize for comparison."""
+                if not s:
+                    return ''
+                s = s.strip()
+                for prefix in ['Buy to Close', 'Sell to Close', 'Buy to Open', 'Sell to Open',
+                               'Buy', 'Sell', 'Close', 'Open']:
+                    if s.upper().startswith(prefix.upper()):
+                        s = s[len(prefix):].strip()
+                        break
+                # Normalize: lowercase, strip extra spaces
+                return re.sub(r'\s+', ' ', s).strip().upper()
+
+            def _extract_strike_set(j_strikes):
+                """Extract the set of all strike values from a journal strikes dict."""
+                if not j_strikes or not isinstance(j_strikes, dict):
+                    return set()
+                return {int(v) for v in j_strikes.values() if v and str(v).isdigit()}
+
+            e_strategy_norm = _normalize_strategy(entry.get('strategy', ''))
+            close_strike_set = {int(s) for s in strikes} if len(strikes) >= 2 else set()
+
+            for j in reversed(journal):
+                if j.get('entry_rating') != 'OPEN':
+                    continue
+
+                # Match 1: Strategy name (normalized, case-insensitive)
+                j_strategy_norm = _normalize_strategy(j.get('strategy', ''))
+                strategy_match = (
+                    j_strategy_norm and e_strategy_norm and (
+                        j_strategy_norm == e_strategy_norm or
+                        # Partial match: core name without DTE/expiry in parens
+                        j_strategy_norm.split('(')[0].strip() == e_strategy_norm.split('(')[0].strip() or
+                        # Ticker inside strategy name
+                        entry.get('ticker', 'SPX') in j.get('strategy', '')
+                    )
+                )
+
+                # Match 2: Strikes (set overlap — order/label-independent)
+                j_strike_set = _extract_strike_set(j.get('strikes'))
+                strike_match = (
+                    len(close_strike_set) >= 2 and len(j_strike_set) >= 2 and
+                    len(close_strike_set & j_strike_set) >= 2  # At least 2 strikes in common
+                )
+
+                if strategy_match or strike_match:
+                    j['close_date'] = datetime.now().strftime("%Y-%m-%d")
+                    j['closes_at'] = datetime.now().isoformat()
+                    j['entry_rating'] = 'CLOSED'
+                    j['close_mark'] = close_amount
+                    credit = j.get('credit_received', 0)
+                    j['realized_pnl'] = round(credit - close_amount, 2)
+                    j['realized_pnl_pct'] = round((j['realized_pnl'] / credit) * 100, 1) if credit else 0
+                    try:
+                        open_date = datetime.strptime(j.get('entry_date', ''), '%Y-%m-%d')
+                        j['days_held'] = (datetime.now() - open_date).days
+                    except:
+                        j['days_held'] = 0
+                    matched = True
+                    pnl_sign = '+' if j['realized_pnl'] >= 0 else ''
+                    print(f"✅ Trade Journal: Closed {j.get('trade_id')} — P&L: {pnl_sign}${j['realized_pnl']} ({j['realized_pnl_pct']}%)")
+                    break
+            if not matched:
+                # No matching open trade — create a standalone close entry
+                journal.append({
+                    "trade_id": entry.get('id', f"exec_{int(time.time())}"),
+                    "strategy": entry.get('strategy', 'Unknown'),
+                    "entry_date": datetime.now().strftime("%Y-%m-%d"),
+                    "close_date": datetime.now().strftime("%Y-%m-%d"),
+                    "expiry": entry.get('strategy', '').split('(')[-1].split(')')[0] if '(' in entry.get('strategy', '') else "",
+                    "credit_received": 0, "close_mark": close_amount,
+                    "realized_pnl": 0, "realized_pnl_pct": 0, "days_held": 0,
+                    "entry_rating": "CLOSED", "entry_score": 0,
+                    "strikes": {}, "closes_at": datetime.now().isoformat(),
+                })
+                print(f"⚠️ Trade Journal: No matching open trade found for close — created standalone entry.")
+        else:
+            # OPEN action — always create new journal entry
+            journal_entry = {
+                "trade_id": entry.get('id', f"exec_{int(time.time())}"),
+                "strategy": entry.get('strategy', 'Unknown'),
+                "entry_date": datetime.now().strftime("%Y-%m-%d"),
+                "close_date": None,
+                "expiry": entry.get('strategy', '').split('(')[-1].split(')')[0] if '(' in entry.get('strategy', '') else "",
+                "credit_received": float(re.findall(r"[\d.]+", entry.get('credit_debit', '0'))[0] or 0),
+                "close_mark": 0, "realized_pnl": 0, "realized_pnl_pct": 0,
+                "days_held": 0, "entry_rating": "OPEN", "entry_score": 0,
+                "strikes": {}, "closes_at": None,
             }
+            if len(strikes) == 4:
+                journal_entry["strikes"] = {
+                    "short_call": int(strikes[0]), "long_call": int(strikes[1]),
+                    "short_put": int(strikes[2]), "long_put": int(strikes[3])
+                }
+            journal.append(journal_entry)
         
-        journal.append(journal_entry)
         with open(journal_path, "w") as f:
             json.dump(journal, f, indent=2, default=str)
             
@@ -526,7 +619,7 @@ def ocr_execution():
         _v3_status = safe_post(url, payload)
 
         
-        res = type("Resp", (), {"status_code": 200 if _v3_status == "sent" else 503, "ok": _v3_status == "sent", "text": _v3_status, "json": lambda: {"status": _v3_status}})()
+        res = type("Resp", (), {"status_code": 200 if _v3_status == "sent" else 503, "ok": _v3_status == "sent", "text": _v3_status, "json": lambda self: {"status": _v3_status}})()
         res_data = res.json()
         
         if res.status_code != 200:
@@ -807,17 +900,35 @@ def trigger_news_report():
     if not NEWS_REPORT_AVAILABLE:
         return jsonify({"error": "News report module not available"}), 503
     try:
+        # Force reload to pick up latest code (Google Drive sync workaround)
+        import importlib, market_news_report
+        importlib.reload(market_news_report)
+        from market_news_report import generate_news_report as gen_report
+        
+        print("📰 [News] Trigger received — generating fresh report via Gemini...")
+        
         # Fetch live snapshot if Loki is available
         snapshot = None
         if Loki:
             try:
                 loki = Loki()
                 snapshot = loki.get_market_snapshot()
-            except Exception:
-                pass
-        report = generate_news_report(market_snapshot=snapshot)
+                print(f"📰 [News] Market snapshot: SPX={snapshot.get('spx', 'N/A')}")
+            except Exception as snap_err:
+                print(f"📰 [News] Snapshot failed (non-critical): {snap_err}")
+        
+        report = gen_report(market_snapshot=snapshot)
+        
+        # Log result quality
+        first_title = report.get('headlines', [{}])[0].get('title', '') if report.get('headlines') else 'NONE'
+        is_local = 'LOCAL' in first_title
+        print(f"📰 [News] Report generated: {len(report.get('headlines', []))} headlines, local_fallback={is_local}, title='{first_title[:60]}'")
+        
         return jsonify(report)
     except Exception as e:
+        import traceback
+        print(f"📰 [News] EXCEPTION: {e}")
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 

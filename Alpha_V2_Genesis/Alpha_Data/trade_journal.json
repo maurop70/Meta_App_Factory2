@@ -6,8 +6,8 @@
     "close_date": "2026-03-06",
     "expiry": "2026-04-10",
     "credit_received": 9.3,
-    "close_mark": 7.30,
-    "realized_pnl": 2.00,
+    "close_mark": 7.3,
+    "realized_pnl": 2.0,
     "realized_pnl_pct": 21.5,
     "days_held": 11,
     "entry_rating": "GOOD ENTRY",
@@ -28,9 +28,9 @@
     "entry_date": "2026-03-06",
     "close_date": "2026-03-12",
     "expiry": "2026-04-24",
-    "credit_received": 10.00,
-    "close_mark": 8.70,
-    "realized_pnl": 1.30,
+    "credit_received": 10.0,
+    "close_mark": 8.7,
+    "realized_pnl": 1.3,
     "realized_pnl_pct": 13.0,
     "days_held": 6,
     "entry_rating": "CLOSED",
@@ -67,5 +67,26 @@
       "short_call": 7000,
       "long_call": 7025
     }
+  },
+  {
+    "trade_id": "exec_1773841585",
+    "strategy": "37 DTE IRON CONDOR",
+    "entry_date": "2026-03-18",
+    "close_date": "2026-03-19",
+    "expiry": "2026-04-24",
+    "credit_received": 4.05,
+    "close_mark": 4.15,
+    "realized_pnl": -0.10,
+    "realized_pnl_pct": -2.5,
+    "days_held": 1,
+    "entry_rating": "CLOSED",
+    "entry_score": 0,
+    "strikes": {
+      "short_put": 6300,
+      "long_put": 6290,
+      "short_call": 6990,
+      "long_call": 7000
+    },
+    "closes_at": "2026-03-19T10:50:33.463794"
   }
 ]

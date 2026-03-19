@@ -112,12 +112,7 @@ def _load_market_context():
 def generate_news_report(market_snapshot=None):
     """
     Calls Gemini 2.5 Flash to generate a market news intelligence report.
-
-    Args:
-        market_snapshot: dict with spx, vix, iv_rank, etc. (optional)
-
-    Returns:
-        dict with structured news report
+    Falls back to local cache only on actual API failure.
     """
     api_key = get_secret("GEMINI_API_KEY")
     if not api_key:
@@ -204,16 +199,15 @@ def generate_news_report(market_snapshot=None):
         ],
         "generationConfig": {
             "temperature": 0.3,
-            "maxOutputTokens": 4096,
+            "maxOutputTokens": 8192,
             "responseMimeType": "application/json",
         },
     }
 
     try:
+        import requests as _req
         logger.info("Generating Market News Intelligence Report via Gemini...")
-        _v3_status = safe_post(url, payload)
-
-        resp = type("Resp", (), {"status_code": 200 if _v3_status == "sent" else 503, "ok": _v3_status == "sent", "text": _v3_status, "json": lambda: {"status": _v3_status}})()
+        resp = _req.post(url, json=payload, timeout=60)
 
         if resp.status_code != 200:
             logger.error(f"Gemini API {resp.status_code}: {resp.text[:300]}")
@@ -226,6 +220,13 @@ def generate_news_report(market_snapshot=None):
             .get("parts", [{}])[0]
             .get("text", "")
         )
+        
+        logger.info(f"Gemini raw response length: {len(raw_text)} chars")
+        if not raw_text:
+            finish_reason = result.get("candidates", [{}])[0].get("finishReason", "UNKNOWN")
+            logger.error(f"Gemini returned empty text. finishReason={finish_reason}")
+            logger.error(f"Full result keys: {list(result.keys())}, candidates: {len(result.get('candidates', []))}")
+            return _build_local_fallback(market_snapshot, now, f"Gemini returned empty response (finishReason={finish_reason})")
 
         # Strip markdown fences if present
         clean = raw_text.strip()
@@ -250,11 +251,77 @@ def generate_news_report(market_snapshot=None):
         return report
 
     except json.JSONDecodeError as e:
-        logger.error(f"Gemini returned non-JSON: {e}")
-        return {"error": "Failed to parse Gemini response", "headlines": [], "events": []}
+        logger.warning(f"Gemini JSON truncated: {e} — attempting repair...")
+        # Attempt to repair truncated JSON by closing open structures
+        repaired = clean
+        # Close any unterminated strings
+        quote_count = repaired.count('"') - repaired.count('\\"')
+        if quote_count % 2 != 0:
+            repaired += '"'
+        # Close open arrays and objects
+        open_braces = repaired.count('{') - repaired.count('}')
+        open_brackets = repaired.count('[') - repaired.count(']')
+        repaired += ']' * max(0, open_brackets)
+        repaired += '}' * max(0, open_braces)
+        try:
+            report = json.loads(repaired)
+            report["generated_at"] = now.isoformat()
+            report["market_snapshot"] = market_snapshot or {}
+            logger.info(f"Repaired truncated JSON: {len(report.get('headlines', []))} headlines recovered")
+            with open(REPORT_PATH, "w", encoding="utf-8") as f:
+                json.dump(report, f, indent=2, default=str)
+            return report
+        except json.JSONDecodeError:
+            logger.error("JSON repair failed, using local fallback")
+            return _build_local_fallback(market_snapshot, now, "Gemini returned non-parseable response")
     except Exception as e:
         logger.error(f"News report generation failed: {e}")
-        return {"error": str(e), "headlines": [], "events": []}
+        return _build_local_fallback(market_snapshot, now, str(e))
+
+
+def _build_local_fallback(market_snapshot, now, reason=""):
+    """Build a useful local report from analyst memo and market data."""
+    memo_path = os.path.join(ROOT, "market_memo.md")
+    memo_content = ""
+    if os.path.exists(memo_path):
+        with open(memo_path, "r", encoding="utf-8") as f:
+            memo_content = f.read()
+
+    spx = market_snapshot.get("spx", "N/A") if market_snapshot else "N/A"
+    vix = market_snapshot.get("vix", "N/A") if market_snapshot else "N/A"
+
+    report = {
+        "report_title": f"Market Intelligence Brief — {now.strftime('%B %d, %Y')}",
+        "market_regime": "NEUTRAL",
+        "headlines": [
+            {
+                "title": "SYSTEM RATIONALE (LOCAL)",
+                "source": "Alpha Architect (Local)",
+                "summary": f"SPX {spx} | VIX {vix} — Generated from cached analyst memo.",
+                "spx_impact": "See analyst memo for full strategic context.",
+                "position_impact": memo_content[:500] if memo_content else "No analyst memo available.",
+                "severity": "MEDIUM"
+            }
+        ],
+        "upcoming_events": [],
+        "trade_recommendation": "Review Analyst Memo for core strategic rationale.",
+        "key_levels": {
+            "spx_support": ["N/A"],
+            "spx_resistance": ["N/A"],
+            "vix_warning_threshold": 20
+        },
+        "generated_at": now.isoformat(),
+        "market_snapshot": market_snapshot or {}
+    }
+
+    try:
+        with open(REPORT_PATH, "w", encoding="utf-8") as f:
+            json.dump(report, f, indent=2, default=str)
+    except Exception:
+        pass
+
+    logger.info(f"Local fallback report generated (reason: {reason})")
+    return report
 
 
 def load_cached_report():
