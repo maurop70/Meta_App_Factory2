@@ -1209,8 +1209,8 @@ class Loki:
                     # N8N is live but position is STABLE - note advisory only
                     rationale = f"{rationale} | N8N: {n8n_forecast} ({n8n_risk_mode})"
             else:
-                # N8N is in standby - note in rationale
-                rationale = f"{rationale} | N8N: STANDBY (Local sensors only)"
+                # N8N offline — using local sensors
+                rationale = f"{rationale} | N8N: LOCAL (Local sensors active)"
         
         # 4. Risk Check
         proposal = {
@@ -1230,7 +1230,7 @@ class Loki:
 
         n8n_is_live = n8n_result.get('n8n_live', False) if n8n_result else False
         n8n_source = n8n_result.get('n8n_source', 'Unknown') if n8n_result else 'OFFLINE'
-        n8n_status_label = f"🟢 LIVE ({n8n_source})" if n8n_is_live else "🔴 STANDBY"
+        n8n_status_label = f"🟢 LIVE ({n8n_source})" if n8n_is_live else "🟡 LOCAL (Offline)"
         
         # Derive live risk score from N8N intelligence
         derived_risk_score = self._derive_risk_score(n8n_result) if n8n_result and isinstance(n8n_result, dict) else 50
