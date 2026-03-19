@@ -1121,8 +1121,9 @@ function App() {
   const [fragilityLoading, setFragilityLoading] = useState(false)
   const [decoderOpen, setDecoderOpen] = useState({})  // accordion toggle state for Market Decoder
   const [activeTab, setActiveTab] = useState('dashboard')  // 'dashboard' | 'journal' | 'fragility' | 'news'
+  const [activeTradeTabIdx, setActiveTradeTabIdx] = useState(0)
   const [chatOpen, setChatOpen] = useState(false)
-  const [apiBase, setApiBase] = useState('http://localhost:5005')
+  const [apiBase, setApiBase] = useState('http://localhost:5008')
   const [newsReport, setNewsReport] = useState(null)
   const [newsLoading, setNewsLoading] = useState(false)
 
@@ -1308,7 +1309,7 @@ function App() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div>
                 <p style={{ color: '#94a3b8', fontSize: '0.875rem', margin: '0 0 0.25rem 0' }}>Current Verdict</p>
-                <h2 style={{ color: data.verdict === 'ENTRY' ? '#10b981' : (data.verdict === 'WAIT' ? '#f59e0b' : '#ef4444'), margin: 0, fontSize: '1.75rem' }}>{data.verdict}</h2>
+                <h2 style={{ color: (data.final_action || loki_proposal.strategy || 'WAIT') === 'ENTRY' ? '#10b981' : ((data.final_action || loki_proposal.strategy || 'WAIT') === 'WAIT' ? '#f59e0b' : '#ef4444'), margin: 0, fontSize: '1.75rem' }}>{data.final_action || loki_proposal.strategy || '—'}</h2>
               </div>
               <div style={{ textAlign: 'center', padding: '0 2rem', borderLeft: '1px solid rgba(255,255,255,0.1)', borderRight: '1px solid rgba(255,255,255,0.1)' }}>
                 <p style={{ color: '#94a3b8', fontSize: '0.875rem', margin: '0 0 0.5rem 0' }}>N8N Risk Score</p>
@@ -1319,7 +1320,7 @@ function App() {
               </div>
               <div style={{ textAlign: 'right' }}>
                 <p style={{ color: '#94a3b8', fontSize: '0.875rem', margin: '0 0 0.25rem 0' }}>Delta Target</p>
-                <h2 style={{ margin: 0, fontSize: '1.75rem' }}>{data.delta}</h2>
+                <h2 style={{ margin: 0, fontSize: '1.75rem' }}>{data.delta || (expert_opinions?.volatility?.vix_rank_30d > 20 ? '0.10δ' : '0.20δ')}</h2>
               </div>
             </div>
             <div style={{ padding: '0.75rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', borderLeft: '3px solid #3b82f6' }}>
@@ -1488,40 +1489,108 @@ function App() {
           </div>
         </div>
 
-        {/* ACTIVE TRADE WATCHDOG */}
-        <div className="card" style={{ border: wd.status === 'DANGER' ? '1px solid red' : '1px solid rgba(255,255,255,0.1)' }}>
-          <div className="card-title">
-            <span>ACTIVE TRADE ({wd.trade_details?.status || 'NONE'})</span>
-            <span className={`status-badge ${wd.status === 'SAFE' ? 'status-green' : wd.status === 'DANGER' ? 'status-red' : 'status-yellow'}`}>
-              {wd.status}
-            </span>
-          </div>
-          {wd.trade_details ? (
-            <>
+        {/* ACTIVE TRADE WATCHDOGS */}
+        {(() => {
+          const openTrades = ledger?.positions ? Object.values(ledger.positions).filter(p => p.status === 'OPEN' || p.original_thesis?.status === 'OPEN' || !p.status || p.status !== 'CLOSED') : [];
+          if (openTrades.length === 0) {
+            return (
+              <div className="card" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
+                <div className="card-title">
+                  <span>ACTIVE TRADE (NONE)</span>
+                </div>
+                <div style={{ color: '#94a3b8', fontStyle: 'italic' }}>No open positions found in Strategy Ledger.</div>
+              </div>
+            );
+          }
+
+          // Ensure activeTradeTabIdx is valid bounds
+          const safeTabIdx = activeTradeTabIdx < openTrades.length ? activeTradeTabIdx : 0;
+          const pos = openTrades[safeTabIdx];
+          
+          const td = pos.original_thesis || {};
+          const spx = market_snapshot?.spx || 0;
+          
+          // Use provided strikes from thesis or directly from position snapshot
+          const short_put = td.short_put_strike || pos.short_put_strike || td.leg_detail?.find(l=>l.type==='put' && l.sign===-1)?.strike;
+          const short_call = td.short_call_strike || pos.short_call_strike || td.leg_detail?.find(l=>l.type==='call' && l.sign===-1)?.strike;
+          const long_put = td.long_put_strike || pos.long_put_strike || td.leg_detail?.find(l=>l.type==='put' && l.sign===1)?.strike;
+          const long_call = td.long_call_strike || pos.long_call_strike || td.leg_detail?.find(l=>l.type==='call' && l.sign===1)?.strike;
+          
+          const put_dist = short_put ? Math.max(0, spx - short_put) : 0;
+          const call_dist = short_call ? Math.max(0, short_call - spx) : 0;
+          const put_dist_pct = short_put ? (put_dist / spx) * 100 : 0;
+          const call_dist_pct = short_call ? (call_dist / spx) * 100 : 0;
+          const distance_pct = Math.min(short_put ? put_dist_pct : 999, short_call ? call_dist_pct : 999);
+          const danger_side = put_dist_pct < call_dist_pct ? 'PUT' : 'CALL';
+          const status = distance_pct < 2 ? 'DANGER' : (distance_pct < 4 ? 'WARNING' : 'SAFE');
+          
+          // DTE calculation fallback
+          let dte = td.dte_at_report;
+          if (!dte && (td.expiration_date || td.expiry || pos.expiration_date || pos.expiry)) {
+            dte = Math.max(0, Math.ceil((new Date(td.expiration_date || td.expiry || pos.expiration_date || pos.expiry) - new Date()) / 86400000));
+          }
+          
+          return (
+            <div className="card" style={{ border: status === 'DANGER' ? '1px solid red' : '1px solid rgba(255,255,255,0.1)' }}>
+              {/* TAB BAR FOR OPEN TRADES */}
+              {openTrades.length > 1 && (
+                <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '1rem', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                  {openTrades.map((t, i) => {
+                    const tTd = t.original_thesis || {};
+                    let tDte = tTd.dte_at_report;
+                    if (!tDte && (tTd.expiration_date || tTd.expiry || t.expiration_date || t.expiry)) {
+                      tDte = Math.max(0, Math.ceil((new Date(tTd.expiration_date || tTd.expiry || t.expiration_date || t.expiry) - new Date()) / 86400000));
+                    }
+                    const isActive = safeTabIdx === i;
+                    return (
+                      <button key={i} onClick={() => setActiveTradeTabIdx(i)} style={{
+                        padding: '0.4rem 0.8rem',
+                        fontSize: '0.75rem',
+                        fontWeight: isActive ? 'bold' : 'normal',
+                        color: isActive ? '#fff' : '#94a3b8',
+                        background: isActive ? 'rgba(59,130,246,0.3)' : 'transparent',
+                        border: 'none',
+                        borderBottom: isActive ? '2px solid #3b82f6' : '2px solid transparent',
+                        cursor: 'pointer',
+                        borderRadius: '4px 4px 0 0'
+                      }}>
+                        {tTd.symbol || 'SPX'} | {tDte} DTE
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
+              <div className="card-title">
+                <span>ACTIVE TRADE ({pos.status || 'OPEN'})</span>
+                <span className={`status-badge ${status === 'SAFE' ? 'status-green' : status === 'DANGER' ? 'status-red' : 'status-yellow'}`}>
+                  {status}
+                </span>
+              </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
                 <div style={{ background: 'rgba(239, 68, 68, 0.15)', padding: '0.4rem', borderRadius: '6px', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
                   <span style={{ color: '#f87171', display: 'block', fontSize: '0.7rem', fontWeight: 'bold', letterSpacing: '0.05em' }}>SHORT PUT</span>
-                  <b style={{ fontSize: '1.1rem' }}>{wd.trade_details.short_put_strike}</b>
+                  <b style={{ fontSize: '1.1rem' }}>{short_put || 'N/A'}</b>
                   <div style={{ fontSize: '0.85rem', color: '#cbd5e1', marginTop: '4px' }}>
-                    <b>${Math.abs(market_snapshot.spx - wd.trade_details.short_put_strike).toFixed(2)}</b>
-                    <span style={{ color: '#94a3b8', marginLeft: '4px' }}>({((Math.abs(market_snapshot.spx - wd.trade_details.short_put_strike) / market_snapshot.spx) * 100).toFixed(2)}%)</span>
+                    <b>${put_dist.toFixed(2)}</b>
+                    <span style={{ color: '#94a3b8', marginLeft: '4px' }}>({put_dist_pct.toFixed(2)}%)</span>
                   </div>
                 </div>
                 <div style={{ background: 'rgba(239, 68, 68, 0.15)', padding: '0.4rem', borderRadius: '6px', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
                   <span style={{ color: '#f87171', display: 'block', fontSize: '0.7rem', fontWeight: 'bold', letterSpacing: '0.05em' }}>SHORT CALL</span>
-                  <b style={{ fontSize: '1.1rem' }}>{wd.trade_details.short_call_strike}</b>
+                  <b style={{ fontSize: '1.1rem' }}>{short_call || 'N/A'}</b>
                   <div style={{ fontSize: '0.85rem', color: '#cbd5e1', marginTop: '4px' }}>
-                    <b>${Math.abs(market_snapshot.spx - wd.trade_details.short_call_strike).toFixed(2)}</b>
-                    <span style={{ color: '#94a3b8', marginLeft: '4px' }}>({((Math.abs(market_snapshot.spx - wd.trade_details.short_call_strike) / market_snapshot.spx) * 100).toFixed(2)}%)</span>
+                    <b>${call_dist.toFixed(2)}</b>
+                    <span style={{ color: '#94a3b8', marginLeft: '4px' }}>({call_dist_pct.toFixed(2)}%)</span>
                   </div>
                 </div>
                 <div style={{ background: 'rgba(34, 197, 94, 0.05)', padding: '0.25rem', borderRadius: '4px', textAlign: 'center' }}>
                   <span style={{ color: '#4ade80', display: 'block', fontSize: '0.7rem' }}>LONG PUT</span>
-                  <b>{wd.trade_details.long_put_strike}</b>
+                  <b>{long_put || 'N/A'}</b>
                 </div>
                 <div style={{ background: 'rgba(34, 197, 94, 0.05)', padding: '0.25rem', borderRadius: '4px', textAlign: 'center' }}>
                   <span style={{ color: '#4ade80', display: 'block', fontSize: '0.7rem' }}>LONG CALL</span>
-                  <b>{wd.trade_details.long_call_strike}</b>
+                  <b>{long_call || 'N/A'}</b>
                 </div>
 
                 <div style={{ gridColumn: 'span 2', background: 'rgba(234, 179, 8, 0.1)', padding: '0.5rem', borderRadius: '6px', border: '1px solid rgba(234, 179, 8, 0.2)', marginTop: '0.5rem' }}>
@@ -1532,68 +1601,66 @@ function App() {
                     <div style={{ textAlign: 'center', background: 'rgba(0,0,0,0.2)', padding: '0.3rem', borderRadius: '4px' }}>
                       <div style={{ fontSize: '0.6rem', color: '#94a3b8', fontWeight: 600, letterSpacing: '0.04em' }}>WEEKLY MMM (7 DTE)</div>
                       <div style={{ fontSize: '1rem', fontWeight: 800, color: '#eab308' }}>
-                        ${data.expert_opinions.new_trade?.mmm || data.expert_opinions.simulation?.financials?.mmm || data.expert_opinions.defense?.financials?.mmm || 'N/A'}
+                        ${data?.expert_opinions?.new_trade?.mmm || data?.expert_opinions?.simulation?.financials?.mmm || data?.expert_opinions?.defense?.financials?.mmm || 'N/A'}
                       </div>
                     </div>
                     <div style={{ textAlign: 'center', background: 'rgba(59,130,246,0.1)', padding: '0.3rem', borderRadius: '4px', border: '1px solid rgba(59,130,246,0.2)' }}>
-                      <div style={{ fontSize: '0.6rem', color: '#60a5fa', fontWeight: 600, letterSpacing: '0.04em' }}>POSITION MMM ({Math.max(0, Math.ceil((new Date(wd.trade_details.expiration_date) - new Date()) / (1000 * 60 * 60 * 24)))} DTE)</div>
+                      <div style={{ fontSize: '0.6rem', color: '#60a5fa', fontWeight: 600, letterSpacing: '0.04em' }}>POSITION MMM</div>
                       <div style={{ fontSize: '1rem', fontWeight: 800, color: '#60a5fa' }}>
-                        ${data.expert_opinions.defense?.financials?.mmm_position || 'N/A'}
+                        ${data?.expert_opinions?.defense?.financials?.mmm_position || 'N/A'}
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-
-
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginTop: '0.25rem' }}>
                 <div style={{ background: 'rgba(34, 197, 94, 0.1)', padding: '0.4rem', borderRadius: '6px', textAlign: 'center' }}>
                   <span style={{ color: '#4ade80', display: 'block', fontSize: '0.7rem', fontWeight: 'bold' }}>CREDIT</span>
-                  <b style={{ fontSize: '1.1rem', color: '#4ade80' }}>${wd.trade_details.credit_received || wd.trade_details.open_price || 'N/A'}</b>
+                  <b style={{ fontSize: '1.1rem', color: '#4ade80' }}>${td.credit_received || td.open_price || pos.current_mark || pos.credit_received || 'N/A'}</b>
                 </div>
                 <div style={{ background: 'rgba(234, 179, 8, 0.1)', padding: '0.4rem', borderRadius: '6px', textAlign: 'center' }}>
                   <span style={{ color: '#eab308', display: 'block', fontSize: '0.7rem', fontWeight: 'bold' }}>50% TARGET</span>
-                  <b style={{ fontSize: '1.1rem', color: '#eab308' }}>${((wd.trade_details.credit_received || wd.trade_details.open_price || 0) / 2).toFixed(2)}</b>
+                  <b style={{ fontSize: '1.1rem', color: '#eab308' }}>${((td.credit_received || td.open_price || pos.current_mark || pos.credit_received || 0) / 2).toFixed(2)}</b>
                 </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', marginTop: '0.5rem' }}>
                 <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.3rem', borderRadius: '4px', textAlign: 'center' }}>
                   <span style={{ color: '#94a3b8', display: 'block', fontSize: '0.65rem' }}>EXPIRATION</span>
-                  <span style={{ fontSize: '0.85rem' }}>{wd.trade_details.expiration_date}</span>
+                  <span style={{ fontSize: '0.85rem' }}>{td.expiration_date || td.expiry || pos.expiration_date || pos.expiry || 'N/A'}</span>
                 </div>
                 <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.3rem', borderRadius: '4px', textAlign: 'center' }}>
                   <span style={{ color: '#94a3b8', display: 'block', fontSize: '0.65rem' }}>DTE</span>
-                  <span style={{ fontSize: '0.85rem' }}>{Math.max(0, Math.ceil((new Date(wd.trade_details.expiration_date) - new Date()) / (1000 * 60 * 60 * 24)))}</span>
+                  <span style={{ fontSize: '0.85rem' }}>{dte || 'N/A'}</span>
                 </div>
                 <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.3rem', borderRadius: '4px', textAlign: 'center' }}>
                   <span style={{ color: '#94a3b8', display: 'block', fontSize: '0.65rem' }}>WIDTH</span>
-                  <span style={{ fontSize: '0.85rem' }}>${wd.trade_details.short_put_strike - wd.trade_details.long_put_strike}</span>
+                  <span style={{ fontSize: '0.85rem' }}>{(short_put && long_put) ? Math.abs(short_put - long_put) : 'N/A'}</span>
                 </div>
               </div>
-              {/* ── Danger Side Indicator ── */}
-              {wd.danger_side && wd.danger_side !== 'NONE' && (
+
+              {short_put && short_call && status !== 'SAFE' && (
                 <div style={{
                   marginTop: '0.75rem', padding: '0.5rem 0.75rem',
-                  background: wd.distance_pct < 2 ? 'rgba(239,68,68,0.15)' : wd.distance_pct < 4 ? 'rgba(234,179,8,0.12)' : 'rgba(16,185,129,0.1)',
-                  border: `1px solid ${wd.distance_pct < 2 ? '#ef4444' : wd.distance_pct < 4 ? '#eab308' : '#10b981'}`,
+                  background: status === 'DANGER' ? 'rgba(239,68,68,0.15)' : 'rgba(234,179,8,0.12)',
+                  border: `1px solid ${status === 'DANGER' ? '#ef4444' : '#eab308'}`,
                   borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <span style={{
                       fontSize: '1.1rem',
-                      color: wd.distance_pct < 2 ? '#ef4444' : wd.distance_pct < 4 ? '#eab308' : '#10b981',
+                      color: status === 'DANGER' ? '#ef4444' : '#eab308',
                       fontWeight: 'bold',
-                    }}>{wd.danger_side === 'CALL' ? '↑' : '↓'}</span>
+                    }}>{danger_side === 'CALL' ? '↑' : '↓'}</span>
                     <div>
                       <div style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 600, letterSpacing: '0.04em' }}>PRIMARY RISK</div>
                       <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#e2e8f0' }}>
-                        {wd.danger_side} SIDE
+                        {danger_side} SIDE
                         <span style={{
                           marginLeft: '0.4rem', fontSize: '0.7rem', fontWeight: 600,
-                          color: wd.distance_pct < 2 ? '#ef4444' : wd.distance_pct < 4 ? '#eab308' : '#10b981',
+                          color: status === 'DANGER' ? '#ef4444' : '#eab308',
                         }}>
-                          ({wd.distance_pct < 2 ? '⚠️ CLOSE' : wd.distance_pct < 4 ? 'WATCH' : 'SAFE'})
+                          ({status === 'DANGER' ? '⚠️ CLOSE' : 'WATCH'})
                         </span>
                       </div>
                     </div>
@@ -1602,20 +1669,18 @@ function App() {
                     <div style={{ fontSize: '0.6rem', color: '#94a3b8', fontWeight: 600 }}>MIN DISTANCE</div>
                     <div style={{
                       fontSize: '1.1rem', fontWeight: 800, fontFamily: 'monospace',
-                      color: wd.distance_pct < 2 ? '#ef4444' : wd.distance_pct < 4 ? '#eab308' : '#10b981',
-                    }}>{wd.distance_pct}%</div>
+                      color: status === 'DANGER' ? '#ef4444' : '#eab308',
+                    }}>{distance_pct.toFixed(2)}%</div>
                   </div>
                 </div>
               )}
               <div style={{ textAlign: 'center', marginTop: '0.75rem' }}>
-                <div className="metric-large">{wd.verdict}</div>
-                <div className="metric-label">WATCHDOG VERDICT</div>
+                <div className="metric-large">{status === 'SAFE' ? 'HOLD' : 'THESIS BROKEN'}</div>
+                <div className="metric-label">DYNAMIC VERDICT</div>
               </div>
-            </>
-          ) : (
-            <div style={{ color: '#94a3b8', fontStyle: 'italic' }}>No positions found in portfolio.json</div>
-          )}
-        </div>
+            </div>
+          );
+        })()}
 
         {/* MARKET SENSE */}
         <div className="card">
@@ -1667,7 +1732,7 @@ function App() {
           <div className="metric-large">{expert_opinions.sentiment.bias.toUpperCase()}</div>
           <div className="metric-label">NEWS BIAS</div>
           <div style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#94a3b8' }}>
-            "{expert_opinions.sentiment.narrative}"
+            "{(expert_opinions.sentiment.narrative && expert_opinions.sentiment.narrative !== 'sent') ? expert_opinions.sentiment.narrative : `Cloud Brain sees ${expert_opinions.sentiment.bias?.toLowerCase() || 'neutral'} directional edge. Fair-value Iron Condor conditions.`}"
           </div>
         </div>
 
@@ -2550,10 +2615,13 @@ function App() {
 
       {/* ══ TAB: NEWS INTELLIGENCE ═══════════════════════════════ */}
       {activeTab === 'news' && (() => {
-        // Auto-fetch on first view
+        // Auto-fetch on first view — re-read config to avoid stale apiBase
         const fetchNews = (fresh = false) => {
           setNewsLoading(true);
-          fetch(`${apiBase}/api/news-report`, { method: fresh ? 'POST' : 'GET' })
+          fetch('/config.json').then(r => r.json()).then(cfg => {
+            const base = cfg.apiBaseUrl || apiBase;
+            return fetch(`${base}/api/news-report`, { method: fresh ? 'POST' : 'GET' });
+          })
             .then(r => r.json())
             .then(d => { if (!d.error) setNewsReport(d); setNewsLoading(false); })
             .catch(() => setNewsLoading(false));
