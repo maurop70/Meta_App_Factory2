@@ -263,6 +263,13 @@ def stream_chat(prompt: str, project_name: str = "General", dashboard_context=No
             if resp.status_code == 200:
                 logger.info(f"Connected to {model_name} successfully")
                 break
+            elif resp.status_code == 403:
+                last_error = "API key invalid or revoked (HTTP 403). Check .env or vault."
+                print(f"DEBUG: 403 FORBIDDEN — API key is invalid")
+                logger.error(last_error)
+                resp.close()
+                resp = None
+                break  # No point trying other models with the same bad key
             else:
                 last_error = resp.text[:500]
                 print(f"DEBUG: {model_name} error body: {last_error}")
@@ -327,11 +334,8 @@ def stream_chat(prompt: str, project_name: str = "General", dashboard_context=No
     except requests.exceptions.Timeout:
         logger.warning("Gemini streaming timed out after 120s")
         yield {"error": "Request timed out. Please try again."}
-    except Exception as e:  # V3: transport errors handled by safe_post
-        logger.error(f"Connection error: {e}")
-        yield {"error": "Connection failed. Check internet."}
     except Exception as e:
-        logger.error(f"Streaming error: {e}")
+        logger.error(f"Streaming/connection error: {e}")
         yield {"error": f"Streaming failed: {str(e)}"}
     finally:
         try:

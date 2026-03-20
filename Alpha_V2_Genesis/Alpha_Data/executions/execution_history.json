@@ -37,5 +37,55 @@
         "notes": "",
         "id": "exec_1773327248",
         "timestamp": "2026-03-12T10:54:08.635920"
+    },
+    {
+        "ticker": "SPX",
+        "action": "OPEN",
+        "strategy": "37 DTE IRON CONDOR",
+        "strikes": "6300 PUT/6290 PUT 6990 CALL/7000 CALL",
+        "credit_debit": "+4.05",
+        "notes": "",
+        "id": "exec_1773841585",
+        "timestamp": "2026-03-18T09:46:25.332212"
+    },
+    {
+        "ticker": "SPX",
+        "action": "CLOSE",
+        "strategy": "Buy 37 DTE IRON CONDOR",
+        "strikes": "+6300 /-6290 put +6990/-7000 Call",
+        "credit_debit": "4.15",
+        "notes": "",
+        "id": "exec_1773931833",
+        "timestamp": "2026-03-19T10:50:33.459221"
+    },
+    {
+        "ticker": "SPXSPX",
+        "action": "OPEN",
+        "strategy": "Test Tab Strategy",
+        "strikes": "6500 PUT / 6400 PUT",
+        "credit_debit": "",
+        "notes": "",
+        "id": "exec_1773940512",
+        "timestamp": "2026-03-19T13:15:12.948069"
+    },
+    {
+        "ticker": "SPX",
+        "action": "CLOSE",
+        "strategy": "Iron Condor 6300/6275 PUT 7000/7025 Call",
+        "strikes": " 6300 PUT/6275PUT 7000 CALL/7025 CALL",
+        "credit_debit": "8.5",
+        "notes": "",
+        "id": "exec_1774036999",
+        "timestamp": "2026-03-20T16:03:19.046532"
+    },
+    {
+        "ticker": "SPX",
+        "action": "OPEN",
+        "strategy": "42 DTE IRON CONDOR",
+        "strikes": "6000 PUT/5975 PUT 6975 CALL/6950 CALL",
+        "credit_debit": "7.85",
+        "notes": "",
+        "id": "exec_1774037257",
+        "timestamp": "2026-03-20T16:07:37.042153"
     }
 ]

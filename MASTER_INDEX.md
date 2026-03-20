@@ -315,3 +315,136 @@
 - **Actions:**
   - ✅ `UNKNOWN` → `log_for_review` | Workflow: Unknown | Severity: medium
 - **Status:** ALL_HEALED
+
+## SELF_HEALING_CYCLE
+- **Timestamp:** 2026-03-19 17:00:38
+- **App:** Resonance
+- **Engine:** Nerve Center v1.0 (Closed-Loop Autonomic Recovery)
+- **Failures Detected:** 1
+- **Auto-Healed:** 0
+- **Queued for Review:** 1
+- **Heal Failures:** 0
+- **Actions:**
+  - ✅ `UNKNOWN` → `log_for_review` | Workflow: Unknown | Severity: medium
+- **Status:** ALL_HEALED
+
+## SELF_HEALING_CYCLE
+- **Timestamp:** 2026-03-19 17:30:43
+- **App:** Resonance
+- **Engine:** Nerve Center v1.0 (Closed-Loop Autonomic Recovery)
+- **Failures Detected:** 1
+- **Auto-Healed:** 0
+- **Queued for Review:** 1
+- **Heal Failures:** 0
+- **Actions:**
+  - ✅ `UNKNOWN` → `log_for_review` | Workflow: Unknown | Severity: medium
+- **Status:** ALL_HEALED
+
+## SELF_HEALING_CYCLE
+- **Timestamp:** 2026-03-19 18:00:48
+- **App:** Resonance
+- **Engine:** Nerve Center v1.0 (Closed-Loop Autonomic Recovery)
+- **Failures Detected:** 1
+- **Auto-Healed:** 0
+- **Queued for Review:** 1
+- **Heal Failures:** 0
+- **Actions:**
+  - ✅ `UNKNOWN` → `log_for_review` | Workflow: Unknown | Severity: medium
+- **Status:** ALL_HEALED
+
+## SELF_HEALING_CYCLE
+- **Timestamp:** 2026-03-19 18:30:53
+- **App:** Resonance
+- **Engine:** Nerve Center v1.0 (Closed-Loop Autonomic Recovery)
+- **Failures Detected:** 1
+- **Auto-Healed:** 0
+- **Queued for Review:** 1
+- **Heal Failures:** 0
+- **Actions:**
+  - ✅ `UNKNOWN` → `log_for_review` | Workflow: Unknown | Severity: medium
+- **Status:** ALL_HEALED
+
+## SELF_HEALING_CYCLE
+- **Timestamp:** 2026-03-19 19:00:58
+- **App:** Resonance
+- **Engine:** Nerve Center v1.0 (Closed-Loop Autonomic Recovery)
+- **Failures Detected:** 1
+- **Auto-Healed:** 0
+- **Queued for Review:** 1
+- **Heal Failures:** 0
+- **Actions:**
+  - ✅ `UNKNOWN` → `log_for_review` | Workflow: Unknown | Severity: medium
+- **Status:** ALL_HEALED
+
+## SELF_HEALING_CYCLE
+- **Timestamp:** 2026-03-19 19:31:03
+- **App:** Resonance
+- **Engine:** Nerve Center v1.0 (Closed-Loop Autonomic Recovery)
+- **Failures Detected:** 1
+- **Auto-Healed:** 0
+- **Queued for Review:** 1
+- **Heal Failures:** 0
+- **Actions:**
+  - ✅ `UNKNOWN` → `log_for_review` | Workflow: Unknown | Severity: medium
+- **Status:** ALL_HEALED
+
+## SELF_HEALING_CYCLE
+- **Timestamp:** 2026-03-19 20:01:07
+- **App:** Resonance
+- **Engine:** Nerve Center v1.0 (Closed-Loop Autonomic Recovery)
+- **Failures Detected:** 1
+- **Auto-Healed:** 0
+- **Queued for Review:** 1
+- **Heal Failures:** 0
+- **Actions:**
+  - ✅ `UNKNOWN` → `log_for_review` | Workflow: Unknown | Severity: medium
+- **Status:** ALL_HEALED
+
+## SELF_HEALING_CYCLE
+- **Timestamp:** 2026-03-19 20:31:13
+- **App:** Resonance
+- **Engine:** Nerve Center v1.0 (Closed-Loop Autonomic Recovery)
+- **Failures Detected:** 1
+- **Auto-Healed:** 0
+- **Queued for Review:** 1
+- **Heal Failures:** 0
+- **Actions:**
+  - ✅ `UNKNOWN` → `log_for_review` | Workflow: Unknown | Severity: medium
+- **Status:** ALL_HEALED
+
+## SELF_HEALING_CYCLE
+- **Timestamp:** 2026-03-20 08:30:39
+- **App:** Resonance
+- **Engine:** Nerve Center v1.0 (Closed-Loop Autonomic Recovery)
+- **Failures Detected:** 2
+- **Auto-Healed:** 0
+- **Queued for Review:** 2
+- **Heal Failures:** 0
+- **Actions:**
+  - ✅ `UNKNOWN` → `log_for_review` | Workflow: Unknown | Severity: medium
+  - ✅ `UNKNOWN` → `log_for_review` | Workflow: Unknown | Severity: medium
+- **Status:** ALL_HEALED
+
+## SELF_HEALING_CYCLE
+- **Timestamp:** 2026-03-20 09:00:45
+- **App:** Resonance
+- **Engine:** Nerve Center v1.0 (Closed-Loop Autonomic Recovery)
+- **Failures Detected:** 1
+- **Auto-Healed:** 0
+- **Queued for Review:** 1
+- **Heal Failures:** 0
+- **Actions:**
+  - ✅ `UNKNOWN` → `log_for_review` | Workflow: Unknown | Severity: medium
+- **Status:** ALL_HEALED
+
+## SELF_HEALING_CYCLE
+- **Timestamp:** 2026-03-20 09:30:50
+- **App:** Resonance
+- **Engine:** Nerve Center v1.0 (Closed-Loop Autonomic Recovery)
+- **Failures Detected:** 1
+- **Auto-Healed:** 0
+- **Queued for Review:** 1
+- **Heal Failures:** 0
+- **Actions:**
+  - ✅ `UNKNOWN` → `log_for_review` | Workflow: Unknown | Severity: medium
+- **Status:** ALL_HEALED
