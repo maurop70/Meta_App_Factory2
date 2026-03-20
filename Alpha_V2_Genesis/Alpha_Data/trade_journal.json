@@ -49,18 +49,18 @@
     "trade_id": "exec_1773327236",
     "strategy": "Iron Condor (24 APR 26)",
     "entry_date": "2026-03-12",
-    "close_date": null,
+    "close_date": "2026-03-20",
     "expiry": "2026-04-24",
     "credit_received": 12.15,
-    "close_mark": 0,
-    "realized_pnl": 0,
-    "realized_pnl_pct": 0,
-    "days_held": 0,
-    "entry_rating": "OPEN",
+    "close_mark": 8.5,
+    "realized_pnl": 3.65,
+    "realized_pnl_pct": 30.0,
+    "days_held": 8,
+    "entry_rating": "CLOSED",
     "entry_score": 0,
     "worst_drift_score": 0,
     "max_drawdown_pct": 0,
-    "closes_at": null,
+    "closes_at": "2026-03-20T16:03:19.055287",
     "strikes": {
       "long_put": 6275,
       "short_put": 6300,
@@ -76,7 +76,7 @@
     "expiry": "2026-04-24",
     "credit_received": 4.05,
     "close_mark": 4.15,
-    "realized_pnl": -0.10,
+    "realized_pnl": -0.1,
     "realized_pnl_pct": -2.5,
     "days_held": 1,
     "entry_rating": "CLOSED",
@@ -88,5 +88,26 @@
       "long_call": 7000
     },
     "closes_at": "2026-03-19T10:50:33.463794"
+  },
+  {
+    "trade_id": "exec_1774037257",
+    "strategy": "42 DTE IRON CONDOR",
+    "entry_date": "2026-03-20",
+    "close_date": null,
+    "expiry": "2026-05-01",
+    "credit_received": 7.85,
+    "close_mark": 0,
+    "realized_pnl": 0,
+    "realized_pnl_pct": 0,
+    "days_held": 0,
+    "entry_rating": "OPEN",
+    "entry_score": 0,
+    "strikes": {
+      "short_put": 6000,
+      "long_put": 5975,
+      "short_call": 6975,
+      "long_call": 6950
+    },
+    "closes_at": null
   }
 ]

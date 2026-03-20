@@ -360,11 +360,15 @@ def sync_to_portfolio(entry):
             }
             # Map strikes if we found 4 (standard IC)
             if len(strikes) == 4:
+                # Sort strikes numerically — in an iron condor:
+                #   lower pair = put side (long_put < short_put)
+                #   upper pair = call side (short_call < long_call)
+                sorted_strikes = sorted(int(s) for s in strikes)
                 new_pos.update({
-                    "short_call_strike": int(strikes[0]),
-                    "long_call_strike": int(strikes[1]),
-                    "short_put_strike": int(strikes[2]),
-                    "long_put_strike": int(strikes[3])
+                    "long_put_strike": sorted_strikes[0],
+                    "short_put_strike": sorted_strikes[1],
+                    "short_call_strike": sorted_strikes[2],
+                    "long_call_strike": sorted_strikes[3]
                 })
             port['positions'].append(new_pos)
             
@@ -484,9 +488,10 @@ def sync_to_portfolio(entry):
                 "strikes": {}, "closes_at": None,
             }
             if len(strikes) == 4:
+                sorted_s = sorted(int(s) for s in strikes)
                 journal_entry["strikes"] = {
-                    "short_call": int(strikes[0]), "long_call": int(strikes[1]),
-                    "short_put": int(strikes[2]), "long_put": int(strikes[3])
+                    "long_put": sorted_s[0], "short_put": sorted_s[1],
+                    "short_call": sorted_s[2], "long_call": sorted_s[3]
                 }
             journal.append(journal_entry)
         

@@ -1,5 +1,5 @@
 # ALPHA V2 GENESIS - STRATEGY LEDGER
-**Generated:** 2026-03-17 13:10:22  |  **Engine:** Lead Quant Architect v2.0
+**Generated:** 2026-03-20 17:02:51  |  **Engine:** Lead Quant Architect v2.0
 
 ---
 
@@ -9,10 +9,10 @@
 | :--- | :--- |
 | **Portfolio Health** | GREEN |
 | **Open Positions** | 1 |
-| **SPX Spot** | 6,728.01 |
-| **VIX** | 22.58 (FALLING) |
-| **IV Rank (52W)** | 19.7% |
-| **IV-HV Spread** | +9.2pp (Seller Edge) |
+| **SPX Spot** | 6,506.48 |
+| **VIX** | 26.78 (RISING) |
+| **IV Rank (52W)** | 28.7% |
+| **IV-HV Spread** | +12.9pp (Seller Edge) |
 | **N8N System Health** | UNKNOWN (0 failures in log) |
 | **Last Hot Updates** | 0 n8n pushes detected |
 
@@ -26,64 +26,59 @@
 
 ## ACTIVE TRADE REPORTS
 
-### exec_1773327236
+### exec_1774037257
 
 | | |
 | :--- | :--- |
-| **Strategy** | Iron Condor (24 APR 26) |
-| **Opened** | 2026-03-12 |
-| **Expires** | 2026-04-24 (38 DTE remaining) |
-| **Credit Received** | $12.15 |
-| **Current Mark** | $9.95 |
-| **P&L So Far** | +$2.20 (18.1% of max profit) |
-| **50% Profit Target** | $6.08 mark |
-| **21-DTE Exit Date** | 2026-04-03 |
-| **Strikes** | 6275/6300 Put · 7000/7025 Call |
+| **Strategy** | 42 DTE IRON CONDOR |
+| **Opened** | 2026-03-20 |
+| **Expires** | 2026-05-01 (42 DTE remaining) |
+| **Credit Received** | $7.85 |
+| **Current Mark** | $1.3 |
+| **P&L So Far** | +$6.55 (83.4% of max profit) |
+| **50% Profit Target** | $3.92 mark |
+| **21-DTE Exit Date** | 2026-04-10 |
+| **Strikes** | 5975/6000 Put · 6975/6950 Call |
 
 **Position Greeks (Black-Scholes, Live)**
 
 | Greek | Value | Meaning |
 | :--- | :---: | :--- |
-| **Theta** (θ) | `+$-17.55/day` | $17.55/day income from time decay |
-| **Vega** (ν) | `$67.39/pp` | $67.39 P&L change per 1pp VIX move (gain on vol expansion) |
-| **Delta** (δ) | `+1.98/pt` | Position is near delta-neutral ($1.98/pt) |
-| **Gamma** (γ) | `0.0000683` | Convexity risk per $1 SPX move |
+| **Theta** (θ) | `+$14.00/day` | $14.00/day income from time decay |
+| **Vega** (ν) | `$-33.09/pp` | $33.09 P&L change per 1pp VIX move (loss on vol expansion) |
+| **Delta** (δ) | `-2.58/pt` | Position is near delta-neutral ($2.58/pt) |
+| **Gamma** (γ) | `-0.0000212` | Convexity risk per $1 SPX move |
 
 **Entry Rating at Open: [A] GOOD ENTRY** (Score: 4/9)
 
 **Reasons FOR the trade:**
 
-- IV-HV spread +9.2pp: market significantly over-pricing vol vs realized — strong seller edge
-- Short put 6.4% OTM (428 pts) — requires 9 consecutive avg-size down days to breach
-- VIX trending DOWN (3-day) — IV compression benefits short-vol positions
-- 38 DTE: optimal theta/gamma ratio for Core Income strategy
+- IV-HV spread +12.9pp: market significantly over-pricing vol vs realized — strong seller edge
+- Short put 7.8% OTM (506 pts) — requires 10 consecutive avg-size down days to breach
+- Short call 7.2% OTM (468 pts) — upside well protected
+- 42 DTE: optimal theta/gamma ratio for Core Income strategy
 
 **Risks at entry:**
 
-- IV Rank 20%: below median — premium is thin for the risk taken
-- Short call 4.0% OTM — call side needs monitoring on rallies
+- IV Rank 29%: below median — premium is thin for the risk taken
+- VIX trending UP (3-day) — short-term headwind; mark-to-market may go negative before recovering
 
 **Daily Thesis Update: [OK] THESIS INTACT** (Drift Score: +2)
 
 - STABLE: SPX has moved only +0.0% — original thesis intact
-- EDGE: IV-HV spread remains +9.2pp — seller advantage intact
+- EDGE: IV-HV spread remains +12.9pp — seller advantage intact
 
 **Challenger Scan: HOLD CURRENT**
 
 | | Current | Challenger |
 | :--- | :---: | :---: |
-| Short Put | 6300 | 6055 |
-| Short Call | 7000 | 7435 |
-| Credit | $12.15 | $0.00 |
-| Put Margin | 6.36% | 10.00% |
-| Expiry | 2026-04-24 | 2026-05-01 |
+| Short Put | 6000 | 5855 |
+| Short Call | 6975 | 7190 |
+| Credit | $7.85 | $0.00 |
+| Put Margin | 7.78% | 10.01% |
+| Expiry | 2026-05-01 | 2026-05-01 |
 
 > HOLD CURRENT: Existing position is competitive or superior. No pivot justified.
-
-**Upcoming Catalysts within Trade Window:**
-
-- [HIGH] **FOMC Meeting (Day 1)** (2026-03-18, in 1d) — Rate decision — highest vol event
-- [HIGH] **FOMC Decision + Press Conference** (2026-03-19, in 2d) — Powell presser = VIX spike guaranted
 
 ---
 

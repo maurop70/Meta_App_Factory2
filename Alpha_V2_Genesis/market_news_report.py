@@ -119,7 +119,12 @@ def generate_news_report(market_snapshot=None):
         logger.error("GEMINI_API_KEY not found")
         return {"error": "API key not configured", "headlines": [], "events": []}
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+    # Model fallback chain — if one model is deprecated, cascade to the next
+    MODELS = [
+        ("gemini-2.5-flash", "v1beta"),
+        ("gemini-2.0-flash", "v1beta"),
+        ("gemini-2.0-flash-lite", "v1beta"),
+    ]
 
     # Build context
     portfolio_ctx = _load_portfolio_context()
@@ -207,11 +212,30 @@ def generate_news_report(market_snapshot=None):
     try:
         import requests as _req
         logger.info("Generating Market News Intelligence Report via Gemini...")
-        resp = _req.post(url, json=payload, timeout=60)
 
-        if resp.status_code != 200:
-            logger.error(f"Gemini API {resp.status_code}: {resp.text[:300]}")
-            return {"error": f"Gemini API error: {resp.status_code}", "headlines": [], "events": []}
+        resp = None
+        last_error = ""
+        for model_name, api_version in MODELS:
+            url = (
+                f"https://generativelanguage.googleapis.com/{api_version}/models/"
+                f"{model_name}:generateContent?key={api_key}"
+            )
+            logger.info(f"Trying model {model_name} ({api_version})...")
+            resp = _req.post(url, json=payload, timeout=60)
+            if resp.status_code == 200:
+                logger.info(f"Success with {model_name}")
+                break
+            elif resp.status_code == 403:
+                logger.error(f"Gemini API 403 (FORBIDDEN) — API key is invalid or revoked. Check .env or vault.")
+                return _build_local_fallback(market_snapshot, now, "API key invalid or revoked (HTTP 403)")
+            else:
+                last_error = resp.text[:300]
+                logger.warning(f"{model_name} returned {resp.status_code}: {last_error[:200]}")
+                resp = None
+
+        if resp is None or resp.status_code != 200:
+            logger.error(f"All Gemini models failed. Last error: {last_error[:300]}")
+            return _build_local_fallback(market_snapshot, now, f"All models failed: {last_error[:200]}")
 
         result = resp.json()
         raw_text = (
