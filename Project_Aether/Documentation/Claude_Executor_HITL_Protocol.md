@@ -1,6 +1,6 @@
 # Claude Executor — HITL Protocol
 ### Human-in-the-Loop Governance for AI Code Execution
-**Classification:** CTO Dev Gate | **Version:** 1.0 | **Date:** March 2026
+**Classification:** CTO Dev Gate | **Version:** 1.1 | **Date:** March 22, 2026
 **Compliance:** Binding Protocol § Pre-Action Audit Required
 
 ---
@@ -99,7 +99,8 @@ When an Aether agent (e.g., CTO, CMO) needs code execution:
 5. Commander approves/rejects
 6. Claude executes approved changes only
 7. Verification runs automatically
-8. Results logged to MASTER_INDEX
+8. **Phantom QA validates the deployment** (mandatory post-execution gate)
+9. Results logged to MASTER_INDEX
 ```
 
 ### Socratic Challenger Integration
@@ -148,6 +149,7 @@ All Claude Executor actions are logged to:
 | `auto_heal_log.json` | Self-repair events |
 | `socratic_logs/socratic_audit.json` | Critic challenges and overrides |
 | `Boardroom_Exchange/` | Agent deliberation records |
+| `Phantom_QA/reports/` | Automated regression test reports |
 
 ---
 
@@ -162,4 +164,5 @@ This HITL protocol ensures:
 
 ---
 
-*Claude Executor HITL Protocol v1.0 — CTO-approved governance for AI-assisted development.*
+*Claude Executor HITL Protocol v1.1 — CTO-approved governance for AI-assisted development.*
+*Updated: Added Phantom QA Gate as mandatory post-execution validation step.*
