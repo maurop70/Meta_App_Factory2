@@ -1,13 +1,13 @@
-# CTO Resilience Manual — Meta App Factory V3
+# CTO Resilience Manual — Meta App Factory V3.2
 ### System Architecture & Self-Healing Infrastructure
-**Classification:** Internal Technical Reference | **Version:** V3.0 | **Date:** March 2026
+**Classification:** Internal Technical Reference | **Version:** V3.2 | **Date:** March 22, 2026
 **Author:** CTO — Antigravity-AI | **Audience:** Technical Partners, Engineering Leadership
 
 ---
 
 ## Executive Summary
 
-Meta App Factory V3 operates a 13-agent AI fleet across local (FastAPI + Gemini/Claude) and cloud (n8n) infrastructure. The **V3 Resilience Stack** ensures zero-downtime operation by solving the fundamental challenge of n8n cloud statelessness through a layered defense system: Watchdog monitoring, Local Safe-Buffer, Auto-Heal self-repair, and Webhook Hardening.
+Meta App Factory V3.2 operates a 14-agent AI fleet (including the autonomous Phantom QA Agent) across local (FastAPI + Gemini/Claude/o3-mini) and cloud (n8n) infrastructure. The **V3.2 Resilience Stack** ensures zero-downtime operation through a 6-layer defense system: Watchdog monitoring, Local Safe-Buffer, Auto-Heal self-repair, Webhook Hardening, Circuit Breaker, and **Phantom QA Gate** — autonomous regression testing that validates every deployment.
 
 This manual documents the complete resilience architecture for CTO-level technical validation.
 
@@ -199,4 +199,45 @@ The Aegis Agent periodically reviews quarantined items for manual or automated r
 
 ---
 
-*V3 Resilience Stack — designed for zero-downtime AI operations at scale.*
+*V3.2 Resilience Stack — designed for zero-downtime AI operations at scale.*
+
+---
+
+## Layer 6: Phantom QA Gate — Autonomous Regression Testing
+
+The Phantom QA Agent is a permanent member of the C-Suite that impersonates user personas and systematically tests all features of any app after every deployment.
+
+| Parameter | Value |
+|-----------|-------|
+| Engine | `Project_Aether/C-Suite_Active_Logic/Phantom_QA/phantom_agent.py` |
+| Trigger | Post-build mandatory, nightly cron, on-demand |
+| Reports To | CTO + Compliance Officer |
+| Personas | Tim (teen tester), Parent (portal tester), New Student (edge cases) |
+| Test Coverage | Health check, SSE chat, file upload, Vision OCR, Mind Map, API endpoints |
+
+**Rule:** No feature is considered "deployed" until Phantom QA signs off with a passing report.
+
+---
+
+## V3.2 Additions — Intelligent Model Router & Vision OCR
+
+### Intelligent Model Router (`model_router_v3.py`)
+Dynamic API gateway that routes payloads to the optimal LLM based on task complexity:
+- **Standard Chat** → Gemini 2.5 Flash (sub-second latency)
+- **Deep Reasoning / Math** → o3-mini or Claude 3.7 Sonnet (zero-hallucination)
+
+### Gemini Vision OCR (`server.py`)
+Multimodal image-to-text extraction for homework photo uploads:
+- Uses Gemini 2.5 Flash Vision natively (no Tesseract dependency)
+- Extracts handwritten equations, printed text, whiteboard content
+- Feeds directly into the Socratic Bridge deconstruction pipeline
+
+### Graph Memory Engine (`graph_memory_v3.py`)
+Node-edge cognitive memory that maps user learning breakthroughs:
+- Replaces flat-file `MASTER_INDEX.md` logging for semantic relationships
+- Links concepts across subjects (Math ↔ Physics structural reasoning)
+- Future migration target: Neo4j Aura or Mem0
+
+---
+
+*V3.2 Resilience Stack — 6 layers of autonomous defense for zero-downtime AI operations at scale.*

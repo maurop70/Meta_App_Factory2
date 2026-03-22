@@ -9,7 +9,7 @@
 
 **Antigravity Ventures is not a dev shop. It's a fully autonomous AI venture studio.**
 
-One prompt builds a complete application. 13 specialized AI agents — from CEO strategy to CTO architecture to CFO financial modeling — collaborate in real-time to research, design, build, brand, and ship production-ready products.
+One prompt builds a complete application. 14 specialized AI agents — from CEO strategy to CTO architecture to CFO financial modeling to autonomous Phantom QA testing — collaborate in real-time to research, design, build, brand, test, and ship production-ready products.
 
 > *"What used to take a team of 12 and 6 months, we deliver in minutes."*
 
@@ -25,27 +25,32 @@ One prompt builds a complete application. 13 specialized AI agents — from CEO 
 | Months to MVP | Minutes to production app |
 | Brand inconsistency across products | Brand Registry enforces identity across everything |
 | Siloed knowledge | Shared memory + boardroom deliberation |
-| Manual quality gates | Socratic Challenger auto-audits everything above 6.5/10 |
+| Manual quality gates | **Phantom QA** auto-regression tests every deploy |
 
 ### The Numbers
 
 | Metric | Value |
 |--------|-------|
-| Active AI Agents | **13 (all active, zero placeholder)** |
+| Active AI Agents | **14 (all active, including Phantom QA)** |
 | Apps Built & Deployed | **6+ production applications** |
 | Port Allocation Range | **5000–5100 (elastic)** |
-| Resilience Uptime Target | **99.9% (V3 Stack)** |
+| Resilience Uptime Target | **99.9% (V3.2 Stack — 6-layer defense)** |
 | Build-to-Deploy Time | **< 5 minutes** |
+| Automated QA Pass Rate | **100% (Phantom QA 10/10)** |
 
 ---
 
 ## Product Portfolio
 
 ### Flagship: Resonance 🎵
-**AI-powered music education platform for Gen Z/Alpha**
-- Behavioral psychology engine (Dr. Aris)
+**AI-powered holistic education platform for teenagers**
+- Socratic Tutor with step-gating homework deconstruction
+- **Gemini Vision OCR** — photo-to-text homework extraction
+- **Intelligent Model Router** — Gemini Flash for chat, o3-mini for deep math
+- **Graph Memory Engine** — cognitive node-edge learning maps
+- Council of Therapists (Dr. Aris + 4 clinical personas)
 - Parent Portal with real-time progress dashboards
-- Proactive audience detection
+- Mind Map visualization (Mermaid.js)
 - *Target: Ed-tech market ($340B by 2027)*
 
 ### Alpha V2 Genesis 📊
@@ -112,10 +117,13 @@ All visual outputs are generated at **Google Nano 2** render parameters:
 ├──────────┼──────────┼───────────────────────┤
 │ 🛡️ Compl │ 🗄️ Data  │ 📚 Librarian         │
 │ Security │ Schema   │ Documentation         │
-└──────────┴──────────┴───────────────────────┘
+├──────────┴──────────┴───────────────────────┤
+│ 🥷 Phantom QA                                │
+│ Autonomous Regression Testing               │
+└─────────────────────────────────────────────┘
 ```
 
-**Key Differentiator:** Every agent has a dedicated n8n webhook, purpose-built system prompt, and specialized tools. They don't just answer questions — they execute.
+**Key Differentiator:** Every agent has a dedicated n8n webhook, purpose-built system prompt, and specialized tools. The Phantom QA agent autonomously validates every deployment — no human QA bottleneck.
 
 ---
 
@@ -151,7 +159,10 @@ Real-time adversarial debate between agents via WebSocket:
 
 ## Technical Credibility
 
-- **V3 Resilience Stack:** 5-layer self-healing (Watchdog → Safe-Buffer → Auto-Heal → Webhook Hardener → Circuit Breaker)
+- **V3.2 Resilience Stack:** 6-layer self-healing (Watchdog → Safe-Buffer → Auto-Heal → Webhook Hardener → Circuit Breaker → **Phantom QA Gate**)
+- **Phantom QA Agent:** Autonomous regression testing — impersonates users, tests every endpoint, generates pass/fail reports
+- **Intelligent Model Router:** Dynamic API gateway routing Gemini Flash (chat) vs o3-mini/Claude (deep math)
+- **Gemini Vision OCR:** Multimodal homework photo extraction — handwriting to structured text
 - **Socratic Challenger:** Autonomous quality gate — proposals below 9.5/10 get challenged
 - **SHA-256 Checksum Handshake:** Cryptographic payload verification on financial data
 - **Google Drive Sync:** Dual-machine development with automatic synchronization

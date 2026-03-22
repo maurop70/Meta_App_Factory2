@@ -1,284 +1,404 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CTO Resilience Manual</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
-@page { size: A4; margin: 0; }
-* { margin:0; padding:0; box-sizing:border-box; }
-:root {
-  --bg: #0b0f1a; --bg-card: rgba(15,23,42,0.7); --bg-section: rgba(15,23,42,0.5);
-  --border: rgba(100,116,139,0.2); --text: #e2e8f0; --text-dim: #94a3b8; --text-muted: #64748b; --heading: #f1f5f9;
-  --green: #22c55e; --green-glow: rgba(34,197,94,0.15); --yellow: #eab308; --red: #ef4444;
-  --blue: #3b82f6; --blue-glow: rgba(59,130,246,0.12); --purple: #8b5cf6; --purple-glow: rgba(139,92,246,0.12);
-  --cyan: #06b6d4; --orange: #f97316; --amber: #F5A623; --amber-glow: rgba(245,166,35,0.12);
-  --teal: #14b8a6; --teal-glow: rgba(20,184,166,0.12);
-}
-body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); line-height:1.7; font-size:15px; -webkit-font-smoothing:antialiased; }
-.cover { min-height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding:60px 40px; position:relative; overflow:hidden;
-  background: radial-gradient(ellipse at 30% 20%,rgba(245,166,35,0.12) 0%,transparent 50%), radial-gradient(ellipse at 70% 80%,rgba(20,184,166,0.1) 0%,transparent 50%), radial-gradient(ellipse at 50% 50%,rgba(139,92,246,0.06) 0%,transparent 60%), var(--bg); }
-.cover::before { content:''; position:absolute; inset:0; background:repeating-linear-gradient(0deg,transparent,transparent 49px,rgba(100,116,139,0.03) 50px); pointer-events:none; }
-.cover-badge { padding:8px 20px; border-radius:24px; background:rgba(245,166,35,0.1); border:1px solid rgba(245,166,35,0.25); color:var(--amber); font-size:12px; font-weight:600; letter-spacing:2px; text-transform:uppercase; margin-bottom:32px; }
-.cover-icon { font-size:72px; margin-bottom:24px; filter:drop-shadow(0 0 40px rgba(245,166,35,0.3)); }
-.cover h1 { font-size:42px; font-weight:800; letter-spacing:-1.5px; background:linear-gradient(135deg,#e2e8f0,#F5A623,#14b8a6); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; max-width:700px; line-height:1.15; margin-bottom:16px; }
-.cover-subtitle { font-size:18px; color:var(--text-dim); max-width:500px; margin-bottom:48px; }
-.cover-meta { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; max-width:600px; width:100%; }
-.cover-stat { padding:16px; border-radius:12px; background:var(--bg-card); border:1px solid var(--border); }
-.cover-stat .val { font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:700; color:var(--amber); }
-.cover-stat .lbl { font-size:10px; text-transform:uppercase; letter-spacing:1.5px; color:var(--text-muted); margin-top:4px; }
-.cover-footer { position:static; margin-top:auto; margin-bottom:20px; font-size:12px; color:var(--text-muted); letter-spacing:0.5px; }
-.content { max-width:900px; margin:0 auto; padding:60px 40px; }
-.chapter { margin-bottom:80px; }
-.chapter h2 { font-size:28px; font-weight:700; letter-spacing:-0.5px; color:var(--heading); margin-bottom:8px; padding-bottom:12px; border-bottom:1px solid var(--border); }
-.chapter h3 { font-size:18px; font-weight:600; color:var(--heading); margin:32px 0 12px; }
-.chapter p, .chapter li { margin-bottom:12px; color:var(--text-dim); }
-.section { background:var(--bg-section); border:1px solid var(--border); border-radius:12px; padding:24px 28px; margin:20px 0; }
-table { width:100%; border-collapse:collapse; margin:16px 0; font-size:13px; }
-thead th { text-align:left; padding:10px 14px; background:rgba(255,255,255,0.04); border-bottom:1px solid var(--border); color:var(--text-dim); font-weight:600; text-transform:uppercase; letter-spacing:0.5px; font-size:11px; }
-tbody td { padding:10px 14px; border-bottom:1px solid rgba(100,116,139,0.1); }
-code { font-family:'JetBrains Mono',monospace; font-size:12px; background:rgba(255,255,255,0.06); padding:2px 6px; border-radius:4px; color:var(--amber); }
-pre { background:rgba(0,0,0,0.4); border:1px solid var(--border); border-radius:8px; padding:16px 20px; overflow-x:auto; margin:16px 0; }
-pre code { background:none; padding:0; font-size:13px; color:var(--text-dim); }
-.callout { border-radius:10px; padding:16px 20px; margin:16px 0; font-size:13px; }
-.callout-title { font-weight:600; margin-bottom:6px; }
-.callout.info { background:rgba(20,184,166,0.08); border:1px solid rgba(20,184,166,0.2); }
-.callout.warn { background:rgba(234,179,8,0.08); border:1px solid rgba(234,179,8,0.2); }
-.callout.critical { background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.2); }
-.callout.tip { background:rgba(139,92,246,0.08); border:1px solid rgba(139,92,246,0.2); }
-ul.feature-list { list-style:none; padding:0; } ul.feature-list li { padding:6px 0 6px 20px; position:relative; color:var(--text-dim); }
-ul.feature-list li::before { content:'▸'; position:absolute; left:0; color:var(--amber); font-weight:bold; }
-ol.step-list { padding-left:20px; } ol.step-list li { margin:10px 0; color:var(--text-dim); }
-.flow-diagram { display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:center; margin:20px 0; }
-.flow-node { padding:10px 16px; border-radius:8px; font-size:12px; font-weight:500; text-align:center; }
-.flow-node.amber { background:rgba(245,166,35,0.12); border:1px solid rgba(245,166,35,0.3); color:var(--amber); }
-.flow-node.teal { background:var(--teal-glow); border:1px solid rgba(20,184,166,0.3); color:var(--teal); }
-.flow-node.purple { background:var(--purple-glow); border:1px solid rgba(139,92,246,0.3); color:var(--purple); }
-.flow-node.blue { background:var(--blue-glow); border:1px solid rgba(59,130,246,0.3); color:var(--blue); }
-.flow-node.green { background:var(--green-glow); border:1px solid rgba(34,197,94,0.3); color:var(--green); }
-.flow-node.red { background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:var(--red); }
-.flow-arrow { color:var(--text-muted); font-size:16px; }
-.agent-card { background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:16px 20px; margin:10px 0; }
-.agent-card h4 { font-size:14px; margin-bottom:6px; }
-.agent-card p { font-size:13px; color:var(--text-muted); margin:0; }
-.badge { display:inline-block; padding:2px 8px; border-radius:4px; font-size:10px; font-weight:600; text-transform:uppercase; }
-.badge-amber { background:rgba(245,166,35,0.15); color:var(--amber); }
-.badge-teal { background:var(--teal-glow); color:var(--teal); }
-.badge-green { background:var(--green-glow); color:var(--green); }
-.badge-red { background:rgba(239,68,68,0.1); color:var(--red); }
-.badge-purple { background:var(--purple-glow); color:var(--purple); }
-.mermaid-placeholder { background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:12px; padding:24px; margin:20px 0; text-align:center; }
-.mermaid-placeholder pre { background:none; border:none; text-align:left; }
-@media(max-width:768px) { .cover h1{font-size:28px;} .cover-meta{grid-template-columns:repeat(2,1fr);} .content{padding:30px 20px;} }
-@media print {
-  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-  body { background: #0b0f1a !important; color: #e2e8f0 !important; }
-  .cover { page-break-after: always; height: 100vh !important; display: flex !important; flex-direction: column !important; justify-content: center !important; align-items: center !important; }
-  .chapter { page-break-before: always; }
-  .chapter:first-of-type { page-break-before: avoid; }
-  .section, table, .callout { page-break-inside: avoid; }
-  h2, h3 { page-break-after: avoid; }
-}
-</style>
-<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-<script>mermaid.initialize({startOnLoad:true, theme:'dark'});</script>
-</head>
-<body>
-<div class="cover">
-  <div class="cover-badge">INTERNAL — TECHNICAL REFERENCE</div>
-  <div class="cover-icon">🛡️</div>
-  <h1>CTO Resilience Manual</h1>
-  <div class="cover-subtitle">V3 Resilience Stack — Watchdog, Safe-Buffer, Auto-Heal & Circuit Breaker</div>
-  <div class="cover-meta">
-    <div class="cover-stat"><div class="val">V3.0</div><div class="lbl">Stack</div></div>
-<div class="cover-stat"><div class="val">5</div><div class="lbl">Layers</div></div>
-<div class="cover-stat"><div class="val">13</div><div class="lbl">Agents</div></div>
-<div class="cover-stat"><div class="val">99.9%</div><div class="lbl">Uptime</div></div>
-
-  </div>
-  <div class="cover-footer">Antigravity Ventures — Meta App Factory V3 Genesis | March 2026</div>
-</div>
-<div class="content">
-
-<div class="chapter">
-  <h2>01 — V3 Resilience Stack Architecture</h2>
-  <p>Meta App Factory V3 operates a 13-agent AI fleet across local (FastAPI + Gemini/Claude) and cloud (n8n) infrastructure. The <strong>V3 Resilience Stack</strong> ensures zero-downtime operation by solving the fundamental challenge of n8n cloud statelessness through a layered defense system.</p>
-
-  <div class="section">
-    <h3>🏗️ Architecture Schematic</h3>
-    <div class="mermaid">
-graph TD
-    subgraph LOCAL["LOCAL MACHINE"]
-        APP["Factory API :8000"] --> SAFE["safe_post()"]
-        SAFE -->|Success| N8N["n8n Cloud"]
-        SAFE -->|Fail| BUFFER["Local Safe-Buffer pending_sync/"]
-        BUFFER -->|Recovery| SYNC["Recovery Sync Daemon"]
-        SYNC -->|Retry| N8N
+<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+body{font-family:Inter,sans-serif;background:#0b0f1a;color:#e2e8f0;max-width:900px;margin:0 auto;padding:60px 40px;line-height:1.7}
+h1{font-size:32px;background:linear-gradient(135deg,#e2e8f0,#3b82f6,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+h2{color:#f1f5f9;border-bottom:1px solid rgba(100,116,139,0.2);padding-bottom:8px;margin-top:40px}
+h3{color:#94a3b8}
+table{border-collapse:collapse;width:100%;margin:16px 0}
+th,td{border:1px solid rgba(100,116,139,0.2);padding:10px 14px;text-align:left}
+th{background:rgba(59,130,246,0.1);color:#3b82f6;font-weight:600}
+code{font-family:'JetBrains Mono',monospace;background:rgba(15,23,42,0.7);padding:2px 6px;border-radius:4px;font-size:13px}
+pre{background:rgba(15,23,42,0.9);padding:20px;border-radius:8px;border:1px solid rgba(100,116,139,0.2);overflow-x:auto}
+pre code{padding:0;background:none}
+blockquote{border-left:3px solid #3b82f6;padding-left:16px;color:#94a3b8;margin:16px 0}
+hr{border:none;border-top:1px solid rgba(100,116,139,0.2);margin:32px 0}
+a{color:#3b82f6}</style></head><body><h1>CTO Resilience Manual — Meta App Factory V3.2</h1>
+<h3>System Architecture &amp; Self-Healing Infrastructure</h3>
+<p><strong>Classification:</strong> Internal Technical Reference | <strong>Version:</strong> V3.2 | <strong>Date:</strong> March 22, 2026
+<strong>Author:</strong> CTO — Antigravity-AI | <strong>Audience:</strong> Technical Partners, Engineering Leadership</p>
+<hr />
+<h2>Executive Summary</h2>
+<p>Meta App Factory V3.2 operates a 14-agent AI fleet (including the autonomous Phantom QA Agent) across local (FastAPI + Gemini/Claude/o3-mini) and cloud (n8n) infrastructure. The <strong>V3.2 Resilience Stack</strong> ensures zero-downtime operation through a 6-layer defense system: Watchdog monitoring, Local Safe-Buffer, Auto-Heal self-repair, Webhook Hardening, Circuit Breaker, and <strong>Phantom QA Gate</strong> — autonomous regression testing that validates every deployment.</p>
+<p>This manual documents the complete resilience architecture for CTO-level technical validation.</p>
+<hr />
+<h2>V3 Resilience Stack — Architecture</h2>
+<pre><code class="language-mermaid">graph TD
+    subgraph LOCAL[&quot;🖥️ LOCAL MACHINE&quot;]
+        APP[&quot;Factory API&lt;br/&gt;:8000&quot;] --&gt; SAFE[&quot;safe_post()&quot;]
+        SAFE --&gt;|Success| N8N[&quot;☁️ n8n Cloud&quot;]
+        SAFE --&gt;|Fail| BUFFER[&quot;📦 Local Safe-Buffer&lt;br/&gt;pending_sync/&quot;]
+        BUFFER --&gt;|Recovery| SYNC[&quot;Recovery Sync&lt;br/&gt;Daemon&quot;]
+        SYNC --&gt;|Retry| N8N
     end
-    subgraph HEAL["AUTO-HEAL ENGINE"]
-        AH["auto_heal.py"] -->|Attempt 1| SAFE
-        AH -->|Fail| RETRY["Exponential Backoff 2s - 4s - 8s"]
-        RETRY -->|"Fail x3"| DIAG["diagnose()"]
-        DIAG -->|Cloud Down| BUFFER
-        DIAG -->|Cred Decay| ROTATE["Key Rotation Flag"]
-        DIAG -->|Degraded| ESC["Escalated - Log"]
+
+    subgraph HEAL[&quot;🔧 AUTO-HEAL ENGINE&quot;]
+        AH[&quot;auto_heal.py&quot;] --&gt;|Attempt 1| SAFE
+        AH --&gt;|Fail| RETRY[&quot;Exponential Backoff&lt;br/&gt;2s → 4s → 8s&quot;]
+        RETRY --&gt;|Fail x3| DIAG[&quot;diagnose()&quot;]
+        DIAG --&gt;|Cloud Down| BUFFER
+        DIAG --&gt;|Cred Decay| ROTATE[&quot;Key Rotation Flag&quot;]
+        DIAG --&gt;|Degraded| ESC[&quot;Escalated → Log&quot;]
     end
-    subgraph WATCH["WATCHDOG"]
-        WD["Watchdog Ping Every 15min"] -->|200 OK| GREEN["Healthy"]
-        WD -->|Timeout| YELLOW["Degraded"]
-        WD -->|2x Fail| RED["Offline Mode"]
-        RED --> BUFFER
+
+    subgraph WATCH[&quot;👁️ WATCHDOG&quot;]
+        WD[&quot;Watchdog Ping&lt;br/&gt;Every 15min&quot;] --&gt;|200 OK| GREEN[&quot;🟢 Healthy&quot;]
+        WD --&gt;|Timeout/5xx| YELLOW[&quot;🟡 Degraded&quot;]
+        WD --&gt;|2x Fail| RED[&quot;🔴 Offline Mode&quot;]
+        RED --&gt; BUFFER
     end
-    </div>
-  </div>
-</div>
 
-<div class="chapter">
-  <h2>02 — Layer 1: Watchdog — Cloud Health Monitor</h2>
-  <p>The Watchdog pings n8n cloud at configurable intervals to detect outages before they impact operations.</p>
-  <div class="section">
-    <table>
-      <thead><tr><th>Parameter</th><th>Value</th><th>Source</th></tr></thead>
-      <tbody>
-        <tr><td><strong>Ping URL</strong></td><td><code>humanresource.app.n8n.cloud/webhook/system-watchdog-ping</code></td><td><code>resilience_config.json</code></td></tr>
-        <tr><td><strong>Timeout</strong></td><td>5,000ms</td><td><code>cloud_health.timeout_ms</code></td></tr>
-        <tr><td><strong>Check Interval</strong></td><td>900s (15 min)</td><td><code>cloud_health.check_interval_seconds</code></td></tr>
-        <tr><td><strong>Failures for Offline</strong></td><td>2 consecutive</td><td><code>consecutive_failures_for_offline</code></td></tr>
-      </tbody>
-    </table>
-    <h3>Status Codes</h3>
-    <ul class="feature-list">
-      <li><span class="badge badge-green">GREEN</span> — Response &lt; 1000ms, HTTP 200</li>
-      <li><span class="badge badge-amber">YELLOW</span> — HTTP 200 but latency &gt; 1000ms (degraded)</li>
-      <li><span class="badge badge-red">RED</span> — Timeout or non-200 → triggers Safe-Buffer mode</li>
-    </ul>
-  </div>
-</div>
-
-<div class="chapter">
-  <h2>03 — Layer 2: Local Safe-Buffer</h2>
-  <p><strong>The Core Problem:</strong> n8n cloud workflows are stateless. If a webhook call fails, the data is lost forever.</p>
-  <p><strong>The Solution:</strong> Every outbound POST to n8n passes through <code>safe_post()</code> in <code>factory.py</code>. On failure, payloads are serialized to <code>pending_sync/</code> as timestamped JSON files.</p>
-  <div class="section">
-    <table>
-      <thead><tr><th>Parameter</th><th>Value</th></tr></thead>
-      <tbody>
-        <tr><td><strong>Buffer Directory</strong></td><td><code>pending_sync/</code></td></tr>
-        <tr><td><strong>Latency Threshold</strong></td><td>3,000ms</td></tr>
-        <tr><td><strong>Max Queue Size</strong></td><td>50 MB</td></tr>
-        <tr><td><strong>Retry Interval</strong></td><td>60s</td></tr>
-        <tr><td><strong>Max Retries</strong></td><td>10</td></tr>
-        <tr><td><strong>Flush on Recovery</strong></td><td><code>true</code></td></tr>
-      </tbody>
-    </table>
-    <div class="callout info">
-      <div class="callout-title">💡 Recovery Sync</div>
-      When Watchdog detects cloud recovery (RED → GREEN), all buffered payloads are replayed in chronological order. Each is verified via SHA-256 checksum before delivery.
-    </div>
-  </div>
-</div>
-
-<div class="chapter">
-  <h2>04 — Layer 3: Auto-Heal Engine</h2>
-  <p><code>auto_heal.py</code> transforms passive resilience into <strong>active self-repair</strong> — retry now, diagnose root cause, escalate.</p>
-  <div class="section">
-    <h3>Standard Flow</h3>
-    <div class="flow-diagram">
-      <div class="flow-node amber">Attempt 1</div><span class="flow-arrow">→</span>
-      <div class="flow-node teal">safe_post()</div><span class="flow-arrow">→</span>
-      <div class="flow-node purple">Retry 2s/4s/8s</div><span class="flow-arrow">→</span>
-      <div class="flow-node blue">diagnose()</div><span class="flow-arrow">→</span>
-      <div class="flow-node green">Result</div>
-    </div>
-    <p>Return values: <code>sent</code> | <code>healed</code> | <code>buffered</code> | <code>escalated</code></p>
-
-    <h3>N8N-Specific Throttled Backoff</h3>
-    <table>
-      <thead><tr><th>Retry</th><th>Wait Time</th><th>Cumulative</th></tr></thead>
-      <tbody>
-        <tr><td>1</td><td>30s</td><td>30s</td></tr>
-        <tr><td>2</td><td>60s</td><td>1.5 min</td></tr>
-        <tr><td>3</td><td>120s</td><td>3.5 min</td></tr>
-        <tr><td>4</td><td>240s</td><td>7.5 min</td></tr>
-        <tr><td>5</td><td>300s (cap)</td><td>12.5 min</td></tr>
-      </tbody>
-    </table>
-
-    <h3>Diagnostic Verdicts</h3>
-    <table>
-      <thead><tr><th>Verdict</th><th>Meaning</th><th>Auto-Action</th></tr></thead>
-      <tbody>
-        <tr><td><span class="badge badge-green">HEALTHY</span></td><td>All systems nominal</td><td>None</td></tr>
-        <tr><td><span class="badge badge-amber">DEGRADED</span></td><td>Cloud slow but responsive</td><td>Monitor</td></tr>
-        <tr><td><span class="badge badge-red">CLOUD_DOWN</span></td><td>Watchdog RED</td><td>Buffer active</td></tr>
-        <tr><td><span class="badge badge-red">CREDENTIAL_DECAY</span></td><td>API key expired/invalid</td><td>Flag for rotation</td></tr>
-        <tr><td><span class="badge badge-red">CREDENTIAL_MISSING</span></td><td>No API key found</td><td>Alert</td></tr>
-        <tr><td><span class="badge badge-amber">SAFE_BUFFER_ACTIVE</span></td><td>Already in buffer mode</td><td>Recovery Sync handles</td></tr>
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<div class="chapter">
-  <h2>05 — Layer 4 & 5: Hardening & Circuit Breaker</h2>
-  <div class="section">
-    <h3>🛡️ Webhook Hardener</h3>
-    <p><code>webhook_hardener.py</code> iterates all n8n workflows and updates webhook trigger nodes to use <code>responseMode: responseNode</code>, preventing cloud timeouts on heavy LLM executions.</p>
-    <p>SHA-256 checksum handshake verifies payload integrity on critical financial data (CFO V2 workflow).</p>
-  </div>
-  <div class="section">
-    <h3>⚡ Circuit Breaker</h3>
-    <table>
-      <thead><tr><th>Parameter</th><th>Value</th></tr></thead>
-      <tbody>
-        <tr><td><strong>Failure Threshold</strong></td><td>3 consecutive</td></tr>
-        <tr><td><strong>Cooldown</strong></td><td>120s</td></tr>
-        <tr><td><strong>Success to Close</strong></td><td>2</td></tr>
-      </tbody>
-    </table>
-    <p>Prevents cascading failures across the 13-agent fleet. If an agent triggers 3 consecutive failures, the breaker opens and calls are short-circuited for 120s.</p>
-  </div>
-  <div class="section">
-    <h3>🔒 Quarantine System</h3>
-    <table>
-      <thead><tr><th>Parameter</th><th>Value</th></tr></thead>
-      <tbody>
-        <tr><td><strong>Storage</strong></td><td><code>data/quarantine.json</code></td></tr>
-        <tr><td><strong>Max Items</strong></td><td>200</td></tr>
-        <tr><td><strong>Repair Agent</strong></td><td><code>aegis_agent</code></td></tr>
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<div class="chapter">
-  <h2>06 — Operational Commands & Monitoring</h2>
-  <div class="section">
-    <table>
-      <thead><tr><th>Command</th><th>Purpose</th></tr></thead>
-      <tbody>
-        <tr><td><code>python auto_heal.py</code></td><td>Run full system diagnosis</td></tr>
-        <tr><td><code>python webhook_hardener.py</code></td><td>Dry-run webhook audit</td></tr>
-        <tr><td><code>python webhook_hardener.py --apply</code></td><td>Apply webhook optimizations</td></tr>
-        <tr><td><code>python deploy_watchdog.py</code></td><td>Deploy/update Watchdog workflow</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <div class="section">
-    <h3>📊 Log Files</h3>
-    <table>
-      <thead><tr><th>File</th><th>Contents</th></tr></thead>
-      <tbody>
-        <tr><td><code>auto_heal_log.json</code></td><td>All heal events (last 500)</td></tr>
-        <tr><td><code>webhook_hardener_report.json</code></td><td>Latest hardener scan</td></tr>
-        <tr><td><code>resilience_config.json</code></td><td>Hot-configurable parameters</td></tr>
-        <tr><td><code>socratic_logs/socratic_audit.json</code></td><td>Critic challenge history</td></tr>
-      </tbody>
-    </table>
-  </div>
-</div>
-
-</div>
-</body>
-</html>
+    subgraph HARDEN[&quot;🛡️ WEBHOOK HARDENER&quot;]
+        WH[&quot;webhook_hardener.py&quot;] --&gt; RESP[&quot;responseMode:&lt;br/&gt;responseNode&quot;]
+        WH --&gt; CHECKSUM[&quot;SHA-256&lt;br/&gt;Payload Integrity&quot;]
+    end
+</code></pre>
+<hr />
+<h2>Layer 1: Watchdog — Cloud Health Monitor</h2>
+<p>The Watchdog pings n8n cloud at configurable intervals to detect outages before they impact operations.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Value</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ping URL</td>
+<td><code>https://humanresource.app.n8n.cloud/webhook/system-watchdog-ping</code></td>
+<td><code>resilience_config.json</code></td>
+</tr>
+<tr>
+<td>Timeout</td>
+<td>5,000ms</td>
+<td><code>cloud_health.timeout_ms</code></td>
+</tr>
+<tr>
+<td>Check Interval</td>
+<td>900s (15 min)</td>
+<td><code>cloud_health.check_interval_seconds</code></td>
+</tr>
+<tr>
+<td>Failures for Offline</td>
+<td>2 consecutive</td>
+<td><code>cloud_health.consecutive_failures_for_offline</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Status Codes:</strong>
+- 🟢 <strong>GREEN</strong> — Response &lt; 1000ms, HTTP 200
+- 🟡 <strong>YELLOW</strong> — HTTP 200 but latency &gt; 1000ms (degraded)
+- 🔴 <strong>RED</strong> — Timeout or non-200 → triggers Safe-Buffer mode</p>
+<hr />
+<h2>Layer 2: Local Safe-Buffer — n8n Statelessness Solution</h2>
+<p><strong>The Core Problem:</strong> n8n cloud workflows are stateless. If a webhook call fails, the data is lost forever.</p>
+<p><strong>The Solution:</strong> Every outbound POST to n8n passes through <code>safe_post()</code> in <code>factory.py</code>. On failure, payloads are serialized to <code>pending_sync/</code> as timestamped JSON files.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Buffer Directory</td>
+<td><code>pending_sync/</code></td>
+</tr>
+<tr>
+<td>Latency Threshold</td>
+<td>3,000ms</td>
+</tr>
+<tr>
+<td>Max Queue Size</td>
+<td>50 MB</td>
+</tr>
+<tr>
+<td>Retry Interval</td>
+<td>60s</td>
+</tr>
+<tr>
+<td>Max Retries</td>
+<td>10</td>
+</tr>
+<tr>
+<td>Flush on Recovery</td>
+<td><code>true</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Recovery Sync Daemon:</strong> When Watchdog detects cloud recovery (RED → GREEN), all buffered payloads are replayed in chronological order. Each is verified via SHA-256 checksum before delivery.</p>
+<hr />
+<h2>Layer 3: Auto-Heal Engine — Active Self-Repair</h2>
+<p><code>auto_heal.py</code> transforms passive resilience (buffer and retry later) into <strong>active self-repair</strong> (retry now, diagnose root cause, escalate).</p>
+<h3>Standard Flow (<code>healed_post</code>)</h3>
+<pre><code>Attempt 1 → safe_post()
+  ├─ &quot;sent&quot;     → Done ✅
+  ├─ &quot;buffered&quot; → Cloud down, buffered for Recovery Sync
+  └─ &quot;failed&quot;   → Retry with exponential backoff
+       ├─ Retry 1 (2s wait)
+       ├─ Retry 2 (4s wait)
+       └─ Retry 3 (8s wait)
+            └─ All failed → diagnose() → log → &quot;escalated&quot;
+</code></pre>
+<p><strong>Return values:</strong> <code>sent</code> | <code>healed</code> | <code>buffered</code> | <code>escalated</code></p>
+<h3>N8N-Specific Throttled Flow (<code>healed_post_n8n</code>)</h3>
+<p>Aggressive backoff to prevent IP rate-limiting on n8n cloud:</p>
+<table>
+<thead>
+<tr>
+<th>Retry</th>
+<th>Wait Time</th>
+<th>Cumulative</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>30s</td>
+<td>30s</td>
+</tr>
+<tr>
+<td>2</td>
+<td>60s</td>
+<td>1.5 min</td>
+</tr>
+<tr>
+<td>3</td>
+<td>120s</td>
+<td>3.5 min</td>
+</tr>
+<tr>
+<td>4</td>
+<td>240s</td>
+<td>7.5 min</td>
+</tr>
+<tr>
+<td>5</td>
+<td>300s (cap)</td>
+<td>12.5 min</td>
+</tr>
+</tbody>
+</table>
+<h3>Decorator Pattern</h3>
+<pre><code class="language-python">@auto_heal(project=&quot;WarRoom&quot;, max_retries=3)
+def _call_n8n_agent_inner(agent_name: str, topic: str) -&gt; str:
+    &quot;&quot;&quot;Any function wrapped with @auto_heal gets automatic
+    retry + backoff + diagnosis on failure.&quot;&quot;&quot;
+</code></pre>
+<h3>Diagnostic Verdicts</h3>
+<table>
+<thead>
+<tr>
+<th>Verdict</th>
+<th>Meaning</th>
+<th>Auto-Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>HEALTHY</code></td>
+<td>All systems nominal</td>
+<td>None</td>
+</tr>
+<tr>
+<td><code>DEGRADED</code></td>
+<td>Cloud slow but responsive</td>
+<td>Monitor</td>
+</tr>
+<tr>
+<td><code>CLOUD_DOWN</code></td>
+<td>Watchdog RED</td>
+<td>Buffer active</td>
+</tr>
+<tr>
+<td><code>CREDENTIAL_DECAY</code></td>
+<td>API key expired/invalid</td>
+<td>Flag for rotation</td>
+</tr>
+<tr>
+<td><code>CREDENTIAL_MISSING</code></td>
+<td>No API key found</td>
+<td>Alert</td>
+</tr>
+<tr>
+<td><code>SAFE_BUFFER_ACTIVE</code></td>
+<td>Already in buffer mode</td>
+<td>Recovery Sync handles</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Layer 4: Webhook Hardener — Timeout Prevention</h2>
+<p><code>webhook_hardener.py</code> iterates all n8n workflows and updates webhook trigger nodes to use <code>responseMode: responseNode</code>, preventing cloud timeouts on heavy LLM executions.</p>
+<p><strong>Additional:</strong> SHA-256 checksum handshake verifies payload integrity on critical financial data (CFO V2 workflow).</p>
+<pre><code class="language-python">def verify_payload_hash(payload: dict, expected_hash: str) -&gt; dict:
+    &quot;&quot;&quot;Cryptographic integrity verification for financial data.&quot;&quot;&quot;
+    computed = compute_payload_hash(payload)
+    return {&quot;valid&quot;: computed == expected_hash, &quot;action&quot;: &quot;accepted&quot; if valid else &quot;autonomous_retry&quot;}
+</code></pre>
+<hr />
+<h2>Layer 5: Circuit Breaker — Cascading Failure Prevention</h2>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Failure Threshold</td>
+<td>3 consecutive failures</td>
+</tr>
+<tr>
+<td>Cooldown</td>
+<td>120s</td>
+</tr>
+<tr>
+<td>Success Threshold</td>
+<td>2 (to close breaker)</td>
+</tr>
+</tbody>
+</table>
+<p>The circuit breaker prevents cascading failures across the 13-agent fleet. If Agent A triggers 3 consecutive failures, the breaker opens and all calls to that agent's webhook are short-circuited for 120s, allowing the cloud to recover.</p>
+<hr />
+<h2>Quarantine System</h2>
+<p>Persistently failing payloads are moved to quarantine after exhausting all retry and buffer options:</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Enabled</td>
+<td><code>true</code></td>
+</tr>
+<tr>
+<td>Storage</td>
+<td><code>data/quarantine.json</code></td>
+</tr>
+<tr>
+<td>Max Items</td>
+<td>200</td>
+</tr>
+<tr>
+<td>Repair Agent</td>
+<td><code>aegis_agent</code></td>
+</tr>
+</tbody>
+</table>
+<p>The Aegis Agent periodically reviews quarantined items for manual or automated resolution.</p>
+<hr />
+<h2>Operational Commands</h2>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>python auto_heal.py</code></td>
+<td>Run full system diagnosis</td>
+</tr>
+<tr>
+<td><code>python webhook_hardener.py</code></td>
+<td>Dry-run webhook audit</td>
+</tr>
+<tr>
+<td><code>python webhook_hardener.py --apply</code></td>
+<td>Apply webhook optimizations</td>
+</tr>
+<tr>
+<td><code>python deploy_watchdog.py</code></td>
+<td>Deploy/update Watchdog workflow</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Monitoring &amp; Logs</h2>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>auto_heal_log.json</code></td>
+<td>All heal events (last 500)</td>
+</tr>
+<tr>
+<td><code>webhook_hardener_report.json</code></td>
+<td>Latest hardener scan results</td>
+</tr>
+<tr>
+<td><code>resilience_config.json</code></td>
+<td>Hot-configurable resilience parameters</td>
+</tr>
+<tr>
+<td><code>socratic_logs/socratic_audit.json</code></td>
+<td>Critic challenge &amp; override history</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><em>V3.2 Resilience Stack — designed for zero-downtime AI operations at scale.</em></p>
+<hr />
+<h2>Layer 6: Phantom QA Gate — Autonomous Regression Testing</h2>
+<p>The Phantom QA Agent is a permanent member of the C-Suite that impersonates user personas and systematically tests all features of any app after every deployment.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Engine</td>
+<td><code>Project_Aether/C-Suite_Active_Logic/Phantom_QA/phantom_agent.py</code></td>
+</tr>
+<tr>
+<td>Trigger</td>
+<td>Post-build mandatory, nightly cron, on-demand</td>
+</tr>
+<tr>
+<td>Reports To</td>
+<td>CTO + Compliance Officer</td>
+</tr>
+<tr>
+<td>Personas</td>
+<td>Tim (teen tester), Parent (portal tester), New Student (edge cases)</td>
+</tr>
+<tr>
+<td>Test Coverage</td>
+<td>Health check, SSE chat, file upload, Vision OCR, Mind Map, API endpoints</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Rule:</strong> No feature is considered "deployed" until Phantom QA signs off with a passing report.</p>
+<hr />
+<h2>V3.2 Additions — Intelligent Model Router &amp; Vision OCR</h2>
+<h3>Intelligent Model Router (<code>model_router_v3.py</code>)</h3>
+<p>Dynamic API gateway that routes payloads to the optimal LLM based on task complexity:
+- <strong>Standard Chat</strong> → Gemini 2.5 Flash (sub-second latency)
+- <strong>Deep Reasoning / Math</strong> → o3-mini or Claude 3.7 Sonnet (zero-hallucination)</p>
+<h3>Gemini Vision OCR (<code>server.py</code>)</h3>
+<p>Multimodal image-to-text extraction for homework photo uploads:
+- Uses Gemini 2.5 Flash Vision natively (no Tesseract dependency)
+- Extracts handwritten equations, printed text, whiteboard content
+- Feeds directly into the Socratic Bridge deconstruction pipeline</p>
+<h3>Graph Memory Engine (<code>graph_memory_v3.py</code>)</h3>
+<p>Node-edge cognitive memory that maps user learning breakthroughs:
+- Replaces flat-file <code>MASTER_INDEX.md</code> logging for semantic relationships
+- Links concepts across subjects (Math ↔ Physics structural reasoning)
+- Future migration target: Neo4j Aura or Mem0</p>
+<hr />
+<p><em>V3.2 Resilience Stack — 6 layers of autonomous defense for zero-downtime AI operations at scale.</em></p></body></html>
