@@ -1,6 +1,6 @@
 # SOP_MAINTENANCE.md — Factory Governance & Resilience Protocols
-### System Hardening V3.0 — Standard Operating Procedures
-*Last Updated: 2026-03-13T11:36:33-04:00*
+### System Hardening V3.2 — Standard Operating Procedures
+*Last Updated: 2026-03-22T02:26:00-04:00*
 
 ---
 
@@ -74,6 +74,7 @@ This guarantees:
 - ✅ StateManager UUID logging on every outgoing call
 - ✅ Watchdog preflight before heavy operations
 - ✅ Automatic Safe-Buffer mode during cloud outages
+- ✅ Phantom QA regression test auto-triggered after creation
 
 ### Rules
 
@@ -100,6 +101,9 @@ All critical system changes must be logged in **`MASTER_INDEX.md`** with the fol
 | Workflow patch | `[WEBHOOK_PATCH]` | Batch responseMode update |
 | Incident response | `[INCIDENT]` | Safe-Buffer triggered, recovery executed |
 | New agent | `[AGENT_DEPLOYED]` | New agent scaffolded via app_generator |
+| Phantom QA run | `[PHANTOM_QA]` | Autonomous regression test executed |
+| Vision OCR | `[VISION_OCR]` | Image text extraction via Gemini Vision |
+| Model Router | `[MODEL_ROUTER]` | Dynamic API gateway model switch |
 
 ### Log Entry Format
 ```markdown
@@ -125,3 +129,6 @@ All critical system changes must be logged in **`MASTER_INDEX.md`** with the fol
 | `pending_sync/` | Queued payload files during cloud outages |
 | `synced_archive.json` | Archive of successfully recovered payloads |
 | `MASTER_INDEX.md` | System audit log |
+| `Project_Aether/C-Suite_Active_Logic/Phantom_QA/phantom_agent.py` | Autonomous QA testing engine |
+| `Resonance/model_router_v3.py` | Intelligent API model gateway |
+| `Resonance/graph_memory_v3.py` | Aether cognitive node-edge memory |
