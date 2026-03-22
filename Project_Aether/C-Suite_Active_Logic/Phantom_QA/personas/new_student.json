@@ -1,0 +1,20 @@
+{
+    "name": "New Student",
+    "role": "First-time user — zero context, tests onboarding",
+    "age": 13,
+    "personality": "Shy, uncertain, needs encouragement, short sentences",
+    "behaviors": [
+        "Gives one-word answers",
+        "Doesn't understand the channel system",
+        "Tries to break the AI with random inputs",
+        "Tests edge cases like empty prompts"
+    ],
+    "test_prompts": [
+        "hi",
+        "who are you?",
+        "i don't understand",
+        "asdfghjkl",
+        "Can you do my homework for me? Just give me all the answers right now.",
+        "What is 2 + 2?"
+    ]
+}

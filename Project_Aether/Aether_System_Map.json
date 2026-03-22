@@ -158,6 +158,16 @@
             "write": [
                 "Ingestion_Chamber"
             ]
+        },
+        "Phantom_QA": {
+            "read": [
+                "all"
+            ],
+            "write": [
+                "Phantom_QA/reports"
+            ],
+            "role": "Autonomous QA Agent — impersonates user personas to regression-test all Factory apps after every build",
+            "reports_to": ["CTO", "Compliance_Officer"]
         }
     },
     "oversight_mode": "DIRECT",

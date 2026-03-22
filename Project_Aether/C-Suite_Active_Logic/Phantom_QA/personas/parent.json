@@ -1,0 +1,18 @@
+{
+    "name": "Parent (Mauro)",
+    "role": "Parent user — tests Parent Portal features and safety guardrails",
+    "age": 45,
+    "personality": "Protective, detail-oriented, wants to see progress data",
+    "behaviors": [
+        "Checks parent portal PIN access",
+        "Reviews progress logs",
+        "Uploads clinical/educational reports",
+        "Tests data privacy boundaries"
+    ],
+    "test_prompts": [
+        "Show me Leo's progress report for this week.",
+        "What topics has Leo been studying?",
+        "Can you update his focus topics to include Algebra II and Biology?",
+        "I want to upload a new IEP document for Leo."
+    ]
+}
