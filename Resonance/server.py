@@ -39,7 +39,7 @@ def _v3_preflight():
         return False
 
 
-import os, sys, json, logging, shutil
+import os, sys, json, logging, shutil, base64, requests as _requests
 from typing import Optional, List
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -144,13 +144,76 @@ async def _extract_text_from_file(file_path: str, file_type: str) -> str:
             else:
                 extracted_text = "[PPTX text extraction requires python-pptx library]"
         elif file_type in ["png", "jpg", "jpeg"]:
-            extracted_text = f"[Image uploaded: {os.path.basename(file_path)}]"
+            # ── Gemini Vision OCR ──────────────────────────
+            extracted_text = _extract_text_via_gemini_vision(file_path, file_type)
         else:
             extracted_text = f"[Unsupported file type for text extraction: {file_type}]"
     except Exception as e:
         logger.error(f"Error extracting text from {file_path}: {e}")
         extracted_text = f"[Error extracting text: {e}]"
     return extracted_text
+
+
+def _extract_text_via_gemini_vision(file_path: str, file_type: str) -> str:
+    """
+    Uses Gemini 2.5 Flash multimodal vision to extract handwritten/printed
+    text from an uploaded image (homework photo, whiteboard, etc.).
+    """
+    # Get API key from vault or env
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        try:
+            from vault_client import get_secret
+            api_key = get_secret("GEMINI_API_KEY")
+        except Exception:
+            pass
+    if not api_key:
+        logger.error("Gemini Vision OCR: No API key available.")
+        return f"[Image uploaded: {os.path.basename(file_path)} — OCR unavailable, no API key]"
+
+    # Read image and base64 encode
+    try:
+        with open(file_path, "rb") as img_f:
+            image_bytes = img_f.read()
+        b64_image = base64.b64encode(image_bytes).decode("utf-8")
+    except Exception as e:
+        logger.error(f"Gemini Vision OCR: Failed to read image: {e}")
+        return f"[Image uploaded: {os.path.basename(file_path)} — could not read file]"
+
+    mime_map = {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg"}
+    mime_type = mime_map.get(file_type, "image/png")
+
+    # Call Gemini multimodal endpoint
+    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+    headers = {"x-goog-api-key": api_key, "Content-Type": "application/json"}
+    payload = {
+        "contents": [{
+            "parts": [
+                {"text": "Extract ALL text from this image exactly as written. Include equations, numbers, letters, and any handwritten content. Preserve the structure and formatting. If it is homework, identify the subject and list each problem separately. Output ONLY the extracted text, nothing else."},
+                {"inline_data": {"mime_type": mime_type, "data": b64_image}}
+            ]
+        }],
+        "generationConfig": {"temperature": 0.1, "maxOutputTokens": 4096}
+    }
+
+    try:
+        resp = _requests.post(url, json=payload, headers=headers, timeout=30)
+        if resp.status_code == 200:
+            data = resp.json()
+            parts = data.get("candidates", [{}])[0].get("content", {}).get("parts", [])
+            extracted = "".join(p.get("text", "") for p in parts).strip()
+            if extracted:
+                logger.info(f"Gemini Vision OCR: Extracted {len(extracted)} chars from {os.path.basename(file_path)}")
+                return extracted
+            else:
+                logger.warning("Gemini Vision OCR: No text detected in image.")
+                return f"[Image uploaded: {os.path.basename(file_path)} — no text detected]"
+        else:
+            logger.error(f"Gemini Vision OCR failed: {resp.status_code} {resp.text[:200]}")
+            return f"[Image uploaded: {os.path.basename(file_path)} — OCR error {resp.status_code}]"
+    except Exception as e:
+        logger.error(f"Gemini Vision OCR exception: {e}")
+        return f"[Image uploaded: {os.path.basename(file_path)} — OCR exception]"
 
 # ── Parent Configuration ────────────────────────────────
 PARENT_CONFIG_PATH = os.path.join(SCRIPT_DIR, "parent_config.json")
