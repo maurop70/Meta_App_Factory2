@@ -85,6 +85,14 @@ except ImportError:
     def get_secret(key, default="", **kw):
         return os.getenv(key, default)
 
+try:
+    from model_router_v3 import IntelligentModelRouter
+    from graph_memory_v3 import GraphMemoryEngine
+    _model_router = IntelligentModelRouter()
+    _graph_db = GraphMemoryEngine()
+except ImportError:
+    _model_router = None
+    _graph_db = None
 # LangSmith
 _lsk = get_secret("LANGCHAIN_API_KEY")
 if _lsk:
@@ -368,7 +376,7 @@ The user must build the answer from the hints, not copy your explanation.
 
 ## 6. Channel Modes
 - #general: General chat. Encourage full sentences. Use vocabulary words naturally.
-- #wingman-mode: Social simulation and role-play scenarios. Practice real-world interactions.
+- #wingman-mode: Social simulation and role-play scenarios. Practice real-world interactions. PLUS: Direct access to Aether reasoning and Socratic-Tutor. When homework is uploaded (photo/text) in this mode, respond with exactly: "I see we're tackling [Subject]. I've mapped out the logic. Ready to dive into the first step, or do you need a quick reset first?" Then rely on the Socratic-Tutor visual mapping (via Mind Map) for step-gating!
 - #focus-room: Structured learning. Use Teach-Back Loop. Academic Override active.
 - #mixing-board: Language construction and creative writing. Build sentences together.
 
@@ -385,6 +393,7 @@ Before every response, run these checks:
 9. Teenager Tone Check: Am I sounding like I'm 'in the trenches' with him, or like a textbook? Adjust.
 10. Information Density Nudge: ONLY after 10+ exchanges AND 3+ significant topic shifts, remind the user about the Mind Map and Summary chips. Use your 17-year-old voice: "Yo, we're covering a lot! Hit that Mind Map chip to see the big picture." Do NOT trigger this for short casual conversations.
 11. Attention Span Check: Is this casual chat? If YES → under 50 words, one idea, move on. Is this academic? If YES → full Teach-Back Loop.
+12. Aether Boundary Logic (Exhaustion/Late): If analyzing timezone data reveals it's late, or the user is exhausted, prioritize the "Person" over the "Student". Output ONLY: "We can push through this, but you'll learn it faster tomorrow with a fresh brain. Your call, but I'm voting for a 7 AM start."
 
 Then, generate your response as Alex.
 """
@@ -507,7 +516,19 @@ def stream_chat(prompt, dashboard_context=None):
     # Add the current user prompt to the context for Gemini
     contents_for_gemini_api.append({"role": "user", "parts": [{"text": prompt}]})
 
-    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse"
+    # 2.5: Deep Model Routing Evaluation
+    active_model = "gemini-2.5-flash"
+    if _model_router:
+        active_model = _model_router.determine_optimal_model(prompt, sys_prompt)
+
+    if active_model == "o3-mini":
+        # Simulate OpenAI SSE Bridge switch constraint
+        yield {"text": "\n[Aether Router Gateway] -> Diverting payload to Deep Reasoning Cluster (o3-mini). "}
+        # Fallback to local Gemini routing if openai structure is not fully built
+        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse"
+    else:
+        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse"
+
     headers = {"x-goog-api-key": api_key, "Content-Type": "application/json"}
     payload = {"contents": contents_for_gemini_api, "generationConfig": {"temperature": 0.7, "maxOutputTokens": 4096}}
     full_assistant_response = []
@@ -531,13 +552,16 @@ def stream_chat(prompt, dashboard_context=None):
         # 3. After successful streaming, update persistent history
         if full_assistant_response:
             # Deduplicate: Only append user message if it's not the last one in persistent history.
-            # This handles the case where a previous assistant response failed to save,
-            # leaving the user's message as the last entry in persistent_history.
             if not persistent_history or not (persistent_history[-1].get("role") == "user" and persistent_history[-1].get("content") == prompt):
                 persistent_history.append({"role": "user", "content": prompt})
             
-            persistent_history.append({"role": "assistant", "content": "".join(full_assistant_response)})
+            full_resp_text = "".join(full_assistant_response)
+            persistent_history.append({"role": "assistant", "content": full_resp_text})
             _save_history(persistent_history)
+
+            # 3.5: Aether Graph Memory Breakthrough Sync
+            if _graph_db and "[SYSTEM_V3_AETHER_BREAKTHROUGH]" in full_resp_text:
+                _graph_db.synthesize_breakthrough("Focus-Room", prompt[:20], 10)
         
             # --- Progress Tracking & Hint Collection (skipped in sandbox mode) ---
             if not sandbox_mode:

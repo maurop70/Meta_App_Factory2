@@ -1,16 +1,13 @@
 """
-Sentinel Bridge — Universal Bridge Server v3.0
-================================================
-State-of-the-Art Universal Bridge providing:
+Sentinel Bridge — FastAPI Server  v2.0
+========================================
+Main application server providing:
 - REST API for reminder management (CRUD + archive)
 - Calendar poll scheduling (APScheduler)
 - Manual reminder creation (text + voice)
 - Category override endpoint (ML feedback loop)
 - Self-healing wrapper on all pipeline stages
-- Multi-channel notifications (Push > WhatsApp > SMS)
-- Context Engine: JSON → human-readable insights
-- Interactive Callbacks: system commands from notification buttons
-- PII Masker: safety filter on all external payloads
+- ntfy push delivery
 - Dashboard API for the web UI
 - Calendar visualization endpoint
 - ngrok heartbeat with dynamic URL notifications
@@ -58,8 +55,6 @@ import os
 import sys
 import json
 import uuid
-import hmac
-import hashlib
 import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
@@ -69,7 +64,7 @@ from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent.parent / ".env")
 
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import FastAPI, HTTPException, Query, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -87,8 +82,6 @@ from categorization_engine import CategorizationEngine
 from notification_dispatcher import NotificationDispatcher
 from intent_extractor import IntentExtractor
 from self_heal import SelfHealEngine
-from context_engine import ContextEngine
-from pii_masker import PIIMasker
 from utils.google_auth import GoogleAuth
 from utils.tunnel_manager import TunnelManager
 
@@ -113,14 +106,6 @@ categorizer = CategorizationEngine()
 dispatcher = NotificationDispatcher(vault=vault)
 extractor = IntentExtractor()
 healer = SelfHealEngine()
-context_eng = ContextEngine()
-pii_masker = PIIMasker()
-
-# HMAC secret for callback token signing
-CALLBACK_SECRET = os.environ.get(
-    "SENTINEL_CALLBACK_SECRET",
-    vault.retrieve("callback_secret", "sentinel-universal-bridge-v3")
-)
 
 # ── Factory-level shared modules ─────────────────────────────────────
 google_auth = GoogleAuth(
@@ -351,7 +336,7 @@ async def tunnel_heartbeat():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup/shutdown events."""
-    logger.info("🛡️ Sentinel Bridge v3.0 (Universal Bridge) starting on port %d…", PORT)
+    logger.info("🛡️ Sentinel Bridge v2.0 starting on port %d…", PORT)
     logger.info("📆 Calendar accounts: %s",
                 [a["email"] for a in poller.get_active_accounts()])
 
@@ -391,9 +376,9 @@ async def lifespan(app: FastAPI):
 
 # ── App ──────────────────────────────────────────────────────────────
 app = FastAPI(
-    title="Sentinel Bridge — Universal Bridge",
-    description="State-of-the-Art Autonomous Reminder & Notification System",
-    version="3.0.0",
+    title="Sentinel Bridge",
+    description="Autonomous Reminder System by Meta App Factory",
+    version="2.0.0",
     lifespan=lifespan,
 )
 
@@ -420,25 +405,19 @@ if UI_DIST.exists():
 async def root():
     """Health check / welcome."""
     return {
-        "app": "Sentinel Bridge — Universal Bridge",
-        "version": "3.0.0",
+        "app": "Sentinel Bridge",
+        "version": "2.0.0",
         "status": "active",
         "port": PORT,
         "dashboard": f"http://localhost:{PORT}/dashboard",
         "ngrok_url": getattr(app.state, "ngrok_url", None),
         "uptime": datetime.now(timezone.utc).isoformat(),
-        "capabilities": [
-            "multi_channel_routing",
-            "context_engine",
-            "interactive_callbacks",
-            "pii_masking",
-        ],
         "endpoints": {
             "dashboard": "/dashboard",
             "reminders": "/api/reminders",
             "add_reminder": "/api/reminders (POST)",
-            "callbacks": "/api/callbacks/{action} (POST)",
-            "context": "/api/context/summarize (POST)",
+            "edit_reminder": "/api/reminders/{id} (PUT)",
+            "archive_reminder": "/api/reminders/{id}/archive (PUT)",
             "calendar_events": "/api/calendar/events",
             "tunnel_status": "/api/tunnel/status",
             "categories": "/api/categories",
@@ -904,6 +883,96 @@ async def telemetry():
     }
 
 
+# ── Document Parser Upload ───────────────────────────────────────────
+try:
+    from document_parser_service import DocumentParserService
+    from document_router import DocumentRouter
+    _doc_parser = DocumentParserService()
+    _doc_router = DocumentRouter()
+    PARSER_AVAILABLE = True
+    logger.info("DocumentParserService loaded.")
+except ImportError:
+    PARSER_AVAILABLE = False
+    logger.warning("DocumentParserService not available — upload/parse disabled.")
+
+
+@app.post("/api/documents/upload")
+async def upload_document(file: UploadFile = File(...)):
+    """
+    Parse an uploaded document, extract all activities, and
+    create a separate reminder for each one.
+    """
+    if not PARSER_AVAILABLE:
+        raise HTTPException(status_code=503, detail="DocumentParserService not available")
+
+    upload_dir = DATA_DIR / "uploads"
+    upload_dir.mkdir(exist_ok=True)
+    dest = upload_dir / file.filename
+
+    content = await file.read()
+    with open(dest, "wb") as f:
+        f.write(content)
+
+    # Step 1: Standard parse (category, summary, routing)
+    result = _doc_parser.parse(str(dest), source_app="Sentinel_Bridge")
+    if result.get("status") != "parsed":
+        return result
+
+    result = _doc_router.route(result)
+    _doc_parser.log_to_master_index(result)
+
+    # Step 2: Extract individual activities from document text
+    raw_text = result["extracted"].get("raw_text_preview", "")
+    # Re-read full text for activity extraction
+    try:
+        with open(dest, "r", encoding="utf-8", errors="replace") as f:
+            full_text = f.read()
+    except Exception:
+        full_text = raw_text
+
+    activities = _doc_parser.extract_activities(full_text, file_name=file.filename)
+
+    # Step 3: Create one reminder per activity
+    created_reminders = []
+    now = datetime.now(timezone.utc)
+
+    for act in activities:
+        reminder = {
+            "id": str(uuid.uuid4())[:8],
+            "activity": act["activity"],
+            "description": act.get("description", ""),
+            "category": act.get("category", result.get("category", "AI")),
+            "confidence": result.get("confidence", 0.0),
+            "time": act.get("due_date") or now.isoformat(),
+            "source": "document_parser",
+            "priority": act.get("priority", "normal"),
+            "status": "pending",
+            "raw_text": act.get("description", act["activity"]),
+            "created_at": now.isoformat(),
+            "parse_id": result["parse_id"],
+            "source_file": file.filename,
+        }
+        reminders_store.append(reminder)
+        created_reminders.append(reminder)
+
+        # Push notification for high-priority activities
+        if act.get("priority") == "high":
+            await dispatcher.send_reminder(
+                category=act.get("category", "AI"),
+                activity=act["activity"],
+                time_str=act.get("due_date", "No due date"),
+                priority="high",
+                reminder_id=reminder["id"],
+            )
+
+    save_reminders(reminders_store)
+
+    result["activities_extracted"] = len(created_reminders)
+    result["reminders_created"] = created_reminders
+
+    return result
+
+
 # ── Self-Heal Dashboard ─────────────────────────────────────────────
 @app.get("/api/selfheal")
 async def selfheal_status():
@@ -912,133 +981,6 @@ async def selfheal_status():
         "stats": healer.get_heal_stats(),
         "recent": healer.get_recent_heals(10),
     }
-
-
-# ── Context Engine API ───────────────────────────────────────────────
-class ContextSummarizeInput(BaseModel):
-    trigger: dict
-
-
-@app.post("/api/context/summarize")
-async def context_summarize(input_data: ContextSummarizeInput):
-    """Summarize a raw JSON trigger into a human-readable insight."""
-    insight = context_eng.summarize(input_data.trigger)
-    return insight.to_dict()
-
-
-@app.get("/api/context/channels")
-async def routing_channels():
-    """Return current routing channel configuration."""
-    return dispatcher.routing_rules
-
-
-# ── Interactive Callbacks ────────────────────────────────────────────
-CALLBACK_ACTIONS = {
-    "snooze": "Snooze the specified reminder for 15 minutes",
-    "done": "Mark the specified reminder as completed",
-    "trigger_pipeline": "Run the calendar poll pipeline",
-    "trigger_review": "Run the Leitner Deep Review",
-    "generate_map": "Generate the Visual Network Map",
-    "reconnect_tunnel": "Force-reconnect the ngrok tunnel",
-}
-
-
-def _sign_callback(action: str, reminder_id: str = "") -> str:
-    """Generate HMAC token for callback verification."""
-    msg = f"{action}:{reminder_id}".encode()
-    return hmac.new(CALLBACK_SECRET.encode(), msg, hashlib.sha256).hexdigest()[:16]
-
-
-def _verify_callback(action: str, reminder_id: str, token: str) -> bool:
-    """Verify an HMAC-signed callback token."""
-    expected = _sign_callback(action, reminder_id)
-    return hmac.compare_digest(expected, token)
-
-
-class CallbackRequest(BaseModel):
-    reminder_id: str = ""
-    token: str = ""
-    params: dict = {}
-
-
-@app.get("/api/callbacks")
-async def list_callbacks():
-    """List available interactive callback actions."""
-    return {"actions": CALLBACK_ACTIONS}
-
-
-@app.post("/api/callbacks/{action}")
-async def execute_callback(action: str, req: CallbackRequest):
-    """
-    Execute a system command via interactive callback.
-    Actions are triggered from notification buttons.
-    """
-    if action not in CALLBACK_ACTIONS:
-        raise HTTPException(status_code=404, detail=f"Unknown action: {action}")
-
-    # Token verification (skip for direct API calls with empty token)
-    if req.token and not _verify_callback(action, req.reminder_id, req.token):
-        raise HTTPException(status_code=403, detail="Invalid callback token")
-
-    logger.info("⚡ Callback triggered: %s (id=%s)", action, req.reminder_id)
-
-    # Dispatch to appropriate handler
-    if action == "snooze":
-        if not req.reminder_id:
-            raise HTTPException(status_code=400, detail="reminder_id required")
-        reminder = next((r for r in reminders_store if r["id"] == req.reminder_id), None)
-        if not reminder:
-            raise HTTPException(status_code=404, detail="Reminder not found")
-        reminder["status"] = "snoozed"
-        reminder["snoozed_until"] = datetime.now(timezone.utc).isoformat()
-        save_reminders(reminders_store)
-        return {"status": "snoozed", "action": action, "reminder_id": req.reminder_id}
-
-    elif action == "done":
-        if not req.reminder_id:
-            raise HTTPException(status_code=400, detail="reminder_id required")
-        reminder = next((r for r in reminders_store if r["id"] == req.reminder_id), None)
-        if not reminder:
-            raise HTTPException(status_code=404, detail="Reminder not found")
-        reminder["status"] = "done"
-        reminder["completed_at"] = datetime.now(timezone.utc).isoformat()
-        save_reminders(reminders_store)
-        return {"status": "done", "action": action, "reminder_id": req.reminder_id}
-
-    elif action == "trigger_pipeline":
-        await safe_calendar_pipeline()
-        return {"status": "pipeline_triggered", "action": action}
-
-    elif action == "trigger_review":
-        try:
-            sys.path.insert(0, str(Path(__file__).parent.parent))
-            from deep_review_cron import run_review
-            result = run_review(force=True)
-            return {"status": "review_complete", "action": action, "result": result}
-        except Exception as e:
-            return {"status": "review_failed", "action": action, "error": str(e)}
-
-    elif action == "generate_map":
-        try:
-            sys.path.insert(0, str(Path(__file__).parent.parent))
-            from network_mapper import NetworkMapper
-            mapper = NetworkMapper()
-            summary = mapper.scan_network()
-            mermaid = mapper.generate_mermaid()
-            report = mapper.generate_load_report()
-            mapper.save_diagram(mermaid, report)
-            return {"status": "map_generated", "action": action, "summary": summary}
-        except Exception as e:
-            return {"status": "map_failed", "action": action, "error": str(e)}
-
-    elif action == "reconnect_tunnel":
-        new_url = tunnel_mgr.force_reconnect(port=PORT, app_name="Sentinel_Bridge")
-        if new_url:
-            app.state.ngrok_url = new_url
-            return {"status": "reconnected", "action": action, "url": new_url}
-        return {"status": "reconnect_failed", "action": action}
-
-    return {"status": "unknown_action", "action": action}
 
 
 # ═══════════════════════════════════════════════════════════════════
