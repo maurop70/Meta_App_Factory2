@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -152,7 +152,7 @@
     <div class="cover-stat"><div class="val">4</div><div class="lbl">AI Agents</div></div>
     <div class="cover-stat"><div class="val">5006</div><div class="lbl">Port</div></div>
   </div>
-  <div class="cover-footer">Antigravity Ventures — Meta App Factory V3 Genesis | March 2026</div>
+  <div class="cover-footer">Antigravity Ventures — Meta App Factory V3.2 Genesis | March 2026</div>
 </div>
 
 <!-- TABLE OF CONTENTS -->
@@ -241,10 +241,10 @@
         <tbody>
           <tr><td><strong>Frontend</strong></td><td>React / Vite</td><td>SSE streaming chat, dark Discord-like UI, kinetic typography</td></tr>
           <tr><td><strong>Backend</strong></td><td>FastAPI (Port 5006)</td><td>44 endpoints, async streaming, file upload pipeline</td></tr>
-          <tr><td><strong>AI Engine</strong></td><td>Gemini 2.5 Flash</td><td>Multi-agent prompt assembly, 20-turn history</td></tr>
-          <tr><td><strong>Orchestrator</strong></td><td>n8n Workflow</td><td>Webhook bridge, Google Drive sync, frustration detection</td></tr>
-          <tr><td><strong>Memory</strong></td><td>Supabase pgvector</td><td>Session persistence, context recovery</td></tr>
-          <tr><td><strong>Resilience</strong></td><td>V3 Auto-Heal</td><td>Circuit breaker, safe buffer, watchdog preflight</td></tr>
+          <tr><td><strong>AI Engine</strong></td><td>Gemini 2.5 Flash + Model Router</td><td>Multi-agent prompt assembly, Intelligent Model Router (Flash for chat, o3-mini for deep math)</td></tr>
+          <tr><td><strong>Orchestrator</strong></td><td>n8n Workflow + Socratic Bridge</td><td>Webhook bridge, Google Drive sync, Socratic Tutor step-gating, frustration detection</td></tr>
+          <tr><td><strong>Memory</strong></td><td>Supabase pgvector + Graph Memory</td><td>Session persistence, context recovery, cognitive node-edge learning maps</td></tr>
+          <tr><td><strong>Resilience</strong></td><td>V3.2 Auto-Heal + Phantom QA</td><td>Circuit breaker, safe buffer, watchdog preflight, autonomous regression testing</td></tr>
         </tbody>
       </table>
     </div>
@@ -286,6 +286,8 @@
           <tr><td><code>action_plan.py</code></td><td>Action Plan Engine — structured task generation for study workflows</td><td>25 KB</td></tr>
           <tr><td><code>unified_eq_engine.py</code></td><td>Emotional intelligence engine — sentiment analysis, EQ scoring</td><td>18 KB</td></tr>
           <tr><td><code>parent_config.json</code></td><td>Persistent store: parent instructions, vocabulary, focus topics, progress log</td><td>11 KB</td></tr>
+          <tr><td><code>model_router_v3.py</code></td><td><strong>V3.2</strong> Intelligent Model Router — dynamic Gemini/o3/Claude gateway</td><td>2 KB</td></tr>
+          <tr><td><code>graph_memory_v3.py</code></td><td><strong>V3.2</strong> Aether Graph Memory — cognitive node-edge learning maps</td><td>2 KB</td></tr>
         </tbody>
       </table>
     </div>
@@ -481,7 +483,7 @@
       <table>
         <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td>POST</td><td><code>/api/upload</code></td><td>Upload file (PDF/DOCX/TXT) — extracted text injected into Alex's context</td></tr>
+          <tr><td>POST</td><td><code>/api/upload</code></td><td>Upload file (PDF/DOCX/TXT/PNG/JPG) — text extracted via parsers or <strong>Gemini Vision OCR</strong> for images</td></tr>
           <tr><td>GET</td><td><code>/api/uploads</code></td><td>List all uploaded files</td></tr>
           <tr><td>GET</td><td><code>/api/uploads/by-section/{section}</code></td><td>Files filtered by section tag</td></tr>
           <tr><td>DELETE</td><td><code>/api/uploads/{filename}</code></td><td>Remove an uploaded file</td></tr>
@@ -628,6 +630,10 @@
         <div class="flow-node purple">preflight.py<small style="display:block;font-size:10px">Watchdog Check</small></div>
       </div>
       <p>All API calls to Gemini, n8n, and Supabase are wrapped in <code>healed_post()</code>. If the circuit breaker opens, payloads are buffered locally and replayed when connectivity returns.</p>
+      <div class="callout info">
+        <div class="callout-title">🥷 V3.2: Phantom QA Gate</div>
+        After every deployment or code change, the <strong>Phantom QA Agent</strong> automatically regression-tests all endpoints by impersonating user personas (Tim, Parent, New Student). No feature ships without a passing Phantom report. Run manually: <code>python Project_Aether/C-Suite_Active_Logic/Phantom_QA/phantom_agent.py --app Resonance</code>
+      </div>
     </div>
 
     <div class="callout tip">
