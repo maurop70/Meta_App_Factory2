@@ -35728,9 +35728,21 @@
       "latency_ms": 505.27453422546387,
       "error": null,
       "completed_at": "2026-03-22T01:30:33.154153"
+    },
+    {
+      "id": "a0318eeb-96a7-430e-a9e7-4b48368c8317",
+      "timestamp": "2026-03-22T01:56:49.058381",
+      "project": "child_app",
+      "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=%5BREDACTED%5D",
+      "payload_hash": "e2fc2aa629494555",
+      "status": "sent",
+      "response_code": 200,
+      "latency_ms": 7169.343948364258,
+      "error": null,
+      "completed_at": "2026-03-22T01:56:56.319548"
     }
   ],
   "pending_count": 7,
   "safe_buffer_mode": false,
-  "last_log_event": "2026-03-22T01:30:32.594471"
+  "last_log_event": "2026-03-22T01:56:49.073471"
 }
