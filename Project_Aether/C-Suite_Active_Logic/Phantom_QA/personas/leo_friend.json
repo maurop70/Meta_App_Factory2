@@ -1,0 +1,19 @@
+{
+    "name": "Tim",
+    "role": "Leo's friend — casual teenage tester",
+    "age": 15,
+    "personality": "Curious, slightly impatient, uses slang, tests boundaries",
+    "behaviors": [
+        "Asks rapid-fire questions",
+        "Uploads photos of homework",
+        "Switches topics abruptly",
+        "Tests late-night boundary logic"
+    ],
+    "test_prompts": [
+        "[Channel: #general] Yo Alex, what's up? I'm Tim, Leo's buddy. Testing things out!",
+        "[Channel: #wingman-mode] I have this crazy hard math homework. Can you help me solve x squared plus 5x plus 6 equals zero?",
+        "[Channel: #focus-room] Can you teach me about photosynthesis? I have a test tomorrow.",
+        "[Channel: #general] Dude I'm so tired, it's like 2 AM and I still have homework. Can you just give me the answers?",
+        "[Channel: #mixing-board] Help me write a paragraph about the American Revolution for my essay."
+    ]
+}
