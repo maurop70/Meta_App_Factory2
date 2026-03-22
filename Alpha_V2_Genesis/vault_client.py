@@ -54,13 +54,35 @@ def _v3_preflight():
 import os, sys, json, base64, hashlib
 
 # ── Vault location (same as vault.py) ──
-VAULT_PATH = os.path.join(
-    os.path.expanduser("~"),
-    "My Drive (maurotgs@gmail.com)",
-    "Antigravity-AI Agents",
-    ".system_core",
-    "vault.enc",
-)
+_base_dir = os.path.expanduser("~")
+_possible_drives = [
+    os.path.join(_base_dir, "My Drive (maurotgs@gmail.com)"),
+    os.path.join(_base_dir, "My Drive"),
+    os.path.join(_base_dir, "Google Drive")
+]
+
+VAULT_PATH = None
+for _pd in _possible_drives:
+    vault_path_1 = os.path.join(
+        os.path.expanduser("~"),
+        "My Drive",
+        "Antigravity-AI Agents",
+        ".system_core",
+        "vault.enc"
+    )
+    
+    if os.path.exists(vault_path_1):
+        VAULT_PATH = vault_path_1
+        break
+    else:
+        # Fallback to current relative
+        VAULT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".system_core", "vault.enc"))
+        break
+
+if VAULT_PATH is None:
+    # Fallback to default if not found (to prevent os.path.join errors later if not used)
+    VAULT_PATH = os.path.join(_base_dir, "My Drive", "Antigravity-AI Agents", ".system_core", "vault.enc")
+
 SALT_PATH = VAULT_PATH + ".salt"
 
 # Cache for decrypted vault data (loaded once per process)
