@@ -73,6 +73,13 @@ BOARDROOM_DIR = os.path.join(RUNTIME_DIR, "Boardroom_Exchange")
 SYSTEM_MAP_PATH = os.path.join(RUNTIME_DIR, "Aether_System_Map.json")
 RUNTIME_LOG = os.path.join(BOARDROOM_DIR, "runtime_log.json")
 
+# ── Rule 0: Proactive Architecture ──
+try:
+    from proactive_architect import ProactiveArchitect
+    _ARCHITECT_AVAILABLE = True
+except ImportError:
+    _ARCHITECT_AVAILABLE = False
+
 # n8n Agent Webhooks (from factory.py AGENT_REGISTRY)
 WEBHOOK_MAP = {
     "CEO": "https://humanresource.app.n8n.cloud/webhook/gemini-flash",
@@ -472,7 +479,15 @@ class AetherRuntime:
         self.router = AgentRouter(self.loader)
         self.critic = CriticGate()
 
-        print(f"\n[RUNTIME] ✅ Aether Runtime v1.0.0 initialized")
+        # Rule 0: Proactive Architecture Mandate
+        if _ARCHITECT_AVAILABLE:
+            self.architect = ProactiveArchitect()
+            print(f"[RUNTIME] 🏗️  Rule 0: Proactive Architect ACTIVE")
+        else:
+            self.architect = None
+            print(f"[RUNTIME] ⚠️  Rule 0: ProactiveArchitect not available")
+
+        print(f"\n[RUNTIME] ✅ Aether Runtime v2.0.0 initialized")
         print(f"[RUNTIME] 📊 {len(self.loader.agents)} agents loaded")
         print(f"[RUNTIME] 🔗 {len(WEBHOOK_MAP)} webhook endpoints configured")
         print("=" * 60)
@@ -490,6 +505,14 @@ class AetherRuntime:
         """
         # Route to agent
         result = self.router.dispatch(text, target)
+
+        # Rule 0: Proactive Architecture recommendation
+        if self.architect:
+            arch_rec = self.architect.analyze(text, result.get("resolved_to", "CEO"))
+            result["architecture_recommendation"] = arch_rec
+            # Inject advisory into the prompt context for the agent
+            advisory = self.architect.format_for_prompt(arch_rec)
+            result["architecture_advisory"] = advisory
 
         # Critic gate (unless bypassed or errored)
         if not skip_critic and result["status"] == "DISPATCHED":

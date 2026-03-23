@@ -100,12 +100,6 @@ logger = logging.getLogger("sentinel.server")
 
 # ── Singletons ───────────────────────────────────────────────────────
 vault = FernetVault()
-poller = CalendarPoller(vault=vault)
-aether = AetherIngestion()
-categorizer = CategorizationEngine()
-dispatcher = NotificationDispatcher(vault=vault)
-extractor = IntentExtractor()
-healer = SelfHealEngine()
 
 # ── Factory-level shared modules ─────────────────────────────────────
 google_auth = GoogleAuth(
@@ -118,6 +112,14 @@ google_auth = GoogleAuth(
     ],
     redirect_uri=f"http://localhost:{PORT}/api/auth/google/callback",
 )
+
+poller = CalendarPoller(vault=vault, google_auth=google_auth)
+aether = AetherIngestion()
+categorizer = CategorizationEngine()
+dispatcher = NotificationDispatcher(vault=vault)
+extractor = IntentExtractor()
+healer = SelfHealEngine()
+
 tunnel_mgr = TunnelManager()
 
 # ── Scheduler ────────────────────────────────────────────────────────
@@ -241,6 +243,36 @@ class VaultSecret(BaseModel):
     value: str
 
 
+class SnoozeInput(BaseModel):
+    """Configurable snooze duration."""
+    minutes: int = 15
+
+
+# ── Quiet Hours (Master Architect: priority queuing + quiet hours) ────
+def _should_notify(priority: str = "normal") -> bool:
+    """Skip non-high-priority notifications during quiet hours (10PM-7AM)."""
+    from datetime import datetime
+    hour = datetime.now().hour
+    if priority == "high":
+        return True  # Always notify for high priority
+    return 7 <= hour < 22  # Quiet hours: 10PM-7AM
+
+
+async def _notify_state_change(reminder: dict, action: str, detail: str = ""):
+    """Send notification for reminder state changes with quiet hours."""
+    priority = reminder.get("priority", "normal")
+    if not _should_notify(priority):
+        logger.info(f"Skipped notification (quiet hours): {action} - {reminder.get('activity', '')}")
+        return
+    await dispatcher.send_reminder(
+        category=reminder.get("category", "Other"),
+        activity=f"{action}: {reminder.get('activity', 'Unknown')}",
+        time_str=detail or reminder.get("time", "N/A"),
+        priority=priority,
+        reminder_id=reminder.get("id", ""),
+    )
+
+
 # ── Lifespan ─────────────────────────────────────────────────────────
 # ── Category → Calendar mapping ──────────────────────────────────────
 CALENDAR_MAP = {
@@ -261,9 +293,9 @@ async def write_to_google_calendar(category: str, summary: str,
     """Write an event to the appropriate Google Calendar based on category."""
     account_id = CALENDAR_MAP.get(category, "personal")
     calendar_email = CALENDAR_EMAILS[account_id]
-    token = vault.retrieve(f"google_token_{account_id}")
+    token = await google_auth.get_valid_token(account_id)
     if not token:
-        logger.warning("Cannot write to calendar — no token for %s", account_id)
+        logger.warning("Cannot write to calendar — no valid token for %s", account_id)
         return None
 
     # Parse start time
@@ -285,7 +317,7 @@ async def write_to_google_calendar(category: str, summary: str,
     }
 
     import httpx as _httpx
-    url = f"https://www.googleapis.com/calendar/v3/calendars/{calendar_email}/events"
+    url = f"https://www.googleapis.com/calendar/v3/calendars/primary/events"
     try:
         async with _httpx.AsyncClient(timeout=15) as client:
             resp = await client.post(url, json=event_body,
@@ -340,8 +372,8 @@ async def lifespan(app: FastAPI):
     logger.info("📆 Calendar accounts: %s",
                 [a["email"] for a in poller.get_active_accounts()])
 
-    # Schedule calendar polling every 15 minutes
-    scheduler.add_job(safe_calendar_pipeline, "interval", minutes=15,
+    # Schedule calendar polling twice daily: noon and midnight
+    scheduler.add_job(safe_calendar_pipeline, "cron", hour="0,12",
                       id="calendar_poll", replace_existing=True)
     # Also run immediately on startup
     scheduler.add_job(safe_calendar_pipeline, "date", id="startup_poll",
@@ -425,6 +457,48 @@ async def root():
             "vault": "/api/vault/audit",
         },
     }
+
+
+@app.get("/manifest.json")
+async def manifest():
+    """PWA Web App Manifest."""
+    return JSONResponse(content={
+        "name": "Sentinel Bridge",
+        "short_name": "Sentinel",
+        "start_url": "/dashboard",
+        "display": "standalone",
+        "background_color": "#0f0f1a",
+        "theme_color": "#0f0f1a",
+        "description": "Autonomous Reminder System",
+        "icons": [
+            {
+                "src": "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>",
+                "sizes": "192x192",
+                "type": "image/svg+xml"
+            },
+            {
+                "src": "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>",
+                "sizes": "512x512",
+                "type": "image/svg+xml"
+            }
+        ]
+    })
+
+
+@app.get("/sw.js")
+async def service_worker():
+    """Minimal Service Worker for PWA compliance."""
+    sw_content = """
+    const CACHE_NAME = 'sentinel-v1';
+    self.addEventListener('install', (event) => {
+        event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(['/dashboard'])));
+    });
+    self.addEventListener('fetch', (event) => {
+        event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
+    });
+    """
+    from fastapi.responses import PlainTextResponse
+    return PlainTextResponse(content=sw_content, media_type="application/javascript")
 
 
 @app.get("/dashboard")
@@ -533,6 +607,10 @@ async def override_category(reminder_id: str, override: CategoryOverride):
 
     save_reminders(reminders_store)
 
+    # Notification
+    await _notify_state_change(reminder, "Category changed",
+                                f"{old_category} -> {override.new_category}")
+
     return {
         "status": "category_updated",
         "old_category": old_category,
@@ -542,28 +620,50 @@ async def override_category(reminder_id: str, override: CategoryOverride):
 
 
 @app.post("/api/reminders/{reminder_id}/snooze")
-async def snooze_reminder(reminder_id: str):
-    """Snooze a reminder for 15 minutes."""
+async def snooze_reminder(reminder_id: str, snooze: SnoozeInput = SnoozeInput()):
+    """Snooze a reminder for a configurable number of minutes."""
     reminder = next((r for r in reminders_store if r["id"] == reminder_id), None)
     if not reminder:
         raise HTTPException(status_code=404, detail="Reminder not found")
     reminder["status"] = "snoozed"
-    reminder["snoozed_until"] = (
-        datetime.now(timezone.utc).isoformat()
-    )
+    snooze_until = datetime.now(timezone.utc) + timedelta(minutes=snooze.minutes)
+    reminder["snoozed_until"] = snooze_until.isoformat()
     save_reminders(reminders_store)
-    return {"status": "snoozed", "reminder_id": reminder_id}
+
+    # Notification
+    await _notify_state_change(reminder, "Snoozed", f"until {snooze_until.strftime('%I:%M %p')}")
+
+    return {"status": "snoozed", "reminder_id": reminder_id, "snoozed_until": reminder["snoozed_until"]}
 
 
 @app.post("/api/reminders/{reminder_id}/done")
 async def mark_done(reminder_id: str):
-    """Mark a reminder as completed."""
+    """Mark a reminder as completed and remove from Google Calendar."""
     reminder = next((r for r in reminders_store if r["id"] == reminder_id), None)
     if not reminder:
         raise HTTPException(status_code=404, detail="Reminder not found")
     reminder["status"] = "done"
     reminder["completed_at"] = datetime.now(timezone.utc).isoformat()
     save_reminders(reminders_store)
+
+    # Notification
+    await _notify_state_change(reminder, "Completed")
+
+    # Delete from Google Calendar if event exists
+    event_id = reminder.get("google_event_id")
+    if event_id:
+        try:
+            account_id = CALENDAR_MAP.get(reminder.get("category", ""), "personal")
+            token = await google_auth.get_valid_token(account_id)
+            if token:
+                import httpx as _hx
+                url = f"https://www.googleapis.com/calendar/v3/calendars/primary/events/{event_id}"
+                async with _hx.AsyncClient(timeout=10) as client:
+                    await client.delete(url, headers={"Authorization": f"Bearer {token}"})
+                logger.info(f"Deleted calendar event {event_id} for completed reminder")
+        except Exception as e:
+            logger.warning(f"Calendar delete failed: {e}")
+
     return {"status": "done", "reminder_id": reminder_id}
 
 
@@ -611,6 +711,24 @@ async def edit_reminder(reminder_id: str, edit: ReminderEdit):
     reminder["edited_at"] = datetime.now(timezone.utc).isoformat()
     save_reminders(reminders_store)
 
+    # Notification on edits
+    await _notify_state_change(reminder, "Updated", f"edited by user")
+
+    # Update Google Calendar if event exists and time changed
+    if edit.time and reminder.get("google_event_id"):
+        try:
+            cal_result = await write_to_google_calendar(
+                category=reminder.get("category", "Other"),
+                summary=reminder.get("activity", ""),
+                start_iso=edit.time,
+                description=f"[Sentinel] Updated reminder",
+            )
+            if cal_result:
+                reminder["google_event_id"] = cal_result.get("id")
+                save_reminders(reminders_store)
+        except Exception as e:
+            logger.warning(f"Calendar update failed: {e}")
+
     return {"status": "updated", "reminder": reminder}
 
 
@@ -623,6 +741,10 @@ async def archive_reminder(reminder_id: str):
     reminder["status"] = "archived"
     reminder["archived_at"] = datetime.now(timezone.utc).isoformat()
     save_reminders(reminders_store)
+
+    # Notification
+    await _notify_state_change(reminder, "Archived")
+
     return {"status": "archived", "reminder_id": reminder_id}
 
 
@@ -665,6 +787,117 @@ async def trigger_poll():
     """Manually trigger a calendar poll."""
     await safe_calendar_pipeline()
     return {"status": "poll_complete"}
+
+
+@app.get("/api/calendar/freebusy")
+async def calendar_freebusy(days: int = Query(7, ge=1, le=14)):
+    """
+    Smart Scheduling: query Google Calendar free/busy across all accounts,
+    find open time slots in the next N days during working hours (8AM-6PM).
+    Returns suggested slots for task scheduling.
+    """
+    import httpx as _hx
+
+    now = datetime.now(timezone.utc)
+    time_min = now.isoformat()
+    time_max = (now + timedelta(days=days)).isoformat()
+
+    # Collect busy blocks from all calendar accounts
+    all_busy = []
+    accounts_queried = []
+
+    for account_id, email in CALENDAR_EMAILS.items():
+        token = await google_auth.get_valid_token(account_id)
+        if not token:
+            continue
+
+        try:
+            url = "https://www.googleapis.com/calendar/v3/freeBusy"
+            body = {
+                "timeMin": time_min,
+                "timeMax": time_max,
+                "items": [{"id": "primary"}],
+            }
+            async with _hx.AsyncClient(timeout=10) as client:
+                resp = await client.post(
+                    url, json=body,
+                    headers={"Authorization": f"Bearer {token}",
+                             "Content-Type": "application/json"},
+                )
+            if resp.status_code == 200:
+                data = resp.json()
+                cal_busy = data.get("calendars", {}).get("primary", {}).get("busy", [])
+                for block in cal_busy:
+                    all_busy.append({
+                        "start": block["start"],
+                        "end": block["end"],
+                        "account": account_id,
+                    })
+                accounts_queried.append(account_id)
+                logger.info(f"FreeBusy: {account_id} returned {len(cal_busy)} busy blocks")
+            else:
+                logger.warning(f"FreeBusy failed for {account_id}: HTTP {resp.status_code}")
+        except Exception as e:
+            logger.warning(f"FreeBusy error for {account_id}: {e}")
+
+    # Find free slots during working hours (8AM-6PM local time)
+    # We'll generate candidate slots and exclude busy ones
+    from zoneinfo import ZoneInfo
+    local_tz = ZoneInfo("America/New_York")
+    suggestions = []
+
+    # Parse all busy periods into datetime ranges
+    busy_ranges = []
+    for b in all_busy:
+        try:
+            bs = datetime.fromisoformat(b["start"].replace("Z", "+00:00"))
+            be = datetime.fromisoformat(b["end"].replace("Z", "+00:00"))
+            busy_ranges.append((bs, be))
+        except Exception:
+            pass
+
+    # Scan each day for 1-hour free slots during working hours
+    for day_offset in range(days):
+        day = (now + timedelta(days=day_offset)).astimezone(local_tz).date()
+        if day == now.astimezone(local_tz).date():
+            # Today: start from next full hour
+            start_hour = max(8, now.astimezone(local_tz).hour + 1)
+        else:
+            start_hour = 8
+
+        for hour in range(start_hour, 18):  # 8AM to 5PM (last slot starts at 5PM)
+            slot_start = datetime(day.year, day.month, day.day, hour, 0,
+                                  tzinfo=local_tz)
+            slot_end = slot_start + timedelta(hours=1)
+
+            # Check if this slot overlaps any busy period
+            is_free = True
+            for bs, be in busy_ranges:
+                if slot_start < be and slot_end > bs:
+                    is_free = False
+                    break
+
+            if is_free:
+                day_label = "Today" if day_offset == 0 else (
+                    "Tomorrow" if day_offset == 1 else
+                    slot_start.strftime("%A %b %d"))
+                suggestions.append({
+                    "start": slot_start.isoformat(),
+                    "end": slot_end.isoformat(),
+                    "label": f"{day_label} {slot_start.strftime('%I:%M %p').lstrip('0')} - {slot_end.strftime('%I:%M %p').lstrip('0')}",
+                    "day_offset": day_offset,
+                })
+
+        # Limit suggestions per day to top 3
+        if len(suggestions) >= 15:
+            break
+
+    return {
+        "suggestions": suggestions[:15],
+        "busy_blocks": len(all_busy),
+        "accounts_queried": accounts_queried,
+        "range_days": days,
+    }
 
 
 @app.get("/api/calendar/events")
@@ -882,6 +1115,77 @@ async def telemetry():
         "calendar_accounts": poller.get_active_accounts(),
     }
 
+# ── Manual Task Creation (with Calendar write-back) ──────────────────
+class TaskCreate(BaseModel):
+    """Request body for manual task creation."""
+    activity: str
+    category: str = "Ops"
+    due_date: str | None = None          # ISO date: 2026-04-15 or 2026-04-15T09:00:00
+    priority: str = "normal"             # high | normal | low
+    description: str = ""
+
+
+@app.post("/api/tasks")
+async def create_task(task: TaskCreate):
+    """
+    Create a manual task/reminder and sync it to Google Calendar.
+
+    Usage (dashboard form or API):
+        POST /api/tasks
+        { "activity": "Board meeting", "category": "Ops",
+          "due_date": "2026-04-15T09:00:00", "priority": "high" }
+    """
+    now = datetime.now(timezone.utc)
+
+    reminder = {
+        "id": str(uuid.uuid4())[:8],
+        "activity": task.activity[:120],
+        "description": task.description[:300],
+        "category": task.category,
+        "confidence": 1.0,
+        "time": task.due_date or now.isoformat(),
+        "source": "manual",
+        "priority": task.priority,
+        "status": "pending",
+        "raw_text": task.description or task.activity,
+        "created_at": now.isoformat(),
+    }
+
+    reminders_store.append(reminder)
+    save_reminders(reminders_store)
+
+    # ── Calendar write-back ──
+    if task.due_date:
+        try:
+            cal_result = await write_to_google_calendar(
+                category=task.category,
+                summary=task.activity,
+                start_iso=task.due_date,
+                description=f"[Sentinel] {task.description}" if task.description else f"[Sentinel] Manual task",
+            )
+            reminder["google_event_id"] = (cal_result or {}).get("id")
+            save_reminders(reminders_store)
+        except Exception as cal_exc:
+            logger.warning(f"Calendar write-back failed for '{task.activity}': {cal_exc}")
+
+    # ── Push notification for high-priority ──
+    if task.priority == "high":
+        await dispatcher.send_reminder(
+            category=task.category,
+            activity=task.activity,
+            time_str=task.due_date or "No due date",
+            priority="high",
+            reminder_id=reminder["id"],
+        )
+
+    logger.info(f"Manual task created: '{task.activity}' (due: {task.due_date}, cal_synced: {'google_event_id' in reminder})")
+
+    return {
+        "status": "created",
+        "reminder": reminder,
+        "calendar_synced": "google_event_id" in reminder,
+    }
+
 
 # ── Document Parser Upload ───────────────────────────────────────────
 try:
@@ -964,6 +1268,19 @@ async def upload_document(file: UploadFile = File(...)):
                 priority="high",
                 reminder_id=reminder["id"],
             )
+
+        # Calendar write-back for activities with due dates
+        if act.get("due_date"):
+            try:
+                cal_result = await write_to_google_calendar(
+                    category=reminder["category"],
+                    summary=reminder["activity"],
+                    start_iso=act["due_date"],
+                    description=f"[Sentinel] Parsed from: {file.filename}\n{act.get('description', '')}",
+                )
+                reminder["google_event_id"] = (cal_result or {}).get("id")
+            except Exception as cal_exc:
+                logger.warning(f"Calendar write-back failed for '{act['activity']}': {cal_exc}")
 
     save_reminders(reminders_store)
 

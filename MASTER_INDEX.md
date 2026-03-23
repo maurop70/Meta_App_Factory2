@@ -352,3 +352,13 @@
 - **Actions:**
   - ✅ `UNKNOWN` → `log_for_review` | Workflow: Unknown | Severity: medium
 - **Status:** ALL_HEALED
+
+### PARSE_ENTRY
+- **Timestamp:** 2026-03-22T22:49:13.066842
+- **Source_App:** Sentinel_Bridge
+- **File:** test_compliance_doc.txt
+- **Category:** Finance
+- **Confidence:** 50%
+- **Entities:** None
+- **Routed_To:** sentinel_reminders
+- **Status:** ERROR

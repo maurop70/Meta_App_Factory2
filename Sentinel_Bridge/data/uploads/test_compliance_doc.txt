@@ -1,0 +1,21 @@
+HEINLEIN FOODS USA - Q2 COMPLIANCE TRACKER
+==========================================
+
+1. FDA Food Safety Audit - Due: 2026-04-15
+   Annual FDA compliance audit for warehouse operations.
+   Priority: HIGH - failure results in shutdown order.
+
+2. Forklift Operator Certifications Renewal - Due: 2026-04-01
+   Three operators (Gomez, Patel, Chen) have expiring certifications.
+   Must schedule re-certification training before April 1.
+
+3. HACCP Plan Review - Due: 2026-05-10
+   Quarterly review of Hazard Analysis Critical Control Points.
+   Food safety team must update temperature monitoring logs.
+
+4. Fire Extinguisher Inspection - Due: 2026-03-31
+   Monthly inspection due for all warehouse fire extinguishers.
+   Contact ABC Fire Safety for scheduling.
+
+5. Employee Health Insurance Open Enrollment - Due: 2026-04-20
+   Open enrollment period for Q2. HR must distribute packets by April 5.
