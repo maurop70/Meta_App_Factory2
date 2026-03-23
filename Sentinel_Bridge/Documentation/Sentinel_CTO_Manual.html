@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Sentinel Bridge — CTO Technical Manual</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f0f1a;color:#e2e8f0;line-height:1.7;padding:40px 20px}
+  .container{max-width:900px;margin:0 auto}
+  h1{font-size:28px;color:#a78bfa;margin:32px 0 8px;border-bottom:2px solid #a78bfa40;padding-bottom:8px}
+  h2{font-size:22px;color:#f1f5f9;margin:28px 0 12px}
+  h3{font-size:17px;color:#94a3b8;margin:20px 0 8px}
+  p{margin:6px 0;color:#cbd5e1}
+  strong{color:#f1f5f9}
+  em{color:#94a3b8}
+  code{background:rgba(255,255,255,0.08);padding:2px 6px;border-radius:4px;font-size:13px;color:#a78bfa}
+  pre{margin:12px 0;color:#a5b4fc;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:16px;overflow-x:auto;font-size:13px}
+  blockquote{border-left:3px solid #a78bfa;padding:8px 16px;margin:12px 0;background:rgba(255,255,255,0.02);border-radius:0 8px 8px 0;color:#94a3b8;font-style:italic}
+  hr{border:none;border-top:1px solid rgba(255,255,255,0.08);margin:24px 0}
+  li{margin:4px 0 4px 20px;color:#cbd5e1}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px}
+  th{background:rgba(255,255,255,0.06);padding:10px 12px;text-align:left;border:1px solid rgba(255,255,255,0.08);color:#f1f5f9;font-weight:600}
+  td{padding:8px 12px;border:1px solid rgba(255,255,255,0.06);color:#cbd5e1}
+  tr:hover td{background:rgba(255,255,255,0.02)}
+  .mermaid-box{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:20px;margin:16px 0;text-align:center;color:#9ca3af;font-style:italic}
+  .mermaid-box code{display:block;font-size:11px;color:#6b7280;text-align:left}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>Sentinel Bridge — CTO Technical Manual</h1>
+<h3>Architecture, Security & API Reference</h3>
+<p><strong>Classification:</strong> Internal Technical Reference | <strong>Version:</strong> 2.0 | <strong>Date:</strong> March 23, 2026</p>
+<p><strong>Author:</strong> CTO — Antigravity-AI | <strong>Audience:</strong> Technical Partners, Engineering Leadership</p>
+
+<hr>
+
+<h2>Executive Summary</h2>
+
+<p>Sentinel Bridge is an <strong>AI-native autonomous reminder system</strong> built on FastAPI + Gemini that unifies multi-calendar management, NLP task extraction, ML-powered categorization, and self-healing resilience. Unlike passive task managers (Todoist, Notion, TickTick, Google Tasks), Sentinel actively ingests, categorizes, schedules, and monitors tasks with zero human intervention.</p>
+
+<p>This document covers the full architecture for CTO-level technical validation.</p>
+
+<hr>
+
+<h2>System Architecture</h2>
+
+<div class="mermaid-box"><p>📊 Architecture Diagram (Mermaid — see .md for source)</p>
+<code>graph TD</code>
+<code>subgraph INGESTION["📥 INGESTION LAYER"]</code>
+<code>CAL["Google Calendar\nPolling (2 accounts)"]</code>
+<code>DOC["Document Parser\n(PDF/DOCX → Tasks)"]</code>
+<code>VOICE["Voice Input\n(Web Speech API)"]</code>
+<code>NLP["NLP Intent Extractor\n(Gemini 2.5 Flash)"]</code>
+<code>MANUAL["Manual Input\n(Dashboard Modal)"]</code>
+<code>end</code>
+<code></code>
+<code>subgraph BRAIN["🧠 AI PROCESSING"]</code>
+<code>CAT["ML Categorization Engine\n(53 keywords + learning)"]</code>
+<code>SMART["Smart Scheduling\n(FreeBusy → Slot Suggestions)"]</code>
+<code>INTENT["Intent Extraction\n(time, priority, category)"]</code>
+<code>end</code>
+<code></code>
+<code>subgraph STORE["💾 DATA LAYER"]</code>
+<code>VAULT["Fernet Vault\n(AES-128-CBC)"]</code>
+<code>JSON["reminders.json\n(persistent store)"]</code>
+<code>SEEN["seen_events.json\n(dedup)"]</code>
+<code>end</code>
+<code></code>
+<code>subgraph OUTPUT["📤 OUTPUT LAYER"]</code>
+<code>GCAL["Google Calendar\nWrite-back"]</code>
+<code>NTFY["ntfy Push\nNotifications"]</code>
+<code>DASH["Dashboard UI\n(SPA + PWA)"]</code>
+<code>end</code>
+<code></code>
+<code>subgraph RESILIENCE["🛡️ RESILIENCE"]</code>
+<code>HEAL["Self-Heal Engine\n(auto_heal.py)"]</code>
+<code>REFRESH["Auto Token Refresh\n(GoogleAuth)"]</code>
+<code>QUIET["Quiet Hours\n(10PM-7AM)"]</code>
+<code>end</code>
+<code></code>
+<code>CAL --> INTENT</code>
+<code>DOC --> INTENT</code>
+<code>VOICE --> INTENT</code>
+<code>MANUAL --> INTENT</code>
+<code>NLP --> INTENT</code>
+<code>INTENT --> CAT</code>
+<code>CAT --> JSON</code>
+<code>CAT --> SMART</code>
+<code>SMART --> GCAL</code>
+<code>JSON --> DASH</code>
+<code>JSON --> NTFY</code>
+<code>VAULT --> GCAL</code>
+<code>VAULT --> REFRESH</code>
+<code>HEAL --> REFRESH</code>
+</div>
+
+<hr>
+
+<h2>Core Modules</h2>
+
+<table>
+<tr><th>Module</th><th>File</th><th>Purpose</th></tr>
+<tr><td>**Server**</td><td>`sentinel_server.py`</td><td>FastAPI app, 20+ REST endpoints, scheduler</td></tr>
+<tr><td>**Calendar Poller**</td><td>`calendar_poller.py`</td><td>Google Calendar polling across work + personal accounts</td></tr>
+<tr><td>**Categorization Engine**</td><td>`categorization_engine.py`</td><td>ML keyword matching + user override learning</td></tr>
+<tr><td>**Intent Extractor**</td><td>`intent_extractor.py`</td><td>NLP time/priority/category extraction via Gemini</td></tr>
+<tr><td>**Document Parser**</td><td>`document_parser.py`</td><td>PDF/DOCX → structured task extraction</td></tr>
+<tr><td>**Notification Dispatcher**</td><td>`notification_dispatcher.py`</td><td>ntfy.sh push with quiet hours</td></tr>
+<tr><td>**Fernet Vault**</td><td>`fernet_vault.py`</td><td>AES-128-CBC encrypted secrets store</td></tr>
+<tr><td>**Self-Heal Engine**</td><td>`self_heal.py`</td><td>Exponential backoff, diagnosis, quarantine</td></tr>
+<tr><td>**Google Auth**</td><td>`utils/google_auth.py`</td><td>OAuth 2.0 + automatic token refresh</td></tr>
+<tr><td>**Proactive Architect**</td><td>`proactive_architect.py`</td><td>System-wide flow audit + architecture advisory</td></tr>
+<tr><td>**Aether Ingestion**</td><td>`aether_ingestion.py`</td><td>AI pattern ingestion for task detection</td></tr>
+</table>
+
+<hr>
+
+<h2>API Surface (20 Endpoints)</h2>
+
+<h3>Task Management</h3>
+<table>
+<tr><th>Method</th><th>Endpoint</th><th>Description</th></tr>
+<tr><td>`GET`</td><td>`/api/reminders`</td><td>List all reminders with filters</td></tr>
+<tr><td>`POST`</td><td>`/api/reminders`</td><td>NLP-powered reminder creation</td></tr>
+<tr><td>`POST`</td><td>`/api/tasks`</td><td>Manual task creation + calendar sync</td></tr>
+<tr><td>`POST`</td><td>`/api/reminders/{id}/done`</td><td>Mark done + calendar delete</td></tr>
+<tr><td>`POST`</td><td>`/api/reminders/{id}/snooze`</td><td>Snooze with configurable duration</td></tr>
+<tr><td>`PUT`</td><td>`/api/reminders/{id}/edit`</td><td>Edit activity and due date</td></tr>
+<tr><td>`PUT`</td><td>`/api/reminders/{id}/category`</td><td>Change category + ML learning</td></tr>
+<tr><td>`POST`</td><td>`/api/reminders/{id}/archive`</td><td>Swipe-to-archive</td></tr>
+</table>
+
+<h3>Calendar</h3>
+<table>
+<tr><th>Method</th><th>Endpoint</th><th>Description</th></tr>
+<tr><td>`GET`</td><td>`/api/calendar/accounts`</td><td>List configured calendars with auth status</td></tr>
+<tr><td>`POST`</td><td>`/api/calendar/poll`</td><td>Force manual calendar poll</td></tr>
+<tr><td>`GET`</td><td>`/api/calendar/events`</td><td>Unified events for calendar view</td></tr>
+<tr><td>`GET`</td><td>`/api/calendar/freebusy`</td><td>**Smart Scheduling** — free slot suggestions</td></tr>
+</table>
+
+<h3>System</h3>
+<table>
+<tr><th>Method</th><th>Endpoint</th><th>Description</th></tr>
+<tr><td>`GET`</td><td>`/api/telemetry`</td><td>Full system health + stats</td></tr>
+<tr><td>`GET`</td><td>`/api/categories`</td><td>ML engine stats + category list</td></tr>
+<tr><td>`GET`</td><td>`/api/auth/status`</td><td>OAuth status for all accounts</td></tr>
+<tr><td>`GET`</td><td>`/api/auth/google`</td><td>OAuth consent flow initiation</td></tr>
+<tr><td>`GET`</td><td>`/api/auth/google/callback`</td><td>OAuth code exchange + token storage</td></tr>
+<tr><td>`POST`</td><td>`/api/notifications/test`</td><td>Test push notification</td></tr>
+<tr><td>`POST`</td><td>`/api/documents/parse`</td><td>Document → task extraction</td></tr>
+<tr><td>`GET`</td><td>`/dashboard`</td><td>SPA Dashboard (HTML)</td></tr>
+</table>
+
+<hr>
+
+<h2>Security Architecture</h2>
+
+<h3>Credential Management</h3>
+<li>**Fernet Vault** — AES-128-CBC encryption for all secrets</li>
+<li>Vault path: `%LOCALAPPDATA%\AntigravityAI\Sentinel_Bridge\vault.enc`</li>
+<li>Stores: Google OAuth tokens, refresh tokens, client secrets, ntfy topic</li>
+<li>8 secrets currently managed</li>
+
+<h3>OAuth 2.0 Flow</h3>
+<li>**Access type:** `offline` (enables refresh tokens)</li>
+<li>**Prompt:** `consent` (forces refresh token issuance)</li>
+<li>**Auto-refresh:** `GoogleAuth.get_valid_token()` checks token validity via Google tokeninfo API, auto-refreshes on 401</li>
+<li>**Token rotation:** New access token stored in vault on every refresh</li>
+<li>**Scopes:** `calendar.readonly` + `calendar.events`</li>
+
+<h3>Notification Security</h3>
+<li>Push via ntfy.sh over HTTPS</li>
+<li>Topic-based access control</li>
+<li>Quiet hours enforcement (10PM–7AM, bypass for high-priority)</li>
+
+<hr>
+
+<h2>Resilience Stack</h2>
+
+<table>
+<tr><th>Layer</th><th>Component</th><th>Purpose</th></tr>
+<tr><td>1</td><td>**Self-Heal Engine**</td><td>Exponential backoff (2s→4s→8s), auto-diagnosis</td></tr>
+<tr><td>2</td><td>**Auto Token Refresh**</td><td>GoogleAuth auto-refreshes expired OAuth tokens</td></tr>
+<tr><td>3</td><td>**Quiet Hours**</td><td>Prevents notification fatigue (10PM–7AM)</td></tr>
+<tr><td>4</td><td>**Proactive Architect**</td><td>System-wide flow audit, gap detection</td></tr>
+<tr><td>5</td><td>**Phantom QA Gate**</td><td>Automated UI + API regression testing</td></tr>
+</table>
+
+<hr>
+
+<h2>Competitive Technical Advantage</h2>
+
+<table>
+<tr><th>Capability</th><th>Todoist</th><th>Notion</th><th>TickTick</th><th>Google Tasks</th><th>**Sentinel**</th></tr>
+<tr><td>AI auto-categorization</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td><td>**✅ ML + learning**</td></tr>
+<tr><td>Document → Tasks</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td><td>**✅ PDF/DOCX**</td></tr>
+<tr><td>Multi-calendar write-back</td><td>❌</td><td>❌</td><td>⚠️</td><td>⚠️</td><td>**✅ 2 accounts**</td></tr>
+<tr><td>Smart Scheduling (FreeBusy)</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td><td>**✅ AI slots**</td></tr>
+<tr><td>Self-healing architecture</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td><td>**✅ 5-layer**</td></tr>
+<tr><td>Encrypted vault</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td><td>**✅ Fernet**</td></tr>
+<tr><td>Auto token refresh</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>**✅ GoogleAuth**</td></tr>
+<tr><td>NLP intent extraction</td><td>❌</td><td>❌</td><td>⚠️</td><td>⚠️</td><td>**✅ Gemini**</td></tr>
+<tr><td>Automated regression testing</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td><td>**✅ Phantom QA**</td></tr>
+</table>
+
+<hr>
+
+<h2>Deployment</h2>
+
+<table>
+<tr><th>Parameter</th><th>Value</th></tr>
+<tr><td>Runtime</td><td>Python 3.14 + FastAPI + uvicorn</td></tr>
+<tr><td>Port</td><td>5009</td></tr>
+<tr><td>PWA</td><td>Service worker + manifest</td></tr>
+<tr><td>Tunnel</td><td>ngrok (optional)</td></tr>
+<tr><td>Scheduler</td><td>APScheduler (15-min calendar poll)</td></tr>
+<tr><td>AI Engine</td><td>Gemini 2.5 Flash (via google-genai SDK)</td></tr>
+</table>
+
+<hr>
+
+<p><em>Sentinel Bridge V2.0 — AI-native autonomous task management with 5-layer resilience.</em></p>
+
+
+</div>
+</body>
+</html>

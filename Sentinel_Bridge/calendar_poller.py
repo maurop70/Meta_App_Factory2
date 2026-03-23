@@ -67,13 +67,13 @@ CALENDAR_ACCOUNTS = [
         "id": "work",
         "email": "mpetrini@heinleinfoodsusa.com",
         "label": "Work",
-        "poll_interval_minutes": 15,
+        "poll_interval_minutes": 720,  # twice daily (noon + midnight)
     },
     {
         "id": "personal",
         "email": "mauro@gelatopetrini.com",
         "label": "Personal",
-        "poll_interval_minutes": 15,
+        "poll_interval_minutes": 720,  # twice daily (noon + midnight)
     },
 ]
 
@@ -115,8 +115,9 @@ class CalendarPoller:
 
     GOOGLE_CALENDAR_API = "https://www.googleapis.com/calendar/v3"
 
-    def __init__(self, vault: FernetVault | None = None):
+    def __init__(self, vault: FernetVault | None = None, google_auth=None):
         self.vault = vault or FernetVault()
+        self.google_auth = google_auth  # GoogleAuth instance for auto-refresh
         self._seen_events: set[str] = set()
         self._load_seen()
 
@@ -149,9 +150,13 @@ class CalendarPoller:
     async def _poll_account(self, account: dict,
                             lookahead_hours: int) -> list[CalendarEvent]:
         """Fetch events from a single Google Calendar account."""
-        token = self.vault.retrieve(f"google_token_{account['id']}")
+        # Use google_auth auto-refresh if available, otherwise fall back to vault
+        if self.google_auth:
+            token = await self.google_auth.get_valid_token(account["id"])
+        else:
+            token = self.vault.retrieve(f"google_token_{account['id']}")
         if not token:
-            logger.warning("No Google token for account '%s' — "
+            logger.warning("No valid Google token for account '%s' — "
                            "run sentinel_config.py to authorize", account["id"])
             # Return demo events for initial setup / testing
             return self._demo_events(account)
@@ -160,8 +165,12 @@ class CalendarPoller:
         time_min = now.isoformat()
         time_max = (now + timedelta(hours=lookahead_hours)).isoformat()
 
+        # Use 'primary' which always refers to the authenticated user's main calendar.
+        # Fall back to the email if needed.
+        calendar_id = "primary"
+
         url = (f"{self.GOOGLE_CALENDAR_API}/calendars/"
-               f"{account['email']}/events")
+               f"{calendar_id}/events")
         params = {
             "timeMin": time_min,
             "timeMax": time_max,

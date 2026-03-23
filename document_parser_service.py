@@ -19,11 +19,24 @@ Usage:
 import os
 import sys
 import json
+import re
 import uuid
 import hashlib
 import logging
 from datetime import datetime
 from typing import Optional
+
+try:
+    from pydantic import BaseModel, field_validator
+    PYDANTIC_AVAILABLE = True
+except ImportError:
+    PYDANTIC_AVAILABLE = False
+
+try:
+    import requests as _requests
+    REQUESTS_AVAILABLE = True
+except ImportError:
+    REQUESTS_AVAILABLE = False
 
 # ── V3 Resilience Integration ──────────────────────────
 FACTORY_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -48,6 +61,35 @@ CATEGORIES = ["Legal", "Finance", "Ops", "Medical", "Technical", "Other"]
 
 # ── Supported file types ──────────────────────────────────
 SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".doc", ".txt", ".csv", ".md"}
+
+
+# ── Pydantic Validation Gate (Rule 0: Critic Gate) ────────
+if PYDANTIC_AVAILABLE:
+    class ValidatedActivity(BaseModel):
+        """Schema gate — every AI-extracted activity must pass this."""
+        activity: str
+        description: str = ""
+        due_date: str | None = None
+        category: str = "Other"
+        priority: str = "normal"
+
+        @field_validator("category")
+        @classmethod
+        def check_category(cls, v):
+            return v if v in CATEGORIES else "Other"
+
+        @field_validator("priority")
+        @classmethod
+        def check_priority(cls, v):
+            return v if v in ("high", "normal", "low") else "normal"
+
+        @field_validator("activity")
+        @classmethod
+        def check_activity(cls, v):
+            v = str(v).strip()[:120]
+            if len(v) < 2:
+                raise ValueError("Activity title too short")
+            return v
 
 
 class DocumentParserService:
@@ -242,8 +284,8 @@ class DocumentParserService:
     def _ai_analyze(self, text: str, file_name: str) -> dict:
         """Use Gemini to categorize and extract entities from document text."""
         api_key = os.getenv("GEMINI_API_KEY", "")
-        if not api_key:
-            logger.warning("GEMINI_API_KEY not set — falling back to keyword categorization")
+        if not api_key or not REQUESTS_AVAILABLE:
+            logger.warning("GEMINI_API_KEY not set or requests unavailable -- keyword fallback")
             return self._keyword_categorize(text)
 
         prompt = f"""Analyze this document and return a JSON object with:
@@ -256,7 +298,7 @@ Document filename: {file_name}
 Document text (first 3000 chars):
 {text[:3000]}
 
-Respond ONLY with valid JSON, no markdown fences."""
+Respond ONLY with a valid JSON object. No markdown fences. Use only ASCII characters."""
 
         try:
             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
@@ -264,23 +306,20 @@ Respond ONLY with valid JSON, no markdown fences."""
                 "contents": [{"parts": [{"text": prompt}]}],
                 "generationConfig": {"temperature": 0.2, "maxOutputTokens": 1024},
             }
-            _v3_status = safe_post(url, payload)
 
-            r = type("Resp", (), {"status_code": 200 if _v3_status == "sent" else 503, "ok": _v3_status == "sent", "text": _v3_status, "json": lambda: {"status": _v3_status}})()
-            if r.status_code != 200:
-                logger.warning(f"Gemini API error: {r.status_code}")
+            resp = _requests.post(url, json=payload, timeout=20)
+            if resp.status_code != 200:
+                logger.warning(f"Gemini API error: {resp.status_code}")
                 return self._keyword_categorize(text)
 
-            response_text = r.json()["candidates"][0]["content"]["parts"][0]["text"]
-            # Strip markdown fences if present
-            response_text = response_text.strip()
-            if response_text.startswith("```"):
-                response_text = response_text.split("\n", 1)[1].rsplit("```", 1)[0]
+            response_text = resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
 
+            # Robust JSON extraction
+            response_text = self._extract_json(response_text)
             return json.loads(response_text)
 
         except Exception as e:
-            logger.warning(f"AI analysis failed ({e}) — using keyword fallback")
+            logger.warning(f"AI analysis failed ({e}) -- using keyword fallback")
             return self._keyword_categorize(text)
 
     def _keyword_categorize(self, text: str) -> dict:
@@ -327,32 +366,24 @@ Respond ONLY with valid JSON, no markdown fences."""
         """
         Extract individual activities/tasks from document text.
 
-        Each activity is returned as:
-            {
-                "activity": "short action title",
-                "description": "detailed description",
-                "due_date": "ISO date or null",
-                "category": "one of CATEGORIES",
-                "priority": "high|normal|low"
-            }
-
-        Uses Gemini for intelligent extraction, falls back to
+        Uses Gemini AI for intelligent extraction with a Pydantic
+        validation gate (Rule 0 Critic Gate), falls back to
         regex-based extraction if unavailable.
         """
         api_key = os.getenv("GEMINI_API_KEY", "")
-        if not api_key:
-            logger.warning("GEMINI_API_KEY not set — using fallback activity extraction")
+        if not api_key or not REQUESTS_AVAILABLE:
+            logger.warning("GEMINI_API_KEY not set -- using fallback activity extraction")
             return self._fallback_extract_activities(raw_text)
 
-        prompt = f"""You are analyzing a document to extract EVERY individual task, activity, 
-obligation, deadline, action item, or scheduled event mentioned.
+        prompt = f"""You are analyzing a document to extract EVERY individual task, activity,
+obligation, deadline, action item, expiration date, or scheduled event mentioned.
 
 For EACH activity found, return a JSON object with:
 - "activity": short title (max 80 chars)
 - "description": 1-2 sentence detailed description of what needs to happen
-- "due_date": ISO date string (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS) if any date/deadline is mentioned, otherwise null
-- "category": one of {CATEGORIES} — classify what business domain this activity belongs to
-- "priority": "high" if it's urgent/legal/financial, "normal" otherwise, "low" if informational
+- "due_date": ISO date string (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS) if any date/deadline/expiration is mentioned, otherwise null
+- "category": one of {CATEGORIES} -- classify what business domain this activity belongs to
+- "priority": "high" if it is urgent/legal/financial/expiring soon, "normal" otherwise, "low" if informational
 
 Return a JSON array of these objects. If no activities are found, return an empty array [].
 
@@ -362,7 +393,7 @@ Current date for reference: {datetime.now().strftime('%Y-%m-%d')}
 Document text (first 4000 chars):
 {raw_text[:4000]}
 
-Respond ONLY with a valid JSON array, no markdown fences."""
+Respond ONLY with a valid JSON array. No markdown fences. Use only ASCII characters."""
 
         try:
             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
@@ -370,38 +401,47 @@ Respond ONLY with a valid JSON array, no markdown fences."""
                 "contents": [{"parts": [{"text": prompt}]}],
                 "generationConfig": {"temperature": 0.2, "maxOutputTokens": 4096},
             }
-            _v3_status = safe_post(url, payload)
 
-            r = type("Resp", (), {"status_code": 200 if _v3_status == "sent" else 503, "ok": _v3_status == "sent", "text": _v3_status, "json": lambda: {"status": _v3_status}})()
-            if r.status_code != 200:
-                logger.warning(f"Gemini API error: {r.status_code}")
+            resp = _requests.post(url, json=payload, timeout=25)
+            if resp.status_code != 200:
+                logger.warning(f"Gemini API error: {resp.status_code}")
                 return self._fallback_extract_activities(raw_text)
 
-            response_text = r.json()["candidates"][0]["content"]["parts"][0]["text"]
-            response_text = response_text.strip()
-            if response_text.startswith("```"):
-                response_text = response_text.split("\n", 1)[1].rsplit("```", 1)[0]
+            response_text = resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+            response_text = self._extract_json(response_text)
 
             activities = json.loads(response_text)
             if not isinstance(activities, list):
                 activities = [activities]
 
-            # Validate and sanitize each activity
+            # ── Rule 0 Critic Gate: Pydantic validation ──
             validated = []
+            rejected = 0
             for act in activities:
-                validated.append({
-                    "activity": str(act.get("activity", "Untitled"))[:120],
-                    "description": str(act.get("description", ""))[:300],
-                    "due_date": act.get("due_date"),
-                    "category": act.get("category", "Other") if act.get("category") in CATEGORIES else "Other",
-                    "priority": act.get("priority", "normal") if act.get("priority") in ("high", "normal", "low") else "normal",
-                })
+                if PYDANTIC_AVAILABLE:
+                    try:
+                        v = ValidatedActivity(**act)
+                        validated.append(v.model_dump())
+                    except Exception as ve:
+                        rejected += 1
+                        logger.warning(f"Critic gate rejected activity: {ve}")
+                else:
+                    # Manual validation fallback
+                    validated.append({
+                        "activity": str(act.get("activity", "Untitled"))[:120],
+                        "description": str(act.get("description", ""))[:300],
+                        "due_date": act.get("due_date"),
+                        "category": act.get("category", "Other") if act.get("category") in CATEGORIES else "Other",
+                        "priority": act.get("priority", "normal") if act.get("priority") in ("high", "normal", "low") else "normal",
+                    })
 
+            if rejected:
+                logger.info(f"Critic gate: {rejected} activities rejected, {len(validated)} passed")
             logger.info(f"Extracted {len(validated)} activities from {file_name}")
             return validated
 
         except Exception as e:
-            logger.warning(f"AI activity extraction failed ({e}) — using fallback")
+            logger.warning(f"AI activity extraction failed ({e}) -- using fallback")
             return self._fallback_extract_activities(raw_text)
 
     def _fallback_extract_activities(self, text: str) -> list[dict]:
@@ -457,6 +497,30 @@ Respond ONLY with a valid JSON array, no markdown fences."""
     # ═══════════════════════════════════════════════════════
     #  UTILITIES
     # ═══════════════════════════════════════════════════════
+
+    def _extract_json(self, text: str) -> str:
+        """Robustly extract JSON from Gemini response text."""
+        # Strip markdown fences
+        if "```" in text:
+            match = re.search(r'```(?:json)?\s*\n?(.*?)\n?```', text, re.DOTALL)
+            if match:
+                text = match.group(1).strip()
+
+        # Find JSON boundaries (object or array)
+        start_obj = text.find("{")
+        start_arr = text.find("[")
+        if start_arr != -1 and (start_obj == -1 or start_arr < start_obj):
+            end = text.rfind("]")
+            if end > start_arr:
+                text = text[start_arr:end + 1]
+        elif start_obj != -1:
+            end = text.rfind("}")
+            if end > start_obj:
+                text = text[start_obj:end + 1]
+
+        # Sanitize unicode
+        text = text.encode('ascii', 'replace').decode('ascii')
+        return text
 
     def _compute_hash(self, file_path: str) -> str:
         """Compute SHA-256 hash of a file for dedup."""

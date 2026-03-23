@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Sentinel Bridge — User Guide</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f0f1a;color:#e2e8f0;line-height:1.7;padding:40px 20px}
+  .container{max-width:900px;margin:0 auto}
+  h1{font-size:28px;color:#60a5fa;margin:32px 0 8px;border-bottom:2px solid #60a5fa40;padding-bottom:8px}
+  h2{font-size:22px;color:#f1f5f9;margin:28px 0 12px}
+  h3{font-size:17px;color:#94a3b8;margin:20px 0 8px}
+  p{margin:6px 0;color:#cbd5e1}
+  strong{color:#f1f5f9}
+  em{color:#94a3b8}
+  code{background:rgba(255,255,255,0.08);padding:2px 6px;border-radius:4px;font-size:13px;color:#60a5fa}
+  pre{margin:12px 0;color:#a5b4fc;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:16px;overflow-x:auto;font-size:13px}
+  blockquote{border-left:3px solid #60a5fa;padding:8px 16px;margin:12px 0;background:rgba(255,255,255,0.02);border-radius:0 8px 8px 0;color:#94a3b8;font-style:italic}
+  hr{border:none;border-top:1px solid rgba(255,255,255,0.08);margin:24px 0}
+  li{margin:4px 0 4px 20px;color:#cbd5e1}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px}
+  th{background:rgba(255,255,255,0.06);padding:10px 12px;text-align:left;border:1px solid rgba(255,255,255,0.08);color:#f1f5f9;font-weight:600}
+  td{padding:8px 12px;border:1px solid rgba(255,255,255,0.06);color:#cbd5e1}
+  tr:hover td{background:rgba(255,255,255,0.02)}
+  .mermaid-box{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:20px;margin:16px 0;text-align:center;color:#9ca3af;font-style:italic}
+  .mermaid-box code{display:block;font-size:11px;color:#6b7280;text-align:left}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>Sentinel Bridge — User Guide</h1>
+<h3>Your AI-Powered Task Manager</h3>
+<p><strong>Version:</strong> 2.0 | <strong>Date:</strong> March 23, 2026</p>
+<p><strong>By:</strong> Antigravity-AI</p>
+
+<hr>
+
+<h2>What is Sentinel Bridge?</h2>
+
+<p>Sentinel Bridge is a <strong>smart task manager</strong> that goes beyond simple to-do lists. It connects to your Google Calendar, reads your documents, and uses artificial intelligence to organize your life — automatically.</p>
+
+<p><strong>Think of it as a personal assistant that:</strong></p>
+<li>📅 Watches your calendars and turns events into trackable tasks</li>
+<li>📄 Reads your documents and extracts action items</li>
+<li>🧠 Categorizes everything automatically (Work, Family, School, etc.)</li>
+<li>⏰ Suggests the best times to schedule tasks based on your actual availability</li>
+<li>📲 Sends push notifications to your phone when things are due</li>
+
+<hr>
+
+<h2>Getting Started</h2>
+
+<h3>1. Open the Dashboard</h3>
+<p>Navigate to your Sentinel Bridge dashboard in any browser. It works on desktop, tablet, and phone.</p>
+
+<h3>2. Connect Your Calendars</h3>
+<p>Click <strong>Calendars</strong> in the top right → authorize your Google accounts. Sentinel syncs:</p>
+<li>**Work calendar** (e.g., office@company.com)</li>
+<li>**Personal calendar** (e.g., you@gmail.com)</li>
+
+<h3>3. Start Adding Tasks</h3>
+<p>You have <strong>three ways</strong> to add tasks:</p>
+
+<table>
+<tr><th>Method</th><th>How</th></tr>
+<tr><td>**Type it**</td><td>Type naturally: *"Pick up Leo at 4pm tomorrow"* → Sentinel extracts the time, category, and priority</td></tr>
+<tr><td>**Speak it**</td><td>Tap the 🎤 button → speak your reminder → done</td></tr>
+<tr><td>**Upload a document**</td><td>Click "Upload & Parse Document" → drop a PDF or Word doc → Sentinel extracts all action items</td></tr>
+</table>
+
+<hr>
+
+<h2>Key Features</h2>
+
+<h3>🧠 Smart Scheduling</h3>
+<p>When you click <strong>+ New Task</strong>, Sentinel checks your calendar availability and shows <strong>green time suggestion pills</strong>:</p>
+
+<blockquote>*Today 9:00 AM - 10:00 AM* · *Today 2:00 PM - 3:00 PM* · *Tomorrow 8:00 AM - 9:00 AM*</blockquote>
+
+<p><strong>Tap any pill</strong> to instantly schedule your task at that time. No more guessing when you're free.</p>
+
+<hr>
+
+<h3>⚡ Active / Done / All Filters</h3>
+<p>At the top of your reminders list, use the filter tabs:</p>
+<li>**⚡ Active** — Tasks you need to do (default view)</li>
+<li>**✅ Done** — Completed tasks</li>
+<li>**📋 All** — Everything including done tasks</li>
+
+<p><strong>Search bar:</strong> Type to filter by task name or category.</p>
+
+<hr>
+
+<h3>🏷️ Auto-Categorization</h3>
+<p>Sentinel automatically assigns categories based on keywords:</p>
+
+<table>
+<tr><th>Category</th><th>Example Tasks</th></tr>
+<tr><td>**Work**</td><td>Meetings, interviews, vendor reviews</td></tr>
+<tr><td>**Family**</td><td>Dentist appointments, school pickup</td></tr>
+<tr><td>**Leo's School**</td><td>Parent-teacher conferences, homework</td></tr>
+<tr><td>**AI**</td><td>Model training, API integration</td></tr>
+<tr><td>**Legal**</td><td>FDA audits, contract reviews</td></tr>
+</table>
+
+<p><strong>Teach it:</strong> If Sentinel categorizes something wrong, click the category badge → pick the correct one. Sentinel <strong>learns</strong> from your correction and gets smarter over time.</p>
+
+<hr>
+
+<h3>📄 Document Parser</h3>
+<p>Upload any PDF or Word document. Sentinel's AI reads it and extracts all actionable items:</p>
+<li>Due dates</li>
+<li>Priorities</li>
+<li>Categories</li>
+<li>Responsible parties</li>
+
+<p>Each extracted task is added to your list and synced to your calendar.</p>
+
+<hr>
+
+<h3>📲 Push Notifications</h3>
+<p>Sentinel sends reminders to your phone via <strong>ntfy</strong>:</p>
+<p>1. Install the [ntfy app](https://ntfy.sh) on your phone</p>
+<p>2. Subscribe to your private topic</p>
+<p>3. Get notifications for upcoming tasks, overdue items, and completed tasks</p>
+
+<p><strong>Quiet Hours:</strong> Sentinel won't ping you between 10 PM and 7 AM (unless it's high priority).</p>
+
+<hr>
+
+<h3>📅 Calendar Sync</h3>
+<p>Every task you create automatically appears in the right Google Calendar:</p>
+<li>Work tasks → Work calendar</li>
+<li>Family tasks → Personal calendar</li>
+
+<p>When you mark a task <strong>done</strong>, the calendar event is automatically removed. Everything stays in sync.</p>
+
+<hr>
+
+<h3>⏰ Overdue Detection</h3>
+<p>Tasks past their due date show:</p>
+<li>🔴 Red dot indicator</li>
+<li>**OVERDUE** badge (pulsing)</li>
+<li>Red left border</li>
+
+<p>You can't miss them.</p>
+
+<hr>
+
+<h3>📋 Task Actions</h3>
+
+<table>
+<tr><th>Action</th><th>How</th><th>What Happens</th></tr>
+<tr><td>**Done**</td><td>Tap ✅</td><td>Task moves to Done tab, calendar event deleted, notification sent</td></tr>
+<tr><td>**Snooze**</td><td>Tap 😴</td><td>Task delayed, notification rescheduled</td></tr>
+<tr><td>**Edit**</td><td>Tap ✏️</td><td>Change title, due date</td></tr>
+<tr><td>**Archive**</td><td>Swipe left (mobile)</td><td>Task hidden from all views</td></tr>
+<tr><td>**Change Category**</td><td>Tap category badge</td><td>Pick new category, ML learns your preference</td></tr>
+</table>
+
+<hr>
+
+<h2>Why Sentinel Bridge vs. Other Apps?</h2>
+
+<table>
+<tr><th></th><th>Todoist</th><th>Google Tasks</th><th>**Sentinel**</th></tr>
+<tr><td>Auto-categorize tasks</td><td>❌</td><td>❌</td><td>**✅**</td></tr>
+<tr><td>Read documents for tasks</td><td>❌</td><td>❌</td><td>**✅**</td></tr>
+<tr><td>Suggest free times</td><td>❌</td><td>❌</td><td>**✅**</td></tr>
+<tr><td>Sync multiple calendars</td><td>❌</td><td>⚠️ One only</td><td>**✅ All**</td></tr>
+<tr><td>Learn from your corrections</td><td>❌</td><td>❌</td><td>**✅**</td></tr>
+<tr><td>Voice input with AI</td><td>❌</td><td>⚠️ Basic</td><td>**✅ Smart**</td></tr>
+<tr><td>Quiet hours</td><td>❌</td><td>❌</td><td>**✅**</td></tr>
+</table>
+
+<hr>
+
+<h2>Tips & Tricks</h2>
+
+<p>1. <strong>Natural language works:</strong> Type <em>"Call dentist next Tuesday at 2pm"</em> — Sentinel understands.</p>
+<p>2. <strong>Bulk import:</strong> Upload meeting agendas or project plans as PDFs — get all tasks instantly.</p>
+<p>3. <strong>Category shortcuts:</strong> The ML engine learns fast. After 3-5 corrections, it auto-categorizes accurately.</p>
+<p>4. <strong>Mobile-friendly:</strong> Sentinel is a PWA — add it to your home screen for app-like experience.</p>
+<p>5. <strong>Force refresh:</strong> Pull down on mobile to refresh all data.</p>
+
+<hr>
+
+<h2>Troubleshooting</h2>
+
+<table>
+<tr><th>Issue</th><th>Solution</th></tr>
+<tr><td>Calendar not syncing</td><td>Go to Calendars → Re-authorize your account</td></tr>
+<tr><td>Not receiving notifications</td><td>Check ntfy app → verify you're subscribed to the right topic</td></tr>
+<tr><td>Task not showing</td><td>Check if you're on the "Active" tab — it might be in "Done" or "All"</td></tr>
+<tr><td>Wrong category</td><td>Tap the category badge to correct it — Sentinel learns</td></tr>
+</table>
+
+<hr>
+
+<p><em>Sentinel Bridge — Your AI assistant that schedules, organizes, and reminds. So you can focus on what matters.</em></p>
+
+</div>
+</body>
+</html>

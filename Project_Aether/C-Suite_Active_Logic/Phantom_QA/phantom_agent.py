@@ -313,23 +313,288 @@ def run_resonance_suite(persona: Persona, base_url: str = "http://localhost:5006
     return runner.results, report_path
 
 
+# ── Sentinel Bridge Test Suite ─────────────────────────
+def run_sentinel_suite(base_url: str = "http://localhost:5009"):
+    """Full regression test suite for Sentinel Bridge."""
+    logger.info(f"═══ PHANTOM QA: Testing Sentinel Bridge ═══")
+    runner = PlaybookRunner(base_url)
+
+    # 1. Health Check
+    runner.test_endpoint("GET", "/", "Root Health Check",
+                         check_field="status", check_value="active")
+
+    # 2. Dashboard Loads
+    runner.test_endpoint("GET", "/dashboard", "Dashboard HTML Loads", expected_status=200)
+
+    # 3. PWA Manifest
+    runner.test_endpoint("GET", "/manifest.json", "PWA Manifest",
+                         check_field="short_name", check_value="Sentinel")
+
+    # 4. Service Worker
+    runner.test_endpoint("GET", "/sw.js", "Service Worker JS", expected_status=200)
+
+    # 5. Create Reminder
+    runner.test_endpoint("POST", "/api/reminders", "Create Reminder",
+                         payload={"text": "Phantom QA test reminder — delete me", "source": "phantom_qa"},
+                         check_field="status", check_value="created")
+
+    # 6. List Reminders
+    runner.test_endpoint("GET", "/api/reminders", "List Reminders",
+                         check_field="total")
+
+    # 7. Categories
+    runner.test_endpoint("GET", "/api/categories", "List Categories")
+
+    # 8. Calendar Events
+    runner.test_endpoint("GET", "/api/calendar/events?month=3&year=2026", "Calendar Events API")
+
+    # 9. Telemetry
+    runner.test_endpoint("GET", "/api/telemetry", "Telemetry Dashboard",
+                         check_field="app", check_value="Sentinel Bridge")
+
+    # 10. Tunnel Status
+    runner.test_endpoint("GET", "/api/tunnel/status", "Tunnel Status API")
+
+    # 11. Vault Audit
+    runner.test_endpoint("GET", "/api/vault/audit", "Vault Audit API")
+
+    # 12. Self-Heal Status
+    runner.test_endpoint("GET", "/api/selfheal", "Self-Heal Dashboard")
+
+    # Generate Report
+    report_path = generate_report("Sentinel", "admin", runner.results)
+
+    total = len(runner.results)
+    passed = sum(1 for r in runner.results if r.passed)
+    logger.info(f"=== RESULTS: {passed}/{total} passed ===")
+    return runner.results, report_path
+
+
+# ══════════════════════════════════════════════════════════
+#  DYNAMIC PERSONA GENERATOR
+# ══════════════════════════════════════════════════════════
+
+class DynamicPersonaGenerator:
+    """
+    Generates task-specific test personas using Gemini AI.
+    This ensures Phantom QA is NOT limited to pre-built apps —
+    it can create appropriate testers for ANY application or feature.
+    """
+
+    @staticmethod
+    def generate(app_name: str, app_description: str = "",
+                 base_url: str = "", num_personas: int = 2) -> list:
+        """
+        Generate test personas tailored to a specific app/task.
+
+        Returns a list of persona dicts with: name, role, behaviors, test_prompts
+        """
+        api_key = os.environ.get("GEMINI_API_KEY", "")
+        if not api_key:
+            logger.warning("No GEMINI_API_KEY — using default generic personas")
+            return DynamicPersonaGenerator._generic_personas(app_name)
+
+        gen_prompt = f"""You are Phantom QA, an autonomous testing agent.
+Generate {num_personas} distinct test personas for the app "{app_name}".
+{f'App description: {app_description}' if app_description else ''}
+{f'Base URL: {base_url}' if base_url else ''}
+
+Each persona should simulate a different type of user who would realistically
+use this application. Include edge-case testers and adversarial testers.
+
+Respond with a JSON array where each element has:
+- "name": short first name for the persona
+- "role": 1-line description of who they are
+- "behaviors": array of 3-4 testing behaviors they exhibit
+- "test_endpoints": array of objects with "method", "path", "name", "payload" (optional)
+
+The test_endpoints should cover realistic user journeys for this specific app.
+Include both happy-path and edge-case tests.
+
+Respond ONLY with valid JSON array, no markdown fences."""
+
+        try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+            payload = {
+                "contents": [{"parts": [{"text": gen_prompt}]}],
+                "generationConfig": {"temperature": 0.5, "maxOutputTokens": 4096},
+            }
+            resp = requests.post(url, json=payload, timeout=30)
+            if resp.status_code != 200:
+                logger.warning(f"Gemini persona gen failed: {resp.status_code}")
+                return DynamicPersonaGenerator._generic_personas(app_name)
+
+            text = resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+            if text.startswith("```"):
+                text = text.split("\n", 1)[1].rsplit("```", 1)[0]
+
+            personas = json.loads(text)
+            logger.info(f"Generated {len(personas)} dynamic personas for {app_name}")
+
+            # Save generated personas for future reference
+            for p in personas:
+                save_path = os.path.join(PERSONAS_DIR, f"dynamic_{app_name}_{p['name'].lower()}.json")
+                with open(save_path, "w", encoding="utf-8") as f:
+                    json.dump(p, f, indent=2)
+                logger.info(f"  Saved persona: {p['name']} ({p['role']})")
+
+            return personas
+
+        except Exception as e:
+            logger.warning(f"Dynamic persona generation failed: {e}")
+            return DynamicPersonaGenerator._generic_personas(app_name)
+
+    @staticmethod
+    def _generic_personas(app_name: str) -> list:
+        """Fallback: generate generic test personas without AI."""
+        return [
+            {
+                "name": "PowerUser",
+                "role": f"Experienced {app_name} user — exercises every feature",
+                "behaviors": [
+                    "Rapid API calls", "Tests all CRUD operations",
+                    "Uploads files", "Checks edge cases"
+                ],
+                "test_endpoints": [
+                    {"method": "GET", "path": "/", "name": "Root endpoint"},
+                    {"method": "GET", "path": "/api/health", "name": "Health check"},
+                    {"method": "GET", "path": "/api/status", "name": "Status endpoint"},
+                ]
+            },
+            {
+                "name": "Adversary",
+                "role": f"Security tester — tries to break {app_name}",
+                "behaviors": [
+                    "Sends malformed input", "Tests auth boundaries",
+                    "Injects special characters", "Tests rate limits"
+                ],
+                "test_endpoints": [
+                    {"method": "GET", "path": "/", "name": "Root access"},
+                    {"method": "POST", "path": "/api/health", "name": "POST to GET endpoint"},
+                    {"method": "GET", "path": "/nonexistent", "name": "404 handling"},
+                ]
+            }
+        ]
+
+
+# ══════════════════════════════════════════════════════════
+#  UNIVERSAL APP SCANNER (Dynamic Test Suite)
+# ══════════════════════════════════════════════════════════
+
+def run_dynamic_suite(app_name: str, base_url: str,
+                      app_description: str = "") -> tuple:
+    """
+    Dynamic test suite that works with ANY application.
+
+    1. Probes the app for common endpoints (OpenAPI, health, root)
+    2. Generates AI-powered personas specific to the app
+    3. Runs their test_endpoints against the live server
+    4. Generates a report
+
+    This ensures Phantom QA is never limited to hardcoded app suites.
+    """
+    logger.info(f"=== PHANTOM QA: Dynamic Testing '{app_name}' at {base_url} ===")
+    runner = PlaybookRunner(base_url)
+
+    # Phase 1: Standard probe endpoints (works for any HTTP app)
+    logger.info("Phase 1: Standard endpoint probe")
+    runner.test_endpoint("GET", "/", "Root Endpoint Probe")
+
+    # Try common health patterns
+    for health_path in ["/api/health", "/health", "/healthz", "/api/status"]:
+        try:
+            r = requests.get(f"{base_url}{health_path}", timeout=5)
+            if r.status_code == 200:
+                runner.test_endpoint("GET", health_path, f"Health Check ({health_path})")
+                break
+        except Exception:
+            continue
+
+    # Try OpenAPI/docs for endpoint discovery
+    openapi_endpoints = []
+    for docs_path in ["/openapi.json", "/docs", "/api/docs"]:
+        try:
+            r = requests.get(f"{base_url}{docs_path}", timeout=5)
+            if r.status_code == 200 and docs_path.endswith(".json"):
+                spec = r.json()
+                paths = spec.get("paths", {})
+                for path, methods in paths.items():
+                    for method in methods:
+                        if method.upper() in ["GET", "POST", "PUT", "DELETE"]:
+                            openapi_endpoints.append({
+                                "method": method.upper(),
+                                "path": path,
+                                "name": f"OpenAPI: {method.upper()} {path}"
+                            })
+                logger.info(f"Discovered {len(openapi_endpoints)} endpoints from OpenAPI")
+                break
+        except Exception:
+            continue
+
+    # Test discovered OpenAPI endpoints (limit to 10 for sanity)
+    if openapi_endpoints:
+        logger.info("Phase 2: OpenAPI-discovered endpoints")
+        for ep in openapi_endpoints[:10]:
+            runner.test_endpoint(ep["method"], ep["path"], ep["name"])
+
+    # Phase 3: Dynamic persona-driven testing
+    logger.info("Phase 3: AI persona-driven testing")
+    personas = DynamicPersonaGenerator.generate(
+        app_name, app_description, base_url
+    )
+
+    for persona in personas:
+        logger.info(f"  Testing as: {persona['name']} ({persona['role']})")
+        for ep in persona.get("test_endpoints", []):
+            method = ep.get("method", "GET")
+            path = ep.get("path", "/")
+            name = f"[{persona['name']}] {ep.get('name', path)}"
+            payload = ep.get("payload")
+            expected = ep.get("expected_status", 200)
+            runner.test_endpoint(method, path, name,
+                                 expected_status=expected, payload=payload)
+
+    # Generate Report
+    persona_names = "+".join(p["name"] for p in personas)
+    report_path = generate_report(app_name, f"dynamic_{persona_names}", runner.results)
+
+    total = len(runner.results)
+    passed = sum(1 for r in runner.results if r.passed)
+    logger.info(f"=== RESULTS: {passed}/{total} passed ===")
+    return runner.results, report_path
+
+
 # ── Main Entry Point ───────────────────────────────────
 if __name__ == "__main__":
     import argparse
-    parser = argparse.ArgumentParser(description="Phantom QA Agent")
-    parser.add_argument("--app", default="Resonance", help="App to test")
-    parser.add_argument("--persona", default="leo_friend", help="Persona to use")
-    parser.add_argument("--url", default="http://localhost:5006", help="Base URL")
+    parser = argparse.ArgumentParser(description="Phantom QA Agent — Universal Testing Engine")
+    parser.add_argument("--app", default="Resonance",
+                        help="App to test. Use any name — dynamic testing activates for unknown apps.")
+    parser.add_argument("--persona", default="leo_friend", help="Persona to use (Resonance only)")
+    parser.add_argument("--url", help="Base URL override")
+    parser.add_argument("--describe", default="",
+                        help="App description for dynamic persona generation")
     args = parser.parse_args()
 
-    persona = Persona(args.persona)
+    app = args.app.lower()
 
-    if args.app.lower() == "resonance":
-        results, report = run_resonance_suite(persona, args.url)
+    if app == "resonance":
+        url = args.url or "http://localhost:5006"
+        persona = Persona(args.persona)
+        results, report = run_resonance_suite(persona, url)
+    elif app == "sentinel":
+        url = args.url or "http://localhost:5009"
+        results, report = run_sentinel_suite(url)
     else:
-        logger.error(f"No test suite registered for app: {args.app}")
-        sys.exit(1)
+        # Dynamic testing for ANY app
+        url = args.url
+        if not url:
+            logger.error(f"--url is required for dynamic testing of '{args.app}'")
+            sys.exit(1)
+        logger.info(f"No built-in suite for '{args.app}' — activating DYNAMIC testing")
+        results, report = run_dynamic_suite(args.app, url, args.describe)
 
     # Exit with failure code if any tests failed
     failed = sum(1 for r in results if not r.passed)
     sys.exit(1 if failed > 0 else 0)
+

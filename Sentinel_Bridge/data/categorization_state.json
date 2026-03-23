@@ -3,7 +3,8 @@
     "AI",
     "Work",
     "Leo's School",
-    "Family"
+    "Family",
+    "Legal"
   ],
   "keyword_weights": {
     "Leo's School": {
@@ -36,14 +37,15 @@
     },
     "Family": {
       "doctor": 0.65,
-      "dentist": 0.5,
-      "appointment": 0.65,
+      "dentist": 0.65,
+      "appointment": 0.7999999999999999,
       "birthday": 0.5,
       "anniversary": 0.5,
       "family dinner": 0.5,
       "reservation": 0.5,
       "vacation": 0.5,
-      "don": 0.15
+      "don": 0.15,
+      "cleaning": 0.15
     },
     "AI": {
       "model training": 0.5,
@@ -58,6 +60,15 @@
       "appointment": 0.29999999999999993,
       "don": 0.15,
       "dawn": 0.15
+    },
+    "Legal": {
+      "phantom": 0.3,
+      "snooze": 0.3,
+      "test": 0.3,
+      "fda": 0.3,
+      "audit": 0.3,
+      "due": 0.3,
+      "april": 0.3
     }
   },
   "custom_rules": [],
@@ -82,7 +93,21 @@
       "old_category": "AI",
       "new_category": "AI",
       "timestamp": "2026-03-10T16:51:51.806396+00:00"
+    },
+    {
+      "reminder_id": "67daa8e3",
+      "text": "Phantom QA snooze test - FDA audit due April 15",
+      "old_category": "Uncategorized",
+      "new_category": "Legal",
+      "timestamp": "2026-03-23T03:32:15.194126+00:00"
+    },
+    {
+      "reminder_id": "9a600867",
+      "text": "Dentist Appointment for Cleaning",
+      "old_category": "Family",
+      "new_category": "Family",
+      "timestamp": "2026-03-23T03:44:57.943178+00:00"
     }
   ],
-  "last_updated": "2026-03-10T16:51:51.806440+00:00"
+  "last_updated": "2026-03-23T03:44:57.943414+00:00"
 }
