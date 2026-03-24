@@ -460,6 +460,92 @@ body {
   transform: none;
 }
 
+/* ══ BUILD PROGRESS BANNER ═══════════════════════════════ */
+.build-progress-banner {
+  padding: 0.7rem 1rem;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(16, 185, 129, 0.06));
+  border-bottom: 1px solid rgba(99, 102, 241, 0.15);
+  animation: progressFadeIn 0.4s ease-out;
+}
+
+@keyframes progressFadeIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.build-progress-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.build-progress-icon {
+  font-size: 1rem;
+}
+
+.build-progress-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-hover);
+}
+
+.build-progress-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  animation: progressPulse 1.2s ease-in-out infinite;
+  margin-left: auto;
+}
+
+@keyframes progressPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.4; transform: scale(0.75); }
+}
+
+.build-progress-bar-track {
+  width: 100%;
+  height: 4px;
+  border-radius: 4px;
+  background: rgba(30, 41, 59, 0.6);
+  overflow: hidden;
+  margin-bottom: 0.4rem;
+}
+
+.build-progress-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--accent), #10b981, #06b6d4);
+  background-size: 200% 100%;
+  animation: progressShimmer 2s ease-in-out infinite;
+}
+
+@keyframes progressShimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.build-progress-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.build-progress-timer {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  color: var(--accent-hover);
+  background: rgba(99, 102, 241, 0.1);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
 /* ══ COMMAND PALETTE ═══════════════════════════════════ */
 .command-palette {
   display: flex;

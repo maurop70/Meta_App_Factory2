@@ -98,10 +98,15 @@ const USAGE_INTENT_SIGNALS = [
 ];
 
 const USAGE_WALKTHROUGHS = [
-  // ── BUILD / CREATE must come FIRST (highest priority) ──────
+  // ── PROGRESS / STATUS must come FIRST (highest priority) ──────
+  {
+    keywords: ['progress', 'status', 'monitor', 'tracking', 'building progress'],
+    response: "You can track your build progress right in the **Builder Chat**:\n\n1. Open **Builder Chat** from the sidebar\n2. Type your app description and press **Ctrl+Enter** to send\n3. Then click the green **🚀 Deploy** button in the top-right corner\n4. The build will stream live updates — you'll see each step as it happens:\n   • 🏗️ Build Started\n   • 📋 Registry Update\n   • 🧪 Phantom QA Gate (automated testing)\n   • ✅ Build Complete\n\nThe streaming progress appears directly in the chat window. If something fails, you'll see the exact error message.\n\n💡 **Tip:** The **Telemetry Bar** at the bottom of the screen also shows when the system is actively streaming.",
+  },
+  // ── BUILD / CREATE (second priority) ──────
   {
     keywords: ['build', 'create', 'new app', 'make an app', 'scaffold', 'generate', 'develop', 'translator', 'converter'],
-    response: "To build a new app:\n\n1. Open the **Builder Chat** from the sidebar\n2. Describe what you want to build in plain language — for example: \"Build me a customer feedback dashboard with charts\"\n3. Choose a blueprint if prompted (or we'll pick the best one for you)\n4. Watch the live build progress as your app is assembled\n\nOnce it's built, it'll appear in the **Active Apps** section of the sidebar!",
+    response: "To build a new app:\n\n1. Open the **Builder Chat** from the sidebar\n2. Describe what you want to build in plain language — for example: \"Build me a customer feedback dashboard with charts\"\n3. Press **Ctrl+Enter** to send your description\n4. Click the green **🚀 Deploy** button to start the build\n5. Watch the live build progress as your app is assembled\n\nOnce it's built, it'll appear in the **Active Apps** section of the sidebar!",
   },
   {
     keywords: ['triad', 'triad execute', 'specialist', 'specialists', 'coordinate'],
@@ -139,9 +144,10 @@ const USAGE_WALKTHROUGHS = [
  * Returns a walkthrough string if matched, or null to continue to the security guard.
  *
  * PRIORITY LOGIC:
- * 1. Build/create intent phrases are checked FIRST (e.g., "I want to create...")
- * 2. Single-keyword matches are checked in array order (build > file > others)
- * 3. This prevents ambiguous words like "document" from overriding build intent.
+ * 0. Progress/status phrases are checked FIRST (e.g., "where can I see the progress...")
+ * 1. Build/create intent phrases are checked SECOND (e.g., "I want to create...")
+ * 2. Single-keyword matches are checked in array order (progress > build > file > others)
+ * 3. This prevents ambiguous words like "building" from overriding progress intent.
  */
 function usageWalkthroughCheck(userText) {
   const lower = userText.toLowerCase();
@@ -150,7 +156,21 @@ function usageWalkthroughCheck(userText) {
   const hasUsageIntent = USAGE_INTENT_SIGNALS.some(signal => lower.includes(signal));
   if (!hasUsageIntent) return null;
 
-  // PHASE 1: Check for BUILD/CREATE intent phrases first (multi-word priority)
+  // PHASE 0: Check for PROGRESS/STATUS intent first
+  const PROGRESS_PHRASES = [
+    'progress of', 'see the progress', 'check the progress',
+    'track the progress', 'build progress', 'building progress',
+    'is it building', 'is it working', 'still building',
+    'where can i see', 'where do i see', 'how do i check',
+    'how do i monitor', 'how do i track', 'status of',
+    'check status', 'build status', 'what is the status',
+    'is the build', 'how long', 'how is the build',
+  ];
+  if (PROGRESS_PHRASES.some(phrase => lower.includes(phrase))) {
+    return USAGE_WALKTHROUGHS[0].response; // PROGRESS walkthrough (index 0)
+  }
+
+  // PHASE 1: Check for BUILD/CREATE intent phrases (multi-word priority)
   const BUILD_PHRASES = [
     'create a', 'build a', 'make a', 'develop a', 'generate a',
     'i want to create', 'i want to build', 'i want to make',
@@ -159,10 +179,10 @@ function usageWalkthroughCheck(userText) {
     'can i create', 'can i build', 'can you create', 'can you build',
   ];
   if (BUILD_PHRASES.some(phrase => lower.includes(phrase))) {
-    return USAGE_WALKTHROUGHS[0].response; // BUILD walkthrough (index 0)
+    return USAGE_WALKTHROUGHS[1].response; // BUILD walkthrough (index 1)
   }
 
-  // PHASE 2: Standard keyword matching (in array order, so build > file > others)
+  // PHASE 2: Standard keyword matching (in array order)
   for (const walkthrough of USAGE_WALKTHROUGHS) {
     if (walkthrough.keywords.some(kw => lower.includes(kw))) {
       return walkthrough.response;
