@@ -181,6 +181,13 @@ async def build_stream(req: BuildRequest):
             except Exception as e:
                 progress_queue.put({"step": "PHANTOM_QA", "text": f"⚠️ Phantom QA skipped: {str(e)[:100]}"})
 
+        if build_ok and PRES_SYNC_AVAILABLE:
+            try:
+                _sync_presentations()
+                progress_queue.put({"step": "PRES_SYNC", "text": "📄 Presentations updated with latest stats"})
+            except Exception as e:
+                progress_queue.put({"step": "PRES_SYNC", "text": f"⚠️ Presentation sync skipped: {str(e)[:80]}"})
+
         if build_ok:
             progress_queue.put({"step": "COMPLETE", "text": f"✅ App '{req.app_name}' built successfully!"})
         progress_queue.put(None)  # Sentinel
@@ -244,6 +251,14 @@ def build_direct(req: BuildRequest):
                 }
             except Exception as e:
                 result["phantom_qa"] = {"verdict": "ERROR", "error": str(e)[:200]}
+
+        # ── Presentation Sync ────────────────────
+        if PRES_SYNC_AVAILABLE:
+            try:
+                _sync_presentations()
+                result["presentations_synced"] = True
+            except Exception:
+                result["presentations_synced"] = False
 
         return result
     except Exception as e:
@@ -464,6 +479,17 @@ try:
 except ImportError:
     PHANTOM_AVAILABLE = False
     logger.warning("Phantom QA Gate not available.")
+
+# ── Presentation Sync ───────────────────────────────────────
+try:
+    _aether_dir = os.path.join(SCRIPT_DIR, "Aether")
+    sys.path.insert(0, _aether_dir)
+    from presentation_sync import sync_all as _sync_presentations
+    PRES_SYNC_AVAILABLE = True
+    logger.info("Presentation Sync loaded.")
+except ImportError:
+    PRES_SYNC_AVAILABLE = False
+    logger.warning("Presentation Sync not available.")
 
 
 @app.post("/api/documents/upload")
