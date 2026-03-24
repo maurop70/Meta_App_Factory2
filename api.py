@@ -123,7 +123,8 @@ class BuildRequest(BaseModel):
 
 @app.post("/api/build/stream")
 async def build_stream(req: BuildRequest):
-    """SSE endpoint: streams factory build progress in real-time."""
+    """SSE endpoint: streams factory build progress in real-time.
+    Now includes Phantom QA gate after build completes."""
     import io
     import contextlib
     import threading
@@ -135,6 +136,7 @@ async def build_stream(req: BuildRequest):
         # Capture stdout from factory.create_app
         old_stdout = sys.stdout
         sys.stdout = buffer = io.StringIO()
+        build_ok = False
         try:
             # Import factory here to avoid circular imports at module level
             sys.path.insert(0, SCRIPT_DIR)
@@ -148,7 +150,7 @@ async def build_stream(req: BuildRequest):
             )
             _update_registry(req.app_name, req.blueprint, req.description)
             progress_queue.put({"step": "REGISTRY", "text": f"📋 '{req.app_name}' registered in registry.json"})
-            progress_queue.put({"step": "COMPLETE", "text": f"✅ App '{req.app_name}' built successfully!"})
+            build_ok = True
         except Exception as e:
             progress_queue.put({"step": "ERROR", "text": f"❌ Build failed: {str(e)}"})
         finally:
@@ -158,7 +160,30 @@ async def build_stream(req: BuildRequest):
             for line in output.strip().split("\n"):
                 if line.strip():
                     progress_queue.put({"step": "LOG", "text": line.strip()})
-            progress_queue.put(None)  # Sentinel
+
+        # ── Phantom QA Gate (post-build) ──────────────────
+        if build_ok and PHANTOM_AVAILABLE:
+            progress_queue.put({"step": "PHANTOM_QA", "text": "🧪 Phantom QA Gate: starting pre-deployment tests..."})
+            try:
+                app_dir = os.path.join(SCRIPT_DIR, req.app_name)
+                verdict = run_phantom_gate({
+                    "app_name": req.app_name,
+                    "app_dir": app_dir if os.path.isdir(app_dir) else "",
+                    "description": req.description,
+                    "build_type": "app",
+                })
+                score = verdict.get("score", 0)
+                v = verdict.get("verdict", "UNKNOWN")
+                icon = "✅" if v == "PASS" else "⚠️" if v == "WARN" else "❌"
+                progress_queue.put({"step": "PHANTOM_QA", "text": f"{icon} Phantom QA: {v} (Score: {score}/100)"})
+                if verdict.get("report_path"):
+                    progress_queue.put({"step": "PHANTOM_QA", "text": f"📄 Report: {os.path.basename(verdict['report_path'])}"})
+            except Exception as e:
+                progress_queue.put({"step": "PHANTOM_QA", "text": f"⚠️ Phantom QA skipped: {str(e)[:100]}"})
+
+        if build_ok:
+            progress_queue.put({"step": "COMPLETE", "text": f"✅ App '{req.app_name}' built successfully!"})
+        progress_queue.put(None)  # Sentinel
 
     # Start build in background thread
     thread = threading.Thread(target=run_build, daemon=True)
@@ -181,7 +206,8 @@ async def build_stream(req: BuildRequest):
 
 @app.post("/api/build/direct")
 def build_direct(req: BuildRequest):
-    """Non-streaming build: directly calls factory.create_app and returns result."""
+    """Non-streaming build: directly calls factory.create_app and returns result.
+    Includes Phantom QA gate results in the response."""
     import io
     old_stdout = sys.stdout
     sys.stdout = buffer = io.StringIO()
@@ -197,7 +223,29 @@ def build_direct(req: BuildRequest):
         )
         output = buffer.getvalue()
         _update_registry(req.app_name, req.blueprint, req.description)
-        return {"status": "success", "app_name": req.app_name, "log": output, "registered": True}
+
+        result = {"status": "success", "app_name": req.app_name, "log": output, "registered": True}
+
+        # ── Phantom QA Gate ────────────────────────────
+        if PHANTOM_AVAILABLE:
+            try:
+                app_dir = os.path.join(SCRIPT_DIR, req.app_name)
+                qa_verdict = run_phantom_gate({
+                    "app_name": req.app_name,
+                    "app_dir": app_dir if os.path.isdir(app_dir) else "",
+                    "description": req.description,
+                    "build_type": "app",
+                })
+                result["phantom_qa"] = {
+                    "verdict": qa_verdict.get("verdict"),
+                    "score": qa_verdict.get("score"),
+                    "report": qa_verdict.get("report_path"),
+                    "duration": qa_verdict.get("duration_seconds"),
+                }
+            except Exception as e:
+                result["phantom_qa"] = {"verdict": "ERROR", "error": str(e)[:200]}
+
+        return result
     except Exception as e:
         output = buffer.getvalue()
         return {"status": "error", "message": str(e), "log": output}
@@ -405,6 +453,17 @@ try:
 except ImportError:
     PARSER_AVAILABLE = False
     logger.warning("DocumentParserService not available.")
+
+# ── Phantom QA Gate ───────────────────────────────────────────
+try:
+    _phantom_dir = os.path.join(SCRIPT_DIR, "Project_Aether", "C-Suite_Active_Logic", "Phantom_QA")
+    sys.path.insert(0, _phantom_dir)
+    from phantom_gate import run_phantom_gate
+    PHANTOM_AVAILABLE = True
+    logger.info("Phantom QA Gate loaded.")
+except ImportError:
+    PHANTOM_AVAILABLE = False
+    logger.warning("Phantom QA Gate not available.")
 
 
 @app.post("/api/documents/upload")
@@ -1499,6 +1558,67 @@ def brand_describe(req: BrandDescribeRequest):
 
     brand_path = _brand_registry.create_brand(project_dir, brand_data)
     return {"status": "ok", "brand": brand_data, "path": brand_path}
+
+
+# ── Phantom QA Standalone Endpoints ───────────────────────────
+
+class PhantomRequest(BaseModel):
+    app_name: str
+    url: str = ""
+    frontend_url: str = ""
+    description: str = ""
+    stages: list[str] | None = None
+
+@app.post("/api/phantom/run")
+def phantom_run(req: PhantomRequest):
+    """Run Phantom QA Gate on demand for any app."""
+    if not PHANTOM_AVAILABLE:
+        return JSONResponse({"error": "Phantom QA Gate not available"}, status_code=503)
+    try:
+        app_dir = os.path.join(SCRIPT_DIR, req.app_name)
+        context = {
+            "app_name": req.app_name,
+            "base_url": req.url,
+            "frontend_url": req.frontend_url,
+            "app_dir": app_dir if os.path.isdir(app_dir) else "",
+            "description": req.description,
+        }
+        if req.stages:
+            context["stages"] = req.stages
+        verdict = run_phantom_gate(context)
+        return {
+            "verdict": verdict.get("verdict"),
+            "score": verdict.get("score"),
+            "report_path": verdict.get("report_path"),
+            "duration": verdict.get("duration_seconds"),
+            "stages": {k: {"score": v.get("score"), "passed": v.get("passed")}
+                       for k, v in verdict.get("stages", {}).items()},
+        }
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+@app.get("/api/phantom/reports")
+def phantom_reports():
+    """List recent Phantom QA reports."""
+    reports_dir = os.path.join(SCRIPT_DIR, "Project_Aether", "C-Suite_Active_Logic",
+                               "Phantom_QA", "reports")
+    if not os.path.isdir(reports_dir):
+        return {"reports": []}
+    files = sorted(
+        [f for f in os.listdir(reports_dir) if f.endswith(".md")],
+        reverse=True
+    )[:20]
+    return {"reports": files}
+
+@app.get("/api/phantom/report/{filename}")
+def phantom_report(filename: str):
+    """Serve a specific Phantom QA report."""
+    reports_dir = os.path.join(SCRIPT_DIR, "Project_Aether", "C-Suite_Active_Logic",
+                               "Phantom_QA", "reports")
+    filepath = os.path.join(reports_dir, filename)
+    if not os.path.exists(filepath) or not filename.endswith(".md"):
+        return JSONResponse({"error": "Report not found"}, status_code=404)
+    return FileResponse(filepath, media_type="text/markdown")
 
 
 # ── Startup: Auto-start incoming watcher ──────────────────
