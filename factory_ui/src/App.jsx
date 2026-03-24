@@ -529,6 +529,34 @@ function BuilderChat({ registry, onAtomizerUpdate, externalCommand, onBuildCompl
         </div>
       )}
 
+      {/* ── BUILD PROGRESS BANNER ── */}
+      {(building || streaming) && (
+        <div className="build-progress-banner">
+          <div className="build-progress-header">
+            <span className="build-progress-icon">{building ? '🏗️' : '💬'}</span>
+            <span className="build-progress-label">
+              {building ? 'BUILD IN PROGRESS' : 'PROCESSING...'}
+            </span>
+            <span className="build-progress-pulse" />
+          </div>
+          <div className="build-progress-bar-track">
+            <div className="build-progress-bar-fill" style={{
+              width: building ? '65%' : streaming ? '40%' : '0%',
+              transition: 'width 1.5s ease-in-out',
+            }} />
+          </div>
+          <div className="build-progress-status">
+            {building && <>
+              <span>🧪 Phantom QA & Master Architect are validating...</span>
+              <span className="build-progress-timer">
+                {messages.filter(m => m.role === 'system' || (m.role === 'assistant' && m.text.includes('BUILD'))).length} steps completed
+              </span>
+            </>}
+            {!building && streaming && <span>⚡ Factory AI is generating a response...</span>}
+          </div>
+        </div>
+      )}
+
       <div className="chat-messages">
         {messages.length === 0 && (
           <div className="welcome-msg">
