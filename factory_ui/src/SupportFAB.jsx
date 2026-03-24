@@ -98,21 +98,23 @@ const USAGE_INTENT_SIGNALS = [
 ];
 
 const USAGE_WALKTHROUGHS = [
+  // ── BUILD / CREATE must come FIRST (highest priority) ──────
+  {
+    keywords: ['build', 'create', 'new app', 'make an app', 'scaffold', 'generate', 'develop', 'translator', 'converter'],
+    response: "To build a new app:\n\n1. Open the **Builder Chat** from the sidebar\n2. Describe what you want to build in plain language — for example: \"Build me a customer feedback dashboard with charts\"\n3. Choose a blueprint if prompted (or we'll pick the best one for you)\n4. Watch the live build progress as your app is assembled\n\nOnce it's built, it'll appear in the **Active Apps** section of the sidebar!",
+  },
   {
     keywords: ['triad', 'triad execute', 'specialist', 'specialists', 'coordinate'],
     response: "You can start a Triad execution by uploading your business plan directly here in the chat, or using the **Refine App** section in the sidebar. I'll handle the coordination with the specialists for you.\n\nHere's how:\n1. 📎 Click the attachment icon in the **Builder Chat** to upload your file\n2. Or paste your prompt into the **Command Palette** for quick actions\n3. Our team of specialists will review and respond with recommendations\n\nWould you like to try it now?",
   },
   {
-    keywords: ['file', 'files', 'upload', 'attach', 'document', 'drop'],
-    response: "Uploading files is easy! Here are your options:\n\n1. 📎 **Builder Chat** — Click the attachment clip icon at the bottom of the chat to upload any file directly\n2. 📋 **Refine App** — Use the sidebar to submit files for detailed analysis\n3. 🎨 **Brand Studio** — Upload brand assets like logos and style guides\n\nSupported formats include PDFs, documents, images, and spreadsheets. Just drop your file in and we'll take it from here!",
-  },
-  {
     keywords: ['refine', 'improve', 'feedback', 'iterate', 'fix', 'change'],
     response: "To refine or improve your app:\n\n1. Click **Refine App** in the left sidebar\n2. Select the app you want to improve from the dropdown\n3. Describe what you'd like changed in plain language — for example: \"Make the dashboard more visual\" or \"Add a dark mode\"\n4. Hit send, and we'll analyze your feedback and apply the improvements\n\nYou can refine as many times as you need — each round builds on the last!",
   },
+  // ── FILE UPLOAD (lower priority — no longer includes "document") ──
   {
-    keywords: ['build', 'create', 'new app', 'make an app', 'scaffold'],
-    response: "To build a new app:\n\n1. Open the **Builder Chat** from the sidebar\n2. Describe what you want to build in plain language — for example: \"Build me a customer feedback dashboard with charts\"\n3. Choose a blueprint if prompted (or we'll pick the best one for you)\n4. Watch the live build progress as your app is assembled\n\nOnce it's built, it'll appear in the **Active Apps** section of the sidebar!",
+    keywords: ['file', 'files', 'upload', 'attach', 'drop'],
+    response: "Uploading files is easy! Here are your options:\n\n1. 📎 **Builder Chat** — Click the attachment clip icon at the bottom of the chat to upload any file directly\n2. 📋 **Refine App** — Use the sidebar to submit files for detailed analysis\n3. 🎨 **Brand Studio** — Upload brand assets like logos and style guides\n\nSupported formats include PDFs, documents, images, and spreadsheets. Just drop your file in and we'll take it from here!",
   },
   {
     keywords: ['command', 'commands', 'palette', 'quick action', 'shortcut'],
@@ -135,6 +137,11 @@ const USAGE_WALKTHROUGHS = [
 /**
  * Usage Intent Detector: checks if the user is asking HOW TO USE a feature.
  * Returns a walkthrough string if matched, or null to continue to the security guard.
+ *
+ * PRIORITY LOGIC:
+ * 1. Build/create intent phrases are checked FIRST (e.g., "I want to create...")
+ * 2. Single-keyword matches are checked in array order (build > file > others)
+ * 3. This prevents ambiguous words like "document" from overriding build intent.
  */
 function usageWalkthroughCheck(userText) {
   const lower = userText.toLowerCase();
@@ -143,7 +150,19 @@ function usageWalkthroughCheck(userText) {
   const hasUsageIntent = USAGE_INTENT_SIGNALS.some(signal => lower.includes(signal));
   if (!hasUsageIntent) return null;
 
-  // Find the best matching walkthrough
+  // PHASE 1: Check for BUILD/CREATE intent phrases first (multi-word priority)
+  const BUILD_PHRASES = [
+    'create a', 'build a', 'make a', 'develop a', 'generate a',
+    'i want to create', 'i want to build', 'i want to make',
+    'i need to create', 'i need to build', 'i need a',
+    'how to create', 'how to build', 'how do i create', 'how do i build',
+    'can i create', 'can i build', 'can you create', 'can you build',
+  ];
+  if (BUILD_PHRASES.some(phrase => lower.includes(phrase))) {
+    return USAGE_WALKTHROUGHS[0].response; // BUILD walkthrough (index 0)
+  }
+
+  // PHASE 2: Standard keyword matching (in array order, so build > file > others)
   for (const walkthrough of USAGE_WALKTHROUGHS) {
     if (walkthrough.keywords.some(kw => lower.includes(kw))) {
       return walkthrough.response;
