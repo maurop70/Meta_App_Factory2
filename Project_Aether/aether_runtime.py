@@ -80,6 +80,15 @@ try:
 except ImportError:
     _ARCHITECT_AVAILABLE = False
 
+# ── Phantom QA Gate ──
+try:
+    _phantom_qa_dir = os.path.join(RUNTIME_DIR, "C-Suite_Active_Logic", "Phantom_QA")
+    sys.path.insert(0, _phantom_qa_dir)
+    from phantom_gate import run_phantom_gate as _run_phantom_gate
+    _PHANTOM_AVAILABLE = True
+except ImportError:
+    _PHANTOM_AVAILABLE = False
+
 # n8n Agent Webhooks (from factory.py AGENT_REGISTRY)
 WEBHOOK_MAP = {
     "CEO": "https://humanresource.app.n8n.cloud/webhook/gemini-flash",
@@ -487,6 +496,14 @@ class AetherRuntime:
             self.architect = None
             print(f"[RUNTIME] ⚠️  Rule 0: ProactiveArchitect not available")
 
+        # Phantom QA Gate
+        if _PHANTOM_AVAILABLE:
+            self.phantom_qa = True
+            print(f"[RUNTIME] 🧪 Phantom QA Gate ACTIVE")
+        else:
+            self.phantom_qa = False
+            print(f"[RUNTIME] ⚠️  Phantom QA Gate not available")
+
         print(f"\n[RUNTIME] ✅ Aether Runtime v2.0.0 initialized")
         print(f"[RUNTIME] 📊 {len(self.loader.agents)} agents loaded")
         print(f"[RUNTIME] 🔗 {len(WEBHOOK_MAP)} webhook endpoints configured")
@@ -521,6 +538,26 @@ class AetherRuntime:
                 result["resolved_to"]
             )
             result["critic_review"] = critic_result
+
+        # Phantom QA gate (for code/build tasks)
+        if self.phantom_qa and result["status"] == "DISPATCHED":
+            _build_keywords = ["build", "deploy", "create", "generate", "scaffold",
+                               "app", "workflow", "pipeline"]
+            if any(kw in text.lower() for kw in _build_keywords):
+                try:
+                    qa_result = _run_phantom_gate({
+                        "app_name": result.get("resolved_to", "aether_task"),
+                        "description": text[:200],
+                        "build_type": "task",
+                        "stages": ["infrastructure", "architecture", "data_integrity"],
+                    })
+                    result["phantom_qa"] = {
+                        "verdict": qa_result.get("verdict"),
+                        "score": qa_result.get("score"),
+                        "report": qa_result.get("report_path"),
+                    }
+                except Exception as e:
+                    result["phantom_qa"] = {"verdict": "SKIPPED", "error": str(e)[:100]}
 
         return result
 

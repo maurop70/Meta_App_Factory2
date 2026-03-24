@@ -571,30 +571,76 @@ if __name__ == "__main__":
     parser.add_argument("--app", default="Resonance",
                         help="App to test. Use any name — dynamic testing activates for unknown apps.")
     parser.add_argument("--persona", default="leo_friend", help="Persona to use (Resonance only)")
-    parser.add_argument("--url", help="Base URL override")
+    parser.add_argument("--url", help="Backend API base URL")
+    parser.add_argument("--frontend", help="Frontend UI URL (for Playwright browser tests)")
+    parser.add_argument("--dir", help="App directory path")
     parser.add_argument("--describe", default="",
                         help="App description for dynamic persona generation")
+    parser.add_argument("--headed", action="store_true",
+                        help="Run Playwright browser in visible mode (debugging)")
+    parser.add_argument("--stage", help="Run specific gate stage(s) only (comma-separated). "
+                        "Options: infrastructure,architecture,brand,data_integrity,"
+                        "ui_testing,api_testing,critic_review")
+    parser.add_argument("--legacy", action="store_true",
+                        help="Use legacy test suites (Resonance/Sentinel) instead of full gate")
     args = parser.parse_args()
 
     app = args.app.lower()
 
-    if app == "resonance":
-        url = args.url or "http://localhost:5006"
-        persona = Persona(args.persona)
-        results, report = run_resonance_suite(persona, url)
-    elif app == "sentinel":
-        url = args.url or "http://localhost:5009"
-        results, report = run_sentinel_suite(url)
-    else:
-        # Dynamic testing for ANY app
+    # Legacy mode: use original built-in suites
+    if args.legacy:
+        if app == "resonance":
+            url = args.url or "http://localhost:5006"
+            persona_obj = Persona(args.persona)
+            results, report = run_resonance_suite(persona_obj, url)
+        elif app == "sentinel":
+            url = args.url or "http://localhost:5009"
+            results, report = run_sentinel_suite(url)
+        else:
+            url = args.url
+            if not url:
+                logger.error(f"--url is required for dynamic testing of '{args.app}'")
+                sys.exit(1)
+            results, report = run_dynamic_suite(args.app, url, args.describe)
+
+        failed = sum(1 for r in results if not r.passed)
+        sys.exit(1 if failed > 0 else 0)
+
+    # Default mode: full Phantom QA Gate pipeline
+    try:
+        from phantom_gate import run_phantom_gate
+
+        context = {
+            "app_name": args.app,
+            "base_url": args.url or "",
+            "frontend_url": args.frontend or "",
+            "app_dir": args.dir or "",
+            "description": args.describe,
+            "headed": args.headed,
+        }
+        if args.stage:
+            context["stages"] = [s.strip() for s in args.stage.split(",")]
+
+        result = run_phantom_gate(context)
+
+        print(f"\n{'='*55}")
+        print(f"  🧪 PHANTOM QA GATE — {result['app_name']}")
+        print(f"{'='*55}")
+        print(f"  Verdict:  {result['verdict']}")
+        print(f"  Score:    {result['score']}/100")
+        print(f"  Duration: {result['duration_seconds']}s")
+        print(f"  Report:   {result['report_path']}")
+        print(f"{'='*55}\n")
+
+        sys.exit(0 if result["verdict"] != "FAIL" else 1)
+
+    except ImportError as e:
+        logger.warning(f"phantom_gate not available ({e}) — falling back to dynamic suite")
         url = args.url
         if not url:
-            logger.error(f"--url is required for dynamic testing of '{args.app}'")
+            logger.error(f"--url is required for testing '{args.app}'")
             sys.exit(1)
-        logger.info(f"No built-in suite for '{args.app}' — activating DYNAMIC testing")
         results, report = run_dynamic_suite(args.app, url, args.describe)
-
-    # Exit with failure code if any tests failed
-    failed = sum(1 for r in results if not r.passed)
-    sys.exit(1 if failed > 0 else 0)
+        failed = sum(1 for r in results if not r.passed)
+        sys.exit(1 if failed > 0 else 0)
 
