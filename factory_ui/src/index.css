@@ -402,8 +402,11 @@ body {
   align-items: flex-end;
   gap: 0.6rem;
   padding: 0.8rem 1rem;
+  padding-right: 90px; /* Clear the Support FAB at bottom-right */
   border-top: 1px solid var(--border);
   background: rgba(10, 14, 23, 0.5);
+  position: relative;
+  z-index: 1150; /* Above the FAB (z-index: 1100) */
 }
 
 .chat-input-bar textarea {
