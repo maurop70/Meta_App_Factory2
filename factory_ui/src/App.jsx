@@ -1223,8 +1223,15 @@ function App() {
               <div
                 key={app.name}
                 className={`sidebar-item ${selectedApp === app.name ? 'active' : ''}`}
-                onClick={() => setSelectedApp(app.name)}
-                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                onClick={() => {
+                  setSelectedApp(app.name);
+                  setActiveView('warroom');
+                  // If the app is running, also open it in a new tab
+                  if (runningApps[app.name]?.alive && runningApps[app.name]?.port) {
+                    window.open(`http://localhost:${runningApps[app.name].port}`, '_blank');
+                  }
+                }}
+                style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
               >
                 <span className="icon" style={isRunning ? { animation: 'pulse 2s infinite' } : {}}>
                   {isRunning ? '🟢' : app.status === 'active' ? '🔵' : '⚪'}
