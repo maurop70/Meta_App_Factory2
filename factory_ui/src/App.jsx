@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import './App.css'
 import WarRoom from './WarRoom'
 import SupportFAB from './SupportFAB'
+import ModeSelectionScreen from './ModeSelectionScreen'
+import VentureSuite from './VentureSuite'
 
 // ═══════════════════════════════════════════════════════════
 //  META APP FACTORY — BUILDER DASHBOARD (Full Feature Parity)
@@ -148,7 +150,7 @@ function TelemetryBar({ streaming }) {
 }
 
 // ── BUILDER CHAT ───────────────────────────────────────────
-function BuilderChat({ registry, onAtomizerUpdate, externalCommand, onBuildComplete }) {
+function BuilderChat({ registry, onAtomizerUpdate, externalCommand, onBuildComplete, onQaGate }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [streaming, setStreaming] = useState(false);
@@ -242,6 +244,10 @@ function BuilderChat({ registry, onAtomizerUpdate, externalCommand, onBuildCompl
           try {
             const event = JSON.parse(line.slice(6));
             if (event.done) break;
+            // UPGRADE 3: Detect GATE_BLOCKED event
+            if (event.step === 'GATE_BLOCKED' && onQaGate) {
+              onQaGate({ app_name: event.app_name, score: event.score });
+            }
             if (event.text) {
               setMessages(prev => {
                 const copy = [...prev];
@@ -1041,12 +1047,82 @@ function BrandStudioPanel({ registry }) {
 // ── MAIN APP ────────────────────────────────────────────────
 function App() {
   const [activeView, setActiveView] = useState('systemmap');
+  const [builderMode, setBuilderMode] = useState(null); // 'technical' | 'venture' | null
   const [registry, setRegistry] = useState([]);
   const [atomizerChunks, setAtomizerChunks] = useState([]);
   const [atomizerProgress, setAtomizerProgress] = useState(0);
   const [externalCommand, setExternalCommand] = useState(null);
   const [streaming, setStreaming] = useState(false);
   const [selectedApp, setSelectedApp] = useState(null);
+
+  // ── UPGRADE 6: n8n Health State ──────────────────────────
+  const [n8nHealth, setN8nHealth] = useState({ status: 'unknown', circuit_breaker: { state: 'CLOSED' } });
+  useEffect(() => {
+    const checkN8n = () => {
+      fetch(`${API_BASE}/api/health/n8n`)
+        .then(r => r.json())
+        .then(data => setN8nHealth(data))
+        .catch(() => setN8nHealth({ status: 'offline', circuit_breaker: { state: 'UNKNOWN' } }));
+    };
+    checkN8n();
+    const interval = setInterval(checkN8n, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // ── UPGRADE 1: Running Apps State ────────────────────────
+  const [runningApps, setRunningApps] = useState({});
+  const [launchingApp, setLaunchingApp] = useState(null);
+
+  const refreshRunning = () => {
+    fetch(`${API_BASE}/api/apps/running`)
+      .then(r => r.json())
+      .then(data => setRunningApps(data))
+      .catch(() => {});
+  };
+  useEffect(() => {
+    refreshRunning();
+    const interval = setInterval(refreshRunning, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const launchApp = async (appName) => {
+    setLaunchingApp(appName);
+    try {
+      const res = await fetch(`${API_BASE}/api/apps/${encodeURIComponent(appName)}/launch`, { method: 'POST' });
+      const data = await res.json();
+      if (data.port) {
+        window.open(data.url, '_blank');
+        refreshRunning();
+      } else {
+        alert(data.error || 'Launch failed');
+      }
+    } catch (err) {
+      alert(`Launch error: ${err.message}`);
+    } finally {
+      setLaunchingApp(null);
+    }
+  };
+
+  const stopApp = async (appName) => {
+    try {
+      await fetch(`${API_BASE}/api/apps/${encodeURIComponent(appName)}/stop`, { method: 'POST' });
+      refreshRunning();
+    } catch { }
+  };
+
+  // ── UPGRADE 3: QA Gate Modal State ──────────────────────
+  const [qaGate, setQaGate] = useState(null); // { app_name, score }
+
+  const approveGate = async () => {
+    if (!qaGate) return;
+    await fetch(`${API_BASE}/api/build/approve/${encodeURIComponent(qaGate.app_name)}`, { method: 'POST' });
+    setQaGate(null);
+  };
+  const abortGate = async () => {
+    if (!qaGate) return;
+    await fetch(`${API_BASE}/api/build/abort/${encodeURIComponent(qaGate.app_name)}`, { method: 'POST' });
+    setQaGate(null);
+  };
 
   // ── Theme Color Map (per-app FAB pulse) ─────────────────
   const APP_THEME_COLORS = {
@@ -1105,6 +1181,19 @@ function App() {
           <span><span className="status-dot" /> Backend Online</span>
           <span>LangSmith: Active</span>
           <span>Supabase: Connected</span>
+          <span title={`Circuit: ${n8nHealth.circuit_breaker?.state || 'N/A'}`}>
+            <span className="status-dot" style={{
+              background: n8nHealth.status === 'connected' ? '#22c55e' :
+                          n8nHealth.status === 'degraded' ? '#eab308' : '#ef4444',
+              boxShadow: n8nHealth.status === 'connected' ? '0 0 6px rgba(34,197,94,0.5)' :
+                         n8nHealth.status === 'degraded' ? '0 0 6px rgba(234,179,8,0.5)' :
+                         '0 0 6px rgba(239,68,68,0.5)',
+            }} />
+            n8n: {n8nHealth.status === 'connected' ? 'Online' :
+                  n8nHealth.status === 'degraded' ? 'Degraded' :
+                  n8nHealth.status === 'auth_expired' ? 'Auth Expired' : 'Offline'}
+            {n8nHealth.circuit_breaker?.state === 'OPEN' && ' ⚡BREAKER'}
+          </span>
         </div>
       </header>
 
@@ -1127,16 +1216,37 @@ function App() {
 
         <div className="sidebar-section">
           <h3>Active Apps</h3>
-          {registry.map(app => (
-            <div
-              key={app.name}
-              className={`sidebar-item ${selectedApp === app.name ? 'active' : ''}`}
-              onClick={() => setSelectedApp(app.name)}
-            >
-              <span className="icon">{app.status === 'active' ? '🟢' : '⚪'}</span>
-              <span>{app.name}</span>
-            </div>
-          ))}
+          {registry.map(app => {
+            const isRunning = !!runningApps[app.name]?.alive;
+            const isLaunching = launchingApp === app.name;
+            return (
+              <div
+                key={app.name}
+                className={`sidebar-item ${selectedApp === app.name ? 'active' : ''}`}
+                onClick={() => setSelectedApp(app.name)}
+                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+              >
+                <span className="icon" style={isRunning ? { animation: 'pulse 2s infinite' } : {}}>
+                  {isRunning ? '🟢' : app.status === 'active' ? '🔵' : '⚪'}
+                </span>
+                <span style={{ flex: 1 }}>{app.name}</span>
+                {isRunning ? (
+                  <button
+                    className="app-action-btn stop"
+                    onClick={e => { e.stopPropagation(); stopApp(app.name); }}
+                    title="Stop app"
+                  >⏹️</button>
+                ) : (
+                  <button
+                    className="app-action-btn launch"
+                    onClick={e => { e.stopPropagation(); launchApp(app.name); }}
+                    title="Launch app"
+                    disabled={isLaunching}
+                  >{isLaunching ? '⏳' : '🚀'}</button>
+                )}
+              </div>
+            );
+          })}
         </div>
       </aside>
 
@@ -1169,16 +1279,23 @@ function App() {
           <WarRoom />
         )}
 
-        {/* Builder Chat */}
+        {/* Builder Chat / Mode Selector (EOS V3.1) */}
         {activeView === 'builder' && (
-          <BuilderChat
-            registry={registry}
-            onAtomizerUpdate={(c, p) => { setAtomizerChunks(c); setAtomizerProgress(p); }}
-            externalCommand={externalCommand}
-            onBuildComplete={() => {
-              fetch(`${API_BASE}/api/registry`).then(r => r.json()).then(data => setRegistry(data.apps || [])).catch(() => { });
-            }}
-          />
+          builderMode === null ? (
+            <ModeSelectionScreen onSelectMode={setBuilderMode} />
+          ) : builderMode === 'venture' ? (
+            <VentureSuite onComplete={() => setBuilderMode('technical')} registry={registry} />
+          ) : (
+            <BuilderChat
+              registry={registry}
+              onAtomizerUpdate={(c, p) => { setAtomizerChunks(c); setAtomizerProgress(p); }}
+              externalCommand={externalCommand}
+              onBuildComplete={() => {
+                fetch(`${API_BASE}/api/registry`).then(r => r.json()).then(data => setRegistry(data.apps || [])).catch(() => { });
+              }}
+              onQaGate={setQaGate}
+            />
+          )
         )}
 
         {/* App Registry */}
@@ -1251,6 +1368,43 @@ function App() {
         activeApp={selectedApp || 'Factory'}
         themeColor={APP_THEME_COLORS[selectedApp] || '#818cf8'}
       />
+
+      {/* ── UPGRADE 3: QA Gate Approval Modal ── */}
+      {qaGate && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999,
+          backdropFilter: 'blur(8px)',
+        }}>
+          <div style={{
+            background: 'linear-gradient(135deg, #1e1b3a, #0f172a)',
+            border: '1px solid rgba(239,68,68,0.3)', borderRadius: '16px',
+            padding: '32px', maxWidth: '480px', width: '90%', textAlign: 'center',
+          }}>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🛑</div>
+            <h2 style={{ color: '#ef4444', margin: '0 0 8px', fontSize: '20px' }}>BUILD PAUSED</h2>
+            <p style={{ color: '#94a3b8', margin: '0 0 16px', fontSize: '14px' }}>
+              Phantom QA scored <strong style={{ color: '#ef4444', fontSize: '24px' }}>{qaGate.score}/100</strong>
+              <br />below the deployment threshold of <strong style={{ color: '#22c55e' }}>70</strong>
+            </p>
+            <p style={{ color: '#64748b', fontSize: '12px', marginBottom: '24px' }}>
+              App: <strong style={{ color: '#e2e8f0' }}>{qaGate.app_name}</strong>
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button onClick={approveGate} style={{
+                padding: '12px 24px', borderRadius: '10px', border: 'none',
+                background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                color: 'white', fontSize: '14px', fontWeight: 600, cursor: 'pointer',
+              }}>✅ Approve & Deploy</button>
+              <button onClick={abortGate} style={{
+                padding: '12px 24px', borderRadius: '10px',
+                border: '1px solid rgba(239,68,68,0.4)', background: 'rgba(239,68,68,0.1)',
+                color: '#ef4444', fontSize: '14px', fontWeight: 600, cursor: 'pointer',
+              }}>❌ Abort Build</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

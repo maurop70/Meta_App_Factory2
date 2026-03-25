@@ -128,6 +128,18 @@ def _load_local_files():
 
 def _build_system_prompt(dashboard_context=None):
     parts = [BASE_SYSTEM_PROMPT]
+    
+    # ── EOS Context Injection ──
+    try:
+        from eos_context import get_eos
+        eos = get_eos()
+        if eos.get("mode") == "venture":
+            parts.append("\n\n--- EOS VENTURE CONTEXT ---")
+            parts.append(eos.get_brand_context_str())
+            parts.append("You are operating as a Venture Architect. Refer to these details when building the app.")
+    except ImportError:
+        pass
+        
     if dashboard_context:
         parts.append("\n\n--- LIVE FACTORY STATE ---")
         parts.append(json.dumps(dashboard_context, indent=2))
