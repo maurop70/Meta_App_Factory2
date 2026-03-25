@@ -1,0 +1,39 @@
+{
+  "name": "Alex",
+  "role": "A highly motivated student who pushes the limits of the learning platform and its AI agents.",
+  "behaviors": [
+    "Submits unusually long or complex queries to AI agents, expecting comprehensive answers.",
+    "Attempts to complete modules in non-linear order or skip prerequisites, observing system responses.",
+    "Rapidly switches between different learning modules and agent interactions to test performance and state management.",
+    "Explores all available settings and customization options, including profile updates and notification preferences."
+  ],
+  "test_endpoints": [
+    {
+      "method": "POST",
+      "path": "/api/courses/101/enroll",
+      "name": "Enroll in a standard course",
+      "payload": {}
+    },
+    {
+      "method": "POST",
+      "path": "/api/agent/tutor/query",
+      "name": "Submit a very long and complex query to AI tutor",
+      "payload": {
+        "prompt": "Can you explain the quantum entanglement paradox in simple terms, then immediately elaborate on its implications for information theory and potential applications in secure communication, while also providing a historical overview of its discovery and the key scientists involved, and finally, compare and contrast it with classical correlation, all within a single, coherent response that avoids jargon where possible but maintains scientific accuracy?"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/modules/203",
+      "name": "Attempt to access a locked prerequisite module (expecting denial or redirection)"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/users/me",
+      "name": "Update user profile with edge-case data (e.g., very long bio)",
+      "payload": {
+        "bio": "I am an enthusiastic learner constantly seeking to expand my knowledge across various disciplines, from astrophysics to ancient history. My passion for understanding complex systems drives me to explore every facet of learning platforms, pushing their boundaries to discover new ways of acquiring and synthesizing information. I believe that the future of education lies in personalized, adaptive, and interactive experiences, and I am here to contribute to that vision by rigorously testing and providing feedback on innovative tools like PulseBoard. My interests also include competitive programming, philosophical debates, and exploring the implications of AI on human cognition and society. I've been a student for over two decades, and I'm always eager to learn more."
+      }
+    }
+  ]
+}

@@ -1276,7 +1276,7 @@ function App() {
 
         {/* War Room — Adversarial Boardroom */}
         {activeView === 'warroom' && (
-          <WarRoom />
+          <WarRoom projectName={selectedApp || 'Aether'} />
         )}
 
         {/* Builder Chat / Mode Selector (EOS V3.1) */}
@@ -1284,7 +1284,15 @@ function App() {
           builderMode === null ? (
             <ModeSelectionScreen onSelectMode={setBuilderMode} />
           ) : builderMode === 'venture' ? (
-            <WarRoom ventureMode={true} />
+            <WarRoom 
+              ventureMode={true} 
+              projectName={selectedApp || 'Aether'}
+              onHandoff={(eosData) => {
+                setBuilderMode('technical');
+                const prompt = `Here is the approved Venture Plan for the MVP. Please build this application immediately:\n\nCompany: ${eosData.company_name}\nTagline: ${eosData.tagline}\nPrimary Color: ${eosData.brand_colors?.primary || '#3b82f6'}\nTAM: ${eosData.tam}\n\nBuild the scaffold and deploy the app!`;
+                setExternalCommand(prompt);
+              }}
+            />
           ) : (
             <BuilderChat
               registry={registry}

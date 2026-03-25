@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resonance — AI-Powered Learning Companion for Neurodiverse Teens</title>
+    <meta name="description" content="Resonance is the first AI companion built specifically for teenagers with auditory processing challenges. Meet Alex — your child's patient, adaptive, always-available learning wingman.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0f0f1a;
+            --bg-secondary: #1a1a2e;
+            --bg-card: #16213e;
+            --bg-card-hover: #1a2745;
+            --accent-indigo: #4F46E5;
+            --accent-indigo-light: #818CF8;
+            --accent-amber: #F5A623;
+            --accent-amber-light: #FBBF24;
+            --accent-emerald: #10B981;
+            --accent-rose: #F43F5E;
+            --accent-cyan: #06B6D4;
+            --accent-purple: #A855F7;
+            --text-primary: #F1F5F9;
+            --text-secondary: #94A3B8;
+            --text-muted: #64748B;
+            --border-subtle: rgba(79, 70, 229, 0.15);
+            --glow-indigo: 0 0 40px rgba(79, 70, 229, 0.2);
+            --glow-amber: 0 0 40px rgba(245, 166, 35, 0.15);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+
+        /* ── Utility ──────────────────────────────────────── */
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 2rem; }
+        .section { padding: 5rem 0; }
+        .section-alt { background: var(--bg-secondary); }
+        .text-gradient {
+            background: linear-gradient(135deg, var(--accent-indigo-light), var(--accent-amber));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .text-gradient-emerald {
+            background: linear-gradient(135deg, var(--accent-emerald), var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* ── Hero ─────────────────────────────────────────── */
+        .hero {
+            position: relative;
+            padding: 8rem 0 6rem;
+            text-align: center;
+            overflow: hidden;
+        }
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -25%;
+            width: 150%;
+            height: 200%;
+            background: radial-gradient(ellipse at 30% 50%, rgba(79,70,229,0.12) 0%, transparent 50%),
+                        radial-gradient(ellipse at 70% 30%, rgba(245,166,35,0.08) 0%, transparent 50%);
+            animation: heroGlow 12s ease-in-out infinite alternate;
+        }
+        @keyframes heroGlow {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            100% { transform: translate(2%, -2%) rotate(1deg); }
+        }
+        .hero-content { position: relative; z-index: 1; }
+        .hero-badge {
+            display: inline-block;
+            padding: 0.4rem 1.2rem;
+            border: 1px solid var(--accent-indigo);
+            border-radius: 100px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--accent-indigo-light);
+            margin-bottom: 2rem;
+            animation: fadeInUp 0.6s ease-out;
+        }
+        .hero h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: clamp(2.8rem, 6vw, 5rem);
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            animation: fadeInUp 0.8s ease-out 0.1s both;
+        }
+        .hero .subtitle {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            max-width: 680px;
+            margin: 0 auto 3rem;
+            animation: fadeInUp 0.8s ease-out 0.2s both;
+        }
+        .hero-stats {
+            display: flex;
+            justify-content: center;
+            gap: 3rem;
+            flex-wrap: wrap;
+            animation: fadeInUp 0.8s ease-out 0.4s both;
+        }
+        .hero-stat {
+            text-align: center;
+        }
+        .hero-stat .number {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--accent-amber);
+        }
+        .hero-stat .label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── Problem Statement ────────────────────────────── */
+        .problem { padding: 5rem 0; }
+        .problem-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+            align-items: center;
+        }
+        .problem h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.4rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+        }
+        .problem p {
+            color: var(--text-secondary);
+            font-size: 1.05rem;
+            margin-bottom: 1rem;
+        }
+        .stat-callout {
+            background: linear-gradient(135deg, rgba(79,70,229,0.1), rgba(245,166,35,0.05));
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 2.5rem;
+            text-align: center;
+        }
+        .stat-callout .big-number {
+            font-family: 'Outfit', sans-serif;
+            font-size: 4.5rem;
+            font-weight: 900;
+            line-height: 1;
+            margin-bottom: 0.5rem;
+        }
+        .stat-callout .stat-desc {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        /* ── Meet Alex ────────────────────────────────────── */
+        .meet-alex {
+            text-align: center;
+            padding: 5rem 0;
+        }
+        .meet-alex h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.4rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+        }
+        .meet-alex .lead {
+            color: var(--text-secondary);
+            font-size: 1.15rem;
+            max-width: 700px;
+            margin: 0 auto 3rem;
+        }
+        .alex-persona {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            text-align: left;
+        }
+        .persona-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 2rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .persona-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            border-radius: 16px 16px 0 0;
+        }
+        .persona-card:nth-child(1)::before { background: linear-gradient(90deg, var(--accent-indigo), var(--accent-purple)); }
+        .persona-card:nth-child(2)::before { background: linear-gradient(90deg, var(--accent-amber), var(--accent-rose)); }
+        .persona-card:nth-child(3)::before { background: linear-gradient(90deg, var(--accent-emerald), var(--accent-cyan)); }
+        .persona-card:nth-child(4)::before { background: linear-gradient(90deg, var(--accent-cyan), var(--accent-indigo)); }
+        .persona-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(79, 70, 229, 0.3);
+            box-shadow: var(--glow-indigo);
+        }
+        .persona-card .icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+        .persona-card h3 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        .persona-card p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        /* ── Features Grid ────────────────────────────────── */
+        .features h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.4rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 0.75rem;
+        }
+        .features .lead {
+            color: var(--text-secondary);
+            text-align: center;
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto 3rem;
+        }
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            gap: 1.5rem;
+        }
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 2rem;
+            transition: all 0.3s ease;
+        }
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--glow-indigo);
+            border-color: rgba(79,70,229,0.3);
+        }
+        .feature-card .feature-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 1.2rem;
+        }
+        .feature-card h3 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.15rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        .feature-card p {
+            color: var(--text-secondary);
+            font-size: 0.92rem;
+        }
+        .fi-indigo { background: rgba(79,70,229,0.15); }
+        .fi-amber  { background: rgba(245,166,35,0.15); }
+        .fi-emerald{ background: rgba(16,185,129,0.15); }
+        .fi-rose   { background: rgba(244,63,94,0.15); }
+        .fi-cyan   { background: rgba(6,182,212,0.15); }
+        .fi-purple { background: rgba(168,85,247,0.15); }
+
+        /* ── Competitive Edge ─────────────────────────────── */
+        .competitive { padding: 5rem 0; }
+        .competitive h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.4rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 0.75rem;
+        }
+        .competitive .lead {
+            color: var(--text-secondary);
+            text-align: center;
+            font-size: 1.1rem;
+            max-width: 650px;
+            margin: 0 auto 3rem;
+        }
+        .comparison-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid var(--border-subtle);
+        }
+        .comparison-table thead { background: var(--bg-card); }
+        .comparison-table th {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            padding: 1.2rem 1.5rem;
+            text-align: left;
+            font-size: 0.95rem;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+        .comparison-table th:first-child { width: 35%; }
+        .comparison-table td {
+            padding: 1rem 1.5rem;
+            font-size: 0.92rem;
+            border-bottom: 1px solid rgba(79,70,229,0.06);
+            vertical-align: top;
+        }
+        .comparison-table tbody tr:hover { background: rgba(79,70,229,0.04); }
+        .comparison-table .resonance-col {
+            color: var(--accent-amber);
+            font-weight: 500;
+        }
+        .check { color: var(--accent-emerald); font-weight: 700; }
+        .partial { color: var(--accent-amber); }
+        .miss { color: var(--text-muted); }
+
+        /* ── Target Audiences ─────────────────────────────── */
+        .audiences h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.4rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 0.75rem;
+        }
+        .audiences .lead {
+            color: var(--text-secondary);
+            text-align: center;
+            font-size: 1.1rem;
+            max-width: 650px;
+            margin: 0 auto 3rem;
+        }
+        .audience-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        .audience-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 2rem;
+            transition: all 0.3s ease;
+        }
+        .audience-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--glow-amber);
+            border-color: rgba(245,166,35,0.3);
+        }
+        .audience-card .audience-icon {
+            font-size: 2.2rem;
+            margin-bottom: 1rem;
+        }
+        .audience-card h3 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.15rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        .audience-card p {
+            color: var(--text-secondary);
+            font-size: 0.92rem;
+            margin-bottom: 0.75rem;
+        }
+        .audience-card ul {
+            list-style: none;
+            padding: 0;
+        }
+        .audience-card ul li {
+            color: var(--text-secondary);
+            font-size: 0.88rem;
+            padding: 0.25rem 0;
+            padding-left: 1.2rem;
+            position: relative;
+        }
+        .audience-card ul li::before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            color: var(--accent-amber);
+        }
+
+        /* ── Testimonial / Quote ──────────────────────────── */
+        .testimonial-section {
+            padding: 4rem 0;
+            text-align: center;
+        }
+        .testimonial-block {
+            max-width: 700px;
+            margin: 0 auto;
+            background: linear-gradient(135deg, rgba(79,70,229,0.08), rgba(245,166,35,0.04));
+            border: 1px solid var(--border-subtle);
+            border-radius: 20px;
+            padding: 3rem;
+            position: relative;
+        }
+        .testimonial-block::before {
+            content: '"';
+            font-family: 'Outfit', serif;
+            font-size: 6rem;
+            font-weight: 900;
+            color: var(--accent-indigo);
+            opacity: 0.3;
+            position: absolute;
+            top: 0.5rem;
+            left: 1.5rem;
+            line-height: 1;
+        }
+        .testimonial-block p {
+            font-size: 1.2rem;
+            font-style: italic;
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+            position: relative;
+            z-index: 1;
+        }
+        .testimonial-block .author {
+            font-size: 0.9rem;
+            color: var(--accent-amber);
+            font-weight: 600;
+            font-style: normal;
+        }
+
+        /* ── How It Works ─────────────────────────────────── */
+        .how-it-works h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.4rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 2rem;
+            counter-reset: step;
+        }
+        .step {
+            text-align: center;
+            position: relative;
+        }
+        .step::before {
+            counter-increment: step;
+            content: counter(step);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-indigo), var(--accent-purple));
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin: 0 auto 1.2rem;
+        }
+        .step h3 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        .step p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* ── Parent Portal Highlight ──────────────────────── */
+        .parent-portal {
+            padding: 5rem 0;
+        }
+        .parent-portal-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+            align-items: center;
+        }
+        .parent-portal h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.4rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+        .parent-portal p {
+            color: var(--text-secondary);
+            font-size: 1.05rem;
+            margin-bottom: 1.5rem;
+        }
+        .portal-features {
+            list-style: none;
+            padding: 0;
+        }
+        .portal-features li {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 0.6rem 0;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+        .portal-features li .pf-icon {
+            flex-shrink: 0;
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            background: rgba(245,166,35,0.12);
+        }
+        .portal-mockup {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: var(--glow-amber);
+        }
+        .portal-mockup .mock-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+        .portal-mockup .mock-header .dot {
+            width: 10px; height: 10px; border-radius: 50%;
+        }
+        .portal-mockup .mock-header .dot-r { background: #ef4444; }
+        .portal-mockup .mock-header .dot-y { background: #eab308; }
+        .portal-mockup .mock-header .dot-g { background: #22c55e; }
+        .portal-mockup .mock-header span {
+            margin-left: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .mock-tab-bar {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .mock-tab {
+            padding: 0.5rem 1.2rem;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            background: rgba(79,70,229,0.08);
+            color: var(--text-muted);
+            border: 1px solid transparent;
+        }
+        .mock-tab.active {
+            background: rgba(245,166,35,0.12);
+            color: var(--accent-amber);
+            border-color: rgba(245,166,35,0.3);
+        }
+        .mock-content-block {
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+            padding: 1.5rem;
+        }
+        .mock-metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.6rem 0;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+        .mock-metric:last-child { border-bottom: none; }
+        .mock-metric .metric-label { font-size: 0.85rem; color: var(--text-muted); }
+        .mock-metric .metric-value { font-family: 'Outfit', sans-serif; font-weight: 600; color: var(--accent-emerald); }
+
+        /* ── CTA ──────────────────────────────────────────── */
+        .cta-section {
+            padding: 6rem 0;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .cta-section::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(ellipse at 50% 80%, rgba(79,70,229,0.15) 0%, transparent 60%),
+                        radial-gradient(ellipse at 50% 20%, rgba(245,166,35,0.08) 0%, transparent 50%);
+        }
+        .cta-content { position: relative; z-index: 1; }
+        .cta-section h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.8rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+        }
+        .cta-section p {
+            color: var(--text-secondary);
+            font-size: 1.15rem;
+            max-width: 550px;
+            margin: 0 auto 2rem;
+        }
+        .cta-button {
+            display: inline-block;
+            padding: 1rem 2.5rem;
+            background: linear-gradient(135deg, var(--accent-indigo), var(--accent-purple));
+            color: white;
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 12px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(79,70,229,0.3);
+        }
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(79,70,229,0.4);
+        }
+
+        /* ── Footer ───────────────────────────────────────── */
+        footer {
+            padding: 3rem 0;
+            border-top: 1px solid var(--border-subtle);
+            text-align: center;
+        }
+        footer p {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+        footer .brand {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            color: var(--text-secondary);
+        }
+
+        /* ── Responsive ───────────────────────────────────── */
+        @media (max-width: 768px) {
+            .problem-grid,
+            .parent-portal-grid {
+                grid-template-columns: 1fr;
+            }
+            .hero h1 { font-size: 2.4rem; }
+            .hero-stats { gap: 1.5rem; }
+            .features-grid { grid-template-columns: 1fr; }
+            .section { padding: 3rem 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ═══════════════════════════════════════════════════════
+         HERO
+         ═══════════════════════════════════════════════════════ -->
+    <section class="hero">
+        <div class="container hero-content">
+            <div class="hero-badge">Antigravity AI — Neurodiverse Education</div>
+            <h1><span class="text-gradient">Resonance</span><br>The AI Companion That Learns<br>How Your Child Learns</h1>
+            <p class="subtitle">
+                Meet <strong>Alex</strong> — a patient, adaptive AI Wingman built specifically for teenagers with
+                auditory processing challenges, speech delays, and learning differences. Not a chatbot. A companion.
+            </p>
+            <div class="hero-stats">
+                <div class="hero-stat">
+                    <div class="number">5+</div>
+                    <div class="label">Specialist AI Agents</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="number">4</div>
+                    <div class="label">Learning Channels</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="number">24/7</div>
+                    <div class="label">Always Available</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="number">100%</div>
+                    <div class="label">Private & Secure</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════
+         THE PROBLEM
+         ═══════════════════════════════════════════════════════ -->
+    <section class="problem section section-alt">
+        <div class="container">
+            <div class="problem-grid">
+                <div>
+                    <h2>Every child deserves a <span class="text-gradient">patient teacher</span> who never gets tired</h2>
+                    <p>
+                        Children with Auditory Processing Disorder (APD) hear the words — but the brain scrambles the meaning.
+                        Traditional tutoring fails because it assumes hearing equals understanding. One explanation is never enough.
+                    </p>
+                    <p>
+                        Speech therapy sessions are expensive, limited to 30–60 minutes a week, and end when the session does.
+                        Your child's curiosity doesn't stop at the therapist's door.
+                    </p>
+                    <p>
+                        <strong style="color: var(--accent-amber)">Resonance fills the 167 other hours of the week</strong> — providing
+                        continuous, adaptive support that meets your child where they are, not where a curriculum says they should be.
+                    </p>
+                </div>
+                <div class="stat-callout">
+                    <div class="big-number text-gradient">5–7%</div>
+                    <div class="stat-desc">of school-aged children have Auditory Processing Disorder<br>
+                        <span style="font-size:0.85rem; color:var(--text-muted)">— American Academy of Audiology</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════
+         MEET ALEX
+         ═══════════════════════════════════════════════════════ -->
+    <section class="meet-alex section">
+        <div class="container">
+            <h2>Meet <span class="text-gradient">Alex</span> — Your Child's AI Wingman</h2>
+            <p class="lead">
+                Alex isn't a clinical assistant. He's a 17-year-old peer who speaks your child's language, celebrates every win,
+                and has the patience to explain things a hundred different ways until the lightbulb turns on.
+            </p>
+            <div class="alex-persona">
+                <div class="persona-card">
+                    <div class="icon">🧠</div>
+                    <h3>Academic Tutor</h3>
+                    <p>
+                        Breaks down homework using the <strong>Teach-Back Loop</strong> — explains with metaphors, gives keyword hints,
+                        and asks your child to teach it back. No moving on until they truly own the concept.
+                    </p>
+                </div>
+                <div class="persona-card">
+                    <div class="icon">🤝</div>
+                    <h3>Social Coach</h3>
+                    <p>
+                        <strong>Wingman Mode</strong> simulates real-world social scenarios — ordering food, talking to friends,
+                        navigating school dynamics — in a safe, judgment-free space where practice makes confidence.
+                    </p>
+                </div>
+                <div class="persona-card">
+                    <div class="icon">💚</div>
+                    <h3>Emotional Guardian</h3>
+                    <p>
+                        Detects frustration, sadness, and anxiety in real time. Validates feelings first, then gently redirects.
+                        Knows when to push and when to say, <em>"Let's take a break and talk about something fun."</em>
+                    </p>
+                </div>
+                <div class="persona-card">
+                    <div class="icon">🎵</div>
+                    <h3>Language Builder</h3>
+                    <p>
+                        The <strong>Mixing Board</strong> channel turns language into a creative playground — building sentences,
+                        experimenting with new words, and reinforcing vocabulary through real conversation, not flashcards.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════
+         CORE FEATURES
+         ═══════════════════════════════════════════════════════ -->
+    <section class="features section section-alt">
+        <div class="container">
+            <h2>Built for <span class="text-gradient">Real Learning</span>, Not Just Answers</h2>
+            <p class="lead">Every feature exists because a child with learning differences needed it.</p>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon fi-indigo">🔄</div>
+                    <h3>Teach-Back Loop™</h3>
+                    <p>Alex never lectures. He explains a concept, gives keyword hints, and asks your child to teach it back. If they struggle, he rephrases with a new metaphor. This is how deep understanding forms — through active recall, not passive reading.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon fi-amber">🗺️</div>
+                    <h3>Live Mind Maps</h3>
+                    <p>At any point, your child can generate a visual mind map of what they've been learning. Complex topics become clear, connected diagrams — turning abstract knowledge into something they can see and navigate.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon fi-emerald">📊</div>
+                    <h3>Council of Therapists</h3>
+                    <p>Behind the scenes, a multi-specialist AI council (Speech-Language Pathologist, Occupational Therapist, Educational Psychologist, Behavioral Analyst) collaborates to shape Alex's approach to your child's unique profile.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon fi-purple">📄</div>
+                    <h3>Clinical Report Intelligence</h3>
+                    <p>Upload your child's IEP, speech evaluation, or psychological assessment. Resonance's AI reads and understands real clinical documents, then automatically adjusts Alex's strategies to match professional recommendations.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon fi-rose">📸</div>
+                    <h3>Vision OCR — Photo Homework</h3>
+                    <p>Your child can snap a photo of a worksheet, textbook page, or whiteboard. Gemini Vision instantly reads the content and Alex jumps into guided tutoring — no typing required.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon fi-cyan">🧩</div>
+                    <h3>Adaptive User Profiling</h3>
+                    <p>Resonance passively learns your child's emotional patterns, academic strengths, and interests over time — without surveys or questionnaires. Alex naturally adjusts his approach session by session.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════
+         DESIGN PHILOSOPHY
+         ═══════════════════════════════════════════════════════ -->
+    <section class="testimonial-section section">
+        <div class="container">
+            <div class="testimonial-block">
+                <p>
+                    We didn't build another tutoring bot. We built the tireless friend every neurodiverse kid deserves —
+                    one who speaks their language, celebrates their wins, and has infinite patience to explain things
+                    a hundred different ways.
+                </p>
+                <div class="author">— Antigravity AI, Design Philosophy</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════
+         COMPETITIVE EDGE
+         ═══════════════════════════════════════════════════════ -->
+    <section class="competitive section section-alt">
+        <div class="container">
+            <h2>What Makes Resonance <span class="text-gradient">Different</span></h2>
+            <p class="lead">Most AI tutors answer homework questions. Resonance develops the whole child.</p>
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Capability</th>
+                        <th class="resonance-col">Resonance</th>
+                        <th>Generic AI Tutors</th>
+                        <th>Human Tutoring</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>APD / Neurodiverse Specialization</strong></td>
+                        <td class="check">✓ Purpose-built</td>
+                        <td class="miss">✗ Generic</td>
+                        <td class="partial">~ Specialist-dependent</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Persistent Character (Not a Bot)</strong></td>
+                        <td class="check">✓ Alex — consistent peer identity</td>
+                        <td class="miss">✗ Generic assistant</td>
+                        <td class="check">✓ Human personality</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Active Recall (Teach-Back)</strong></td>
+                        <td class="check">✓ Built-in loop with hints</td>
+                        <td class="miss">✗ Provides answers directly</td>
+                        <td class="partial">~ Depends on tutor skill</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Social Simulation (Wingman Mode)</strong></td>
+                        <td class="check">✓ Role-play with feedback</td>
+                        <td class="miss">✗ Not available</td>
+                        <td class="miss">✗ Not scalable</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Emotional State Detection</strong></td>
+                        <td class="check">✓ Real-time, adaptive</td>
+                        <td class="miss">✗ None</td>
+                        <td class="partial">~ Intuition-based</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Clinical Document Integration</strong></td>
+                        <td class="check">✓ IEP / Eval reader</td>
+                        <td class="miss">✗ Not available</td>
+                        <td class="partial">~ Manual review</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Multi-Specialist AI Council</strong></td>
+                        <td class="check">✓ 4+ specialist agents</td>
+                        <td class="miss">✗ Single model</td>
+                        <td class="miss">✗ Single person</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Parent Oversight Dashboard</strong></td>
+                        <td class="check">✓ Full portal with progress</td>
+                        <td class="miss">✗ Chat logs only</td>
+                        <td class="partial">~ Session notes</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Availability</strong></td>
+                        <td class="check">✓ 24/7/365</td>
+                        <td class="check">✓ 24/7</td>
+                        <td class="miss">✗ Limited sessions</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Cost (vs weekly therapy)</strong></td>
+                        <td class="check">✓ Fraction of the cost</td>
+                        <td class="check">✓ Low cost</td>
+                        <td class="miss">✗ $80–200/session</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════
+         PARENT PORTAL
+         ═══════════════════════════════════════════════════════ -->
+    <section class="parent-portal section">
+        <div class="container">
+            <div class="parent-portal-grid">
+                <div>
+                    <h2>The <span style="color:var(--accent-amber)">Parent Portal</span></h2>
+                    <p>
+                        You stay in control. The PIN-protected Parent Portal lets you set educational priorities,
+                        add vocabulary from school spelling lists, write custom directives for Alex, and track your child's
+                        progress — all without them knowing the instructions changed.
+                    </p>
+                    <ul class="portal-features">
+                        <li>
+                            <div class="pf-icon">📝</div>
+                            <span><strong>Priority Directives</strong> — Write instructions that shape Alex's behavior in real time. Tell him to focus on fractions this week, or to practice ordering food at restaurants.</span>
+                        </li>
+                        <li>
+                            <div class="pf-icon">📚</div>
+                            <span><strong>Vocabulary Manager</strong> — Add words with definitions and example sentences. Alex will naturally weave them into conversation.</span>
+                        </li>
+                        <li>
+                            <div class="pf-icon">🎯</div>
+                            <span><strong>Focus Topics</strong> — Set academic priorities (e.g., "Biology Chapter 7") and Alex automatically shifts emphasis.</span>
+                        </li>
+                        <li>
+                            <div class="pf-icon">📈</div>
+                            <span><strong>Progress Dashboard</strong> — See session frequency, engagement depth, word counts, and channel usage over time.</span>
+                        </li>
+                        <li>
+                            <div class="pf-icon">🧪</div>
+                            <span><strong>Sandbox Mode</strong> — Test Alex yourself as a parent without affecting your child's learning profile or progress data.</span>
+                        </li>
+                    </ul>
+                </div>
+                <div class="portal-mockup">
+                    <div class="mock-header">
+                        <div class="dot dot-r"></div>
+                        <div class="dot dot-y"></div>
+                        <div class="dot dot-g"></div>
+                        <span>Parent Portal — Resonance</span>
+                    </div>
+                    <div class="mock-tab-bar">
+                        <div class="mock-tab">Instructions</div>
+                        <div class="mock-tab">Vocabulary</div>
+                        <div class="mock-tab active">Progress</div>
+                        <div class="mock-tab">Focus Topics</div>
+                    </div>
+                    <div class="mock-content-block">
+                        <div class="mock-metric">
+                            <span class="metric-label">Sessions This Week</span>
+                            <span class="metric-value">14</span>
+                        </div>
+                        <div class="mock-metric">
+                            <span class="metric-label">Avg. Engagement Depth</span>
+                            <span class="metric-value" style="color:var(--accent-amber)">Medium–Long</span>
+                        </div>
+                        <div class="mock-metric">
+                            <span class="metric-label">Words Spoken by Student</span>
+                            <span class="metric-value">3,240</span>
+                        </div>
+                        <div class="mock-metric">
+                            <span class="metric-label">Most Active Channel</span>
+                            <span class="metric-value" style="color:var(--accent-indigo-light)">#focus-room</span>
+                        </div>
+                        <div class="mock-metric">
+                            <span class="metric-label">Vocabulary Reinforced</span>
+                            <span class="metric-value">12 / 15 words</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════
+         TARGET AUDIENCES
+         ═══════════════════════════════════════════════════════ -->
+    <section class="audiences section section-alt">
+        <div class="container">
+            <h2>Who Is <span class="text-gradient">Resonance</span> For?</h2>
+            <p class="lead">Resonance serves families and professionals across the neurodiverse learning spectrum.</p>
+            <div class="audience-grid">
+                <div class="audience-card">
+                    <div class="audience-icon">👨‍👩‍👦</div>
+                    <h3>Parents of Neurodiverse Teens</h3>
+                    <p>Families with children diagnosed with APD, speech delays, autism spectrum traits, or ADHD-related processing challenges.</p>
+                    <ul>
+                        <li>Supplement speech therapy between sessions</li>
+                        <li>Practice social skills in a safe environment</li>
+                        <li>Homework support that adapts to their child</li>
+                        <li>Track progress without being in the room</li>
+                    </ul>
+                </div>
+                <div class="audience-card">
+                    <div class="audience-icon">🏫</div>
+                    <h3>Special Education Programs</h3>
+                    <p>Schools, learning centers, and IEP coordinators looking for technology-assisted supplemental instruction.</p>
+                    <ul>
+                        <li>Aligns with IEP goals automatically</li>
+                        <li>Provides 1-on-1 attention at scale</li>
+                        <li>Consistent teaching methodology</li>
+                        <li>Measurable engagement data for reporting</li>
+                    </ul>
+                </div>
+                <div class="audience-card">
+                    <div class="audience-icon">🩺</div>
+                    <h3>Speech-Language Pathologists</h3>
+                    <p>Licensed SLPs who want a homework tool that reinforces session goals between weekly appointments.</p>
+                    <ul>
+                        <li>Upload clinical reports — Alex adapts</li>
+                        <li>Prescribe focus topics and vocabulary</li>
+                        <li>Council of Therapists mirrors your strategy</li>
+                        <li>Progress data integrates with your workflow</li>
+                    </ul>
+                </div>
+                <div class="audience-card">
+                    <div class="audience-icon">🧑‍⚕️</div>
+                    <h3>Occupational & Behavioral Therapists</h3>
+                    <p>OTs and BCBAs looking for a bridge between structured therapy and daily life practice.</p>
+                    <ul>
+                        <li>Social simulation for real-world scenarios</li>
+                        <li>Emotional detection and de-escalation</li>
+                        <li>Behavioral pattern tracking over time</li>
+                        <li>Customizable directives per client</li>
+                    </ul>
+                </div>
+                <div class="audience-card">
+                    <div class="audience-icon">🏠</div>
+                    <h3>Homeschool Families</h3>
+                    <p>Parents managing education at home who need an adaptive, always-available co-teacher for their neurodiverse learner.</p>
+                    <ul>
+                        <li>Covers academic + social + emotional needs</li>
+                        <li>Photo homework — snap a worksheet and go</li>
+                        <li>Flexible channel modes for different subjects</li>
+                        <li>Mind maps and summaries for review</li>
+                    </ul>
+                </div>
+                <div class="audience-card">
+                    <div class="audience-icon">🌍</div>
+                    <h3>Underserved Communities</h3>
+                    <p>Families without access to specialized speech therapy or in areas with long waitlists for services.</p>
+                    <ul>
+                        <li>Immediate access — no waitlist</li>
+                        <li>Fraction of the cost of weekly therapy</li>
+                        <li>Available in any timezone, any schedule</li>
+                        <li>Professional-grade methodology, democratized</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════
+         HOW IT WORKS
+         ═══════════════════════════════════════════════════════ -->
+    <section class="how-it-works section">
+        <div class="container">
+            <h2>Getting Started Is <span class="text-gradient">Simple</span></h2>
+            <div class="steps">
+                <div class="step">
+                    <h3>Launch</h3>
+                    <p>One click launches Resonance. No configuration needed — the desktop shortcut handles everything automatically.</p>
+                </div>
+                <div class="step">
+                    <h3>Set Up Parent Portal</h3>
+                    <p>Create your 4-digit PIN. Add your child's vocabulary words, focus topics, and any instructions for Alex.</p>
+                </div>
+                <div class="step">
+                    <h3>Upload Reports</h3>
+                    <p>Drop in your child's IEP, speech evaluation, or school reports. Alex automatically adapts his approach.</p>
+                </div>
+                <div class="step">
+                    <h3>Let Them Talk to Alex</h3>
+                    <p>Your child opens Resonance and starts chatting. Alex handles the rest — tutoring, coaching, celebrating, growing together.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════
+         CTA
+         ═══════════════════════════════════════════════════════ -->
+    <section class="cta-section">
+        <div class="container cta-content">
+            <h2>Give Your Child the <span class="text-gradient">Wingman</span> They Deserve</h2>
+            <p>
+                Resonance is more than an app. It's the patient friend, the tireless tutor, and the 
+                emotional anchor that every neurodiverse teen needs — available the moment they need it.
+            </p>
+            <a href="mailto:info@antigravity.ai" class="cta-button">Request a Demo →</a>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════
+         FOOTER
+         ═══════════════════════════════════════════════════════ -->
+    <footer>
+        <div class="container">
+            <p><span class="brand">Resonance</span> by Antigravity AI &nbsp;·&nbsp; V3.2 Socratic Tutor Release &nbsp;·&nbsp; © 2026 All Rights Reserved</p>
+            <p style="margin-top:0.5rem; font-size:0.8rem;">
+                Resonance is a learning support tool and is not a replacement for licensed therapy or medical advice.
+            </p>
+        </div>
+    </footer>
+
+</body>
+</html>

@@ -1,0 +1,7 @@
+{
+    "app_name": "PulseBoard",
+    "webhook_url": "https://humanresource.app.n8n.cloud/webhook/PulseBoard-webhook",
+    "blueprint": "multi_agent_core",
+    "n8n_workflow_id": "LOCAL_PulseBoard_20260324205533",
+    "port": 5008
+}

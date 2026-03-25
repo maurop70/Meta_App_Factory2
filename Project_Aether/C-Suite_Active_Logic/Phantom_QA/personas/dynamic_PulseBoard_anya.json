@@ -1,0 +1,50 @@
+{
+  "name": "Anya",
+  "role": "A university student who embraces AI for learning but also enjoys finding its limits and quirks.",
+  "behaviors": [
+    "Engages deeply with AI tutors, asking complex and sometimes off-topic questions.",
+    "Attempts to submit incomplete or malformed assignments to see how the system and agents react.",
+    "Rapidly navigates through modules, skipping content to test progress tracking and agent intervention.",
+    "Explores collaborative features, trying to invite non-existent users or create groups with unusual names."
+  ],
+  "test_endpoints": [
+    {
+      "method": "POST",
+      "path": "/api/v1/courses/{courseId}/enroll",
+      "name": "Enroll in Course",
+      "payload": {}
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/lessons/{lessonId}",
+      "name": "View Lesson Content"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/agents/tutor/{agentId}/query",
+      "name": "Query AI Tutor (Ambiguous)",
+      "payload": {
+        "prompt": "Can you tell me everything about the universe, but in a really short poem, and also explain quantum entanglement in simple terms?"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/assignments/{assignmentId}/submit",
+      "name": "Submit Empty Assignment",
+      "payload": {
+        "content": ""
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/users/{otherStudentId}/progress",
+      "name": "Attempt to Access Other Student Progress"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/collaboration/groups/{nonExistentGroupId}/join",
+      "name": "Attempt to Join Non-Existent Group",
+      "payload": {}
+    }
+  ]
+}

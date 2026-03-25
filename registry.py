@@ -68,7 +68,8 @@ class Librarian:
 
     def register_app(self, app_name, workflow_id, webhook_url, blueprint,
                      project_id="", project_name="", drive_path="",
-                     capabilities=None, is_skill=False, item_type="App"):
+                     capabilities=None, is_skill=False, item_type="App",
+                     port=None):
         """Register a new item in the ANTIGRAVITY_INVENTORY."""
         row = {
             "Item_Name": app_name,
@@ -80,6 +81,8 @@ class Librarian:
             "Drive_Path": drive_path,
             "Status": "Active",
         }
+        if port is not None:
+            row["Port"] = str(port)
 
         if self.table_id:
             r = requests.post(
