@@ -25,9 +25,10 @@ const SEVERITY_COLORS = {
   MODERATE: '#eab308',
 };
 
-export default function WarRoom({ ventureMode = false }) {
+export default function WarRoom({ ventureMode = false, onHandoff, projectName = 'Aether' }) {
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
+  const [eosState, setEosState] = useState(null);
   const [persuasion, setPersuasion] = useState(5);
   const [connected, setConnected] = useState(false);
   const [topicInput, setTopicInput] = useState('');
@@ -38,21 +39,39 @@ export default function WarRoom({ ventureMode = false }) {
   // UPGRADE 2: History state
   const [showHistory, setShowHistory] = useState(false);
   const [historySessions, setHistorySessions] = useState([]);
+  // UPGRADE: Outcome Decision Flow
+  const [outcomeProposal, setOutcomeProposal] = useState(null);
+  const [implementationPlan, setImplementationPlan] = useState(null);
+  const [generatingPlan, setGeneratingPlan] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const wsRef = useRef(null);
   const feedEndRef = useRef(null);
+  const fileRef = useRef(null);
   const _seenIds = useRef(new Set());
   const _msgIdCounter = useRef(0);
 
   // Load history
   const loadHistory = () => {
     setHistoryLoading(true);
-    fetch(`${API_BASE}/api/warroom/history`)
+    fetch(`${API_BASE}/api/warroom/history?project_name=${encodeURIComponent(projectName)}`)
       .then(r => r.json())
       .then(data => setHistorySessions(data.sessions || []))
       .catch(() => {})
       .finally(() => setHistoryLoading(false));
   };
+
+  // ── EOS Polling (Phase Tracker) ───────────────────────
+  useEffect(() => {
+    if (!ventureMode) return;
+    const interval = setInterval(() => {
+      fetch(`${API_BASE}/api/eos/state?project_name=${encodeURIComponent(projectName)}`)
+        .then(r => r.json())
+        .then(setEosState)
+        .catch(() => {});
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [ventureMode, projectName]);
 
   // ── WebSocket Connection (dedup-safe for StrictMode) ──
   useEffect(() => {
@@ -75,7 +94,7 @@ export default function WarRoom({ ventureMode = false }) {
 
     const connect = () => {
       if (didCancel) return;
-      ws = new WebSocket(WS_URL);
+      ws = new WebSocket(`${WS_URL}?project=${encodeURIComponent(projectName)}`);
       wsRef.current = ws;
 
       ws.onopen = () => {
@@ -104,6 +123,11 @@ export default function WarRoom({ ventureMode = false }) {
             setActiveChallenge(null);
             setConvinceMode(false);
           }
+        } else if (data.type === 'outcome_proposal') {
+          setOutcomeProposal(data);
+        } else if (data.type === 'implementation_plan') {
+          setImplementationPlan(data);
+          setGeneratingPlan(false);
         }
       };
 
@@ -126,7 +150,7 @@ export default function WarRoom({ ventureMode = false }) {
       clearTimeout(reconnectTimer);
       if (ws) ws.close();
     };
-  }, []);
+  }, [projectName]);
 
   // ── Auto-scroll ───────────────────────────────────────
   useEffect(() => {
@@ -143,6 +167,7 @@ export default function WarRoom({ ventureMode = false }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          project_name: projectName,
           challenge_id: activeChallenge.challenge_id,
           reasoning: inputText.trim(),
         }),
@@ -164,6 +189,7 @@ export default function WarRoom({ ventureMode = false }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          project_name: projectName,
           challenge_id: activeChallenge.challenge_id,
           note: inputText.trim() || 'Commander override — proceeding.',
         }),
@@ -182,13 +208,14 @@ export default function WarRoom({ ventureMode = false }) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        project_name: projectName,
         proposal: topicInput.trim(),
         critic_score: score,
       }),
     });
     setTopicInput('');
     setChallengeScore('');
-  }, [topicInput, challengeScore, persuasion]);
+  }, [topicInput, challengeScore, persuasion, projectName]);
 
   // ── Seed Topic (Phase 2) ──────────────────────────────
   const seedTopic = useCallback(() => {
@@ -196,10 +223,10 @@ export default function WarRoom({ ventureMode = false }) {
     fetch(`${API_BASE}/api/warroom/seed`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ topic: topicInput.trim() }),
+      body: JSON.stringify({ project_name: projectName, topic: topicInput.trim() }),
     });
     setTopicInput('');
-  }, [topicInput]);
+  }, [topicInput, projectName]);
 
   // ── 🆕 EOS Action Trigger ─────────────────────────────
   const triggerEosAction = useCallback((cmd) => {
@@ -207,6 +234,72 @@ export default function WarRoom({ ventureMode = false }) {
       wsRef.current.send(JSON.stringify({ type: 'intervention', message: cmd }));
     }
   }, []);
+
+  // ── 🆕 Upload Handler ─────────────────────────────────
+  const uploadFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || uploading) return;
+    e.target.value = '';
+    
+    setUploading(true);
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('project_name', projectName);
+    
+    try {
+      if (wsRef.current) {
+        wsRef.current.send(JSON.stringify({ type: 'intervention', message: `Uploading document: ${file.name}...` }));
+      }
+      await fetch(`${API_BASE}/api/warroom/upload`, { method: 'POST', body: fd });
+    } catch (err) {
+      console.error("Upload failed", err);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // ── Outcome Decision Handlers ──────────────────────────
+  const handleOutcomeChoice = async (choice) => {
+    if (choice === 'dismiss') {
+      setOutcomeProposal(null);
+      return;
+    }
+    setGeneratingPlan(true);
+    setOutcomeProposal(null);
+    try {
+      await fetch(`${API_BASE}/api/warroom/execute_outcome`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project_name: projectName, outcome_type: choice }),
+      });
+    } catch (err) {
+      console.error('Outcome execution failed', err);
+      setGeneratingPlan(false);
+    }
+  };
+
+  const approvePlan = () => {
+    if (wsRef.current) {
+      wsRef.current.send(JSON.stringify({
+        type: 'intervention',
+        message: `✅ APPROVED: Implementation plan for ${implementationPlan?.outcome_type?.toUpperCase() || 'UPDATE'}. Proceeding to build.`,
+      }));
+    }
+    if (implementationPlan?.outcome_type === 'new' && onHandoff) {
+      onHandoff({ plan: implementationPlan.plan });
+    }
+    setImplementationPlan(null);
+  };
+
+  const rejectPlan = () => {
+    if (wsRef.current) {
+      wsRef.current.send(JSON.stringify({
+        type: 'intervention',
+        message: '❌ REJECTED: Implementation plan needs revision. Re-entering deliberation.',
+      }));
+    }
+    setImplementationPlan(null);
+  };
 
   // ── Helpers ───────────────────────────────────────────
   const getMeterColor = (score) => {
@@ -325,6 +418,10 @@ export default function WarRoom({ ventureMode = false }) {
             />
             <button onClick={seedTopic} style={styles.topicBtn}>🏛️ Debate</button>
             <button onClick={issueChallenge} style={{ ...styles.topicBtn, background: 'linear-gradient(135deg, #ef4444, #dc2626)' }}>🔍 Challenge</button>
+            <button onClick={() => fileRef.current?.click()} disabled={uploading} style={{ ...styles.topicBtn, background: uploading ? '#64748b' : 'linear-gradient(135deg, #10b981, #059669)' }}>
+              {uploading ? '⏳' : '📎 Upload'}
+            </button>
+            <input type="file" ref={fileRef} onChange={uploadFile} style={{ display: 'none' }} />
           </div>
 
           {/* Message Feed */}
@@ -473,6 +570,48 @@ export default function WarRoom({ ventureMode = false }) {
               </p>
             )}
 
+            {/* UPGRADE V3.3: Phase Tracker & Handoff */}
+            {ventureMode && eosState && (
+              <div style={{ marginTop: '16px', borderTop: '1px solid rgba(100,116,139,0.15)', paddingTop: '16px' }}>
+                <div style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>
+                  📈 Venture Progress
+                </div>
+                
+                {['market', 'brand', 'legal', 'business_plan', 'financials', 'funding', 'pitch'].map(phase => {
+                  const status = eosState.phase_status?.[phase] || 'pending';
+                  const isLocked = status === 'locked';
+                  return (
+                    <div key={phase} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px', padding: '4px', background: 'rgba(0,0,0,0.2)', borderRadius: '4px' }}>
+                      <span style={{ textTransform: 'capitalize', color: '#cbd5e1' }}>{phase.replace('_', ' ')}</span>
+                      <span style={{ 
+                        color: isLocked ? '#10b981' : status === 'iterating' ? '#eab308' : status === 'deadlocked' ? '#ef4444' : '#64748b',
+                        fontWeight: isLocked ? 700 : 400 
+                      }}>
+                        {isLocked ? '✅ Locked' : status === 'iterating' ? '🔄 Iterating' : status === 'deadlocked' ? '🚨 Deadlocked' : '⏳ Pending'}
+                      </span>
+                    </div>
+                  );
+                })}
+
+                {eosState.phase_status?.market === 'locked' && 
+                 eosState.phase_status?.brand === 'locked' && 
+                 eosState.phase_status?.legal === 'locked' && 
+                 eosState.phase_status?.business_plan === 'locked' && 
+                 eosState.phase_status?.financials === 'locked' && (
+                  <button 
+                    onClick={() => onHandoff?.(eosState)}
+                    style={{
+                      width: '100%', padding: '12px', marginTop: '12px', borderRadius: '8px', border: 'none',
+                      background: 'linear-gradient(135deg, #22c55e, #16a34a)', color: 'white',
+                      fontSize: '13px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Inter, sans-serif',
+                      boxShadow: '0 4px 14px rgba(34,197,94,0.3)', animation: 'pulse 2s infinite'
+                    }}>
+                    🚀 APPROVE PLAN & SEND TO BUILDER
+                  </button>
+                )}
+              </div>
+            )}
+
             {ventureMode && !convinceMode && (
               <div style={{ marginTop: '16px', borderTop: '1px solid rgba(100,116,139,0.15)', paddingTop: '16px' }}>
                 <div style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>
@@ -481,10 +620,12 @@ export default function WarRoom({ ventureMode = false }) {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
                   <button onClick={() => triggerEosAction('/market')} style={styles.btnEos}>1. Market Intel</button>
                   <button onClick={() => triggerEosAction('/brand')} style={styles.btnEos}>2. Brand DNA</button>
-                  <button onClick={() => triggerEosAction('/financials')} style={styles.btnEos}>3. Financials</button>
-                  <button onClick={() => triggerEosAction('/funding')} style={styles.btnEos}>4. Funding Strategy</button>
+                  <button onClick={() => triggerEosAction('/legal')} style={styles.btnEos}>3. Legal & IP</button>
+                  <button onClick={() => triggerEosAction('/financials')} style={styles.btnEos}>4. Financials</button>
+                  <button onClick={() => triggerEosAction('/business-plan')} style={styles.btnEos}>5. Business Plan</button>
+                  <button onClick={() => triggerEosAction('/funding')} style={styles.btnEos}>6. Funding Strat</button>
                   <button onClick={() => triggerEosAction('/pitch')} style={{ ...styles.btnEos, gridColumn: 'span 2', background: 'rgba(244,63,94,0.1)', color: '#f43f5e', borderColor: 'rgba(244,63,94,0.3)' }}>
-                    Export Deliverable Decks
+                    7. Validate & Export Start-Up Decks
                   </button>
                 </div>
                 <div style={{ fontSize: '10px', color: '#64748b', marginTop: '8px', fontStyle: 'italic', lineHeight: 1.4 }}>
@@ -506,6 +647,67 @@ export default function WarRoom({ ventureMode = false }) {
           </div>
         </div>
       </div>
+
+      {/* ── Outcome Decision Modal ── */}
+      {outcomeProposal && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modalContent}>
+            <div style={{ fontSize: '48px', textAlign: 'center', marginBottom: '16px' }}>🎯</div>
+            <h2 style={{ color: '#22c55e', margin: '0 0 8px', fontSize: '20px', textAlign: 'center' }}>CONSENSUS REACHED</h2>
+            <p style={{ color: '#94a3b8', fontSize: '13px', textAlign: 'center', marginBottom: '20px' }}>
+              The board finalized <strong style={{ color: '#e2e8f0' }}>{outcomeProposal.summary?.deliverables_count || 0}</strong> deliverables
+              for <strong style={{ color: '#e2e8f0' }}>{outcomeProposal.summary?.company_name}</strong>
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <button onClick={() => handleOutcomeChoice('update')} style={{ ...styles.outcomeBtn, background: 'linear-gradient(135deg, #3b82f6, #6366f1)' }}>
+                🔄 Update Existing Product
+                <span style={{ display: 'block', fontSize: '11px', opacity: 0.7, marginTop: '4px' }}>Merge deliverables into the current codebase</span>
+              </button>
+              <button onClick={() => handleOutcomeChoice('new')} style={{ ...styles.outcomeBtn, background: 'linear-gradient(135deg, #22c55e, #16a34a)' }}>
+                🆕 Create New Product
+                <span style={{ display: 'block', fontSize: '11px', opacity: 0.7, marginTop: '4px' }}>Spin up a fresh build from these deliverables</span>
+              </button>
+              <button onClick={() => handleOutcomeChoice('dismiss')} style={{ ...styles.outcomeBtn, background: 'rgba(100,116,139,0.2)', border: '1px solid rgba(100,116,139,0.3)' }}>
+                📦 Dismiss — Archive for Later
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Implementation Plan Viewer ── */}
+      {implementationPlan && (
+        <div style={styles.modalOverlay}>
+          <div style={{ ...styles.modalContent, maxWidth: '700px', maxHeight: '80vh', overflow: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 style={{ color: '#6366f1', margin: 0, fontSize: '18px' }}>📋 Implementation Plan ({implementationPlan.outcome_type?.toUpperCase()})</h2>
+              <span style={{ fontSize: '10px', color: '#64748b', fontFamily: 'JetBrains Mono, monospace' }}>{implementationPlan.project_name}</span>
+            </div>
+            <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '10px', padding: '16px', fontSize: '13px', color: '#cbd5e1', lineHeight: 1.7, whiteSpace: 'pre-wrap', fontFamily: 'Inter, sans-serif', maxHeight: '50vh', overflow: 'auto' }}>
+              {implementationPlan.plan}
+            </div>
+            <div style={{ display: 'flex', gap: '12px', marginTop: '16px', justifyContent: 'center' }}>
+              <button onClick={approvePlan} style={{ padding: '12px 32px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, #22c55e, #16a34a)', color: 'white', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}>
+                ✅ Approve & Execute
+              </button>
+              <button onClick={rejectPlan} style={{ padding: '12px 32px', borderRadius: '10px', border: '1px solid rgba(239,68,68,0.4)', background: 'rgba(239,68,68,0.1)', color: '#ef4444', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}>
+                ❌ Reject & Revise
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Generating Plan Spinner ── */}
+      {generatingPlan && (
+        <div style={styles.modalOverlay}>
+          <div style={{ ...styles.modalContent, textAlign: 'center', maxWidth: '400px' }}>
+            <div style={{ fontSize: '48px', animation: 'pulse 2s infinite' }}>🧠</div>
+            <h3 style={{ color: '#e2e8f0', margin: '12px 0 4px' }}>Generating Implementation Plan...</h3>
+            <p style={{ color: '#64748b', fontSize: '12px' }}>Claude is analyzing the deliverables and structuring the plan.</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -691,5 +893,22 @@ const styles = {
     color: '#cbd5e1', fontSize: '11px', fontWeight: 600, cursor: 'pointer',
     fontFamily: 'Inter, sans-serif', textAlign: 'center',
     transition: 'all 0.2s',
+  },
+
+  // ── Modals ──
+  modalOverlay: {
+    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999,
+    backdropFilter: 'blur(8px)',
+  },
+  modalContent: {
+    background: 'linear-gradient(135deg, #1e1b3a, #0f172a)',
+    border: '1px solid rgba(99,102,241,0.3)', borderRadius: '16px',
+    padding: '32px', maxWidth: '480px', width: '90%',
+  },
+  outcomeBtn: {
+    width: '100%', padding: '14px 20px', borderRadius: '10px', border: 'none',
+    color: 'white', fontSize: '14px', fontWeight: 600, cursor: 'pointer',
+    fontFamily: 'Inter, sans-serif', textAlign: 'center',
   },
 };

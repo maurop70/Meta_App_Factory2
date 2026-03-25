@@ -2697,5 +2697,40 @@
       "credentials": "valid",
       "buffer_pending": 3
     }
+  },
+  {
+    "timestamp": "2026-03-24T13:38:03.534311",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-decision",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-03-24T20:42:54.788659",
+    "project": "WarRoom",
+    "target": "func:_call_n8n_agent_inner",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 2
+    },
+    "error": "404 Client Error: Not Found for url: https://humanresource.app.n8n.cloud/webhook/elite-council"
+  },
+  {
+    "timestamp": "2026-03-24T22:11:07.542623",
+    "project": "WarRoom",
+    "target": "func:_call_n8n_agent_inner",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 2
+    },
+    "error": "404 Client Error: Not Found for url: https://humanresource.app.n8n.cloud/webhook/elite-council"
   }
 ]

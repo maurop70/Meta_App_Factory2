@@ -1,0 +1,12 @@
+node_modules
+__pycache__
+.git
+.env
+.env.enc
+*.pyc
+*.pyo
+.Gemini_state
+vault.enc
+vault.enc.salt
+.vault_pw
+*.log

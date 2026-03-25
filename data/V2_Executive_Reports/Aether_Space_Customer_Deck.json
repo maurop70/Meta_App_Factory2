@@ -1,0 +1,174 @@
+{
+  "audience": "customer",
+  "tone": "warm, approachable",
+  "focus": [
+    "User Experience",
+    "Safety & Privacy",
+    "Reliability"
+  ],
+  "slides": [
+    {
+      "type": "title",
+      "title": "Antigravity-AI - Customer Brief",
+      "subtitle": "Autonomous Intelligence Infrastructure",
+      "date": "March 24, 2026"
+    },
+    {
+      "type": "content",
+      "title": "Welcome to Antigravity-AI",
+      "bullets": [
+        "Your intelligent assistant that adapts to you",
+        "18 specialized agents working seamlessly",
+        "Beautiful dashboards, simple controls",
+        "Your data stays private -- always"
+      ]
+    },
+    {
+      "type": "content",
+      "title": "Intuitive Dashboard Experience",
+      "bullets": [
+        "Omni-Dashboard: see all agents at a glance",
+        "Real-time stress monitoring adapts tone",
+        "One-click context refresh",
+        "Dark mode for extended use"
+      ]
+    },
+    {
+      "type": "diagram",
+      "title": "Agent Network Architecture (V7)",
+      "diagram_type": "network",
+      "agents": [
+        [
+          "CEO",
+          "Core"
+        ],
+        [
+          "CFO",
+          "Core"
+        ],
+        [
+          "CTO",
+          "Core"
+        ],
+        [
+          "CMO",
+          "Growth"
+        ],
+        [
+          "Deep Crawler",
+          "Research"
+        ],
+        [
+          "Critic",
+          "Quality"
+        ],
+        [
+          "Librarian",
+          "Knowledge"
+        ],
+        [
+          "Compliance",
+          "Safety"
+        ],
+        [
+          "Data Architect",
+          "Infra"
+        ],
+        [
+          "Researcher",
+          "Research"
+        ],
+        [
+          "Designer",
+          "Creative"
+        ],
+        [
+          "Presentations",
+          "Executive"
+        ],
+        [
+          "CX Strategist",
+          "Growth"
+        ],
+        [
+          "Aether",
+          "Core"
+        ],
+        [
+          "Delegate AI",
+          "Core"
+        ],
+        [
+          "EQ Engine",
+          "Core"
+        ],
+        [
+          "GeoTalent",
+          "Intelligence"
+        ],
+        [
+          "News Bureau",
+          "Intelligence"
+        ]
+      ],
+      "center": "Delegate AI Orchestrator",
+      "clusters": {
+        "Core": [
+          "CEO",
+          "CFO",
+          "CTO",
+          "Aether",
+          "Delegate AI",
+          "EQ Engine"
+        ],
+        "Intelligence": [
+          "GeoTalent",
+          "News Bureau",
+          "Deep Crawler",
+          "Researcher"
+        ],
+        "Quality": [
+          "Critic",
+          "Compliance",
+          "Librarian"
+        ],
+        "Executive": [
+          "Presentations",
+          "CX Strategist",
+          "CMO"
+        ],
+        "Creative": [
+          "Designer",
+          "Data Architect"
+        ]
+      }
+    },
+    {
+      "type": "content",
+      "title": "Your Data is Safe",
+      "bullets": [
+        "PIIMasker: auto-redaction on all outputs",
+        "FernetVault: encrypted API key storage",
+        "No external data leaves unmasked",
+        "Compliance-ready audit trails"
+      ]
+    },
+    {
+      "type": "content",
+      "title": "Getting Started",
+      "bullets": [
+        "1. Launch Meta App Factory dashboard",
+        "2. Review agent network health",
+        "3. Set notification preferences",
+        "4. Let the system work for you"
+      ]
+    },
+    {
+      "type": "closing",
+      "title": "Thank You",
+      "subtitle": "Antigravity-AI | Autonomous Intelligence Infrastructure"
+    }
+  ],
+  "generated_at": "2026-03-25T01:56:33.510514+00:00",
+  "version": "V2"
+}

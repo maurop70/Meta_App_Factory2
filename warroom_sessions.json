@@ -1,0 +1,86 @@
+{
+  "last_updated": "2026-03-24T22:53:02.364131",
+  "message_count": 10,
+  "messages": [
+    {
+      "type": "dialogue",
+      "agent": "COMMANDER",
+      "icon": "\u26a1",
+      "color": "#f97316",
+      "message": "/market",
+      "timestamp": "2026-03-24T22:10:39.405450",
+      "is_user": true
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "icon": "\ud83d\udcca",
+      "color": "#10b981",
+      "message": "**Market Intel Acquired**\nTAM: $999T\nSAM: $500T\nSOM: $0.00",
+      "timestamp": "2026-03-24T22:10:48.068940"
+    },
+    {
+      "type": "dialogue",
+      "agent": "CEO",
+      "icon": "\ud83d\udc54",
+      "color": "#3b82f6",
+      "message": "Opening deliberation on: \"Review the Market Intel just acquired.\"\u2026 Consulting the board now.",
+      "timestamp": "2026-03-24T22:10:48.583207"
+    },
+    {
+      "type": "dialogue",
+      "agent": "CEO",
+      "icon": "\ud83d\udc54",
+      "color": "#3b82f6",
+      "message": "\u26a0\ufe0f [Cached] The strategic implications are significant. Let me hear from the specialists before I weigh in fully.",
+      "timestamp": "2026-03-24T22:11:08.362075"
+    },
+    {
+      "type": "dialogue",
+      "agent": "CMO",
+      "icon": "\ud83d\udce2",
+      "color": "#8b5cf6",
+      "message": "\u26a0\ufe0f [Cached] From a market positioning standpoint, we need more audience data before committing to this direction.",
+      "timestamp": "2026-03-24T22:11:09.169202"
+    },
+    {
+      "type": "dialogue",
+      "agent": "CFO",
+      "icon": "\ud83d\udcb0",
+      "color": "#22c55e",
+      "message": "\u26a0\ufe0f [Cached] The financial model needs stress-testing. I'll need projected cash flows before approving spend.",
+      "timestamp": "2026-03-24T22:11:09.974645"
+    },
+    {
+      "type": "dialogue",
+      "agent": "CRITIC",
+      "icon": "\ud83d\udd0d",
+      "color": "#ef4444",
+      "message": "\u26a0\ufe0f [Cached] I remain skeptical. Where is the evidence that this outperforms the baseline? Show me data, not conviction.",
+      "timestamp": "2026-03-24T22:11:10.778758"
+    },
+    {
+      "type": "persuasion_update",
+      "score": 6,
+      "reason": "Critic assessment after live deliberation"
+    },
+    {
+      "type": "dialogue",
+      "agent": "COMMANDER",
+      "icon": "\u26a1",
+      "color": "#f97316",
+      "message": "/market",
+      "timestamp": "2026-03-24T22:35:34.659067",
+      "is_user": true
+    },
+    {
+      "type": "dialogue",
+      "agent": "COMMANDER",
+      "icon": "\u26a1",
+      "color": "#f97316",
+      "message": "/legal",
+      "timestamp": "2026-03-24T22:53:02.364106",
+      "is_user": true
+    }
+  ]
+}

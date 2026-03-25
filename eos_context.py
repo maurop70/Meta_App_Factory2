@@ -18,7 +18,6 @@ from typing import Any
 logger = logging.getLogger("EOSContext")
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-EOS_STATE_PATH = os.path.join(SCRIPT_DIR, "eos_state.json")
 
 _DEFAULT_STATE: dict = {
     # ── Identity ─────────────────────────────────────────
@@ -75,47 +74,73 @@ _DEFAULT_STATE: dict = {
     "customer_pptx_path": None,
     "business_plan_md_path": None,
     "pitch_deck_json_path": None,
+    "legal_analysis": None,           # Copyright/Trademark viability
+
+    # ── Iterative Workflow State ──────────────────────────
+    "phase_status": {
+        "market": "pending",      # pending | iterating | locked | deadlocked
+        "brand": "pending",
+        "legal": "pending",
+        "financials": "pending",
+        "funding": "pending",
+        "pitch": "pending",
+        "business_plan": "pending"
+    },
+    "phase_iterations": {
+        "market": 0, "brand": 0, "legal": 0, "financials": 0, "funding": 0, "pitch": 0, "business_plan": 0
+    },
+    "phase_critique": {
+        "market": "", "brand": "", "legal": "", "financials": "", "funding": "", "pitch": "", "business_plan": ""
+    },
 
     # ── Phases Completed ──────────────────────────────────
-    "phases_completed": [],    # ["brief", "market", "brand", "financial", "funding", "decks", "warroom"]
+    "phases_completed": [],    # legacy tracker
 }
 
 
 class EOSContext:
-    """Thread-safe singleton EOS state store with disk persistence."""
+    """Thread-safe EOS state store with per-project disk persistence."""
 
-    _instance = None
-    _lock = Lock()
-
-    def __new__(cls):
-        with cls._lock:
-            if cls._instance is None:
-                cls._instance = super().__new__(cls)
-                cls._instance._state = dict(_DEFAULT_STATE)
-                cls._instance._state_lock = Lock()
-                cls._instance._load()
-        return cls._instance
+    def __init__(self, project_name: str):
+        self.project_name = project_name
+        self.project_dir = os.path.join(SCRIPT_DIR, "projects", self.project_name)
+        os.makedirs(self.project_dir, exist_ok=True)
+        self.state_path = os.path.join(self.project_dir, "eos_state.json")
+        
+        self._state = dict(_DEFAULT_STATE)
+        self._state["company_name"] = self.project_name
+        self._state_lock = Lock()
+        self._load()
 
     # ── Persistence ──────────────────────────────────────
 
     def _load(self):
         try:
-            if os.path.exists(EOS_STATE_PATH):
-                with open(EOS_STATE_PATH, "r", encoding="utf-8") as f:
+            if os.path.exists(self.state_path):
+                with open(self.state_path, "r", encoding="utf-8") as f:
                     saved = json.load(f)
                 self._state.update(saved)
-                logger.info(f"EOS state loaded ({self._state.get('company_name', 'No company')})")
+                logger.info(f"EOS state loaded for '{self.project_name}'")
         except Exception as e:
-            logger.warning(f"EOS state load failed: {e}")
+            logger.warning(f"EOS state load failed for '{self.project_name}': {e}")
 
     def save(self):
         with self._state_lock:
             try:
                 self._state["last_updated"] = datetime.now(timezone.utc).isoformat()
-                with open(EOS_STATE_PATH, "w", encoding="utf-8") as f:
+                with open(self.state_path, "w", encoding="utf-8") as f:
                     json.dump(self._state, f, indent=2, default=str)
             except Exception as e:
-                logger.warning(f"EOS state save failed: {e}")
+                logger.warning(f"EOS state save failed for '{self.project_name}': {e}")
+
+_instances = {}
+_instances_lock = Lock()
+
+def get_eos(project_name: str = "Aether") -> EOSContext:
+    with _instances_lock:
+        if project_name not in _instances:
+            _instances[project_name] = EOSContext(project_name)
+        return _instances[project_name]
 
     # ── Access ────────────────────────────────────────────
 
@@ -154,6 +179,45 @@ class EOSContext:
 
     def is_phase_complete(self, phase: str) -> bool:
         return phase in self._state.get("phases_completed", [])
+
+    # ── Workflow State Methods ────────────────────────────
+
+    def start_iteration(self, phase: str) -> int:
+        """Mark phase as iterating and increment count. Returns the new count."""
+        with self._state_lock:
+            self._state["phase_status"][phase] = "iterating"
+            self._state["phase_iterations"][phase] += 1
+            count = self._state["phase_iterations"][phase]
+            if count > 3:
+                self._state["phase_status"][phase] = "deadlocked"
+            return count
+
+    def set_critique(self, phase: str, critique: str):
+        """Save the CRITIC's latest objections for the specialized agent to use."""
+        with self._state_lock:
+            self._state["phase_critique"][phase] = critique
+        self.save()
+
+    def get_critique(self, phase: str) -> str:
+        with self._state_lock:
+            return self._state["phase_critique"].get(phase, "")
+
+    def lock_phase(self, phase: str):
+        with self._state_lock:
+            self._state["phase_status"][phase] = "locked"
+            self.mark_phase_complete(phase)
+        self.save()
+
+    def all_phases_locked(self) -> bool:
+        """Check if core startup phases are locked."""
+        with self._state_lock:
+            st = self._state["phase_status"]
+            return (
+                st.get("market") == "locked" and 
+                st.get("brand") == "locked" and 
+                st.get("legal") == "locked" and
+                st.get("financials") == "locked"
+            )
 
     # ── Computed Properties ───────────────────────────────
 

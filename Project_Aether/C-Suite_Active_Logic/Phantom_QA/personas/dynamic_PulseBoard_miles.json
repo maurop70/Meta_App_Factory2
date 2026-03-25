@@ -1,0 +1,66 @@
+{
+  "name": "Miles",
+  "role": "A veteran professor who uses PulseBoard to manage his courses, meticulously configuring AI agents and scrutinizing their performance and data integrity.",
+  "behaviors": [
+    "Creates courses with various configurations, including edge cases for agent roles and resource limits.",
+    "Monitors agent interaction logs and student progress reports for inconsistencies or anomalies.",
+    "Attempts to delete critical resources (e.g., active courses, essential agents) to test data protection and error handling.",
+    "Audits student submissions and agent feedback, comparing them for fairness and accuracy."
+  ],
+  "test_endpoints": [
+    {
+      "method": "POST",
+      "path": "/api/v1/courses",
+      "name": "Create New Course",
+      "payload": {
+        "title": "Advanced AI Ethics",
+        "description": "Exploring ethical dilemmas in multi-agent systems.",
+        "instructorId": "{currentUserId}"
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/courses/{courseId}/agents/{agentId}",
+      "name": "Configure Course Agent",
+      "payload": {
+        "role": "Tutor",
+        "scope": "module",
+        "moduleId": "{moduleId}",
+        "parameters": {
+          "difficulty": "advanced",
+          "responseStyle": "formal"
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/courses",
+      "name": "Create Course (Excessively Long Title)",
+      "payload": {
+        "title": "This is an extremely long course title designed to test the maximum character limits of the database and UI display fields for course titles within the PulseBoard application to ensure proper handling and truncation or error messages when faced with oversized input.",
+        "description": "Long title test for database and UI.",
+        "instructorId": "{currentUserId}"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/courses/{activeCourseId}",
+      "name": "Attempt to Delete Active Course with Students"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agents/logs?agentId={agentId}&startDate=2023-01-01&endDate=2023-01-07&level=error",
+      "name": "Get Agent Error Logs for Period"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/courses/{courseId}/agents/assign",
+      "name": "Attempt to Assign Agent Role to Non-Existent User",
+      "payload": {
+        "agentId": "{someAgentId}",
+        "userId": "nonExistentUser123",
+        "role": "assistant"
+      }
+    }
+  ]
+}

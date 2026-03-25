@@ -12,7 +12,7 @@ import subprocess
 
 from auto_heal import auto_heal, diagnose
 
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, UploadFile, File
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse, FileResponse
 from pydantic import BaseModel
@@ -78,6 +78,19 @@ try:
     HISTORY_RETRIEVAL = MEMORY_AVAILABLE
 except ImportError:
     HISTORY_RETRIEVAL = False
+
+# ── Institutional Memory (Learning Engine) ────────────────────
+try:
+    from institutional_memory import record_lesson, get_lessons, get_lessons_for_build, search_lessons
+    _MEMORY_AVAILABLE = True
+    logger.info("Institutional Memory engine loaded.")
+except ImportError:
+    _MEMORY_AVAILABLE = False
+    logger.warning("Institutional Memory not available.")
+    def record_lesson(*a, **kw): pass
+    def get_lessons(*a, **kw): return []
+    def get_lessons_for_build(*a, **kw): return ""
+    def search_lessons(*a, **kw): return []
 
 
 # ── MODELS ────────────────────────────────────────────────────
@@ -743,12 +756,32 @@ class _N8NCircuitBreaker:
 _n8n_breaker = _N8NCircuitBreaker()
 
 # ═══════════════════════════════════════════════════════════════
-#  UPGRADE 4: Gemini Fallback for War Room Agents
+#  UPGRADE 4: Intelligent Model Router (Gemini / Claude)
 # ═══════════════════════════════════════════════════════════════
+
+try:
+    from model_router import route as _model_route, get_model_for_task
+    _MODEL_ROUTER_AVAILABLE = True
+    logger.info("Model Router loaded (Gemini + Claude routing).")
+except ImportError:
+    _MODEL_ROUTER_AVAILABLE = False
+    logger.warning("Model Router not found — falling back to Gemini-only.")
 
 def _gemini_fallback(agent_name: str, topic: str) -> str:
     """Generate a real AI response using Gemini when n8n is unreachable.
-    Fallback chain: n8n → Gemini → cached string."""
+    Fallback chain: n8n → Model Router (Gemini/Claude) → cached string."""
+    # Prefer the Model Router if available (routes to best-fit LLM)
+    if _MODEL_ROUTER_AVAILABLE:
+        sys_prompt = (
+            f"You are the {agent_name} in a C-suite boardroom war room. "
+            f"Give a concise assessment (3-5 sentences) on this topic. "
+            f"Stay in character as a senior executive."
+        )
+        result = _model_route(agent_name, f"TOPIC: {topic}", sys_prompt)
+        if result:
+            return result[:600]
+    
+    # Legacy Gemini-only fallback
     try:
         if STREAMING_AVAILABLE:
             from streaming_bridge import stream_chat
@@ -933,42 +966,44 @@ from concurrent.futures import ThreadPoolExecutor
 
 _warroom_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="warroom")
 
-# War Room State
-_warroom_clients: list[WebSocket] = []
-_warroom_log: list[dict] = []
+# War Room State (Per-Project)
+_warroom_clients: dict[str, list[WebSocket]] = {}
+_warroom_logs: dict[str, list[dict]] = {}
 _persuasion_score: int = 5  # 1-10 Critic agreement
 _session_active: bool = False
 
-# UPGRADE 2: War Room Persistence
-_WARROOM_HISTORY_PATH = os.path.join(SCRIPT_DIR, "warroom_sessions.json")
+# UPGRADE 2: War Room Persistence (Per-Project)
+def _get_history_path(project: str):
+    pdir = os.path.join(SCRIPT_DIR, "projects", project)
+    os.makedirs(pdir, exist_ok=True)
+    return os.path.join(pdir, "warroom_history.json")
 
-def _load_warroom_history():
+def _load_warroom_history(project: str):
     """Load War Room history from disk on startup."""
-    global _warroom_log
+    if project not in _warroom_logs: _warroom_logs[project] = []
+    path = _get_history_path(project)
     try:
-        if os.path.exists(_WARROOM_HISTORY_PATH):
-            with open(_WARROOM_HISTORY_PATH, "r", encoding="utf-8") as f:
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            _warroom_log = data.get("messages", [])[-200:]
-            logger.info(f"War Room: loaded {len(_warroom_log)} messages from history")
+            _warroom_logs[project] = data.get("messages", [])[-200:]
+            logger.info(f"War Room: loaded {len(_warroom_logs[project])} messages for {project}")
     except Exception as e:
-        logger.warning(f"War Room history load failed: {e}")
+        logger.warning(f"War Room history load failed for {project}: {e}")
 
-def _save_warroom_history():
+def _save_warroom_history(project: str):
     """Persist War Room messages to disk."""
+    path = _get_history_path(project)
     try:
         data = {
             "last_updated": _dt.now().isoformat(),
-            "message_count": len(_warroom_log),
-            "messages": _warroom_log[-500:],  # Keep last 500
+            "message_count": len(_warroom_logs.get(project, [])),
+            "messages": _warroom_logs.get(project, [])[-500:],  # Keep last 500
         }
-        with open(_WARROOM_HISTORY_PATH, "w", encoding="utf-8") as f:
+        with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, default=str)
     except Exception as e:
-        logger.warning(f"War Room history save failed: {e}")
-
-# Load on module init
-_load_warroom_history()
+        logger.warning(f"War Room history save failed for {project}: {e}")
 
 # Agent personas for the boardroom
 _AGENTS = {
@@ -1013,37 +1048,42 @@ _WARROOM_PROMPTS = {
     ),
 }
 
-async def _broadcast(msg: dict):
-    """Send a message to all connected War Room clients + persist to disk."""
-    _warroom_log.append(msg)
+async def _broadcast(msg: dict, project: str = "Aether"):
+    """Send a message to all connected War Room clients for a project + persist to disk."""
+    if project not in _warroom_logs: _warroom_logs[project] = []
+    _warroom_logs[project].append(msg)
     # Keep last 200 in memory
-    if len(_warroom_log) > 200:
-        _warroom_log.pop(0)
+    if len(_warroom_logs[project]) > 200:
+        _warroom_logs[project].pop(0)
     # Persist to disk (Upgrade 2)
-    _save_warroom_history()
+    _save_warroom_history(project)
+    
     dead = []
-    for ws in _warroom_clients:
+    for ws in _warroom_clients.get(project, []):
         try:
             await ws.send_json(msg)
         except Exception:
             dead.append(ws)
     for ws in dead:
-        _warroom_clients.remove(ws)
+        _warroom_clients[project].remove(ws)
 
 
 @app.websocket("/ws/warroom")
-async def warroom_websocket(websocket: WebSocket):
+async def warroom_websocket(websocket: WebSocket, project: str = "Aether"):
     """WebSocket endpoint for War Room real-time dialogue."""
     global _persuasion_score
     await websocket.accept()
-    _warroom_clients.append(websocket)
-    logger.info(f"War Room client connected ({len(_warroom_clients)} total)")
+    
+    if project not in _warroom_clients: _warroom_clients[project] = []
+    _warroom_clients[project].append(websocket)
+    _load_warroom_history(project)
+    logger.info(f"War Room '{project}' client connected ({len(_warroom_clients[project])} total)")
 
     # Send history on connect
     try:
         await websocket.send_json({
             "type": "init",
-            "history": _warroom_log[-50:],
+            "history": _warroom_logs.get(project, [])[-50:],
             "persuasion": _persuasion_score,
             "agents": _AGENTS,
         })
@@ -1064,84 +1104,109 @@ async def warroom_websocket(websocket: WebSocket):
                     "message": user_msg,
                     "timestamp": _dt.now().isoformat(),
                     "is_user": True,
-                })
+                }, project=project)
                 
                 # ── EOS Action Parsing ──
                 if user_msg.startswith("/market"):
                     import asyncio
-                    from eos_context import get_eos
-                    eos = get_eos()
-                    req = {"company_name": eos.get("company_name", "Startup")}
+                    req = {"project_name": project, "company_name": get_eos(project).get("company_name", "Startup")}
                     res = generate_market_intel(req)
                     if res.get("status") == "ok":
                         await _broadcast({
                             "type": "dialogue", "agent": "SYSTEM", "icon": "📊", "color": "#10b981",
                             "message": f"**Market Intel Acquired**\nTAM: {res['market'].get('tam')}\nSAM: {res['market'].get('sam')}\nSOM: {res['market'].get('som')}",
                             "timestamp": _dt.now().isoformat()
-                        })
+                        }, project=project)
                     else:
-                        await _broadcast({"type": "dialogue", "agent": "SYSTEM", "icon": "❌", "color": "#ef4444", "message": f"Market Intel Error: {res.get('error')}", "timestamp": _dt.now().isoformat()})
-                    asyncio.create_task(_live_debate("Review the Market Intel just acquired."))
+                        await _broadcast({"type": "dialogue", "agent": "SYSTEM", "icon": "❌", "color": "#ef4444", "message": f"Market Intel Error: {res.get('error')}", "timestamp": _dt.now().isoformat()}, project=project)
+                    asyncio.create_task(_live_debate("Review the Market Intel just acquired.", project_name=project, phase="market"))
                 
                 elif user_msg.startswith("/brand"):
                     import asyncio
-                    res = generate_brand_identity({})
+                    res = generate_brand_identity({"project_name": project})
                     if res.get("status") == "ok":
                         b = res["brand"]
                         await _broadcast({
                             "type": "dialogue", "agent": "SYSTEM", "icon": "🎨", "color": "#a855f7",
                             "message": f"**Brand DNA Generated**\nName: {b.get('company_name')}\nTagline: {b.get('tagline')}\nLogo Prompt: {b.get('logo_prompt')}",
                             "timestamp": _dt.now().isoformat()
-                        })
+                        }, project=project)
                     else:
-                        await _broadcast({"type": "dialogue", "agent": "SYSTEM", "icon": "❌", "color": "#ef4444", "message": f"Brand Error: {res.get('error')}", "timestamp": _dt.now().isoformat()})
-                    asyncio.create_task(_live_debate("Critique the new brand identity."))
+                        await _broadcast({"type": "dialogue", "agent": "SYSTEM", "icon": "❌", "color": "#ef4444", "message": f"Brand Error: {res.get('error')}", "timestamp": _dt.now().isoformat()}, project=project)
+                    asyncio.create_task(_live_debate("Critique the new brand identity.", project_name=project, phase="brand"))
+
+                elif user_msg.startswith("/legal"):
+                    import asyncio
+                    res = generate_legal_analysis({"project_name": project})
+                    if res.get("status") == "ok":
+                        l = res["legal"]
+                        await _broadcast({
+                            "type": "dialogue", "agent": "SYSTEM", "icon": "⚖️", "color": "#14b8a6",
+                            "message": f"**Legal Analysis Complete**\nTrademark Viability: {l.get('trademark_viability')}",
+                            "timestamp": _dt.now().isoformat()
+                        }, project=project)
+                    else:
+                        await _broadcast({"type": "dialogue", "agent": "SYSTEM", "icon": "❌", "color": "#ef4444", "message": f"Legal Error: {res.get('error')}", "timestamp": _dt.now().isoformat()}, project=project)
+                    asyncio.create_task(_live_debate("Review the Legal & IP analysis.", project_name=project, phase="legal"))
 
                 elif user_msg.startswith("/financials"):
                     import asyncio
-                    res = generate_financial_model({})
+                    res = generate_financial_model({"project_name": project})
                     if res.get("status") == "ok":
                         link = f"http://localhost:8000/api/eos/documents/{res['path'].split('/')[-1]}" if '/' in str(res.get('path')) else res.get('path')
                         await _broadcast({
                             "type": "dialogue", "agent": "SYSTEM", "icon": "📈", "color": "#3b82f6",
                             "message": f"**Financial Model Ready**\nBreakeven: Month {res.get('breakeven')}\n[Download XLSX]({link})",
                             "timestamp": _dt.now().isoformat()
-                        })
+                        }, project=project)
                     else:
-                        await _broadcast({"type": "dialogue", "agent": "SYSTEM", "icon": "❌", "color": "#ef4444", "message": f"Financial Error: {res.get('error')}", "timestamp": _dt.now().isoformat()})
-                    asyncio.create_task(_live_debate("Assess the 5-year financial projections just generated."))
+                        await _broadcast({"type": "dialogue", "agent": "SYSTEM", "icon": "❌", "color": "#ef4444", "message": f"Financial Error: {res.get('error')}", "timestamp": _dt.now().isoformat()}, project=project)
+                    asyncio.create_task(_live_debate("Assess the 5-year financial projections just generated.", project_name=project, phase="financials"))
+
+                elif user_msg.startswith("/business-plan"):
+                    import asyncio
+                    res = generate_business_plan({"project_name": project})
+                    if res.get("status") == "ok":
+                        await _broadcast({
+                            "type": "dialogue", "agent": "SYSTEM", "icon": "📑", "color": "#6366f1",
+                            "message": f"**Reconciled Business Plan Generated**\nAvailable in Workspace. Executive summary finalized.",
+                            "timestamp": _dt.now().isoformat()
+                        }, project=project)
+                    else:
+                        await _broadcast({"type": "dialogue", "agent": "SYSTEM", "icon": "❌", "color": "#ef4444", "message": f"Business Plan Error: {res.get('error')}", "timestamp": _dt.now().isoformat()}, project=project)
+                    asyncio.create_task(_live_debate("Evaluate the reconciled Business Plan.", project_name=project, phase="business_plan"))
 
                 elif user_msg.startswith("/funding"):
                     import asyncio
-                    res = generate_funding_strategy({})
+                    res = generate_funding_strategy({"project_name": project})
                     if res.get("status") == "ok":
                         await _broadcast({
                             "type": "dialogue", "agent": "SYSTEM", "icon": "💰", "color": "#eab308",
                             "message": f"**Funding Strategy**\nGap: ${res.get('gap')}\n\n{res.get('strategy')}",
                             "timestamp": _dt.now().isoformat()
-                        })
+                        }, project=project)
                     else:
-                        await _broadcast({"type": "dialogue", "agent": "SYSTEM", "icon": "❌", "color": "#ef4444", "message": f"Funding Error: {res.get('error')}", "timestamp": _dt.now().isoformat()})
-                    asyncio.create_task(_live_debate("Evaluate the proposed funding strategy."))
+                        await _broadcast({"type": "dialogue", "agent": "SYSTEM", "icon": "❌", "color": "#ef4444", "message": f"Funding Error: {res.get('error')}", "timestamp": _dt.now().isoformat()}, project=project)
+                    asyncio.create_task(_live_debate("Evaluate the proposed funding strategy.", project_name=project, phase="funding"))
 
                 elif user_msg.startswith("/pitch"):
                     import asyncio
-                    res = generate_pitch_deck()
+                    res = generate_pitch_deck({"project_name": project})
                     if res.get("status") == "ok":
-                        ilink = f"http://localhost:8000/api/eos/documents/{res['investor'].split('/')[-1]}"
-                        clink = f"http://localhost:8000/api/eos/documents/{res['customer'].split('/')[-1]}"
+                        ilink = f"http://localhost:8000/api/eos/documents/{res.get('investor', '').split('/')[-1]}"
+                        clink = f"http://localhost:8000/api/eos/documents/{res.get('customer', '').split('/')[-1]}"
                         await _broadcast({
                             "type": "dialogue", "agent": "SYSTEM", "icon": "🎯", "color": "#f43f5e",
                             "message": f"**Deliverable Suite Generated**\n[Download Investor Deck]({ilink})\n[Download Customer Deck]({clink})",
                             "timestamp": _dt.now().isoformat()
-                        })
+                        }, project=project)
                     else:
-                        await _broadcast({"type": "dialogue", "agent": "SYSTEM", "icon": "❌", "color": "#ef4444", "message": f"Pitch Error: {res.get('error')}", "timestamp": _dt.now().isoformat()})
-                    asyncio.create_task(_live_debate("The Pitch decks are ready for distribution."))
+                        await _broadcast({"type": "dialogue", "agent": "SYSTEM", "icon": "❌", "color": "#ef4444", "message": f"Pitch Error: {res.get('error')}", "timestamp": _dt.now().isoformat()}, project=project)
+                    asyncio.create_task(_live_debate("The Pitch decks are ready for distribution.", project_name=project, phase="pitch"))
                     
                 else:
                     # Regular chat
-                    asyncio.create_task(_live_debate(user_msg))
+                    asyncio.create_task(_live_debate(user_msg, project_name=project))
 
             elif data.get("type") == "override":
                 _persuasion_score = min(10, _persuasion_score + 2)
@@ -1149,7 +1214,7 @@ async def warroom_websocket(websocket: WebSocket):
                     "type": "persuasion_update",
                     "score": _persuasion_score,
                     "reason": "Commander Hard Override executed",
-                })
+                }, project=project)
                 await _broadcast({
                     "type": "dialogue",
                     "agent": "SYSTEM",
@@ -1157,13 +1222,13 @@ async def warroom_websocket(websocket: WebSocket):
                     "color": "#eab308",
                     "message": f"🚨 HARD OVERRIDE — Commander bypassed deliberation. Critic compliance forced to {_persuasion_score}/10.",
                     "timestamp": _dt.now().isoformat(),
-                })
+                }, project=project)
     except WebSocketDisconnect:
         pass
     finally:
-        if websocket in _warroom_clients:
-            _warroom_clients.remove(websocket)
-        logger.info(f"War Room client disconnected ({len(_warroom_clients)} total)")
+        if websocket in _warroom_clients.get(project, []):
+            _warroom_clients[project].remove(websocket)
+        logger.info(f"War Room '{project}' client disconnected ({len(_warroom_clients.get(project, []))} total)")
 
 
 @auto_heal(project="WarRoom", max_retries=3)
@@ -1241,7 +1306,7 @@ _FALLBACK_RESPONSES = {
 }
 
 
-async def _live_debate(topic: str):
+async def _live_debate(topic: str, project_name: str = "Aether", phase: str = None):
     """Route the debate topic to real n8n specialist agents and stream responses."""
     global _persuasion_score
     loop = asyncio.get_event_loop()
@@ -1255,7 +1320,7 @@ async def _live_debate(topic: str):
         "color": "#3b82f6",
         "message": f"Opening deliberation on: \"{topic[:120]}\"\u2026 Consulting the board now.",
         "timestamp": _dt.now().isoformat(),
-    })
+    }, project=project_name)
 
     # Call agents in parallel via thread pool
     agents_to_call = ["CMO", "CFO", "CRITIC"]
@@ -1283,7 +1348,7 @@ async def _live_debate(topic: str):
             "color": meta.get("color", "#94a3b8"),
             "message": response,
             "timestamp": _dt.now().isoformat(),
-        })
+        }, project=project_name)
 
     # After Critic speaks, parse their confidence and update persuasion
     critic_response = await futures["CRITIC"]
@@ -1306,7 +1371,264 @@ async def _live_debate(topic: str):
         "type": "persuasion_update",
         "score": _persuasion_score,
         "reason": f"Critic assessment after live deliberation",
-    })
+    }, project=project_name)
+
+    # ── Auto-Iterative Loop Trigger ──
+    if phase and _persuasion_score < 7:
+        from eos_context import get_eos
+        eos = get_eos(project_name)
+        status = eos.get("phase_status", {}).get(phase)
+        
+        if status != "deadlocked":
+            eos.set_critique(phase, critic_response)
+            count = eos.start_iteration(phase)
+            
+            if count <= 3:
+                await asyncio.sleep(1)
+                await _broadcast({
+                    "type": "dialogue", "agent": "SYSTEM", "icon": "🔄", "color": "#eab308",
+                    "message": f"🚨 CRITIC REJECTED PHASE '{phase.upper()}'. Initiating automated REVISION {count}/3 based on feedback...",
+                    "timestamp": _dt.now().isoformat(),
+                }, project=project_name)
+                
+                # Execute replacement asynchronously
+                def _run_gen():
+                    if phase == "market": return generate_market_intel({"project_name": project_name, "company_name": eos.get("company_name", "Startup")})
+                    elif phase == "brand": return generate_brand_identity({"project_name": project_name})
+                    elif phase == "legal": return generate_legal_analysis({"project_name": project_name})
+                    elif phase == "business_plan": return generate_business_plan({"project_name": project_name})
+                    return {"error": f"Iteration not supported for {phase}"}
+                
+                res = await loop.run_in_executor(_warroom_executor, _run_gen)
+                
+                if res.get("status") == "ok":
+                    doc_msg = json.dumps(res.get(phase, {}), indent=2)[:300] + "..."
+                    await _broadcast({
+                        "type": "dialogue", "agent": "SYSTEM", "icon": "✅", "color": "#10b981",
+                        "message": f"**{phase.upper()} Revised**\n```json\n{doc_msg}\n```",
+                        "timestamp": _dt.now().isoformat()
+                    }, project=project_name)
+                    # Re-trigger debate on the new revision
+                    asyncio.create_task(_live_debate(f"Review the revised {phase} proposal. Does it address the previous weaknesses?", project_name=project_name, phase=phase))
+            else:
+                await _broadcast({
+                    "type": "dialogue", "agent": "SYSTEM", "icon": "🛑", "color": "#ef4444",
+                    "message": f"**DEADLOCK REACHED**\nThe board failed to reach consensus on '{phase.upper()}' after 3 iterations. Commander intervention required to Proceed or Force Override.",
+                    "timestamp": _dt.now().isoformat()
+                }, project=project_name)
+
+async def _analyze_upload(project_name: str, file_path: str, filename: str):
+    import base64
+    import mimetypes
+    import requests
+    
+    await _broadcast({
+        "type": "dialogue", "agent": "SYSTEM", "icon": "📎", "color": "#10b981",
+        "message": f"**Master Architect uploaded a document:** `{filename}`\nThe Critic is reviewing it now...",
+        "timestamp": _dt.now().isoformat()
+    }, project=project_name)
+    
+    mime_type, _ = mimetypes.guess_type(file_path)
+    is_image = mime_type and mime_type.startswith("image")
+    
+    api_key = get_secret("GEMINI_API_KEY")
+    if not api_key:
+        return
+        
+    prompt = "You are the CRITIC, the adversarial board member of a startup war room. The Master Architect (the user) has just uploaded this file for review. Provide a sharp, insightful, and constructively critical analysis of this document/image. Identify specific weaknesses, risks, and areas for improvement. Format nicely in markdown, staying in character as a blunt, hyper-logical analyst."
+    
+    try:
+        if is_image:
+            with open(file_path, "rb") as f:
+                b64_data = base64.b64encode(f.read()).decode("utf-8")
+            data = {
+                "contents": [{"role": "user", "parts": [
+                    {"text": prompt},
+                    {"inline_data": {"mime_type": mime_type, "data": b64_data}}
+                ]}]
+            }
+        else:
+            with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                content = f.read()[:30000] # Truncate to avoid massive overload
+            data = {
+                "contents": [{"role": "user", "parts": [
+                    {"text": f"{prompt}\n\nDOCUMENT CONTENTS:\n{content}"}
+                ]}]
+            }
+            
+        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+        headers = {"Content-Type": "application/json", "x-goog-api-key": api_key}
+        r = requests.post(url, json=data, headers=headers)
+        
+        candidates = r.json().get("candidates", [])
+        if candidates:
+            critic_text = candidates[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+            await _broadcast({
+                "type": "dialogue", "agent": "CRITIC", "icon": "🔍", "color": "#ef4444",
+                "message": f"**Analysis of `{filename}`**\n\n{critic_text}",
+                "timestamp": _dt.now().isoformat()
+            }, project=project_name)
+            
+            # Re-seed the boardroom to discuss the CRITIC's findings
+            await asyncio.sleep(2)
+            asyncio.create_task(_live_debate(f"The CRITIC just reviewed '{filename}'. Does the rest of the board agree with this assessment?", project_name=project_name))
+
+    except Exception as e:
+        logger.error(f"Upload analysis failed: {e}")
+        await _broadcast({
+            "type": "dialogue", "agent": "SYSTEM", "icon": "❌", "color": "#ef4444",
+            "message": f"Failed to analyze '{filename}': {str(e)}",
+            "timestamp": _dt.now().isoformat()
+        }, project=project_name)
+
+@app.post("/api/warroom/upload")
+async def warroom_upload(
+    file: UploadFile = File(...),
+    project_name: str = Form("Aether")
+):
+    """Upload a document to the War Room for the Critic to analyze."""
+    try:
+        project_dir = os.path.join(SCRIPT_DIR, "projects", project_name)
+        os.makedirs(project_dir, exist_ok=True)
+        
+        upload_dir = os.path.join(project_dir, "uploads")
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        filename = file.filename or "upload"
+        file_path = os.path.join(upload_dir, filename)
+        
+        content = await file.read()
+        with open(file_path, "wb") as f:
+            f.write(content)
+            
+        asyncio.create_task(_analyze_upload(project_name, file_path, filename))
+        
+        return {"status": "ok", "message": "File uploaded and sent to Critic for review."}
+    except Exception as e:
+        logger.error(f"Warroom upload error: {e}")
+        return {"error": str(e)}
+
+
+@app.post("/api/warroom/propose_outcome")
+async def warroom_propose_outcome(request: Request):
+    """Trigger an outcome proposal after the C-Suite reaches consensus.
+    The system summarizes what was decided and pushes an outcome_proposal WS event."""
+    body = await request.json()
+    project_name = body.get("project_name", "Aether")
+    
+    eos = get_eos(project_name)
+    
+    # Collect all locked deliverables as the outcome
+    deliverables = {}
+    for phase in ["market", "brand", "legal", "business_plan", "financials", "funding", "pitch"]:
+        data = eos.get(phase) or eos.get(f"{phase}_analysis") or eos.get(f"{phase}_plan")
+        if data:
+            deliverables[phase] = data
+    
+    # Also grab high-level context
+    summary = {
+        "company_name": eos.get("company_name", project_name),
+        "industry": eos.get("industry", ""),
+        "tagline": eos.get("tagline", ""),
+        "deliverables_count": len(deliverables),
+        "phases_locked": [p for p in ["market", "brand", "legal", "business_plan", "financials"] if eos.get("phase_status", {}).get(p) == "locked"],
+    }
+    
+    await _broadcast({
+        "type": "outcome_proposal",
+        "summary": summary,
+        "deliverables": deliverables,
+        "project_name": project_name,
+        "timestamp": _dt.now().isoformat(),
+    }, project=project_name)
+    
+    await _broadcast({
+        "type": "dialogue", "agent": "SYSTEM", "icon": "🎯", "color": "#22c55e",
+        "message": f"**CONSENSUS REACHED** — The board has finalized {len(deliverables)} deliverables for {summary['company_name']}.\n\nChoose how to proceed:\n• **Update Existing Product** — merge into the current codebase\n• **Create New Product** — spin up a fresh build\n• **Dismiss** — archive for later",
+        "timestamp": _dt.now().isoformat(),
+    }, project=project_name)
+    
+    return {"status": "ok", "summary": summary}
+
+
+@app.post("/api/warroom/execute_outcome")
+async def warroom_execute_outcome(request: Request):
+    """Execute a brainstorm outcome: generate implementation plan for approval."""
+    body = await request.json()
+    project_name = body.get("project_name", "Aether")
+    outcome_type = body.get("outcome_type", "update")  # "update" or "new"
+    
+    eos = get_eos(project_name)
+    company = eos.get("company_name", project_name)
+    
+    # Build context from EOS state
+    eos_snapshot = json.dumps({k: v for k, v in eos._state.items() if k not in ["_iterations", "_critiques"]}, indent=2, default=str)[:8000]
+    
+    if outcome_type == "update":
+        plan_prompt = (
+            f"You are the Master Architect for '{company}'. The C-Suite war room has finalized new deliverables through adversarial debate. "
+            f"Generate a DETAILED implementation plan to UPDATE the existing product with these new findings. "
+            f"Structure the plan as markdown with: ## Summary, ## Changes Required (file-by-file), ## Risk Assessment, ## Timeline. "
+            f"Be specific about which files to modify and what code changes are needed.\n\n"
+            f"EOS CONTEXT:\n{eos_snapshot}"
+        )
+    else:
+        plan_prompt = (
+            f"You are the Master Architect for '{company}'. The C-Suite war room has finalized deliverables for a NEW product. "
+            f"Generate a DETAILED implementation plan to BUILD this product from scratch. "
+            f"Structure the plan as markdown with: ## Product Overview, ## Architecture, ## Tech Stack, ## File Structure, ## Build Steps, ## Timeline. "
+            f"Be specific about the app scaffold and deployment strategy.\n\n"
+            f"EOS CONTEXT:\n{eos_snapshot}"
+        )
+    
+    # Use Model Router (Claude preferred for structured planning)
+    plan_text = ""
+    if _MODEL_ROUTER_AVAILABLE:
+        plan_text = _model_route("implementation_plan", plan_prompt)
+    
+    if not plan_text:
+        # Fallback to Gemini direct
+        api_key = get_secret("GEMINI_API_KEY")
+        if api_key:
+            try:
+                import requests as _req
+                url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+                headers = {"Content-Type": "application/json", "x-goog-api-key": api_key}
+                data = {"contents": [{"role": "user", "parts": [{"text": plan_prompt}]}]}
+                r = _req.post(url, json=data, headers=headers, timeout=60)
+                candidates = r.json().get("candidates", [])
+                if candidates:
+                    plan_text = candidates[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+            except Exception as e:
+                logger.error(f"Plan generation failed: {e}")
+    
+    if not plan_text:
+        plan_text = f"# Implementation Plan for {company}\n\nUnable to generate plan automatically. Please review the EOS deliverables in the project directory."
+    
+    # Save the plan to the project directory
+    project_dir = os.path.join(SCRIPT_DIR, "projects", project_name)
+    os.makedirs(project_dir, exist_ok=True)
+    plan_path = os.path.join(project_dir, "implementation_plan.md")
+    with open(plan_path, "w", encoding="utf-8") as f:
+        f.write(plan_text)
+    
+    # Broadcast the plan for user approval
+    await _broadcast({
+        "type": "implementation_plan",
+        "plan": plan_text,
+        "outcome_type": outcome_type,
+        "project_name": project_name,
+        "plan_path": plan_path,
+        "timestamp": _dt.now().isoformat(),
+    }, project=project_name)
+    
+    await _broadcast({
+        "type": "dialogue", "agent": "SYSTEM", "icon": "📋", "color": "#6366f1",
+        "message": f"**Implementation Plan Generated** ({outcome_type.upper()})\n\nThe plan has been saved to `{plan_path}`.\nReview it below and **Approve** to begin execution or **Reject** to revise.",
+        "timestamp": _dt.now().isoformat(),
+    }, project=project_name)
+    
+    return {"status": "ok", "plan": plan_text, "path": plan_path}
 
 
 @app.post("/api/warroom/intervene")
@@ -1324,6 +1646,17 @@ async def warroom_intervene(request: Request):
         "is_user": True,
     })
     asyncio.create_task(_simulate_response(msg))
+
+    # Record all user interventions as institutional lessons
+    record_lesson(
+        category="user_feedback",
+        summary=f"Commander intervention: {msg[:120]}",
+        details=msg,
+        source_agent="COMMANDER",
+        severity="normal",
+        tags=["intervention", "user-feedback"],
+    )
+
     return {"status": "ok", "message": "Intervention dispatched"}
 
 
@@ -1569,12 +1902,56 @@ async def warroom_force_proceed(request: Request):
     })
     await _broadcast({"type": "persuasion_update", "score": _persuasion_score, "reason": "Hard Override executed"})
 
+    # Record override as an institutional lesson
+    record_lesson(
+        category="override",
+        summary=f"Commander bypassed Critic on challenge {challenge_id}",
+        details=f"Override note: {commander_note}. Risk level: {override.get('risk_level', 'unknown')}. Risk: {override.get('risk_description', '')}",
+        source_agent="COMMANDER",
+        severity="high",
+        tags=["override", "critic-bypass"],
+    )
+
     return override
 
 
 # ── Phase 4: Incoming Watcher + n8n Archiver + Master Audit ───
 
 import threading
+
+# ── Institutional Memory REST API ─────────────────────────────
+
+@app.get("/api/lessons")
+def api_get_lessons(project_name: str = None, category: str = None, limit: int = 50):
+    """Retrieve institutional lessons learned."""
+    lessons = get_lessons(project_name=project_name, category=category, limit=limit)
+    return {"lessons": lessons, "count": len(lessons)}
+
+@app.post("/api/lessons")
+async def api_record_lesson(request: Request):
+    """Manually record a lesson (from any client or agent)."""
+    body = await request.json()
+    lesson = record_lesson(
+        category=body.get("category", "user_feedback"),
+        summary=body.get("summary", ""),
+        details=body.get("details", ""),
+        project_name=body.get("project_name"),
+        source_agent=body.get("source_agent", "USER"),
+        severity=body.get("severity", "normal"),
+        tags=body.get("tags", []),
+    )
+    return {"status": "ok", "lesson": lesson}
+
+@app.get("/api/lessons/search")
+def api_search_lessons(q: str = "", limit: int = 20):
+    """Search across all institutional lessons."""
+    return {"results": search_lessons(q, limit=limit)}
+
+@app.get("/api/lessons/build-context")
+def api_build_context(project_name: str = None):
+    """Get the accumulated lessons context block for injecting into child app builds."""
+    context = get_lessons_for_build(project_name)
+    return {"context": context, "project": project_name}
 
 try:
     from incoming_watcher import audit_incoming, watch_incoming
@@ -2122,26 +2499,35 @@ except ImportError as e:
     logger.warning(f"EOS Imports varied: {e}")
 
 @app.get("/api/eos/state")
-def get_eos_state():
-    return get_eos().to_dict()
+def get_eos_state(project_name: str = "Aether"):
+    return get_eos(project_name).to_dict()
 
 @app.post("/api/eos/state")
 def update_eos_state(payload: dict):
-    get_eos().update(payload)
-    return {"status": "ok", "state": get_eos().to_dict()}
+    pn = payload.get("project_name", "Aether")
+    get_eos(pn).update(payload)
+    return {"status": "ok", "state": get_eos(pn).to_dict()}
 
 @app.post("/api/eos/reset")
-def reset_eos_state():
-    get_eos().reset()
+def reset_eos_state(payload: dict):
+    pn = payload.get("project_name", "Aether")
+    get_eos(pn).reset()
     return {"status": "reset"}
 
 @app.post("/api/eos/market-intel")
 def generate_market_intel(payload: dict):
-    eos = get_eos()
+    pn = payload.get("project_name", "Aether")
+    eos = get_eos(pn)
     company = eos.get("company_name", payload.get("company_name", "Startup"))
     niche = eos.get("industry", payload.get("industry", "Tech"))
     
+    critique = eos.get_critique("market")
     prompt = f"Analyze the market for '{company}' in the '{niche}' industry. Return ONLY valid JSON with no markdown block formatting. Keys: 'tam' (string, e.g. '$10B'), 'sam' (string), 'som' (string), 'competitors' (list of dicts with 'name' and 'weakness')."
+    
+    if critique:
+        prompt += f"\n\n[CRITICAL FEEDBACK FROM BOARD]: The previous attempt was rejected. Address these exact weaknesses in your revision:\n{critique}"
+    
+    eos.start_iteration("market")
     
     api_key = get_secret("GEMINI_API_KEY")
     if not api_key:
@@ -2172,7 +2558,7 @@ def generate_market_intel(payload: dict):
             "som": result.get("som", "$0"),
             "competitors": result.get("competitors", [])
         })
-        eos.mark_phase_complete("market")
+        eos.lock_phase("market")
         return {"status": "ok", "market": result}
     except Exception as e:
         logger.error(f"Market intel error: {e}")
@@ -2184,7 +2570,13 @@ def generate_brand_identity(payload: dict):
     company = payload.get("company_name", eos.get("company_name"))
     niche = payload.get("industry", eos.get("industry"))
     
+    critique = eos.get_critique("brand")
     prompt = f"Act as a high-end Brand Studio. Generate a brand identity for '{company}' in '{niche}'. Return ONLY valid JSON block. Keys: 'company_name' (string, if you suggest a new one, else use the provided), 'tagline' (string), 'brand_colors' (dict of 'primary', 'secondary', 'accent' with hex codes), 'logo_prompt' (string: detailed DALL-E 3 midjourney prompt for the logo)."
+    
+    if critique:
+        prompt += f"\n\n[CRITICAL FEEDBACK FROM BOARD]: The previous attempt was rejected. Fix these weaknesses:\n{critique}"
+    
+    eos.start_iteration("brand")
     
     api_key = get_secret("GEMINI_API_KEY")
     if not api_key:
@@ -2213,10 +2605,102 @@ def generate_brand_identity(payload: dict):
             "brand_colors": result.get("brand_colors", {}),
             "logo_prompt": result.get("logo_prompt", "")
         })
-        eos.mark_phase_complete("brand")
+        eos.lock_phase("brand")
         return {"status": "ok", "brand": result}
     except Exception as e:
         logger.error(f"Brand studio error: {e}")
+        return {"error": str(e)}
+
+@app.post("/api/eos/legal")
+def generate_legal_analysis(payload: dict):
+    eos = get_eos()
+    company = payload.get("company_name", eos.get("company_name", "Startup"))
+    niche = payload.get("industry", eos.get("industry", "Tech"))
+    
+    critique = eos.get_critique("legal")
+    prompt = f"Act as a Legal AI Agent. Analyze the trademark and copyright viability for a company named '{company}' in the '{niche}' industry. Detail intellectual property implications. Return ONLY valid JSON block. Keys: 'trademark_viability' (string), 'copyright_risks' (string), 'legal_strategy' (string)."
+    
+    if critique:
+        prompt += f"\n\n[CRITICAL FEEDBACK FROM BOARD]: The previous legal analysis was rejected. Address these exact weaknesses:\n{critique}"
+    
+    eos.start_iteration("legal")
+    
+    api_key = get_secret("GEMINI_API_KEY")
+    if not api_key:
+        return {"error": "No GEMINI_API_KEY"}
+        
+    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+    headers = {"Content-Type": "application/json", "x-goog-api-key": api_key}
+    data = {"contents": [{"role": "user", "parts": [{"text": prompt}]}]}
+    
+    try:
+        import requests
+        r = requests.post(url, json=data, headers=headers)
+        js = r.json()
+        candidates = js.get("candidates", [])
+        if not candidates: return {"error": "Empty response"}
+            
+        text = candidates[0].get("content", {}).get("parts", [{}])[0].get("text", "").strip()
+        if text.startswith("```json"): text = text.replace("```json", "", 1)
+        if text.endswith("```"): text = text[:-3]
+        
+        result = json.loads(text.strip())
+        
+        eos.update({
+            "legal_analysis": result
+        })
+        eos.lock_phase("legal")
+        return {"status": "ok", "legal": result}
+    except Exception as e:
+        logger.error(f"Legal AI error: {e}")
+        return {"error": str(e)}
+
+@app.post("/api/eos/business-plan")
+def generate_business_plan(payload: dict):
+    pn = payload.get("project_name", "Aether")
+    eos = get_eos(pn)
+    eos.update(payload)
+    
+    critique = eos.get_critique("business_plan")
+    
+    # Synthesize previous data for the prompt
+    c_name = eos.get("company_name", "Startup")
+    niche = eos.get("industry", "Business")
+    brand = eos.get("tagline", "")
+    tam = eos.get("tam", "")
+    legal = eos.get("legal_analysis", {}).get("trademark_viability", "")
+    
+    prompt = f"Act as an Elite Business Planner. Reconcile this data into a cohesive Executive Summary for '{c_name}' (Tagline: {brand}) in the '{niche}' sector. Market TAM: {tam}. Legal standing: {legal}. Return ONLY valid JSON block. Keys: 'executive_summary' (string), 'business_model_canvas' (dict of 'value_propositions', 'customer_segments', 'revenue_streams' - all strings)."
+    
+    if critique:
+        prompt += f"\n\n[CRITICAL FEEDBACK FROM BOARD]: The previous attempt was rejected. Address these exact weaknesses:\n{critique}"
+        
+    eos.start_iteration("business_plan")
+    
+    api_key = get_secret("GEMINI_API_KEY")
+    if not api_key: return {"error": "No GEMINI_API_KEY"}
+    
+    try:
+        import requests
+        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+        headers = {"Content-Type": "application/json", "x-goog-api-key": api_key}
+        data = {"contents": [{"role": "user", "parts": [{"text": prompt}]}]}
+        r = requests.post(url, json=data, headers=headers)
+        
+        candidates = r.json().get("candidates", [])
+        if not candidates: return {"error": "Empty response"}
+        
+        text = candidates[0].get("content", {}).get("parts", [{}])[0].get("text", "").strip()
+        if text.startswith("```json"): text = text.replace("```json", "", 1)
+        if text.endswith("```"): text = text[:-3]
+        
+        result = json.loads(text.strip())
+        eos.update({"business_plan": result})
+        eos.lock_phase("business_plan")
+        return {"status": "ok", "business_plan": result}
+        
+    except Exception as e:
+        logger.error(f"Business Plan Error: {e}")
         return {"error": str(e)}
 
 @app.post("/api/eos/financial-model")
@@ -2235,7 +2719,7 @@ def generate_financial_model(payload: dict):
                 "financial_xlsx_path": res.get("path"),
                 "breakeven_month": res.get("breakeven_month")
             })
-            eos.mark_phase_complete("financial")
+            eos.lock_phase("financials")
             return {"status": "ok", "path": res.get("path"), "breakeven": res.get("breakeven_month")}
         return {"error": "Failed to generate financials", "details": res}
     except Exception as e:
@@ -2292,7 +2776,7 @@ def generate_pitch_deck():
                 "investor_pptx_path": res_inv.get("pptx_path"),
                 "customer_pptx_path": res_cust.get("pptx_path")
             })
-            eos.mark_phase_complete("decks")
+            eos.lock_phase("pitch")
             return {"status": "ok", "investor": res_inv.get("pptx_path"), "customer": res_cust.get("pptx_path")}
         return {"error": "Deck generation failed (returned false paths)"}
     except Exception as e:

@@ -37,14 +37,30 @@ from datetime import datetime
 SYSTEM_CORE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, SYSTEM_CORE_DIR)
 
-# Add skill path to sys.path
+# Add skill path to sys.path — validate that critical modules (n8n_architect) are present
 FACTORY_DIR = os.path.dirname(os.path.abspath(__file__))
-SKILL_PATH = os.path.abspath(os.path.join(FACTORY_DIR, "..", "..", "_ANTIGRAVITY_SKILLS_LIBRARY"))
-if not os.path.exists(SKILL_PATH):
-    SKILL_PATH = os.path.abspath(os.path.join(FACTORY_DIR, "..", "skills"))  # legacy fallback
-if not os.path.exists(SKILL_PATH):
-    SKILL_PATH = os.path.join(FACTORY_DIR, "Alpha_V2_Genesis", "skills")  # playground fallback
-sys.path.append(SKILL_PATH)
+_SKILL_CANDIDATES = [
+    os.path.abspath(os.path.join(FACTORY_DIR, "..", "..", "_ANTIGRAVITY_SKILLS_LIBRARY")),
+    os.path.abspath(os.path.join(FACTORY_DIR, "..", "skills")),
+    os.path.join(FACTORY_DIR, "Alpha_V2_Genesis", "skills"),
+]
+SKILL_PATH = None
+for _candidate in _SKILL_CANDIDATES:
+    if os.path.isdir(os.path.join(_candidate, "n8n_architect")):
+        SKILL_PATH = _candidate
+        break
+if not SKILL_PATH:
+    # Accept any existing directory as last resort
+    for _candidate in _SKILL_CANDIDATES:
+        if os.path.isdir(_candidate):
+            SKILL_PATH = _candidate
+            break
+if SKILL_PATH:
+    sys.path.append(SKILL_PATH)
+# Also add all existing candidate paths so scattered modules are discoverable
+for _candidate in _SKILL_CANDIDATES:
+    if os.path.isdir(_candidate) and _candidate not in sys.path:
+        sys.path.append(_candidate)
 
 # Lazy imports — these are only needed for the `create` command
 # CLI commands (status, build, launch, tunnels) work without them
@@ -162,11 +178,11 @@ class MetaAppFactory:
         except Exception as e:
             print(f"  >> Project creation failed ({e}), using Specialist Agents")
 
-        # 2.5 Deploy to N8N
+        # 2.5 Deploy to N8N (non-fatal — app scaffold is built regardless)
         workflow_id = self.architect.create_workflow(workflow_json)
         if not workflow_id:
-            print("Failed to deploy workflow to N8N.")
-            return
+            print("  >> N8N workflow deploy failed — continuing with local scaffold only.")
+            workflow_id = f"LOCAL_{app_name}_{datetime.now().strftime('%Y%m%d%H%M%S')}"
             
         print(f"Workflow deployed successfully. ID: {workflow_id}")
 

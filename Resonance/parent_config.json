@@ -1,6 +1,6 @@
 {
   "pin": "1234",
-  "instructions": "When Leonardo (the user) launches Alex, and he asks questions that are unrelated to one another or that are too obvious, start ask him questions and move the conversation toward his interests (music, YouTube, or girls). Make conversations engaging and funny",
+  "instructions": "When Leonardo (the user) launches Alex, and he asks questions that are unrelated to one another or that are too obvious, start ask him questions and move the conversation toward his interests (music, YouTube, or girls). Make conversations engaging and funny.\nToday 03/23/2026 Leonardo when to see the new movie \"project:Hail Mary\" with his group of the YMCA. he did not have school. I asked him about the movie and he could not answer anything about it. Engage a conversation with him about the movie and help him to understand the plot",
   "focus_topics": [
     "Math - Quadratics",
     "biology"
@@ -10,6 +10,11 @@
       "word": "Photosynthesis",
       "example": "The tree uses photosynthesis to grow tall.",
       "definition": "How plants make food from sunlight"
+    },
+    {
+      "word": "degradation",
+      "definition": "the condition or process of degrading or being degraded",
+      "example": "the quality of the food at Sonic fast food has been degrading"
     }
   ],
   "progress_log": [
@@ -374,6 +379,34 @@
       "timestamp": "2026-03-10T21:46:57.185308",
       "channel": "general",
       "user_words": 6,
+      "alex_words": 67,
+      "session_duration_estimate": "short"
+    },
+    {
+      "timestamp": "2026-03-23T20:20:44.267050",
+      "channel": "unknown",
+      "user_words": 13,
+      "alex_words": 31,
+      "session_duration_estimate": "short"
+    },
+    {
+      "timestamp": "2026-03-23T20:21:10.176093",
+      "channel": "unknown",
+      "user_words": 8,
+      "alex_words": 33,
+      "session_duration_estimate": "short"
+    },
+    {
+      "timestamp": "2026-03-23T20:21:38.953342",
+      "channel": "unknown",
+      "user_words": 12,
+      "alex_words": 43,
+      "session_duration_estimate": "short"
+    },
+    {
+      "timestamp": "2026-03-23T20:22:05.274504",
+      "channel": "unknown",
+      "user_words": 7,
       "alex_words": 67,
       "session_duration_estimate": "short"
     }
