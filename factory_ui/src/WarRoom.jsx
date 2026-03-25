@@ -25,7 +25,7 @@ const SEVERITY_COLORS = {
   MODERATE: '#eab308',
 };
 
-export default function WarRoom() {
+export default function WarRoom({ ventureMode = false }) {
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [persuasion, setPersuasion] = useState(5);
@@ -35,10 +35,24 @@ export default function WarRoom() {
   const [activeChallenge, setActiveChallenge] = useState(null);
   const [challengeScore, setChallengeScore] = useState('');
   const [convinceMode, setConvinceMode] = useState(false);
+  // UPGRADE 2: History state
+  const [showHistory, setShowHistory] = useState(false);
+  const [historySessions, setHistorySessions] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const wsRef = useRef(null);
   const feedEndRef = useRef(null);
   const _seenIds = useRef(new Set());
   const _msgIdCounter = useRef(0);
+
+  // Load history
+  const loadHistory = () => {
+    setHistoryLoading(true);
+    fetch(`${API_BASE}/api/warroom/history`)
+      .then(r => r.json())
+      .then(data => setHistorySessions(data.sessions || []))
+      .catch(() => {})
+      .finally(() => setHistoryLoading(false));
+  };
 
   // ── WebSocket Connection (dedup-safe for StrictMode) ──
   useEffect(() => {
@@ -187,6 +201,13 @@ export default function WarRoom() {
     setTopicInput('');
   }, [topicInput]);
 
+  // ── 🆕 EOS Action Trigger ─────────────────────────────
+  const triggerEosAction = useCallback((cmd) => {
+    if (wsRef.current) {
+      wsRef.current.send(JSON.stringify({ type: 'intervention', message: cmd }));
+    }
+  }, []);
+
   // ── Helpers ───────────────────────────────────────────
   const getMeterColor = (score) => {
     if (score <= 3) return '#ef4444';
@@ -223,6 +244,15 @@ export default function WarRoom() {
           </div>
         </div>
         <div style={styles.headerRight}>
+          <button
+            onClick={() => { setShowHistory(!showHistory); if (!showHistory) loadHistory(); }}
+            style={{
+              padding: '4px 12px', borderRadius: '6px', border: '1px solid rgba(100,116,139,0.3)',
+              background: showHistory ? 'rgba(99,102,241,0.15)' : 'rgba(0,0,0,0.2)',
+              color: showHistory ? '#818cf8' : '#94a3b8', fontSize: '11px', fontWeight: 600,
+              cursor: 'pointer', fontFamily: 'Inter, sans-serif', marginRight: '8px',
+            }}
+          >📜 History</button>
           {convinceMode && (
             <span style={styles.pauseBadge}>⏸ PAUSED</span>
           )}
@@ -236,6 +266,43 @@ export default function WarRoom() {
       </div>
 
       <div style={styles.body}>
+        {/* ── History Panel (Upgrade 2) ── */}
+        {showHistory && (
+          <div style={{
+            width: '280px', borderRight: '1px solid rgba(100,116,139,0.12)',
+            background: 'rgba(15,23,42,0.4)', overflowY: 'auto', padding: '12px',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: '#f1f5f9' }}>📜 Past Debates</h4>
+              <span style={{ fontSize: '10px', color: '#64748b' }}>{historySessions.length} sessions</span>
+            </div>
+            {historyLoading && <p style={{ fontSize: '11px', color: '#64748b' }}>Loading...</p>}
+            {historySessions.map((session, i) => (
+              <div key={i} style={{
+                padding: '10px', marginBottom: '6px', borderRadius: '8px',
+                background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(100,116,139,0.1)',
+                cursor: 'pointer',
+              }}
+              onClick={() => {
+                setMessages(session.messages);
+                setShowHistory(false);
+              }}
+              >
+                <div style={{ fontSize: '12px', fontWeight: 600, color: '#e2e8f0', marginBottom: '4px' }}>
+                  {session.topic?.slice(0, 60) || 'Untitled'}
+                </div>
+                <div style={{ fontSize: '10px', color: '#64748b' }}>
+                  {session.messages?.length || 0} messages • {session.started ? new Date(session.started).toLocaleDateString() : ''}
+                </div>
+              </div>
+            ))}
+            {historySessions.length === 0 && !historyLoading && (
+              <p style={{ fontSize: '11px', color: '#475569', textAlign: 'center', marginTop: '20px' }}>
+                No debate history yet.
+              </p>
+            )}
+          </div>
+        )}
         {/* ── Left: Dialogue Feed ── */}
         <div style={styles.feedPanel}>
           {/* Topic Seeder + Challenge Trigger */}
@@ -404,6 +471,26 @@ export default function WarRoom() {
               <p style={{ fontSize: '10px', color: '#64748b', marginTop: '8px' }}>
                 💡 Tip: Use data-driven language — "metrics show", "validated by", "A/B test results"
               </p>
+            )}
+
+            {ventureMode && !convinceMode && (
+              <div style={{ marginTop: '16px', borderTop: '1px solid rgba(100,116,139,0.15)', paddingTop: '16px' }}>
+                <div style={{ fontSize: '10px', color: '#94a3b8', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>
+                  🚀 Venture Architect Commands
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                  <button onClick={() => triggerEosAction('/market')} style={styles.btnEos}>1. Market Intel</button>
+                  <button onClick={() => triggerEosAction('/brand')} style={styles.btnEos}>2. Brand DNA</button>
+                  <button onClick={() => triggerEosAction('/financials')} style={styles.btnEos}>3. Financials</button>
+                  <button onClick={() => triggerEosAction('/funding')} style={styles.btnEos}>4. Funding Strategy</button>
+                  <button onClick={() => triggerEosAction('/pitch')} style={{ ...styles.btnEos, gridColumn: 'span 2', background: 'rgba(244,63,94,0.1)', color: '#f43f5e', borderColor: 'rgba(244,63,94,0.3)' }}>
+                    Export Deliverable Decks
+                  </button>
+                </div>
+                <div style={{ fontSize: '10px', color: '#64748b', marginTop: '8px', fontStyle: 'italic', lineHeight: 1.4 }}>
+                  Click to execute EOS workstreams. Tell the CEO your company name and industry first.
+                </div>
+              </div>
             )}
           </div>
 
@@ -595,5 +682,14 @@ const styles = {
   agentListTitle: { margin: '0 0 10px', fontSize: '12px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' },
   agentItem: {
     display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 0',
+  },
+
+  // ── EOS Buttons ──
+  btnEos: {
+    padding: '8px', borderRadius: '6px',
+    border: '1px solid rgba(148,163,184,0.2)', background: 'rgba(0,0,0,0.2)',
+    color: '#cbd5e1', fontSize: '11px', fontWeight: 600, cursor: 'pointer',
+    fontFamily: 'Inter, sans-serif', textAlign: 'center',
+    transition: 'all 0.2s',
   },
 };

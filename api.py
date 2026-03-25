@@ -1053,7 +1053,7 @@ async def warroom_websocket(websocket: WebSocket):
     try:
         while True:
             data = await websocket.receive_json()
-            # Handle user interventions
+            # Handle user interventions and EOS commands
             if data.get("type") == "intervention":
                 user_msg = data.get("message", "")
                 await _broadcast({
@@ -1065,8 +1065,83 @@ async def warroom_websocket(websocket: WebSocket):
                     "timestamp": _dt.now().isoformat(),
                     "is_user": True,
                 })
-                # Route to real n8n agents
-                asyncio.create_task(_live_debate(user_msg))
+                
+                # ── EOS Action Parsing ──
+                if user_msg.startswith("/market"):
+                    import asyncio
+                    from eos_context import get_eos
+                    eos = get_eos()
+                    req = {"company_name": eos.get("company_name", "Startup")}
+                    res = generate_market_intel(req)
+                    if res.get("status") == "ok":
+                        await _broadcast({
+                            "type": "dialogue", "agent": "SYSTEM", "icon": "📊", "color": "#10b981",
+                            "message": f"**Market Intel Acquired**\nTAM: {res['market'].get('tam')}\nSAM: {res['market'].get('sam')}\nSOM: {res['market'].get('som')}",
+                            "timestamp": _dt.now().isoformat()
+                        })
+                    else:
+                        await _broadcast({"type": "dialogue", "agent": "SYSTEM", "icon": "❌", "color": "#ef4444", "message": f"Market Intel Error: {res.get('error')}", "timestamp": _dt.now().isoformat()})
+                    asyncio.create_task(_live_debate("Review the Market Intel just acquired."))
+                
+                elif user_msg.startswith("/brand"):
+                    import asyncio
+                    res = generate_brand_identity({})
+                    if res.get("status") == "ok":
+                        b = res["brand"]
+                        await _broadcast({
+                            "type": "dialogue", "agent": "SYSTEM", "icon": "🎨", "color": "#a855f7",
+                            "message": f"**Brand DNA Generated**\nName: {b.get('company_name')}\nTagline: {b.get('tagline')}\nLogo Prompt: {b.get('logo_prompt')}",
+                            "timestamp": _dt.now().isoformat()
+                        })
+                    else:
+                        await _broadcast({"type": "dialogue", "agent": "SYSTEM", "icon": "❌", "color": "#ef4444", "message": f"Brand Error: {res.get('error')}", "timestamp": _dt.now().isoformat()})
+                    asyncio.create_task(_live_debate("Critique the new brand identity."))
+
+                elif user_msg.startswith("/financials"):
+                    import asyncio
+                    res = generate_financial_model({})
+                    if res.get("status") == "ok":
+                        link = f"http://localhost:8000/api/eos/documents/{res['path'].split('/')[-1]}" if '/' in str(res.get('path')) else res.get('path')
+                        await _broadcast({
+                            "type": "dialogue", "agent": "SYSTEM", "icon": "📈", "color": "#3b82f6",
+                            "message": f"**Financial Model Ready**\nBreakeven: Month {res.get('breakeven')}\n[Download XLSX]({link})",
+                            "timestamp": _dt.now().isoformat()
+                        })
+                    else:
+                        await _broadcast({"type": "dialogue", "agent": "SYSTEM", "icon": "❌", "color": "#ef4444", "message": f"Financial Error: {res.get('error')}", "timestamp": _dt.now().isoformat()})
+                    asyncio.create_task(_live_debate("Assess the 5-year financial projections just generated."))
+
+                elif user_msg.startswith("/funding"):
+                    import asyncio
+                    res = generate_funding_strategy({})
+                    if res.get("status") == "ok":
+                        await _broadcast({
+                            "type": "dialogue", "agent": "SYSTEM", "icon": "💰", "color": "#eab308",
+                            "message": f"**Funding Strategy**\nGap: ${res.get('gap')}\n\n{res.get('strategy')}",
+                            "timestamp": _dt.now().isoformat()
+                        })
+                    else:
+                        await _broadcast({"type": "dialogue", "agent": "SYSTEM", "icon": "❌", "color": "#ef4444", "message": f"Funding Error: {res.get('error')}", "timestamp": _dt.now().isoformat()})
+                    asyncio.create_task(_live_debate("Evaluate the proposed funding strategy."))
+
+                elif user_msg.startswith("/pitch"):
+                    import asyncio
+                    res = generate_pitch_deck()
+                    if res.get("status") == "ok":
+                        ilink = f"http://localhost:8000/api/eos/documents/{res['investor'].split('/')[-1]}"
+                        clink = f"http://localhost:8000/api/eos/documents/{res['customer'].split('/')[-1]}"
+                        await _broadcast({
+                            "type": "dialogue", "agent": "SYSTEM", "icon": "🎯", "color": "#f43f5e",
+                            "message": f"**Deliverable Suite Generated**\n[Download Investor Deck]({ilink})\n[Download Customer Deck]({clink})",
+                            "timestamp": _dt.now().isoformat()
+                        })
+                    else:
+                        await _broadcast({"type": "dialogue", "agent": "SYSTEM", "icon": "❌", "color": "#ef4444", "message": f"Pitch Error: {res.get('error')}", "timestamp": _dt.now().isoformat()})
+                    asyncio.create_task(_live_debate("The Pitch decks are ready for distribution."))
+                    
+                else:
+                    # Regular chat
+                    asyncio.create_task(_live_debate(user_msg))
 
             elif data.get("type") == "override":
                 _persuasion_score = min(10, _persuasion_score + 2)

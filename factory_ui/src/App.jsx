@@ -1284,7 +1284,7 @@ function App() {
           builderMode === null ? (
             <ModeSelectionScreen onSelectMode={setBuilderMode} />
           ) : builderMode === 'venture' ? (
-            <VentureSuite onComplete={() => setBuilderMode('technical')} registry={registry} />
+            <WarRoom ventureMode={true} />
           ) : (
             <BuilderChat
               registry={registry}
