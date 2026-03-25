@@ -162,7 +162,7 @@ async def build_stream(req: BuildRequest):
                 if line.strip():
                     progress_queue.put({"step": "LOG", "text": line.strip()})
 
-        # ── Phantom QA Gate (post-build) ──────────────────
+        # ── Phantom QA Gate (post-build) — UPGRADE 3: Blocking ──
         if build_ok and PHANTOM_AVAILABLE:
             progress_queue.put({"step": "PHANTOM_QA", "text": "🧪 Phantom QA Gate: starting pre-deployment tests..."})
             try:
@@ -179,6 +179,34 @@ async def build_stream(req: BuildRequest):
                 progress_queue.put({"step": "PHANTOM_QA", "text": f"{icon} Phantom QA: {v} (Score: {score}/100)"})
                 if verdict.get("report_path"):
                     progress_queue.put({"step": "PHANTOM_QA", "text": f"📄 Report: {os.path.basename(verdict['report_path'])}"})
+
+                # BLOCKING GATE: score < 70 requires user approval
+                if score < 70:
+                    _pending_approvals[req.app_name] = {"score": score, "report": verdict.get("report_path", ""), "approved": False}
+                    progress_queue.put({
+                        "step": "GATE_BLOCKED",
+                        "text": f"🛑 BUILD PAUSED — Phantom QA score {score}/100 is below threshold (70). Awaiting commander approval.",
+                        "score": score,
+                        "app_name": req.app_name,
+                    })
+                    # Wait for approval (poll every 2s, timeout 5 min)
+                    import time as _gate_time
+                    for _ in range(150):  # 150 x 2s = 5 min
+                        _gate_time.sleep(2)
+                        approval = _pending_approvals.get(req.app_name, {})
+                        if approval.get("approved"):
+                            progress_queue.put({"step": "GATE_APPROVED", "text": "✅ Commander approved deployment. Proceeding."})
+                            _pending_approvals.pop(req.app_name, None)
+                            break
+                        if req.app_name not in _pending_approvals:
+                            # Aborted
+                            progress_queue.put({"step": "GATE_ABORTED", "text": "❌ Build aborted by commander."})
+                            build_ok = False
+                            break
+                    else:
+                        progress_queue.put({"step": "GATE_TIMEOUT", "text": "⏰ Approval timeout (5 min). Build aborted."})
+                        _pending_approvals.pop(req.app_name, None)
+                        build_ok = False
             except Exception as e:
                 progress_queue.put({"step": "PHANTOM_QA", "text": f"⚠️ Phantom QA skipped: {str(e)[:100]}"})
 
@@ -659,6 +687,241 @@ def v3_map_data():
     return result
 
 
+# ═══════════════════════════════════════════════════════════════
+#  UPGRADE 5: N8N Circuit Breaker
+# ═══════════════════════════════════════════════════════════════
+import socket as _socket
+
+class _N8NCircuitBreaker:
+    """Circuit breaker for n8n webhooks.
+    CLOSED → n8n calls proceed normally
+    OPEN → skip n8n, go straight to Gemini fallback (cooldown 60s)
+    HALF_OPEN → try one n8n call; success→CLOSED, fail→OPEN
+    """
+    def __init__(self, failure_threshold=3, cooldown_seconds=60):
+        self.failure_threshold = failure_threshold
+        self.cooldown = cooldown_seconds
+        self.failures = 0
+        self.state = "CLOSED"  # CLOSED, OPEN, HALF_OPEN
+        self.last_failure_time = 0
+
+    def can_call(self) -> bool:
+        import time
+        if self.state == "CLOSED":
+            return True
+        if self.state == "OPEN":
+            if time.time() - self.last_failure_time >= self.cooldown:
+                self.state = "HALF_OPEN"
+                return True
+            return False
+        # HALF_OPEN — allow one probe
+        return True
+
+    def record_success(self):
+        self.failures = 0
+        self.state = "CLOSED"
+
+    def record_failure(self):
+        import time
+        self.failures += 1
+        self.last_failure_time = time.time()
+        if self.failures >= self.failure_threshold:
+            self.state = "OPEN"
+            logger.warning(f"[CircuitBreaker] OPENED — {self.failures} consecutive n8n failures, cooldown {self.cooldown}s")
+
+    def get_status(self) -> dict:
+        import time
+        remaining = 0
+        if self.state == "OPEN":
+            remaining = max(0, self.cooldown - (time.time() - self.last_failure_time))
+        return {
+            "state": self.state,
+            "failures": self.failures,
+            "cooldown_remaining": round(remaining, 1),
+        }
+
+_n8n_breaker = _N8NCircuitBreaker()
+
+# ═══════════════════════════════════════════════════════════════
+#  UPGRADE 4: Gemini Fallback for War Room Agents
+# ═══════════════════════════════════════════════════════════════
+
+def _gemini_fallback(agent_name: str, topic: str) -> str:
+    """Generate a real AI response using Gemini when n8n is unreachable.
+    Fallback chain: n8n → Gemini → cached string."""
+    try:
+        if STREAMING_AVAILABLE:
+            from streaming_bridge import stream_chat
+            prompt = (
+                f"You are the {agent_name} in a C-suite boardroom war room. "
+                f"Give a concise assessment (3-5 sentences) on this topic. "
+                f"Stay in character as a senior executive.\n\nTOPIC: {topic}"
+            )
+            full_response = ""
+            for event in stream_chat(prompt, dashboard_context={"mode": "warroom_fallback", "agent": agent_name}):
+                if event.get("type") == "chunk":
+                    full_response += event.get("text", "")
+                elif event.get("type") == "complete":
+                    full_response = event.get("text", full_response)
+            if full_response.strip():
+                return f"🤖 [Gemini] {full_response.strip()[:600]}"
+    except Exception as e:
+        logger.warning(f"[GeminiFallback] {agent_name} failed: {e}")
+    return ""
+
+
+# ═══════════════════════════════════════════════════════════════
+#  UPGRADE 6: N8N Health Endpoint
+# ═══════════════════════════════════════════════════════════════
+
+@app.get("/api/health/n8n")
+def n8n_health():
+    """Return n8n connectivity status and circuit breaker state."""
+    status = "unknown"
+    latency_ms = None
+    try:
+        import time as _t
+        start = _t.time()
+        r = _requests.get(
+            "https://humanresource.app.n8n.cloud/api/v1/workflows?limit=1",
+            headers={"X-N8N-API-KEY": os.getenv("N8N_API_KEY", "")},
+            timeout=5,
+        )
+        latency_ms = round((_t.time() - start) * 1000)
+        if r.status_code == 200:
+            status = "connected"
+        elif r.status_code == 401:
+            status = "auth_expired"
+        else:
+            status = "degraded"
+    except Exception:
+        status = "offline"
+    return {
+        "status": status,
+        "latency_ms": latency_ms,
+        "circuit_breaker": _n8n_breaker.get_status(),
+    }
+
+
+# ═══════════════════════════════════════════════════════════════
+#  UPGRADE 1: App Launch / Stop from Sidebar
+# ═══════════════════════════════════════════════════════════════
+
+_running_apps: dict = {}  # app_name -> {"process": Popen, "port": int}
+
+
+def _find_free_port(start_port: int, max_scan: int = 20) -> int:
+    """Scan upward from start_port to find the next free port."""
+    for offset in range(max_scan):
+        port = start_port + offset
+        with _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM) as s:
+            if s.connect_ex(("127.0.0.1", port)) != 0:
+                return port
+    return start_port + max_scan
+
+
+@app.post("/api/apps/{app_name}/launch")
+def launch_app(app_name: str):
+    """Launch a registered app. Auto-finds a free port if the assigned one is busy."""
+    global _running_apps
+    if app_name in _running_apps:
+        info = _running_apps[app_name]
+        return {"status": "already_running", "port": info["port"], "url": f"http://localhost:{info['port']}"}
+
+    # Resolve app directory (Google Drive root or SCRIPT_DIR)
+    gdrive = os.path.join(os.path.expanduser("~"), "My Drive", "Antigravity-AI Agents", "Meta_App_Factory")
+    app_dir = None
+    for candidate in [os.path.join(gdrive, app_name), os.path.join(SCRIPT_DIR, app_name)]:
+        if os.path.isdir(candidate):
+            app_dir = candidate
+            break
+    if not app_dir:
+        return JSONResponse({"error": f"App directory not found for '{app_name}'"}, status_code=404)
+
+    # Find the server script
+    server_script = None
+    for candidate_name in ["server.py", "app.py", "main.py"]:
+        candidate_path = os.path.join(app_dir, candidate_name)
+        if os.path.isfile(candidate_path):
+            server_script = candidate_path
+            break
+
+    if not server_script:
+        # Check for launch bat
+        bat_path = os.path.join(app_dir, f"launch_{app_name}.bat")
+        if os.path.isfile(bat_path):
+            server_script = bat_path
+
+    if not server_script:
+        return JSONResponse({"error": f"No server.py/app.py/main.py found in {app_dir}"}, status_code=404)
+
+    # Determine port — read from registry or default
+    assigned_port = 5010
+    try:
+        with open(REGISTRY_PATH, "r", encoding="utf-8") as f:
+            reg_data = json.load(f)
+        app_info = reg_data.get("apps", {}).get(app_name, {})
+        if app_info.get("port"):
+            assigned_port = int(app_info["port"])
+    except Exception:
+        pass
+
+    port = _find_free_port(assigned_port)
+
+    # Start the process
+    try:
+        env = os.environ.copy()
+        env["PORT"] = str(port)
+        if server_script.endswith(".py"):
+            proc = subprocess.Popen(
+                [sys.executable, server_script, "--port", str(port)],
+                cwd=app_dir, env=env,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
+            )
+        else:
+            proc = subprocess.Popen(
+                [server_script],
+                cwd=app_dir, env=env, shell=True,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
+            )
+        _running_apps[app_name] = {"process": proc, "port": port, "pid": proc.pid}
+        logger.info(f"Launched {app_name} on port {port} (PID: {proc.pid})")
+        return {"status": "launched", "port": port, "url": f"http://localhost:{port}", "pid": proc.pid}
+    except Exception as e:
+        return JSONResponse({"error": f"Failed to launch: {str(e)}"}, status_code=500)
+
+
+@app.post("/api/apps/{app_name}/stop")
+def stop_app(app_name: str):
+    """Stop a running app."""
+    global _running_apps
+    if app_name not in _running_apps:
+        return JSONResponse({"error": f"'{app_name}' is not running"}, status_code=404)
+    info = _running_apps.pop(app_name)
+    try:
+        info["process"].terminate()
+        info["process"].wait(timeout=5)
+    except Exception:
+        try:
+            info["process"].kill()
+        except Exception:
+            pass
+    logger.info(f"Stopped {app_name} (was on port {info['port']})")
+    return {"status": "stopped", "app_name": app_name}
+
+
+@app.get("/api/apps/running")
+def get_running_apps():
+    """Return list of currently running apps."""
+    result = {}
+    for name, info in _running_apps.items():
+        alive = info["process"].poll() is None
+        result[name] = {"port": info["port"], "pid": info["pid"], "alive": alive}
+    return result
+
+
 # ── War Room WebSocket (Phase 2 — Adversarial Boardroom) ─────
 
 import asyncio
@@ -675,6 +938,37 @@ _warroom_clients: list[WebSocket] = []
 _warroom_log: list[dict] = []
 _persuasion_score: int = 5  # 1-10 Critic agreement
 _session_active: bool = False
+
+# UPGRADE 2: War Room Persistence
+_WARROOM_HISTORY_PATH = os.path.join(SCRIPT_DIR, "warroom_sessions.json")
+
+def _load_warroom_history():
+    """Load War Room history from disk on startup."""
+    global _warroom_log
+    try:
+        if os.path.exists(_WARROOM_HISTORY_PATH):
+            with open(_WARROOM_HISTORY_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            _warroom_log = data.get("messages", [])[-200:]
+            logger.info(f"War Room: loaded {len(_warroom_log)} messages from history")
+    except Exception as e:
+        logger.warning(f"War Room history load failed: {e}")
+
+def _save_warroom_history():
+    """Persist War Room messages to disk."""
+    try:
+        data = {
+            "last_updated": _dt.now().isoformat(),
+            "message_count": len(_warroom_log),
+            "messages": _warroom_log[-500:],  # Keep last 500
+        }
+        with open(_WARROOM_HISTORY_PATH, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, default=str)
+    except Exception as e:
+        logger.warning(f"War Room history save failed: {e}")
+
+# Load on module init
+_load_warroom_history()
 
 # Agent personas for the boardroom
 _AGENTS = {
@@ -720,11 +1014,13 @@ _WARROOM_PROMPTS = {
 }
 
 async def _broadcast(msg: dict):
-    """Send a message to all connected War Room clients."""
+    """Send a message to all connected War Room clients + persist to disk."""
     _warroom_log.append(msg)
-    # Keep last 200 messages
+    # Keep last 200 in memory
     if len(_warroom_log) > 200:
         _warroom_log.pop(0)
+    # Persist to disk (Upgrade 2)
+    _save_warroom_history()
     dead = []
     for ws in _warroom_clients:
         try:
@@ -829,9 +1125,25 @@ def _call_n8n_agent_inner(agent_name: str, topic: str) -> str:
 
 
 def _call_n8n_agent(agent_name: str, topic: str) -> str:
-    """Thread-pool-safe wrapper. auto_heal returns None on persistent failure."""
-    result = _call_n8n_agent_inner(agent_name, topic)
-    return result if result else ""
+    """3-tier fallback: n8n (via circuit breaker) → Gemini → cached string."""
+    # Tier 1: n8n via circuit breaker
+    if _n8n_breaker.can_call():
+        result = _call_n8n_agent_inner(agent_name, topic)
+        if result:
+            _n8n_breaker.record_success()
+            return result
+        _n8n_breaker.record_failure()
+    else:
+        logger.info(f"[CircuitBreaker] Skipping n8n for {agent_name} — circuit OPEN")
+
+    # Tier 2: Gemini fallback (real AI response)
+    gemini_response = _gemini_fallback(agent_name, topic)
+    if gemini_response:
+        return gemini_response
+
+    # Tier 3: Static cached string (last resort)
+    cached = _FALLBACK_RESPONSES.get(agent_name, ["No response available."])
+    return f"⚠️ [Cached] {random.choice(cached)}"
 
 
 _FALLBACK_RESPONSES = {
@@ -886,9 +1198,7 @@ async def _live_debate(topic: str):
         await asyncio.sleep(0.8)  # Natural delay between speakers
 
         if not response:
-            # Fallback if agent unreachable
-            response = random.choice(_FALLBACK_RESPONSES.get(agent, ["No response."]))
-            response = f"\u26a0\ufe0f [Cached] {response}"
+            response = "No response available."
 
         meta = _AGENTS.get(agent, {})
         await _broadcast({
@@ -1647,6 +1957,282 @@ def phantom_report(filename: str):
         return JSONResponse({"error": "Report not found"}, status_code=404)
     return FileResponse(filepath, media_type="text/markdown")
 
+
+# ═══════════════════════════════════════════════════════════════
+#  UPGRADE 2: War Room History Retrieval
+# ═══════════════════════════════════════════════════════════════
+
+@app.get("/api/warroom/history")
+def warroom_history():
+    """Return full War Room debate history from disk."""
+    try:
+        if os.path.exists(_WARROOM_HISTORY_PATH):
+            with open(_WARROOM_HISTORY_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            # Group messages into sessions by SYSTEM "SESSION OPENED" markers
+            messages = data.get("messages", [])
+            sessions = []
+            current_session = {"topic": "Unknown", "started": None, "messages": []}
+            for msg in messages:
+                if msg.get("type") == "dialogue" and msg.get("agent") == "SYSTEM" and "SESSION OPENED" in msg.get("message", ""):
+                    if current_session["messages"]:
+                        sessions.append(current_session)
+                    topic = msg.get("message", "").split("Topic: ")[-1].strip('"')
+                    current_session = {
+                        "topic": topic,
+                        "started": msg.get("timestamp"),
+                        "messages": [msg],
+                    }
+                else:
+                    current_session["messages"].append(msg)
+            if current_session["messages"]:
+                sessions.append(current_session)
+            return {
+                "session_count": len(sessions),
+                "total_messages": len(messages),
+                "sessions": sessions,
+                "last_updated": data.get("last_updated"),
+            }
+        return {"session_count": 0, "total_messages": 0, "sessions": []}
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.delete("/api/warroom/history/clear")
+def warroom_history_clear():
+    """Clear all War Room history."""
+    global _warroom_log
+    _warroom_log.clear()
+    try:
+        if os.path.exists(_WARROOM_HISTORY_PATH):
+            os.remove(_WARROOM_HISTORY_PATH)
+    except Exception:
+        pass
+    return {"status": "ok", "message": "War Room history cleared"}
+
+
+# ═══════════════════════════════════════════════════════════════
+#  UPGRADE 3: Phantom QA Blocking Gate
+# ═══════════════════════════════════════════════════════════════
+
+_pending_approvals: dict = {}  # app_name -> {"score": int, "report": str, "approved": bool}
+
+
+@app.post("/api/build/approve/{app_name}")
+def build_approve(app_name: str):
+    """Approve or abort a build blocked by Phantom QA gate."""
+    if app_name not in _pending_approvals:
+        return JSONResponse({"error": f"No pending approval for '{app_name}'"}, status_code=404)
+    _pending_approvals[app_name]["approved"] = True
+    logger.info(f"Build approved: {app_name} (QA score: {_pending_approvals[app_name]['score']})")
+    return {"status": "approved", "app_name": app_name}
+
+
+@app.post("/api/build/abort/{app_name}")
+def build_abort(app_name: str):
+    """Abort a build blocked by Phantom QA gate."""
+    if app_name in _pending_approvals:
+        _pending_approvals.pop(app_name)
+    return {"status": "aborted", "app_name": app_name}
+
+
+# ── EOS (Enterprise Operating System) Endpoints ────────────────
+
+try:
+    from eos_context import get_eos
+    from Aether.financial_architect import FinancialArchitect
+    from Aether.presentation_architect import PresentationArchitect
+    from factory_stream import get_secret
+except ImportError as e:
+    logger.warning(f"EOS Imports varied: {e}")
+
+@app.get("/api/eos/state")
+def get_eos_state():
+    return get_eos().to_dict()
+
+@app.post("/api/eos/state")
+def update_eos_state(payload: dict):
+    get_eos().update(payload)
+    return {"status": "ok", "state": get_eos().to_dict()}
+
+@app.post("/api/eos/reset")
+def reset_eos_state():
+    get_eos().reset()
+    return {"status": "reset"}
+
+@app.post("/api/eos/market-intel")
+def generate_market_intel(payload: dict):
+    eos = get_eos()
+    company = eos.get("company_name", payload.get("company_name", "Startup"))
+    niche = eos.get("industry", payload.get("industry", "Tech"))
+    
+    prompt = f"Analyze the market for '{company}' in the '{niche}' industry. Return ONLY valid JSON with no markdown block formatting. Keys: 'tam' (string, e.g. '$10B'), 'sam' (string), 'som' (string), 'competitors' (list of dicts with 'name' and 'weakness')."
+    
+    api_key = get_secret("GEMINI_API_KEY")
+    if not api_key:
+        return {"error": "No GEMINI_API_KEY"}
+        
+    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+    headers = {"Content-Type": "application/json", "x-goog-api-key": api_key}
+    data = {"contents": [{"role": "user", "parts": [{"text": prompt}]}]}
+    
+    try:
+        import requests
+        r = requests.post(url, json=data, headers=headers)
+        js = r.json()
+        
+        candidates = js.get("candidates", [])
+        if not candidates:
+            return {"error": "No response from Gemini", "details": js}
+            
+        text = candidates[0].get("content", {}).get("parts", [{}])[0].get("text", "").strip()
+        if text.startswith("```json"): text = text.replace("```json", "", 1)
+        if text.endswith("```"): text = text[:-3]
+        
+        result = json.loads(text.strip())
+        
+        eos.update({
+            "tam": result.get("tam", "$0"),
+            "sam": result.get("sam", "$0"),
+            "som": result.get("som", "$0"),
+            "competitors": result.get("competitors", [])
+        })
+        eos.mark_phase_complete("market")
+        return {"status": "ok", "market": result}
+    except Exception as e:
+        logger.error(f"Market intel error: {e}")
+        return {"error": str(e)}
+
+@app.post("/api/eos/brand")
+def generate_brand_identity(payload: dict):
+    eos = get_eos()
+    company = payload.get("company_name", eos.get("company_name"))
+    niche = payload.get("industry", eos.get("industry"))
+    
+    prompt = f"Act as a high-end Brand Studio. Generate a brand identity for '{company}' in '{niche}'. Return ONLY valid JSON block. Keys: 'company_name' (string, if you suggest a new one, else use the provided), 'tagline' (string), 'brand_colors' (dict of 'primary', 'secondary', 'accent' with hex codes), 'logo_prompt' (string: detailed DALL-E 3 midjourney prompt for the logo)."
+    
+    api_key = get_secret("GEMINI_API_KEY")
+    if not api_key:
+        return {"error": "No GEMINI_API_KEY"}
+        
+    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+    headers = {"Content-Type": "application/json", "x-goog-api-key": api_key}
+    data = {"contents": [{"role": "user", "parts": [{"text": prompt}]}]}
+    
+    try:
+        import requests
+        r = requests.post(url, json=data, headers=headers)
+        js = r.json()
+        candidates = js.get("candidates", [])
+        if not candidates: return {"error": "Empty response"}
+            
+        text = candidates[0].get("content", {}).get("parts", [{}])[0].get("text", "").strip()
+        if text.startswith("```json"): text = text.replace("```json", "", 1)
+        if text.endswith("```"): text = text[:-3]
+        
+        result = json.loads(text.strip())
+        
+        eos.update({
+            "company_name": result.get("company_name", company),
+            "tagline": result.get("tagline", "Innovating the future"),
+            "brand_colors": result.get("brand_colors", {}),
+            "logo_prompt": result.get("logo_prompt", "")
+        })
+        eos.mark_phase_complete("brand")
+        return {"status": "ok", "brand": result}
+    except Exception as e:
+        logger.error(f"Brand studio error: {e}")
+        return {"error": str(e)}
+
+@app.post("/api/eos/financial-model")
+def generate_financial_model(payload: dict):
+    eos = get_eos()
+    eos.update(payload)
+    config = eos.get_financial_config()
+    
+    arch = FinancialArchitect()
+    try:
+        # PII setup handles safe path. 
+        res = arch.generate_projections(config=config, output_name=f"{config['company_name'].replace(' ', '_')}_Financials.xlsx")
+        
+        if res.get("generated"):
+            eos.update({
+                "financial_xlsx_path": res.get("path"),
+                "breakeven_month": res.get("breakeven_month")
+            })
+            eos.mark_phase_complete("financial")
+            return {"status": "ok", "path": res.get("path"), "breakeven": res.get("breakeven_month")}
+        return {"error": "Failed to generate financials", "details": res}
+    except Exception as e:
+        logger.error(f"Financial Model error: {e}")
+        return {"error": str(e)}
+
+@app.post("/api/eos/funding")
+def generate_funding_strategy(payload: dict):
+    eos = get_eos()
+    eos.update(payload)
+    gap = eos.compute_funding_gap()
+    
+    prompt = f"Company {eos.get('company_name')} needs to raise ${eos.get('total_investment_needed')}. The founder is investing ${eos.get('equity_contribution')}. The funding gap is ${gap}. Write a brief, punchy markdown strategy (3 paragraphs max) recommending how to split this gap between VC funding and Bank Loans. End with the suggested VC equity give %."
+    
+    api_key = get_secret("GEMINI_API_KEY")
+    if api_key:
+        try:
+            import requests
+            url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+            headers = {"Content-Type": "application/json", "x-goog-api-key": api_key}
+            data = {"contents": [{"role": "user", "parts": [{"text": prompt}]}]}
+            r = requests.post(url, json=data, headers=headers)
+            candidates = r.json().get("candidates", [])
+            if candidates:
+                text = candidates[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+                eos.update({"funding_strategy_md": text})
+                eos.mark_phase_complete("funding")
+                return {"status": "ok", "strategy": text, "gap": gap}
+        except Exception as e:
+            logger.error(f"Funding strategy error: {e}")
+            return {"error": str(e)}
+    return {"error": "No GEMINI_API_KEY"}
+
+@app.post("/api/eos/pitch-deck")
+def generate_pitch_deck():
+    eos = get_eos()
+    company = eos.get("company_name", "Startup")
+    try:
+        arch = PresentationArchitect()
+        
+        # Generate Investor Deck
+        inv_data = {
+            "roi": "450", "breakeven_month": eos.get("breakeven_month", 6),
+            "y1_revenue": f"${eos.get('monthly_revenue', 0)*12:,.0f}",
+            "gross_margin": 72, "signals_daily": 150
+        }
+        res_inv = arch.generate(audience="investor", data=inv_data, output_name=f"{company.replace(' ', '_')}_Investor_Deck.json")
+        
+        # Generate Customer Deck
+        res_cust = arch.generate(audience="customer", data={}, output_name=f"{company.replace(' ', '_')}_Customer_Deck.json")
+        
+        if res_inv.get("pptx_path") or res_cust.get("pptx_path"):
+            eos.update({
+                "investor_pptx_path": res_inv.get("pptx_path"),
+                "customer_pptx_path": res_cust.get("pptx_path")
+            })
+            eos.mark_phase_complete("decks")
+            return {"status": "ok", "investor": res_inv.get("pptx_path"), "customer": res_cust.get("pptx_path")}
+        return {"error": "Deck generation failed (returned false paths)"}
+    except Exception as e:
+        logger.error(f"Pitch Deck error: {e}")
+        return {"error": str(e)}
+
+@app.get("/api/eos/documents/{filename:path}")
+def download_eos_document(filename: str):
+    import os
+    from fastapi.responses import FileResponse
+    # Look in the V2 Executive Reports directory
+    safe_path = os.path.join(SCRIPT_DIR, "data", "V2_Executive_Reports", filename.replace("..", ""))
+    if os.path.exists(safe_path):
+        return FileResponse(safe_path)
+    return JSONResponse({"error": "File not found"}, status_code=404)
 
 # ── Startup: Auto-start incoming watcher ──────────────────
 @app.on_event("startup")
