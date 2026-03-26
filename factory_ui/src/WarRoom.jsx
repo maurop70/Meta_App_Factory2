@@ -143,11 +143,19 @@ export default function WarRoom({ ventureMode = false, onHandoff, projectName = 
       };
     };
 
+    // ── Keepalive ping every 20s to prevent WS timeout during long debates ──
+    const pingInterval = setInterval(() => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        try { ws.send(JSON.stringify({ type: 'ping' })); } catch (_) {}
+      }
+    }, 20000);
+
     connect();
 
     return () => {
       didCancel = true;
       clearTimeout(reconnectTimer);
+      clearInterval(pingInterval);
       if (ws) ws.close();
     };
   }, [projectName]);
@@ -157,9 +165,24 @@ export default function WarRoom({ ventureMode = false, onHandoff, projectName = 
     feedEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // ── Safe WebSocket Send with HTTP fallback ──────────
+  const sendSafe = useCallback((payload) => {
+    const ws = wsRef.current;
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify(payload));
+    } else {
+      // WS is closed — use HTTP fallback so intervention always reaches backend
+      fetch(`${API_BASE}/api/warroom/intervene`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...payload, project_name: projectName }),
+      }).catch(e => console.error('Intervention HTTP fallback failed:', e));
+    }
+  }, [projectName]);
+
   // ── Send Intervention (Phase 2) ───────────────────────
   const sendIntervention = useCallback(() => {
-    if (!inputText.trim() || !wsRef.current) return;
+    if (!inputText.trim()) return;
 
     if (convinceMode && activeChallenge) {
       // Phase 3: Submit as convince reasoning
@@ -173,13 +196,10 @@ export default function WarRoom({ ventureMode = false, onHandoff, projectName = 
         }),
       });
     } else {
-      wsRef.current.send(JSON.stringify({
-        type: 'intervention',
-        message: inputText.trim(),
-      }));
+      sendSafe({ type: 'intervention', message: inputText.trim() });
     }
     setInputText('');
-  }, [inputText, convinceMode, activeChallenge]);
+  }, [inputText, convinceMode, activeChallenge, sendSafe]);
 
   // ── Hard Override (Phase 3 enhanced) ──────────────────
   const sendOverride = useCallback(() => {
@@ -438,6 +458,7 @@ export default function WarRoom({ ventureMode = false, onHandoff, projectName = 
             {messages.filter(m => m.type === 'dialogue').map((msg, i) => {
               const agentStyle = AGENT_STYLES[msg.agent] || AGENT_STYLES.SYSTEM;
               const isUser = msg.is_user || msg.agent === 'COMMANDER';
+              const isLong = (msg.message || '').length > 800;
               return (
                 <div key={i} style={{
                   ...styles.message,
@@ -451,7 +472,10 @@ export default function WarRoom({ ventureMode = false, onHandoff, projectName = 
                     <span style={styles.msgTime}>{formatTime(msg.timestamp)}</span>
                     {isUser && <span style={styles.userBadge}>YOU</span>}
                   </div>
-                  <p style={styles.msgText}>{msg.message}</p>
+                  <div style={{
+                    ...styles.msgText,
+                    ...(isLong ? { maxHeight: '400px', overflowY: 'auto', paddingRight: '8px' } : {}),
+                  }}>{msg.message}</div>
                 </div>
               );
             })}
@@ -792,7 +816,7 @@ const styles = {
     padding: '1px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: 700,
     background: 'rgba(249,115,22,0.2)', color: '#f97316', letterSpacing: '0.5px',
   },
-  msgText: { margin: 0, fontSize: '13.5px', lineHeight: 1.6, color: '#cbd5e1' },
+  msgText: { margin: 0, fontSize: '13.5px', lineHeight: 1.6, color: '#cbd5e1', whiteSpace: 'pre-wrap', wordBreak: 'break-word' },
 
   // ── Control Panel ──
   controlPanel: {

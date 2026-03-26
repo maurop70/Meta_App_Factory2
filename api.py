@@ -1304,6 +1304,7 @@ _WARROOM_WEBHOOKS = {
     "CEO":  "https://humanresource.app.n8n.cloud/webhook/elite-council",
     "CMO":  "https://humanresource.app.n8n.cloud/webhook/cmo-v2",
     "CFO":  "https://humanresource.app.n8n.cloud/webhook/cfo-v2",
+    "CTO":  "https://humanresource.app.n8n.cloud/webhook/elite-council",
     "CRITIC": "https://humanresource.app.n8n.cloud/webhook/critic-v2",
 }
 
@@ -1329,6 +1330,12 @@ _WARROOM_PROMPTS = {
         "concise critical assessment (3-5 sentences) of the following topic. Identify the "
         "biggest weakness, demand evidence, and score your confidence 1-10 with justification. "
         "Be tough but fair.\n\nTOPIC: {topic}"
+    ),
+    "CTO": (
+        "You are the CTO in a boardroom war room. Give a concise technical assessment "
+        "(3-5 sentences) on the following topic. Focus on architecture, scalability, "
+        "technology stack choices, implementation timeline, and technical risks. "
+        "Be specific about tools, frameworks, and feasibility.\n\nTOPIC: {topic}"
     ),
 }
 
@@ -1489,8 +1496,29 @@ async def warroom_websocket(websocket: WebSocket, project: str = "Aether"):
                     asyncio.create_task(_live_debate("The Pitch decks are ready for distribution.", project_name=project, phase="pitch"))
                     
                 else:
-                    # Regular chat
-                    asyncio.create_task(_live_debate(user_msg, project_name=project))
+                    # Smart routing: detect if the Commander is addressing a specific agent
+                    # e.g. "CMO, prepare market research" → only CMO responds
+                    _KNOWN_AGENTS = {"CEO", "CMO", "CFO", "CTO", "CRITIC", "ARCHITECT"}
+                    user_upper = user_msg.upper()
+                    directed_agent = None
+                    for ag in _KNOWN_AGENTS:
+                        if user_upper.startswith(ag + ",") or user_upper.startswith(ag + " "):
+                            directed_agent = ag
+                            break
+
+                    if directed_agent:
+                        # Single-agent directed response — quick and focused
+                        asyncio.create_task(_directed_response(directed_agent, user_msg, project_name=project))
+                    else:
+                        # General board question — lightweight 2-agent response (no full multi-round)
+                        asyncio.create_task(_board_quick_response(user_msg, project_name=project))
+
+            elif data.get("type") == "ping":
+                # Keepalive — just acknowledge with a pong
+                try:
+                    await websocket.send_json({"type": "pong"})
+                except Exception:
+                    pass
 
             elif data.get("type") == "override":
                 _persuasion_score = min(10, _persuasion_score + 2)
@@ -1507,6 +1535,7 @@ async def warroom_websocket(websocket: WebSocket, project: str = "Aether"):
                     "message": f"🚨 HARD OVERRIDE — Commander bypassed deliberation. Critic compliance forced to {_persuasion_score}/10.",
                     "timestamp": _dt.now().isoformat(),
                 }, project=project)
+
     except WebSocketDisconnect:
         pass
     finally:
@@ -1587,7 +1616,103 @@ _FALLBACK_RESPONSES = {
         "I remain skeptical. Where is the evidence that this outperforms the baseline? Show me data, not conviction.",
         "Interesting direction, but my core objections about scalability and validation remain unaddressed.",
     ],
+    "CTO": [
+        "The technical architecture needs deeper analysis. I'll need to prototype before confirming feasibility.",
+        "Interesting approach, but I see potential scaling bottlenecks. Let me evaluate the stack options.",
+    ],
 }
+
+
+
+async def _directed_response(agent_name: str, user_msg: str, project_name: str = "Aether"):
+    """Commander addressed a specific agent — get a focused response from that agent only.
+    Used for post-debate commands like 'CMO, prepare a market research report.'"""
+    loop = asyncio.get_event_loop()
+    meta = _AGENTS.get(agent_name, {"icon": "💬", "color": "#94a3b8"})
+
+    # Build a role-scoped prompt
+    prompt_template = _WARROOM_PROMPTS.get(agent_name, "Respond to this request from the Commander: {topic}")
+    directed_prompt = (
+        f"You are the {agent_name} in a boardroom. The Commander has specifically addressed you.\n"
+        f"Commander's request: {user_msg}\n"
+        f"Provide a detailed, focused response in your role. Be thorough but concise (4-6 sentences)."
+    )
+
+    await _broadcast({
+        "type": "dialogue",
+        "agent": "SYSTEM",
+        "icon": "📡",
+        "color": "#6366f1",
+        "message": f"Commander directed to {agent_name}. Awaiting {agent_name}'s response...",
+        "timestamp": _dt.now().isoformat(),
+    }, project=project_name)
+
+    response = await loop.run_in_executor(_warroom_executor, _call_n8n_agent, agent_name, directed_prompt)
+
+    if not response:
+        response = f"[{agent_name}] I've received your request. I'll prepare the analysis and report back."
+
+    await _broadcast({
+        "type": "dialogue",
+        "agent": agent_name,
+        "icon": meta.get("icon", "💬"),
+        "color": meta.get("color", "#94a3b8"),
+        "message": response,
+        "timestamp": _dt.now().isoformat(),
+    }, project=project_name)
+
+    # Log to institutional memory
+    if MEMORY_AVAILABLE:
+        try:
+            record_lesson(
+                f"Commander → {agent_name}: '{user_msg[:80]}' — {agent_name} responded",
+                "commander_intervention", project_name
+            )
+        except Exception:
+            pass
+
+
+async def _board_quick_response(user_msg: str, project_name: str = "Aether"):
+    """Lightweight board response for general Commander questions post-debate.
+    CEO responds first, CRITIC weighs in — no multi-round loop."""
+    loop = asyncio.get_event_loop()
+
+    await _broadcast({
+        "type": "dialogue",
+        "agent": "SYSTEM",
+        "icon": "📡",
+        "color": "#6366f1",
+        "message": "Board responding to Commander input...",
+        "timestamp": _dt.now().isoformat(),
+    }, project=project_name)
+
+    prompt = f"You are responding to a Commander intervention in a boardroom. Commander said: '{user_msg}'. Respond in your role — concise, 3-4 sentences."
+
+    # CEO and CRITIC respond in parallel
+    ceo_future = loop.run_in_executor(_warroom_executor, _call_n8n_agent, "CEO", prompt)
+    critic_future = loop.run_in_executor(_warroom_executor, _call_n8n_agent, "CRITIC", prompt)
+
+    ceo_resp = await ceo_future
+    await asyncio.sleep(0.8)
+    await _broadcast({
+        "type": "dialogue",
+        "agent": "CEO",
+        "icon": "👔",
+        "color": "#3b82f6",
+        "message": ceo_resp or "Noted. I'll take this under advisement.",
+        "timestamp": _dt.now().isoformat(),
+    }, project=project_name)
+
+    critic_resp = await critic_future
+    await asyncio.sleep(0.8)
+    await _broadcast({
+        "type": "dialogue",
+        "agent": "CRITIC",
+        "icon": "🔍",
+        "color": "#ef4444",
+        "message": critic_resp or "Valid point. Let me assess the implications.",
+        "timestamp": _dt.now().isoformat(),
+    }, project=project_name)
 
 
 async def _live_debate(topic: str, project_name: str = "Aether", phase: str = None):
@@ -1922,6 +2047,46 @@ async def _analyze_upload(project_name: str, file_path: str, filename: str):
             "message": f"Failed to analyze '{filename}': {str(e)}",
             "timestamp": _dt.now().isoformat()
         }, project=project_name)
+
+
+@app.post("/api/warroom/intervene")
+async def warroom_intervene_http(request: Request):
+    """HTTP fallback for Commander Intervention when WebSocket is disconnected.
+    Triggers the same smart routing as the WS handler."""
+    data = await request.json()
+    user_msg = data.get("message", "").strip()
+    project = data.get("project_name", "Aether")
+
+    if not user_msg:
+        return {"status": "error", "error": "No message provided"}
+
+    # Broadcast the Commander message so it appears in the feed
+    await _broadcast({
+        "type": "dialogue",
+        "agent": "COMMANDER",
+        "icon": "⚡",
+        "color": "#f97316",
+        "message": user_msg,
+        "timestamp": _dt.now().isoformat(),
+        "is_user": True,
+    }, project=project)
+
+    # Smart routing — same logic as WebSocket handler
+    _KNOWN_AGENTS = {"CEO", "CMO", "CFO", "CTO", "CRITIC", "ARCHITECT"}
+    user_upper = user_msg.upper()
+    directed_agent = None
+    for ag in _KNOWN_AGENTS:
+        if user_upper.startswith(ag + ",") or user_upper.startswith(ag + " "):
+            directed_agent = ag
+            break
+
+    if directed_agent:
+        asyncio.create_task(_directed_response(directed_agent, user_msg, project_name=project))
+    else:
+        asyncio.create_task(_board_quick_response(user_msg, project_name=project))
+
+    return {"status": "ok", "routed_to": directed_agent or "board"}
+
 
 @app.post("/api/warroom/upload")
 async def warroom_upload(
