@@ -259,8 +259,15 @@ def get_eos(project_name: str = "Aether") -> EOSContext:
         return "\n".join(parts)
 
 
-# Module-level singleton accessor
-_eos = EOSContext()
+# Per-project factory — thread-safe, lazy instantiation
+_instances: dict[str, EOSContext] = {}
+_factory_lock = Lock()
 
-def get_eos() -> EOSContext:
-    return _eos
+def get_eos(project_name: str = "Aether") -> EOSContext:
+    """Return the EOS context for a specific project, creating it if needed."""
+    if project_name not in _instances:
+        with _factory_lock:
+            if project_name not in _instances:
+                _instances[project_name] = EOSContext(project_name)
+                logger.info(f"EOSContext created for project: {project_name}")
+    return _instances[project_name]

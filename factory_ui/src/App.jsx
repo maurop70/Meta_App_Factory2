@@ -1283,7 +1283,7 @@ function App() {
 
         {/* War Room — Adversarial Boardroom */}
         {activeView === 'warroom' && (
-          <WarRoom projectName={selectedApp || 'Aether'} />
+          <WarRoom key={selectedApp || 'Aether'} projectName={selectedApp || 'Aether'} />
         )}
 
         {/* Builder Chat / Mode Selector (EOS V3.1) */}
@@ -1292,6 +1292,7 @@ function App() {
             <ModeSelectionScreen onSelectMode={setBuilderMode} />
           ) : builderMode === 'venture' ? (
             <WarRoom 
+              key={`venture-${selectedApp || 'Aether'}`}
               ventureMode={true} 
               projectName={selectedApp || 'Aether'}
               onHandoff={(eosData) => {
