@@ -1320,21 +1320,63 @@ function App() {
             <h3>📦 App Registry</h3>
             <table className="registry-table">
               <thead>
-                <tr><th>App Name</th><th>Type</th><th>Status</th><th>Port</th></tr>
+                <tr><th>App Name</th><th>Type</th><th>Status</th><th>Port</th><th>Actions</th></tr>
               </thead>
               <tbody>
-                {registry.map(app => (
-                  <tr key={app.name}>
-                    <td style={{ color: '#e2e8f0', fontWeight: 500 }}>{app.name}</td>
-                    <td>{app.type}</td>
-                    <td>
-                      <span className={app.status === 'active' ? 'status-active' : 'status-inactive'}>
-                        {app.status === 'active' ? '● Active' : '○ Inactive'}
-                      </span>
-                    </td>
-                    <td>{app.port || '—'}</td>
-                  </tr>
-                ))}
+                {registry.map(app => {
+                  const running = runningApps[app.name]?.alive;
+                  const port = runningApps[app.name]?.port || app.port;
+                  return (
+                    <tr key={app.name}>
+                      <td
+                        style={{ color: '#818cf8', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline dotted rgba(99,102,241,0.4)' }}
+                        onClick={() => {
+                          if (running && port) {
+                            window.open(`http://localhost:${port}`, '_blank');
+                          } else {
+                            launchApp(app.name);
+                          }
+                        }}
+                        title={running ? `Open ${app.name} (localhost:${port})` : `Launch ${app.name}`}
+                      >
+                        {app.name}
+                      </td>
+                      <td>{app.type}</td>
+                      <td>
+                        <span className={running ? 'status-active' : app.status === 'active' ? 'status-active' : 'status-inactive'}>
+                          {running ? '🟢 Running' : app.status === 'active' ? '● Active' : '○ Inactive'}
+                        </span>
+                      </td>
+                      <td>{running ? port : app.port || '—'}</td>
+                      <td>
+                        {running ? (
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                            <button
+                              className="app-action-btn launch"
+                              onClick={() => window.open(`http://localhost:${port}`, '_blank')}
+                              title="Open in browser"
+                              style={{ fontSize: '11px', padding: '3px 8px', borderRadius: '4px', border: '1px solid rgba(34,197,94,0.3)', background: 'rgba(34,197,94,0.1)', color: '#22c55e', cursor: 'pointer' }}
+                            >🌐 Open</button>
+                            <button
+                              className="app-action-btn stop"
+                              onClick={() => stopApp(app.name)}
+                              title="Stop app"
+                              style={{ fontSize: '11px', padding: '3px 8px', borderRadius: '4px', border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.1)', color: '#ef4444', cursor: 'pointer' }}
+                            >⏹ Stop</button>
+                          </div>
+                        ) : (
+                          <button
+                            className="app-action-btn launch"
+                            onClick={() => launchApp(app.name)}
+                            disabled={launchingApp === app.name}
+                            title="Launch app"
+                            style={{ fontSize: '11px', padding: '3px 8px', borderRadius: '4px', border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(99,102,241,0.1)', color: '#818cf8', cursor: 'pointer' }}
+                          >{launchingApp === app.name ? '⏳ Launching...' : '🚀 Launch'}</button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
