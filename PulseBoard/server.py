@@ -50,7 +50,7 @@ from pydantic import BaseModel
 try:
     from dotenv import load_dotenv
     load_dotenv()
-except ImportError:
+except Exception:
     pass
 
 # ── Portability: Runtime Data Isolation ──────────────────
