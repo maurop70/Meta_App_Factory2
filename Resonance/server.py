@@ -70,8 +70,11 @@ except ImportError:
     logging.warning("python-pptx not installed. PPTX file extraction will not work.")
 
 
-# Load .env variables
-load_dotenv()
+# Load .env variables (resilient to encoding issues in parent .env)
+try:
+    load_dotenv()
+except Exception:
+    pass
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [Resonance] %(message)s")
 logger = logging.getLogger("Resonance")
