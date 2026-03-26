@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CMO Agent — Marketing Intelligence Command Center | Antigravity-AI</title>
+    <meta name="description" content="AI-powered marketing intelligence command center with market research, brand strategy, GTM planning, audience personas, and competitive analysis.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <!-- ═══ Sidebar Navigation ═══ -->
+    <nav id="sidebar" class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">
+                <span class="logo-icon">📢</span>
+                <div class="logo-text">
+                    <span class="logo-title">CMO<span class="logo-accent">_Elite</span></span>
+                    <span class="logo-sub">Marketing Intelligence</span>
+                </div>
+            </div>
+            <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">☰</button>
+        </div>
+
+        <div class="sidebar-nav">
+            <button class="nav-item active" data-panel="dashboard" id="nav-dashboard">
+                <span class="nav-icon">📊</span>
+                <span class="nav-label">Dashboard</span>
+            </button>
+            <button class="nav-item" data-panel="projects" id="nav-projects">
+                <span class="nav-icon">📁</span>
+                <span class="nav-label">Projects</span>
+            </button>
+            <button class="nav-item" data-panel="market-research" id="nav-market-research">
+                <span class="nav-icon">🔍</span>
+                <span class="nav-label">Market Research</span>
+            </button>
+            <button class="nav-item" data-panel="brand-studio" id="nav-brand-studio">
+                <span class="nav-icon">🎨</span>
+                <span class="nav-label">Brand Studio</span>
+            </button>
+            <button class="nav-item" data-panel="gtm-planner" id="nav-gtm-planner">
+                <span class="nav-icon">🚀</span>
+                <span class="nav-label">GTM Planner</span>
+            </button>
+            <button class="nav-item" data-panel="persona-builder" id="nav-persona-builder">
+                <span class="nav-icon">👥</span>
+                <span class="nav-label">Persona Builder</span>
+                <span class="nav-badge">Dr. Aris</span>
+            </button>
+            <button class="nav-item" data-panel="campaign-hub" id="nav-campaign-hub">
+                <span class="nav-icon">📣</span>
+                <span class="nav-label">Campaign Hub</span>
+            </button>
+            <button class="nav-item" data-panel="competitive-intel" id="nav-competitive-intel">
+                <span class="nav-icon">⚔️</span>
+                <span class="nav-label">Competitive Intel</span>
+            </button>
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="connection-status" id="connectionStatus">
+                <span class="status-dot offline"></span>
+                <span class="status-text">Checking...</span>
+            </div>
+            <div class="sidebar-brand">
+                <span class="brand-text">Antigravity-AI</span>
+                <span class="brand-version">v1.0.0</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ═══ Main Content Area ═══ -->
+    <main id="mainContent" class="main-content">
+        <!-- Project Switcher Bar -->
+        <div class="project-switcher-bar" id="projectSwitcherBar">
+            <span class="project-switcher-label">PROJECT:</span>
+            <select class="project-switcher-select" id="projectSwitcher">
+                <option value="default">Default Project</option>
+            </select>
+            <button class="btn-new-project-mini" onclick="showNewProjectModal()" title="New Project">＋</button>
+        </div>
+        <!-- Dynamic panels loaded by app.js -->
+        <div id="panel-container"></div>
+    </main>
+
+    <!-- ═══ Loading Overlay ═══ -->
+    <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="loading-card">
+            <div class="loading-spinner"></div>
+            <h3 class="loading-title" id="loadingTitle">Analyzing...</h3>
+            <p class="loading-sub" id="loadingSub">CMO_Elite is processing your request</p>
+            <div class="progress-bar-container" id="progressBarContainer">
+                <div class="progress-bar-track">
+                    <div class="progress-bar-fill" id="progressBarFill"></div>
+                </div>
+                <div class="progress-stages" id="progressStages"></div>
+                <p class="progress-timer" id="progressTimer">Elapsed: 0s</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ Toast Notifications ═══ -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
+

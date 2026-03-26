@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Phantom QA Elite — Autonomous Multi-Agent Quality Assurance Command Center by Antigravity-AI">
+    <title>Phantom QA Elite — Quality Assurance Command Center</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <!-- ═══ SIDEBAR ═══ -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <div class="brand-icon">👻</div>
+            <div>
+                <div class="brand-title">Phantom <span class="accent">QA</span></div>
+                <div class="brand-sub">QUALITY ASSURANCE</div>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a class="nav-item active" data-panel="dashboard" onclick="showPanel('dashboard')">
+                <span class="nav-icon">📊</span> Dashboard
+            </a>
+            <a class="nav-item" data-panel="test-runner" onclick="showPanel('test-runner')">
+                <span class="nav-icon">🚀</span> Test Runner
+            </a>
+            <a class="nav-item" data-panel="architect" onclick="showPanel('architect')">
+                <span class="nav-icon">🏗️</span> Architect View
+            </a>
+            <a class="nav-item" data-panel="ghost" onclick="showPanel('ghost')">
+                <span class="nav-icon">👻</span> Ghost Report
+            </a>
+            <a class="nav-item" data-panel="ghost-stream" onclick="showPanel('ghost-stream')">
+                <span class="nav-icon">📡</span> Ghost Stream
+            </a>
+            <a class="nav-item" data-panel="skeptic" onclick="showPanel('skeptic')">
+                <span class="nav-icon">🔍</span> Skeptic Report
+            </a>
+            <a class="nav-item" data-panel="history" onclick="showPanel('history')">
+                <span class="nav-icon">📋</span> Test History
+            </a>
+            <a class="nav-item" data-panel="repairs" onclick="showPanel('repairs')">
+                <span class="nav-icon">🔧</span> Repair Loop
+            </a>
+            <a class="nav-item" data-panel="pulse" onclick="showPanel('pulse')">
+                <span class="nav-icon">💚</span> System Pulse
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="status-dot" id="statusDot"></div>
+            <span id="statusLabel">Connecting...</span>
+        </div>
+        <div class="sidebar-version">ANTIGRAVITY-AI &nbsp; v1.0.0</div>
+    </aside>
+
+    <!-- ═══ MAIN CONTENT ═══ -->
+    <main class="main-content" id="mainContent">
+
+        <!-- ═══ DASHBOARD PANEL ═══ -->
+        <section class="panel active" id="panel-dashboard">
+            <div class="panel-header">
+                <span class="panel-badge">COMMAND CENTER</span>
+                <h1>Quality Assurance Dashboard</h1>
+                <p class="panel-desc">Real-time quality intelligence across all Antigravity applications</p>
+            </div>
+
+            <div class="kpi-grid" id="kpiGrid">
+                <div class="kpi-card">
+                    <div class="kpi-value" id="kpiRuns">—</div>
+                    <div class="kpi-label">Test Runs</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-value accent" id="kpiPassRate">—</div>
+                    <div class="kpi-label">Pass Rate</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-value" id="kpiApps">—</div>
+                    <div class="kpi-label">Apps Tested</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-value" id="kpiScore">—</div>
+                    <div class="kpi-label">Avg Score</div>
+                </div>
+            </div>
+
+            <div class="quick-actions">
+                <h2>⚡ Quick Actions</h2>
+                <div class="action-grid">
+                    <button class="action-btn" onclick="showPanel('test-runner')">
+                        <span class="action-icon">🚀</span>
+                        <span class="action-title">Run Full Test</span>
+                        <span class="action-desc">3-agent test bench</span>
+                    </button>
+                    <button class="action-btn" onclick="runPulse()">
+                        <span class="action-icon">💚</span>
+                        <span class="action-title">System Pulse</span>
+                        <span class="action-desc">Scan all C-Suite ports</span>
+                    </button>
+                    <button class="action-btn" onclick="showPanel('history')">
+                        <span class="action-icon">📋</span>
+                        <span class="action-title">View History</span>
+                        <span class="action-desc">Past test reports</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="recent-section">
+                <h2>🕐 Recent Test Runs</h2>
+                <div id="recentRuns" class="recent-list">
+                    <div class="empty-state">No test runs yet. Launch your first test!</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══ TEST RUNNER PANEL ═══ -->
+        <section class="panel" id="panel-test-runner">
+            <div class="panel-header">
+                <span class="panel-badge">MULTI-AGENT TEST BENCH</span>
+                <h1>🚀 Test Runner</h1>
+                <p class="panel-desc">Point Phantom at any app URL to run the full 3-agent test suite</p>
+            </div>
+
+            <div class="input-section">
+                <label class="input-label">TARGET APPLICATION URL</label>
+                <input type="text" class="input-field" id="targetUrl"
+                       placeholder="http://localhost:5020" value="http://localhost:5020">
+
+                <label class="input-label" style="margin-top: 12px">APP NAME (optional)</label>
+                <input type="text" class="input-field" id="appName" placeholder="CMO_Elite">
+
+                <label class="input-label" style="margin-top: 12px">DESCRIPTION (optional)</label>
+                <textarea class="input-textarea" id="appDescription"
+                          placeholder="Marketing intelligence command center with 6 AI engines..."></textarea>
+
+                <div class="toggle-row">
+                    <label class="toggle-label">
+                        <input type="checkbox" id="skipGhost"> Skip Ghost User (API-only test)
+                    </label>
+                </div>
+
+                <button class="primary-btn" onclick="runFullTest()">
+                    <span>👻</span> Run Full Test Bench
+                </button>
+            </div>
+
+            <div id="testResults" class="results-area" style="display:none">
+                <!-- Populated by JS -->
+            </div>
+        </section>
+
+        <!-- ═══ ARCHITECT VIEW PANEL ═══ -->
+        <section class="panel" id="panel-architect">
+            <div class="panel-header">
+                <span class="panel-badge">THE ARCHITECT</span>
+                <h1>🏗️ Test Plan</h1>
+                <p class="panel-desc">AI-generated test strategy from the latest analysis</p>
+            </div>
+            <div id="architectContent" class="results-area">
+                <div class="empty-state">Run a test first to see the Architect's plan</div>
+            </div>
+        </section>
+
+        <!-- ═══ GHOST REPORT PANEL ═══ -->
+        <section class="panel" id="panel-ghost">
+            <div class="panel-header">
+                <span class="panel-badge">THE GHOST USER</span>
+                <h1>👻 UI Test Report</h1>
+                <p class="panel-desc">Playwright-driven persona testing results</p>
+            </div>
+            <div id="ghostContent" class="results-area">
+                <div class="empty-state">Run a test first to see Ghost User results</div>
+            </div>
+        </section>
+
+        <!-- ═══ SKEPTIC REPORT PANEL ═══ -->
+        <section class="panel" id="panel-skeptic">
+            <div class="panel-header">
+                <span class="panel-badge">THE SKEPTIC</span>
+                <h1>🔍 API Stress Test Report</h1>
+                <p class="panel-desc">Edge-case attacks and vulnerability analysis</p>
+            </div>
+            <div id="skepticContent" class="results-area">
+                <div class="empty-state">Run a test first to see Skeptic results</div>
+            </div>
+        </section>
+
+        <!-- ═══ HISTORY PANEL ═══ -->
+        <section class="panel" id="panel-history">
+            <div class="panel-header">
+                <span class="panel-badge">TEST HISTORY</span>
+                <h1>📋 Past Test Runs</h1>
+                <p class="panel-desc">All historical test runs with drill-down</p>
+            </div>
+            <div id="historyContent" class="results-area">
+                <div class="empty-state">Loading...</div>
+            </div>
+        </section>
+
+        <!-- ═══ GHOST STREAM PANEL ═══ -->
+        <section class="panel" id="panel-ghost-stream">
+            <div class="panel-header">
+                <span class="panel-badge">LIVE FEED</span>
+                <h1>📡 Ghost Stream</h1>
+                <p class="panel-desc">Real-time Playwright browser activity during test execution</p>
+            </div>
+            <div class="stream-controls">
+                <div class="stream-status" id="streamStatus">
+                    <span class="stream-dot" id="streamDot"></span>
+                    <span id="streamLabel">Disconnected</span>
+                </div>
+                <button class="primary-btn sm" onclick="connectGhostStream()">
+                    <span>📡</span> Connect Stream
+                </button>
+                <button class="secondary-btn sm" onclick="clearGhostStream()">
+                    <span>🧹</span> Clear
+                </button>
+            </div>
+            <div class="ghost-stream-feed" id="ghostStreamFeed">
+                <div class="empty-state">Connect to the Ghost Stream to see real-time Playwright activity during tests</div>
+            </div>
+        </section>
+
+        <!-- ═══ REPAIRS PANEL ═══ -->
+        <section class="panel" id="panel-repairs">
+            <div class="panel-header">
+                <span class="panel-badge">LOOP OF PERFECTION</span>
+                <h1>🔧 Repair Loop</h1>
+                <p class="panel-desc">Automated repair dispatch → Atomizer V2 → retest cycle</p>
+            </div>
+            <div id="repairContent" class="results-area">
+                <div class="empty-state">No repair dispatches yet. Run tests to generate fix payloads.</div>
+            </div>
+        </section>
+
+        <!-- ═══ PULSE PANEL ═══ -->
+        <section class="panel" id="panel-pulse">
+            <div class="panel-header">
+                <span class="panel-badge">SYSTEM HEALTH</span>
+                <h1>💚 C-Suite Pulse</h1>
+                <p class="panel-desc">Live health scan of all known Antigravity applications</p>
+            </div>
+            <div id="pulseContent" class="results-area">
+                <div class="empty-state">Click "Scan Now" to check all systems</div>
+            </div>
+            <button class="primary-btn" onclick="runPulse()" style="margin-top:16px">
+                <span>💚</span> Scan All Systems
+            </button>
+        </section>
+    </main>
+
+    <!-- ═══ LOADING OVERLAY ═══ -->
+    <div class="loading-overlay hidden" id="loadingOverlay">
+        <div class="loading-card">
+            <div class="spinner"></div>
+            <h2 id="loadingTitle">Testing...</h2>
+            <p id="loadingSub">Initializing test bench...</p>
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill" id="progressBarFill"></div>
+            </div>
+            <div id="progressStages" class="progress-stages"></div>
+            <div id="progressTimer" class="progress-timer">Elapsed: 0s</div>
+        </div>
+    </div>
+
+    <!-- ═══ TOAST CONTAINER ═══ -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
