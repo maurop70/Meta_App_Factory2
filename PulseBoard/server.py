@@ -99,8 +99,28 @@ class ChatRequest(BaseModel):
     prompt: str
     dashboard_context: dict | None = None
 
+# ── Serve Built Frontend ──────────────────────────────────
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse as _FileResponse
+
+_FRONTEND_DIST = os.path.join(SCRIPT_DIR, "pulseboard_ui", "dist")
+_HAS_FRONTEND = os.path.isdir(_FRONTEND_DIST)
+if _HAS_FRONTEND:
+    _assets_dir = os.path.join(_FRONTEND_DIST, "assets")
+    if os.path.isdir(_assets_dir):
+        app.mount("/assets", StaticFiles(directory=_assets_dir), name="pulseboard-assets")
+    logger.info(f"Frontend mounted from {_FRONTEND_DIST}")
+else:
+    logger.warning(f"No frontend build at {_FRONTEND_DIST}. Run 'npm run build' in pulseboard_ui/.")
+
 @app.get("/")
 def root():
+    if _HAS_FRONTEND:
+        return _FileResponse(os.path.join(_FRONTEND_DIST, "index.html"))
+    return {"service": "PulseBoard", "version": "3.0", "streaming": STREAMING, "port": DEFAULT_PORT}
+
+@app.get("/api/info")
+def api_info():
     return {"service": "PulseBoard", "version": "3.0", "streaming": STREAMING, "port": DEFAULT_PORT}
 
 @app.post("/api/chat/stream")
@@ -124,6 +144,11 @@ def health():
     return {"status": "healthy", "streaming": STREAMING, "runtime_dir": RUNTIME_DIR}
 
 if __name__ == "__main__":
+    import argparse
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=DEFAULT_PORT)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", DEFAULT_PORT)))
+    args = parser.parse_args()
+    uvicorn.run(app, host="0.0.0.0", port=args.port)
 # V3 AUTO-HEAL ACTIVE
+
