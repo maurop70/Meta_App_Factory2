@@ -909,14 +909,14 @@ def launch_app(app_name: str):
             proc = subprocess.Popen(
                 [sys.executable, server_script, "--port", str(port)],
                 cwd=app_dir, env=env,
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                 creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
             )
         else:
             proc = subprocess.Popen(
                 [server_script],
                 cwd=app_dir, env=env, shell=True,
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                 creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
             )
         _running_apps[app_name] = {"process": proc, "port": port, "pid": proc.pid}
@@ -947,11 +947,17 @@ def stop_app(app_name: str):
 
 @app.get("/api/apps/running")
 def get_running_apps():
-    """Return list of currently running apps."""
+    """Return list of currently running apps. Auto-cleans dead processes."""
     result = {}
+    dead = []
     for name, info in _running_apps.items():
         alive = info["process"].poll() is None
         result[name] = {"port": info["port"], "pid": info["pid"], "alive": alive}
+        if not alive:
+            dead.append(name)
+    # Clean up dead process references
+    for name in dead:
+        _running_apps.pop(name, None)
     return result
 
 
