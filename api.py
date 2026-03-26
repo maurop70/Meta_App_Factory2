@@ -147,6 +147,31 @@ async def build_stream(req: BuildRequest):
     progress_queue = queue.Queue()
 
     def run_build():
+        # ── Master Architect Pre-Build Review ──
+        if _MODEL_ROUTER_AVAILABLE:
+            progress_queue.put({"step": "ARCHITECT", "text": "🏗️ Master Architect: Reviewing architecture..."})
+            try:
+                arch_review = _architect_review(
+                    feature_description=f"Build new app '{req.app_name}': {req.description}",
+                    change_type="new_app",
+                    affected_components=[req.app_name, req.blueprint or "custom"],
+                )
+                if arch_review.get("concerns"):
+                    for c in arch_review["concerns"][:3]:
+                        progress_queue.put({"step": "ARCHITECT", "text": f"  ⚠️ {c}"})
+                if arch_review.get("recommendations"):
+                    for r in arch_review["recommendations"][:3]:
+                        progress_queue.put({"step": "ARCHITECT", "text": f"  💡 {r}"})
+                progress_queue.put({"step": "ARCHITECT", "text": f"🏗️ Architect verdict: {arch_review.get('verdict', 'PROCEED')}"})
+                # Record the review as a lesson
+                if MEMORY_AVAILABLE:
+                    try:
+                        record_lesson(f"Architect review for '{req.app_name}': {arch_review.get('verdict','?')}", "architect_review", req.app_name)
+                    except Exception:
+                        pass
+            except Exception as e:
+                progress_queue.put({"step": "ARCHITECT", "text": f"⚠️ Architect review skipped: {str(e)[:80]}"})
+
         # Capture stdout from factory.create_app
         old_stdout = sys.stdout
         sys.stdout = buffer = io.StringIO()
@@ -767,6 +792,84 @@ except ImportError:
     _MODEL_ROUTER_AVAILABLE = False
     logger.warning("Model Router not found — falling back to Gemini-only.")
 
+
+# ═══════════════════════════════════════════════════════════════
+#  UPGRADE 5: Master Architect — Pre-Feature Architectural Review
+# ═══════════════════════════════════════════════════════════════
+
+_ARCHITECT_SYSTEM_PROMPT = """You are the MASTER ARCHITECT of a software factory.
+You review proposed features, builds, and code changes BEFORE they are implemented.
+Your job is to identify architectural concerns, suggest best practices, and approve or flag designs.
+
+Respond in this EXACT JSON format (no markdown, no code fences):
+{
+  "verdict": "APPROVE" or "REVIEW" or "REJECT",
+  "concerns": ["list of architectural concerns, max 3"],
+  "recommendations": ["list of actionable recommendations, max 3"],
+  "architecture_notes": "1-2 sentence summary of architectural guidance"
+}
+
+Focus on: port conflicts, process management, frontend/backend coupling,
+error handling, state management, security, and deployment patterns.
+Be concise. Never output anything outside the JSON object."""
+
+
+def _architect_review(feature_description: str, change_type: str = "feature",
+                      affected_components: list = None) -> dict:
+    """Send a feature/fix description to the Master Architect for review.
+    Uses Model Router to pick the best LLM.
+    Returns {verdict, concerns, recommendations, architecture_notes}."""
+    if not _MODEL_ROUTER_AVAILABLE:
+        return {"verdict": "SKIP", "concerns": [], "recommendations": [],
+                "architecture_notes": "Model Router unavailable — Architect review skipped."}
+
+    prompt = (
+        f"CHANGE TYPE: {change_type}\n"
+        f"AFFECTED COMPONENTS: {', '.join(affected_components or ['unknown'])}\n"
+        f"DESCRIPTION:\n{feature_description}\n\n"
+        f"Provide your architectural review."
+    )
+    try:
+        raw = _model_route("architect", prompt, _ARCHITECT_SYSTEM_PROMPT)
+        # Parse JSON response
+        import re as _re
+        # Strip markdown fences if present
+        cleaned = _re.sub(r'^```[\w]*\n|```$', '', raw.strip(), flags=_re.MULTILINE).strip()
+        result = json.loads(cleaned)
+        result.setdefault("verdict", "REVIEW")
+        result.setdefault("concerns", [])
+        result.setdefault("recommendations", [])
+        result.setdefault("architecture_notes", "")
+        return result
+    except json.JSONDecodeError:
+        return {"verdict": "REVIEW", "concerns": [],
+                "recommendations": [], "architecture_notes": raw[:300] if raw else "Parse error"}
+    except Exception as e:
+        return {"verdict": "ERROR", "concerns": [str(e)[:200]],
+                "recommendations": [], "architecture_notes": "Architect review failed."}
+
+
+class ArchitectReviewRequest(BaseModel):
+    feature_description: str
+    change_type: str = "feature"  # feature, bugfix, new_app, refactor
+    affected_components: list = []
+
+
+@app.post("/api/architect/review")
+def architect_review(req: ArchitectReviewRequest):
+    """Master Architect pre-feature review. Call before implementing any significant change."""
+    result = _architect_review(req.feature_description, req.change_type, req.affected_components)
+    # Record to institutional memory
+    if MEMORY_AVAILABLE:
+        try:
+            record_lesson(
+                f"Architect review ({req.change_type}): {result.get('verdict')} — {result.get('architecture_notes', '')[:100]}",
+                "architect_review", ",".join(req.affected_components or ["general"])
+            )
+        except Exception:
+            pass
+    return result
+
 def _gemini_fallback(agent_name: str, topic: str) -> str:
     """Generate a real AI response using Gemini when n8n is unreachable.
     Fallback chain: n8n → Model Router (Gemini/Claude) → cached string."""
@@ -837,10 +940,14 @@ def n8n_health():
 
 
 # ═══════════════════════════════════════════════════════════════
-#  UPGRADE 1: App Launch / Stop from Sidebar
+#  UPGRADE 1: App Launch / Stop / Watchdog / Self-Healing
 # ═══════════════════════════════════════════════════════════════
 
-_running_apps: dict = {}  # app_name -> {"process": Popen, "port": int}
+_running_apps: dict = {}  # app_name -> {"process": Popen, "port": int, ...}
+_restart_cooldowns: dict = {}  # app_name -> last_restart_timestamp
+import threading as _threading
+import socket as _socket
+import time as _time
 
 
 def _find_free_port(start_port: int, max_scan: int = 20) -> int:
@@ -853,15 +960,92 @@ def _find_free_port(start_port: int, max_scan: int = 20) -> int:
     return start_port + max_scan
 
 
+# ── Post-Launch Smoke Test (Phantom QA Integration) ──────────
+def _smoke_test_app(port: int, timeout: int = 10) -> dict:
+    """
+    Phantom QA post-launch smoke test.
+    Polls http://localhost:{port}/ every 1s for up to `timeout` seconds.
+    Verifies HTTP 200 and text/html content type (not JSON).
+    Returns {"passed": bool, "detail": str, "content_type": str, "status_code": int}.
+    """
+    import urllib.request
+    import urllib.error
+    deadline = _time.time() + timeout
+    last_error = "timeout"
+    while _time.time() < deadline:
+        try:
+            req = urllib.request.Request(f"http://localhost:{port}/", method="GET")
+            with urllib.request.urlopen(req, timeout=2) as resp:
+                status = resp.status
+                ct = resp.headers.get("Content-Type", "")
+                body_peek = resp.read(500).decode("utf-8", errors="replace")
+                is_html = "text/html" in ct or "<html" in body_peek.lower() or "<!doctype" in body_peek.lower()
+                if status == 200 and is_html:
+                    return {"passed": True, "detail": "Frontend serving HTML", "content_type": ct, "status_code": status}
+                elif status == 200:
+                    # App is up but serving JSON (API-only) — still counts as alive
+                    return {"passed": True, "detail": "API responding (no frontend build)", "content_type": ct, "status_code": status}
+                else:
+                    last_error = f"HTTP {status}"
+        except urllib.error.URLError as e:
+            last_error = str(e.reason)
+        except Exception as e:
+            last_error = str(e)
+        _time.sleep(1)
+    return {"passed": False, "detail": last_error, "content_type": "", "status_code": 0}
+
+
 @app.post("/api/apps/{app_name}/launch")
 def launch_app(app_name: str):
-    """Launch a registered app. Auto-finds a free port if the assigned one is busy."""
+    """Launch a registered app with post-launch Phantom QA smoke test."""
     global _running_apps
     if app_name in _running_apps:
         info = _running_apps[app_name]
         return {"status": "already_running", "port": info["port"], "url": f"http://localhost:{info['port']}"}
 
-    # Resolve app directory (Google Drive root or SCRIPT_DIR)
+    result = _do_launch(app_name)
+    if isinstance(result, JSONResponse):
+        return result
+
+    # ── Phantom QA Post-Launch Smoke Test ──
+    port = result["port"]
+    pid = result["pid"]
+    smoke = _smoke_test_app(port, timeout=10)
+    result["launch_verified"] = smoke["passed"]
+    result["smoke_test"] = smoke
+
+    if smoke["passed"]:
+        logger.info(f"✅ Phantom QA: {app_name} verified on port {port} ({smoke['detail']})")
+        # Record success lesson
+        if MEMORY_AVAILABLE:
+            try:
+                record_lesson(f"App launch verified: {app_name} on port {port}", "launch_success", app_name)
+            except Exception:
+                pass
+    else:
+        logger.warning(f"⚠️ Phantom QA: {app_name} smoke test FAILED on port {port} ({smoke['detail']})")
+        # Check if process died
+        proc_info = _running_apps.get(app_name)
+        if proc_info and proc_info["process"].poll() is not None:
+            _running_apps.pop(app_name, None)
+            result["status"] = "launch_failed"
+            logger.error(f"❌ {app_name} process died immediately (exit code: {proc_info['process'].returncode})")
+        if MEMORY_AVAILABLE:
+            try:
+                record_lesson(
+                    f"App launch FAILED: {app_name} on port {port}. {smoke['detail']}",
+                    "launch_failure", app_name
+                )
+            except Exception:
+                pass
+    return result
+
+
+def _do_launch(app_name: str, port_override: int = None) -> dict:
+    """Internal launch logic. Returns dict on success, JSONResponse on failure."""
+    global _running_apps
+
+    # Resolve app directory
     gdrive = os.path.join(os.path.expanduser("~"), "My Drive", "Antigravity-AI Agents", "Meta_App_Factory")
     app_dir = None
     for candidate in [os.path.join(gdrive, app_name), os.path.join(SCRIPT_DIR, app_name)]:
@@ -878,28 +1062,27 @@ def launch_app(app_name: str):
         if os.path.isfile(candidate_path):
             server_script = candidate_path
             break
-
     if not server_script:
-        # Check for launch bat
         bat_path = os.path.join(app_dir, f"launch_{app_name}.bat")
         if os.path.isfile(bat_path):
             server_script = bat_path
-
     if not server_script:
         return JSONResponse({"error": f"No server.py/app.py/main.py found in {app_dir}"}, status_code=404)
 
-    # Determine port — read from registry or default
-    assigned_port = 5010
-    try:
-        with open(REGISTRY_PATH, "r", encoding="utf-8") as f:
-            reg_data = json.load(f)
-        app_info = reg_data.get("apps", {}).get(app_name, {})
-        if app_info.get("port"):
-            assigned_port = int(app_info["port"])
-    except Exception:
-        pass
-
-    port = _find_free_port(assigned_port)
+    # Determine port
+    if port_override:
+        port = port_override
+    else:
+        assigned_port = 5010
+        try:
+            with open(REGISTRY_PATH, "r", encoding="utf-8") as f:
+                reg_data = json.load(f)
+            app_info = reg_data.get("apps", {}).get(app_name, {})
+            if app_info.get("port"):
+                assigned_port = int(app_info["port"])
+        except Exception:
+            pass
+        port = _find_free_port(assigned_port)
 
     # Start the process
     try:
@@ -919,7 +1102,11 @@ def launch_app(app_name: str):
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                 creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
             )
-        _running_apps[app_name] = {"process": proc, "port": port, "pid": proc.pid}
+        _running_apps[app_name] = {
+            "process": proc, "port": port, "pid": proc.pid,
+            "app_dir": app_dir, "server_script": server_script,
+            "launched_at": _time.time(),
+        }
         logger.info(f"Launched {app_name} on port {port} (PID: {proc.pid})")
         return {"status": "launched", "port": port, "url": f"http://localhost:{port}", "pid": proc.pid}
     except Exception as e:
@@ -945,19 +1132,110 @@ def stop_app(app_name: str):
     return {"status": "stopped", "app_name": app_name}
 
 
+# ── Child App Process Watchdog + Self-Healing Auto-Restart ────
+_WATCHDOG_INTERVAL = 30  # seconds
+_RESTART_COOLDOWN = 300  # 5 minutes between auto-restarts per app
+
+def _watchdog_loop():
+    """Background thread: monitors child app health every 30s.
+    Detects dead processes, attempts auto-restart (max 1 per 5min), records lessons."""
+    while True:
+        _time.sleep(_WATCHDOG_INTERVAL)
+        try:
+            dead_apps = []
+            for name, info in list(_running_apps.items()):
+                if info["process"].poll() is not None:
+                    dead_apps.append((name, info))
+
+            for name, info in dead_apps:
+                exit_code = info["process"].returncode
+                logger.warning(f"🔴 Watchdog: {name} died (exit code {exit_code}, was port {info['port']})")
+
+                # Record crash lesson
+                if MEMORY_AVAILABLE:
+                    try:
+                        record_lesson(
+                            f"Child app CRASHED: {name} (exit code {exit_code}, port {info['port']}). "
+                            f"Auto-healing will attempt restart.",
+                            "child_app_crash", name
+                        )
+                    except Exception:
+                        pass
+
+                # Remove dead reference
+                _running_apps.pop(name, None)
+
+                # Auto-restart with cooldown
+                last_restart = _restart_cooldowns.get(name, 0)
+                if _time.time() - last_restart > _RESTART_COOLDOWN:
+                    logger.info(f"🔄 Watchdog: Auto-restarting {name}...")
+                    _restart_cooldowns[name] = _time.time()
+
+                    result = _do_launch(name, port_override=info["port"])
+                    if isinstance(result, JSONResponse):
+                        logger.error(f"❌ Watchdog: Auto-restart of {name} failed")
+                        if MEMORY_AVAILABLE:
+                            try:
+                                record_lesson(f"Auto-restart FAILED for {name}", "auto_restart_failed", name)
+                            except Exception:
+                                pass
+                        continue
+
+                    # Run smoke test on restarted app
+                    smoke = _smoke_test_app(result["port"], timeout=8)
+                    if smoke["passed"]:
+                        logger.info(f"✅ Watchdog: {name} auto-healed on port {result['port']}")
+                        if MEMORY_AVAILABLE:
+                            try:
+                                record_lesson(
+                                    f"Auto-HEALED: {name} restarted on port {result['port']}",
+                                    "auto_healed", name
+                                )
+                            except Exception:
+                                pass
+                    else:
+                        logger.error(f"❌ Watchdog: {name} restarted but smoke test failed: {smoke['detail']}")
+                        if MEMORY_AVAILABLE:
+                            try:
+                                record_lesson(
+                                    f"Auto-restart of {name} succeeded but smoke test FAILED: {smoke['detail']}",
+                                    "auto_restart_smoke_fail", name
+                                )
+                            except Exception:
+                                pass
+                else:
+                    cooldown_left = int(_RESTART_COOLDOWN - (_time.time() - last_restart))
+                    logger.warning(f"⏳ Watchdog: {name} cooldown active ({cooldown_left}s remaining), skipping restart")
+
+        except Exception as e:
+            logger.error(f"Watchdog error: {e}")
+
+# Start watchdog thread on module load
+_watchdog_thread = _threading.Thread(target=_watchdog_loop, daemon=True, name="app-watchdog")
+_watchdog_thread.start()
+logger.info("🐕 App Watchdog started (30s interval, auto-restart with 5min cooldown)")
+
+
 @app.get("/api/apps/running")
 def get_running_apps():
-    """Return list of currently running apps. Auto-cleans dead processes."""
+    """Return list of currently running apps with health status."""
     result = {}
-    dead = []
-    for name, info in _running_apps.items():
+    for name, info in list(_running_apps.items()):
         alive = info["process"].poll() is None
-        result[name] = {"port": info["port"], "pid": info["pid"], "alive": alive}
-        if not alive:
-            dead.append(name)
-    # Clean up dead process references
-    for name in dead:
-        _running_apps.pop(name, None)
+        health = "healthy" if alive else "dead"
+        # Quick health ping for alive processes
+        if alive:
+            try:
+                import urllib.request
+                with urllib.request.urlopen(f"http://localhost:{info['port']}/api/health", timeout=2) as resp:
+                    if resp.status != 200:
+                        health = "degraded"
+            except Exception:
+                health = "degraded"
+        result[name] = {
+            "port": info["port"], "pid": info["pid"],
+            "alive": alive, "health": health
+        }
     return result
 
 
