@@ -332,7 +332,7 @@ export default function WarRoom({ ventureMode = false, onHandoff, projectName = 
           <div>
             <h2 style={styles.headerTitle}>Adversarial War Room</h2>
             <span style={styles.headerSub}>
-              {convinceMode ? '🔴 STRATEGIC PAUSE — Socratic Challenge Active' : 'Boardroom Socratic Dialogue — Live Feed'}
+              {convinceMode ? '🔴 STRATEGIC PAUSE — Socratic Challenge Active' : `${projectName} — Boardroom Socratic Dialogue`}
             </span>
           </div>
         </div>
