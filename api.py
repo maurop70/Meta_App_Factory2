@@ -1657,7 +1657,165 @@ async def _live_debate(topic: str, project_name: str = "Aether", phase: str = No
         "reason": f"Critic assessment after live deliberation",
     }, project=project_name)
 
-    # ── Auto-Iterative Loop Trigger ──
+    # ── Autonomous Multi-Round Debate (General Topics) ──
+    # When no specific EOS phase is set, the debate continues autonomously
+    # until the Critic reaches consensus (score >= 7) or max rounds (5).
+    if not phase:
+        _MAX_DEBATE_ROUNDS = 5
+        round_num = 1
+        debate_history = [f"ROUND 1 DISCUSSION:\n"]
+        # Collect round 1 responses for context
+        for agent in agent_order:
+            resp = await futures[agent]
+            if resp:
+                debate_history.append(f"{agent}: {resp[:300]}")
+
+        while _persuasion_score < 7 and round_num < _MAX_DEBATE_ROUNDS:
+            round_num += 1
+            await asyncio.sleep(2)
+
+            # System announces continuation
+            await _broadcast({
+                "type": "dialogue", "agent": "SYSTEM", "icon": "🔄", "color": "#eab308",
+                "message": f"**ROUND {round_num}/{_MAX_DEBATE_ROUNDS}** — Critic score {_persuasion_score}/10 (need ≥7 for consensus). Debate continues...",
+                "timestamp": _dt.now().isoformat(),
+            }, project=project_name)
+
+            # Build context-aware follow-up prompts
+            history_context = "\n".join(debate_history[-12:])  # Last 12 entries for context
+            followup_prompts = {
+                "CEO": (
+                    f"You are the CEO continuing a boardroom debate. This is round {round_num}. "
+                    f"The Critic's current confidence is {_persuasion_score}/10. "
+                    f"Address the Critic's concerns directly and strengthen your position. "
+                    f"Be concise (3-4 sentences). Prior discussion:\n{history_context}\n\n"
+                    f"ORIGINAL TOPIC: {topic}"
+                ),
+                "CTO": (
+                    f"You are the CTO in a boardroom debate, round {round_num}. "
+                    f"The Critic scored confidence at {_persuasion_score}/10. "
+                    f"Provide technical solutions to address the concerns raised. "
+                    f"Be specific about architecture, stack, and feasibility. (3-4 sentences)\n"
+                    f"Prior discussion:\n{history_context}\n\nTOPIC: {topic}"
+                ),
+                "CFO": (
+                    f"You are the CFO in round {round_num} of a boardroom debate. "
+                    f"Critic confidence: {_persuasion_score}/10. "
+                    f"Provide updated financial analysis addressing concerns. "
+                    f"Include specific numbers and risk mitigation. (3-4 sentences)\n"
+                    f"Prior discussion:\n{history_context}\n\nTOPIC: {topic}"
+                ),
+                "CRITIC": (
+                    f"You are the Critic in round {round_num} of a boardroom debate. "
+                    f"Your current confidence is {_persuasion_score}/10. "
+                    f"Re-evaluate based on the board's responses. If concerns are addressed, "
+                    f"increase your score. If not, explain what's still missing. "
+                    f"End with 'Confidence: X/10'. (3-5 sentences)\n"
+                    f"Prior discussion:\n{history_context}\n\nTOPIC: {topic}"
+                ),
+            }
+
+            # Call agents for this round (include CTO this time)
+            round_agents = ["CEO", "CTO", "CFO", "CRITIC"]
+            round_futures = {}
+            for agent in round_agents:
+                prompt = followup_prompts.get(agent, f"Continue the debate on: {topic}")
+                round_futures[agent] = loop.run_in_executor(
+                    _warroom_executor, _call_n8n_agent, agent, prompt
+                )
+
+            debate_history.append(f"\nROUND {round_num} DISCUSSION:")
+            for agent in round_agents:
+                response = await round_futures[agent]
+                await asyncio.sleep(1.0)
+                if not response:
+                    response = "No response available."
+                meta = _AGENTS.get(agent, {})
+                await _broadcast({
+                    "type": "dialogue",
+                    "agent": agent,
+                    "icon": meta.get("icon", "💬"),
+                    "color": meta.get("color", "#94a3b8"),
+                    "message": response,
+                    "timestamp": _dt.now().isoformat(),
+                }, project=project_name)
+                debate_history.append(f"{agent}: {response[:300]}")
+
+            # Parse Critic's updated score
+            critic_resp = await round_futures["CRITIC"]
+            if critic_resp:
+                import re
+                score_match = re.search(r'(\d+(?:\.\d+)?)\s*/\s*10', critic_resp)
+                if score_match:
+                    new_score = min(10, max(1, int(float(score_match.group(1)))))
+                    _persuasion_score = new_score
+                else:
+                    delta = random.choice([0, 1, 1, 1, 2])
+                    _persuasion_score = max(1, min(10, _persuasion_score + delta))
+
+            await _broadcast({
+                "type": "persuasion_update",
+                "score": _persuasion_score,
+                "reason": f"Critic re-assessment after round {round_num}",
+            }, project=project_name)
+
+        # ── Debate Conclusion + Final Deliverables ──
+        if _persuasion_score >= 7:
+            conclusion_status = "CONSENSUS REACHED"
+            conclusion_icon = "✅"
+            conclusion_color = "#22c55e"
+        else:
+            conclusion_status = f"DEADLOCK after {round_num} rounds"
+            conclusion_icon = "🛑"
+            conclusion_color = "#ef4444"
+
+        await _broadcast({
+            "type": "dialogue", "agent": "SYSTEM", "icon": conclusion_icon, "color": conclusion_color,
+            "message": f"**{conclusion_status}** — Critic final score: {_persuasion_score}/10 after {round_num} round(s). Generating final deliverables...",
+            "timestamp": _dt.now().isoformat(),
+        }, project=project_name)
+
+        # Generate final summary deliverable via Model Router
+        final_history = "\n".join(debate_history[-20:])
+        def _generate_final_deliverable():
+            summary_prompt = (
+                f"You are a board secretary. Summarize the following boardroom debate into a FINAL DELIVERABLE.\n\n"
+                f"FORMAT YOUR RESPONSE EXACTLY LIKE THIS:\n"
+                f"## Executive Summary\n[2-3 sentence overview]\n\n"
+                f"## Key Decisions\n- [bullet points]\n\n"
+                f"## Action Items\n- [numbered list with owners]\n\n"
+                f"## Risk Factors\n- [from Critic's concerns]\n\n"
+                f"## Recommendation\n[Final go/no-go recommendation]\n\n"
+                f"DEBATE TRANSCRIPT:\n{final_history}\n\n"
+                f"ORIGINAL TOPIC: {topic}\n"
+                f"FINAL CRITIC SCORE: {_persuasion_score}/10\n"
+                f"STATUS: {conclusion_status}"
+            )
+            if _MODEL_ROUTER_AVAILABLE:
+                return _model_route("architect", summary_prompt, "You are a professional board secretary producing concise executive deliverables from boardroom debates. Use markdown formatting.")
+            return "Final deliverable generation requires Model Router."
+
+        deliverable = await loop.run_in_executor(_warroom_executor, _generate_final_deliverable)
+
+        await _broadcast({
+            "type": "dialogue", "agent": "SYSTEM", "icon": "📋", "color": "#6366f1",
+            "message": f"**FINAL DELIVERABLE**\n\n{deliverable}",
+            "timestamp": _dt.now().isoformat(),
+        }, project=project_name)
+
+        # Record to institutional memory
+        if MEMORY_AVAILABLE:
+            try:
+                record_lesson(
+                    f"War Room debate concluded: '{topic[:80]}' — {conclusion_status}, Critic score {_persuasion_score}/10, {round_num} rounds",
+                    "warroom_conclusion", project_name
+                )
+            except Exception:
+                pass
+
+        return  # General debate complete — skip EOS phase logic below
+
+    # ── Auto-Iterative Loop Trigger (EOS Phase-specific) ──
     if phase and _persuasion_score < 7:
         from eos_context import get_eos
         eos = get_eos(project_name)
