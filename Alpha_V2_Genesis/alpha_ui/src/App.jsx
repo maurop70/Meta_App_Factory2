@@ -1524,11 +1524,11 @@ function App() {
           const danger_side = put_dist_pct < call_dist_pct ? 'PUT' : 'CALL';
           const status = distance_pct < 2 ? 'DANGER' : (distance_pct < 4 ? 'WARNING' : 'SAFE');
           
-          // DTE calculation fallback
-          let dte = td.dte_at_report;
-          if (!dte && (td.expiration_date || td.expiry || pos.expiration_date || pos.expiry)) {
-            dte = Math.max(0, Math.ceil((new Date(td.expiration_date || td.expiry || pos.expiration_date || pos.expiry) - new Date()) / 86400000));
-          }
+          // DTE calculation — always compute LIVE from expiration date
+          const expiryStr = td.expiration_date || td.expiry || pos.expiration_date || pos.expiry;
+          let dte = expiryStr
+            ? Math.max(0, Math.ceil((new Date(expiryStr) - new Date()) / 86400000))
+            : td.dte_at_report;  // fallback to snapshot only if no expiration date available
           
           return (
             <div className="card" style={{ border: status === 'DANGER' ? '1px solid red' : '1px solid rgba(255,255,255,0.1)' }}>
@@ -1537,10 +1537,10 @@ function App() {
                 <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '1rem', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
                   {openTrades.map((t, i) => {
                     const tTd = t.original_thesis || {};
-                    let tDte = tTd.dte_at_report;
-                    if (!tDte && (tTd.expiration_date || tTd.expiry || t.expiration_date || t.expiry)) {
-                      tDte = Math.max(0, Math.ceil((new Date(tTd.expiration_date || tTd.expiry || t.expiration_date || t.expiry) - new Date()) / 86400000));
-                    }
+                    const tExpiryStr = tTd.expiration_date || tTd.expiry || t.expiration_date || t.expiry;
+                    let tDte = tExpiryStr
+                      ? Math.max(0, Math.ceil((new Date(tExpiryStr) - new Date()) / 86400000))
+                      : tTd.dte_at_report;  // fallback to snapshot only if no expiration date available
                     const isActive = safeTabIdx === i;
                     return (
                       <button key={i} onClick={() => setActiveTradeTabIdx(i)} style={{
