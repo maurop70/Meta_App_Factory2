@@ -1324,10 +1324,14 @@ function App() {
                 className={`sidebar-item ${selectedApp === app.name ? 'active' : ''}`}
                 onClick={() => {
                   setSelectedApp(app.name);
-                  setActiveView('warroom');
-                  // If the app is running, also open it in a new tab
-                  if (runningApps[app.name]?.alive && runningApps[app.name]?.port) {
-                    window.open(`http://localhost:${runningApps[app.name].port}`, '_blank');
+                  const runPort = runningApps[app.name]?.port;
+                  const regPort = app.port;
+                  if (runningApps[app.name]?.alive && runPort) {
+                    window.open(`http://localhost:${runPort}`, '_blank');
+                  } else if (regPort) {
+                    window.open(`http://localhost:${regPort}`, '_blank');
+                  } else {
+                    setActiveView('warroom');
                   }
                 }}
                 style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
@@ -1336,6 +1340,20 @@ function App() {
                   {isRunning ? '🟢' : app.status === 'active' ? '🔵' : '⚪'}
                 </span>
                 <span style={{ flex: 1 }}>{app.name}</span>
+                {app.form_url && (
+                  <button
+                    className="app-action-btn launch"
+                    onClick={e => {
+                      e.stopPropagation();
+                      const p = app.port;
+                      if (p) {
+                        window.open(`http://localhost:${p}${app.form_url}`, '_blank');
+                      }
+                    }}
+                    title="Open Dialogue Box"
+                    style={{ fontSize: '11px', padding: '1px 4px', border: 'none', background: 'transparent', cursor: 'pointer' }}
+                  >💬</button>
+                )}
                 {isRunning ? (
                   <button
                     className="app-action-btn stop"
@@ -1419,7 +1437,7 @@ function App() {
             <h3>📦 App Registry</h3>
             <table className="registry-table">
               <thead>
-                <tr><th>App Name</th><th>Type</th><th>Status</th><th>Port</th><th>Actions</th></tr>
+                <tr><th>App Name</th><th>Type</th><th>Status</th><th>Port</th><th>Dialogue</th><th>Actions</th></tr>
               </thead>
               <tbody>
                 {registry.map(app => {
@@ -1432,11 +1450,13 @@ function App() {
                         onClick={() => {
                           if (running && port) {
                             window.open(`http://localhost:${port}`, '_blank');
+                          } else if (port) {
+                            window.open(`http://localhost:${port}`, '_blank');
                           } else {
                             launchApp(app.name);
                           }
                         }}
-                        title={running ? `Open ${app.name} (localhost:${port})` : `Launch ${app.name}`}
+                        title={port ? `Open ${app.name} (localhost:${port})` : `Launch ${app.name}`}
                       >
                         {app.name}
                       </td>
@@ -1447,6 +1467,17 @@ function App() {
                         </span>
                       </td>
                       <td>{running ? port : app.port || '—'}</td>
+                      <td>
+                        {app.form_url && port ? (
+                          <button
+                            onClick={() => window.open(`http://localhost:${port}${app.form_url}`, '_blank')}
+                            title="Open Dialogue Box"
+                            style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '4px', border: '1px solid rgba(139,92,246,0.3)', background: 'rgba(139,92,246,0.1)', color: '#a78bfa', cursor: 'pointer', fontWeight: 600 }}
+                          >💬 Open</button>
+                        ) : (
+                          <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '11px' }}>—</span>
+                        )}
+                      </td>
                       <td>
                         {running ? (
                           <div style={{ display: 'flex', gap: '6px' }}>

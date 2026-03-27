@@ -2802,5 +2802,19 @@
       "buffer_pending": 2
     },
     "error": "404 Client Error: Not Found for url: https://humanresource.app.n8n.cloud/webhook/elite-council"
+  },
+  {
+    "timestamp": "2026-03-27T15:13:36.029853",
+    "project": "WarRoom",
+    "target": "func:_call_n8n_agent_inner",
+    "outcome": "escalated",
+    "attempts": 3,
+    "diagnosis": {
+      "verdict": "HEALTHY",
+      "watchdog": "green",
+      "credentials": "valid",
+      "buffer_pending": 2
+    },
+    "error": "404 Client Error: Not Found for url: https://humanresource.app.n8n.cloud/webhook/elite-council"
   }
 ]

@@ -203,7 +203,8 @@
             },
             "c_suite_role": "System Design & Logic Gate",
             "visual_accent": "#06B6D4",
-            "last_build": "2026-03-27T03:18:00.000Z"
+            "last_build": "2026-03-27T03:18:00.000Z",
+            "form_url": "/"
         },
         "CMO_Agent": {
             "status": "active",
@@ -240,7 +241,8 @@
             },
             "c_suite_role": "GTM Strategy & Audience Persona",
             "visual_accent": "#F43F5E",
-            "last_build": "2026-03-27T03:00:00.000Z"
+            "last_build": "2026-03-27T03:00:00.000Z",
+            "form_url": "/"
         },
         "Phantom_QA_Elite": {
             "status": "active",
@@ -273,8 +275,46 @@
             },
             "c_suite_role": "Outcome Validation & UI Testing",
             "visual_accent": "#10B981",
-            "last_build": "2026-03-27T03:00:00.000Z"
+            "last_build": "2026-03-27T03:00:00.000Z",
+            "form_url": "/"
+        },
+        "CFO_Fragility_Engine": {
+            "status": "active",
+            "type": "Financial Execution Pipeline",
+            "version": "2.0.0",
+            "port": 5041,
+            "workflow_id": "beFBb85gonIaMzAo",
+            "webhook_url": "https://humanresource.app.n8n.cloud/webhook/cfo-execution-controller",
+            "blueprint": "multi_agent_core",
+            "n8n_project": "CFO Fragility",
+            "path": "Meta_App_Factory/CFO_Agent",
+            "parent_agent": "CFO",
+            "isolation": {
+                "boundary": "CFO_Agent",
+                "separated_from": [],
+                "no_code_dependencies": true
+            },
+            "capabilities": [
+                "fragility index calculation",
+                "ROI & NPV modeling",
+                "spend reconciliation",
+                "risk-adjusted returns",
+                "4-tab Excel report generation",
+                "N8N Cloud webhook mirror",
+                "math error handling (422)"
+            ],
+            "agents": {
+                "active": [
+                    "Gatekeeper",
+                    "Execution_Engine",
+                    "Report_Generator"
+                ]
+            },
+            "c_suite_role": "CFO Sub-Agent — Financial Modeling & Fragility Analysis",
+            "visual_accent": "#E94560",
+            "last_build": "2026-03-27T20:25:00.000Z",
+            "form_url": "/form"
         }
     },
-    "last_updated": "2026-03-27T10:27:00.000Z"
+    "last_updated": "2026-03-27T20:55:00.000Z"
 }

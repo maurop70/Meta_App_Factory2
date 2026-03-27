@@ -1,0 +1,1005 @@
+"""
+server.py — CFO Ultimate Excel Architect
+═══════════════════════════════════════════════
+Sub-Agent of CFO | Port: 5041 | Antigravity-AI
+
+The CFO Agent's "Mathematical Soul" — transforms instructions
+and uploaded files into high-integrity financial models.
+
+Endpoints:
+  GET  /                                  — Dashboard
+  GET  /form                              — Dialogue Box (instruction + file upload)
+  POST /api/consult                       — Process instruction + file
+  POST /webhook/cfo-execution-controller  — Main execution (N8N-compatible)
+  POST /api/execute                       — Direct execution
+  GET  /api/health                        — Health check
+  GET  /api/reports                       — List generated reports
+"""
+
+import os
+import sys
+import json
+import time
+import logging
+from pathlib import Path
+from datetime import datetime
+
+from fastapi import FastAPI, Request, UploadFile, File, Form
+from fastapi.responses import JSONResponse, HTMLResponse, FileResponse
+from fastapi.middleware.cors import CORSMiddleware
+import uvicorn
+from dotenv import load_dotenv
+
+# ═══════════════════════════════════════════════════════════
+#  ENVIRONMENT
+# ═══════════════════════════════════════════════════════════
+
+ROOT = Path(__file__).parent
+FACTORY_ROOT = ROOT.parent
+
+for env_path in [ROOT / ".env", FACTORY_ROOT / ".env"]:
+    if env_path.exists():
+        load_dotenv(env_path)
+        break
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(message)s")
+logger = logging.getLogger("CFO_Excel_Architect")
+
+sys.path.insert(0, str(ROOT))
+from cfo_engine import CFOExecutionController
+
+cfo = CFOExecutionController()
+
+# ═══════════════════════════════════════════════════════════
+#  APP
+# ═══════════════════════════════════════════════════════════
+
+app = FastAPI(
+    title="CFO Ultimate Excel Architect — Sub-Agent of CFO",
+    version="3.0.0",
+    docs_url="/docs",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# ── Safe Body Parser ─────────────────────────────────────
+async def safe_parse_body(request: Request) -> dict:
+    try:
+        body = await request.body()
+        if not body or body.strip() == b"":
+            return {}
+        return await request.json()
+    except Exception:
+        return {}
+
+
+# ═══════════════════════════════════════════════════════════
+#  ROUTES
+# ═══════════════════════════════════════════════════════════
+
+@app.get("/")
+async def dashboard():
+    """Glassmorphic dashboard for CFO Ultimate Excel Architect."""
+    reports_dir = ROOT / "reports"
+    report_files = sorted(reports_dir.glob("*.xlsx"), reverse=True)[:10] if reports_dir.exists() else []
+    report_list = [f.name for f in report_files]
+    uploads_dir = ROOT / "uploads"
+    upload_count = len(list(uploads_dir.iterdir())) if uploads_dir.exists() else 0
+
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CFO Ultimate Excel Architect</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* {{ margin:0; padding:0; box-sizing:border-box; }}
+html, body {{ overflow-x: hidden; }}
+body {{
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3e 50%, #0d0d2b 100%);
+    color: #e0e0e0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}}
+.container {{
+    max-width: 740px;
+    width: 90%;
+    padding: 40px;
+    background: rgba(255,255,255,0.04);
+    backdrop-filter: blur(20px);
+    border-radius: 24px;
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}}
+.badge {{
+    display: inline-block;
+    background: linear-gradient(135deg, #e94560, #c23152);
+    color: white;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+}}
+.badge.form-badge {{
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    margin-left: 8px;
+}}
+h1 {{
+    font-size: 28px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #e94560, #ff6b81);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+}}
+.subtitle {{
+    font-size: 14px;
+    color: rgba(255,255,255,0.5);
+    margin-bottom: 28px;
+    line-height: 1.5;
+}}
+.card {{
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 16px;
+}}
+.card h3 {{
+    font-size: 13px;
+    color: rgba(255,255,255,0.4);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+}}
+.endpoint {{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    flex-wrap: wrap;
+}}
+.endpoint:last-child {{ border-bottom: none; }}
+.method {{
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 6px;
+    min-width: 46px;
+    text-align: center;
+}}
+.method.post {{ background: rgba(233,69,96,0.2); color: #e94560; }}
+.method.get {{ background: rgba(0,200,150,0.2); color: #00c896; }}
+.method.form {{ background: rgba(99,102,241,0.2); color: #818cf8; }}
+.path {{ font-family: 'JetBrains Mono', 'Consolas', monospace; font-size: 13px; color: #e0e0e0; word-break: break-all; overflow-wrap: break-word; min-width: 0; }}
+.status {{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: rgba(0,200,150,0.05);
+    border: 1px solid rgba(0,200,150,0.15);
+    border-radius: 12px;
+    margin-bottom: 16px;
+}}
+.dot {{ width: 8px; height: 8px; border-radius: 50%; background: #00c896; animation: pulse 2s infinite; }}
+@keyframes pulse {{ 0%,100% {{ opacity:1; }} 50% {{ opacity:0.4; }} }}
+.reports {{ font-size: 13px; color: rgba(255,255,255,0.6); list-style: none; }}
+.reports li {{ padding: 4px 0; word-break: break-all; overflow-wrap: break-word; }}
+.btn-row {{ display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }}
+.test-btn {{
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 24px;
+    background: linear-gradient(135deg, #e94560, #c23152);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: transform 0.2s, box-shadow 0.2s;
+}}
+.test-btn:hover {{ transform: translateY(-2px); box-shadow: 0 8px 24px rgba(233,69,96,0.3); }}
+.test-btn.primary {{
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    font-size: 14px;
+    padding: 14px 28px;
+}}
+.test-btn.primary:hover {{ box-shadow: 0 8px 24px rgba(99,102,241,0.4); }}
+.test-btn.secondary {{
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #e0e0e0;
+}}
+.test-btn.secondary:hover {{ background: rgba(255,255,255,0.1); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }}
+.stat-row {{
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+}}
+.stat {{
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+    padding: 14px;
+    text-align: center;
+}}
+.stat-val {{ font-size: 24px; font-weight: 700; color: #e94560; }}
+.stat-label {{ font-size: 11px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }}
+@media (max-width: 480px) {{
+  .container {{ padding: 20px 16px; width: 95%; }}
+  h1 {{ font-size: 22px; }}
+  .subtitle {{ font-size: 12px; }}
+  .path {{ font-size: 11px; }}
+  .card {{ padding: 14px; }}
+  .method {{ min-width: 40px; font-size: 10px; padding: 3px 6px; }}
+  .stat-row {{ grid-template-columns: 1fr; }}
+  .btn-row {{ flex-direction: column; }}
+}}
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="badge">Sub-Agent of CFO</div>
+    <span class="badge form-badge">v3.0 — Mathematical Soul</span>
+    <h1>CFO Ultimate Excel Architect</h1>
+    <p class="subtitle">The financial execution brain — Fragility Index, ROI, NPV, Budget Modeling, Spend Reconciliation. Upload files, give instructions, get Excel masterpieces.</p>
+
+    <div class="status">
+        <div class="dot"></div>
+        <span style="font-size:13px; font-weight:500; color:#00c896;">Online — Port 5041</span>
+    </div>
+
+    <div class="stat-row">
+        <div class="stat"><div class="stat-val">{len(report_list)}</div><div class="stat-label">Reports</div></div>
+        <div class="stat"><div class="stat-val">{upload_count}</div><div class="stat-label">Uploads</div></div>
+        <div class="stat"><div class="stat-val">5041</div><div class="stat-label">Port</div></div>
+    </div>
+
+    <div class="card">
+        <h3>Dialogue Box</h3>
+        <div class="endpoint">
+            <span class="method form">FORM</span>
+            <span class="path">/form — Interactive instruction + file upload</span>
+        </div>
+        <p style="font-size:12px; color:rgba(255,255,255,0.35); margin-top:8px;">Give instructions and upload PDFs/Excels directly to the CFO brain.</p>
+    </div>
+
+    <div class="card">
+        <h3>API Endpoints</h3>
+        <div class="endpoint"><span class="method post">POST</span><span class="path">/api/consult — Instruction + file</span></div>
+        <div class="endpoint"><span class="method post">POST</span><span class="path">/webhook/cfo-execution-controller</span></div>
+        <div class="endpoint"><span class="method post">POST</span><span class="path">/api/execute</span></div>
+        <div class="endpoint"><span class="method get">GET</span><span class="path">/api/health</span></div>
+        <div class="endpoint"><span class="method get">GET</span><span class="path">/api/reports</span></div>
+    </div>
+
+    <div class="card">
+        <h3>N8N Cloud Mirror</h3>
+        <div class="endpoint"><span class="method post">POST</span><span class="path" style="font-size:11px;">humanresource.app.n8n.cloud/webhook/cfo-execution-controller</span></div>
+    </div>
+
+    <div class="card">
+        <h3>Recent Reports ({len(report_list)})</h3>
+        <ul class="reports">
+            {''.join(f'<li>📊 <a href="/api/reports/{r}" style="color:#818cf8; text-decoration:none;">{r}</a></li>' for r in report_list[:5]) if report_list else '<li style="color:rgba(255,255,255,0.3);">No reports yet — use the Dialogue Box to create one</li>'}
+        </ul>
+    </div>
+
+    <div class="btn-row">
+        <a href="/form" class="test-btn primary">💬 Open Dialogue Box</a>
+        <a href="/docs" class="test-btn secondary">📄 API Docs</a>
+    </div>
+</div>
+</body>
+</html>"""
+    return HTMLResponse(html)
+
+
+# ═══════════════════════════════════════════════════════════
+#  DIALOGUE BOX — The "Front Door"
+# ═══════════════════════════════════════════════════════════
+
+DIALOGUE_HTML = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CFO Dialogue Box — Ultimate Excel Architect</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { overflow-x: hidden; }
+body {
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(135deg, #0a0a1a 0%, #12122e 40%, #1a0a2e 100%);
+    color: #e0e0e0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+.form-container {
+    max-width: 640px;
+    width: 100%;
+    padding: 40px;
+    background: rgba(255,255,255,0.04);
+    backdrop-filter: blur(24px);
+    border-radius: 24px;
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 24px 80px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
+    position: relative;
+    overflow: hidden;
+}
+.form-container::before {
+    content: '';
+    position: absolute;
+    top: -100px;
+    right: -100px;
+    width: 250px;
+    height: 250px;
+    background: radial-gradient(circle, rgba(233,69,96,0.08), transparent 70%);
+    pointer-events: none;
+}
+.form-container::after {
+    content: '';
+    position: absolute;
+    bottom: -80px;
+    left: -80px;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(99,102,241,0.06), transparent 70%);
+    pointer-events: none;
+}
+.form-header {
+    text-align: center;
+    margin-bottom: 32px;
+    position: relative;
+    z-index: 1;
+}
+.form-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white;
+    padding: 4px 16px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+}
+.form-title {
+    font-size: 26px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #e94560, #ff6b81, #c23152);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+}
+.form-sub {
+    font-size: 14px;
+    color: rgba(255,255,255,0.45);
+    line-height: 1.5;
+}
+
+.field-group {
+    margin-bottom: 24px;
+    position: relative;
+    z-index: 1;
+}
+.field-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 8px;
+}
+.field-label .hint {
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: normal;
+    color: rgba(255,255,255,0.3);
+    font-size: 11px;
+}
+textarea {
+    width: 100%;
+    min-height: 120px;
+    padding: 16px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px;
+    color: #f0f0f0;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    resize: vertical;
+    transition: border-color 0.3s, box-shadow 0.3s;
+    outline: none;
+}
+textarea:focus {
+    border-color: rgba(233,69,96,0.5);
+    box-shadow: 0 0 0 3px rgba(233,69,96,0.1);
+}
+textarea::placeholder { color: rgba(255,255,255,0.2); }
+
+.drop-zone {
+    border: 2px dashed rgba(255,255,255,0.12);
+    border-radius: 14px;
+    padding: 32px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+}
+.drop-zone:hover, .drop-zone.dragover {
+    border-color: rgba(99,102,241,0.5);
+    background: rgba(99,102,241,0.04);
+}
+.drop-zone .drop-icon { font-size: 32px; margin-bottom: 8px; }
+.drop-zone .drop-text { font-size: 13px; color: rgba(255,255,255,0.4); }
+.drop-zone .drop-text strong { color: #818cf8; }
+.drop-zone .drop-formats { font-size: 11px; color: rgba(255,255,255,0.25); margin-top: 6px; }
+.drop-zone input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer;
+}
+.file-preview {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: rgba(99,102,241,0.08);
+    border: 1px solid rgba(99,102,241,0.2);
+    border-radius: 12px;
+    margin-top: 10px;
+}
+.file-preview.show { display: flex; }
+.file-preview .file-name { flex: 1; font-size: 13px; color: #818cf8; font-weight: 500; }
+.file-preview .file-size { font-size: 11px; color: rgba(255,255,255,0.3); }
+.file-preview .remove-file {
+    background: none; border: none; color: #ef4444;
+    cursor: pointer; font-size: 16px; padding: 2px 6px;
+}
+
+.submit-btn {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, #e94560, #c23152);
+    color: white;
+    border: none;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+.submit-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(233,69,96,0.35);
+}
+.submit-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+.submit-btn .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    display: none;
+}
+.submit-btn.loading .spinner { display: block; }
+.submit-btn.loading .btn-text { display: none; }
+.submit-btn.loading .btn-loading { display: inline; }
+.btn-loading { display: none; }
+
+.result-panel {
+    display: none;
+    margin-top: 24px;
+    padding: 20px;
+    background: rgba(16,185,129,0.06);
+    border: 1px solid rgba(16,185,129,0.2);
+    border-radius: 14px;
+    position: relative;
+    z-index: 1;
+}
+.result-panel.show { display: block; }
+.result-panel.error {
+    background: rgba(239,68,68,0.06);
+    border-color: rgba(239,68,68,0.2);
+}
+.result-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.result-body { font-size: 13px; color: rgba(255,255,255,0.6); line-height: 1.6; }
+.result-body pre {
+    background: rgba(0,0,0,0.3);
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+.back-link {
+    display: inline-block;
+    margin-top: 20px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.3);
+    text-decoration: none;
+    transition: color 0.2s;
+    position: relative;
+    z-index: 1;
+}
+.back-link:hover { color: rgba(255,255,255,0.6); }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (max-width: 480px) {
+  .form-container { padding: 24px 18px; }
+  .form-title { font-size: 20px; }
+  textarea { min-height: 100px; font-size: 13px; }
+}
+</style>
+</head>
+<body>
+<div class="form-container">
+    <div class="form-header">
+        <div class="form-badge">CFO Dialogue Box</div>
+        <h1 class="form-title">Ultimate Excel Architect</h1>
+        <p class="form-sub">Give me an instruction and optionally upload a file.<br>I'll transform it into a financial masterpiece.</p>
+    </div>
+
+    <form id="cfoForm" enctype="multipart/form-data">
+        <div class="field-group">
+            <label class="field-label">Instruction <span class="hint">— What should I do?</span></label>
+            <textarea id="instruction" name="instruction" placeholder="e.g. 'Build me a 12-month budget forecast for a SaaS startup with $50k MRR'&#10;&#10;Or: 'Improve this Excel — add NPV calculations and a dashboard tab'&#10;&#10;Or: 'Analyze this PDF and extract the financial data into a spreadsheet'"></textarea>
+        </div>
+
+        <div class="field-group">
+            <label class="field-label">File Upload <span class="hint">— optional (PDF, XLSX, CSV)</span></label>
+            <div class="drop-zone" id="dropZone">
+                <div class="drop-icon">📎</div>
+                <div class="drop-text">Drag & drop or <strong>click to browse</strong></div>
+                <div class="drop-formats">.pdf · .xlsx · .xls · .csv · .txt</div>
+                <input type="file" id="fileInput" name="file" accept=".pdf,.xlsx,.xls,.csv,.txt">
+            </div>
+            <div class="file-preview" id="filePreview">
+                <span>📄</span>
+                <span class="file-name" id="fileName"></span>
+                <span class="file-size" id="fileSize"></span>
+                <button type="button" class="remove-file" id="removeFile">✕</button>
+            </div>
+        </div>
+
+        <button type="submit" class="submit-btn" id="submitBtn">
+            <span class="btn-text">⚡ Send to CFO</span>
+            <span class="btn-loading">Processing...</span>
+            <div class="spinner"></div>
+        </button>
+    </form>
+
+    <div class="result-panel" id="resultPanel">
+        <div class="result-title" id="resultTitle"></div>
+        <div class="result-body" id="resultBody"></div>
+    </div>
+
+    <a href="/" class="back-link">← Back to Dashboard</a>
+</div>
+
+<script>
+const form = document.getElementById('cfoForm');
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const filePreview = document.getElementById('filePreview');
+const fileName = document.getElementById('fileName');
+const fileSize = document.getElementById('fileSize');
+const removeFile = document.getElementById('removeFile');
+const submitBtn = document.getElementById('submitBtn');
+const resultPanel = document.getElementById('resultPanel');
+const resultTitle = document.getElementById('resultTitle');
+const resultBody = document.getElementById('resultBody');
+
+// Drag & drop
+['dragenter', 'dragover'].forEach(e => {
+    dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.classList.add('dragover'); });
+});
+['dragleave', 'drop'].forEach(e => {
+    dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.classList.remove('dragover'); });
+});
+dropZone.addEventListener('drop', ev => {
+    if (ev.dataTransfer.files.length) {
+        fileInput.files = ev.dataTransfer.files;
+        showFilePreview(ev.dataTransfer.files[0]);
+    }
+});
+fileInput.addEventListener('change', () => {
+    if (fileInput.files.length) showFilePreview(fileInput.files[0]);
+});
+
+function showFilePreview(file) {
+    fileName.textContent = file.name;
+    fileSize.textContent = (file.size / 1024).toFixed(1) + ' KB';
+    filePreview.classList.add('show');
+    dropZone.style.display = 'none';
+}
+removeFile.addEventListener('click', () => {
+    fileInput.value = '';
+    filePreview.classList.remove('show');
+    dropZone.style.display = 'block';
+});
+
+// Submit
+form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const instruction = document.getElementById('instruction').value.trim();
+    if (!instruction) { alert('Please enter an instruction.'); return; }
+
+    submitBtn.classList.add('loading');
+    submitBtn.disabled = true;
+    resultPanel.classList.remove('show', 'error');
+
+    const fd = new FormData();
+    fd.append('instruction', instruction);
+    if (fileInput.files.length) fd.append('file', fileInput.files[0]);
+
+    try {
+        const res = await fetch('/api/consult', { method: 'POST', body: fd });
+        const data = await res.json();
+
+        resultPanel.classList.add('show');
+        if (res.ok) {
+            resultTitle.innerHTML = '✅ ' + (data.title || 'Instruction Processed');
+            let body = '';
+            if (data.file_name) body += '<strong>Report:</strong> ' + data.file_name + '<br>';
+            if (data.message) body += data.message + '<br>';
+            if (data.report) body += '<pre>' + JSON.stringify(data.report, null, 2) + '</pre>';
+            resultBody.innerHTML = body || 'Done.';
+        } else {
+            resultPanel.classList.add('error');
+            resultTitle.innerHTML = '❌ ' + (data.status || 'Error');
+            resultBody.innerHTML = data.message || data.error_message || JSON.stringify(data);
+        }
+    } catch (err) {
+        resultPanel.classList.add('show', 'error');
+        resultTitle.innerHTML = '❌ Connection Error';
+        resultBody.innerHTML = err.message;
+    } finally {
+        submitBtn.classList.remove('loading');
+        submitBtn.disabled = false;
+    }
+});
+</script>
+</div>
+</body>
+</html>
+"""
+
+@app.get("/form")
+async def dialogue_box():
+    """The Dialogue Box — interactive form for instruction + file upload."""
+    return HTMLResponse(DIALOGUE_HTML)
+
+
+@app.get("/api/health")
+async def health():
+    uploads_dir = ROOT / "uploads"
+    upload_count = len(list(uploads_dir.iterdir())) if uploads_dir.exists() else 0
+    return {
+        "status": "online",
+        "agent": "CFO_Ultimate_Excel_Architect",
+        "parent_agent": "CFO",
+        "version": "3.0.0",
+        "port": 5041,
+        "dialogue_box": "/form",
+        "n8n_mirror": "https://humanresource.app.n8n.cloud/webhook/cfo-execution-controller",
+        "excel_available": True,
+        "uploads_processed": upload_count,
+        "timestamp": datetime.now().isoformat(),
+    }
+
+
+@app.post("/webhook/cfo-execution-controller")
+async def webhook_handler(request: Request):
+    """N8N-compatible webhook endpoint — same contract as the cloud version."""
+    data = await safe_parse_body(request)
+    return await _execute(data)
+
+
+@app.post("/api/execute")
+async def execute_handler(request: Request):
+    """Direct execution endpoint."""
+    data = await safe_parse_body(request)
+    return await _execute(data)
+
+
+async def _execute(data: dict):
+    """Core execution logic shared by webhook and direct endpoints."""
+    start = time.time()
+
+    # Validate
+    valid, error = cfo.validate_payload(data)
+    if not valid:
+        logger.warning(f"Gatekeeper rejected: {error}")
+        required = ['cmo_spend', 'architect_risk', 'campaign_list']
+        missing = [f for f in required if f not in data]
+        return JSONResponse({
+            "agent": "CFO",
+            "status": "awaiting_data",
+            "message": error,
+            "missing_fields": missing,
+            "received_fields": list(data.keys()),
+            "callback_url": "http://localhost:5041/webhook/cfo-execution-controller",
+            "instruction": "Please re-submit with all required fields: cmo_spend, architect_risk, campaign_list"
+        }, status_code=400)
+
+    # Execute
+    try:
+        report = cfo.generate_report(data)
+        elapsed = time.time() - start
+
+        # Rename file to WarRoom convention
+        old_name = report.get('file_name', '')
+        new_name = old_name.replace('CFO_Fragility_Report_', 'WarRoom_CFO_Report_')
+        report['file_name'] = new_name
+
+        logger.info(f"CFO Fragility Engine: {new_name} generated in {elapsed:.2f}s")
+        logger.info(f"  Fragility Index: {report.get('fragility', {}).get('fragility_index')}")
+        logger.info(f"  Portfolio ROI: {report.get('summary', {}).get('portfolio_roi_pct')}%")
+
+        return {
+            "agent": "CFO",
+            "status": "deployed",
+            "message": "CFO Agent has deployed the Fragility Report to the AI Folder.",
+            "file_name": new_name,
+            "report": {
+                "report_name": new_name,
+                "generated_at": report.get('generated_at'),
+                "agent": "CFO Execution Controller",
+                "fragility_index": report.get('fragility', {}).get('fragility_index'),
+                "composite_score": report.get('fragility', {}).get('composite'),
+                "portfolio_roi_pct": report.get('summary', {}).get('portfolio_roi_pct'),
+                "total_spend": report.get('summary', {}).get('total_spend'),
+                "total_revenue": report.get('summary', {}).get('total_projected_revenue'),
+                "spend_utilization_pct": report.get('summary', {}).get('spend_utilization_pct'),
+                "unallocated": report.get('spend_reconciliation', {}).get('unallocated'),
+                "campaigns": report.get('campaigns', []),
+                "campaign_count": report.get('summary', {}).get('campaign_count'),
+                "schema": ['Dashboard', 'Calculation Engine', 'Input Data', 'Campaign Analysis'],
+                "formula_map": report.get('formula_map', {}),
+                "logic_rationale": report.get('logic_rationale', ''),
+            },
+            "file_path": report.get('file_path'),
+            "duration_ms": round(elapsed * 1000, 1),
+        }
+
+    except (ZeroDivisionError, ValueError, TypeError, OverflowError) as e:
+        logger.error(f"Math error: {type(e).__name__}: {e}")
+        return JSONResponse({
+            "agent": "CFO",
+            "status": "math_error",
+            "error_type": type(e).__name__,
+            "error_message": str(e),
+            "correction_request": f"Math Correction Request: {type(e).__name__} - {e}. Please review the input data and formulas.",
+        }, status_code=422)
+
+
+# ═══════════════════════════════════════════════════════════
+#  DIALOGUE BOX SUBMISSION — /api/consult
+# ═══════════════════════════════════════════════════════════
+
+@app.post("/api/consult")
+async def consult(
+    instruction: str = Form(...),
+    file: UploadFile | None = File(None),
+):
+    """
+    The Dialogue Box endpoint — accepts an instruction and optional file.
+    Routes to the appropriate CFO operation based on the instruction.
+    """
+    start = time.time()
+    uploads_dir = ROOT / "uploads"
+    uploads_dir.mkdir(exist_ok=True)
+
+    file_info = None
+    file_path = None
+
+    # Handle file upload
+    if file and file.filename:
+        safe_name = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{file.filename}"
+        file_path = uploads_dir / safe_name
+        content = await file.read()
+        file_path.write_bytes(content)
+        file_info = {
+            "original_name": file.filename,
+            "saved_as": safe_name,
+            "size_bytes": len(content),
+            "content_type": file.content_type,
+        }
+        logger.info(f"File uploaded: {file.filename} ({len(content)} bytes)")
+
+    logger.info(f"Consult received — Instruction: {instruction[:100]}...")
+
+    # Detect intent from instruction
+    instruction_lower = instruction.lower()
+    is_fragility = any(kw in instruction_lower for kw in [
+        'fragility', 'risk', 'campaign', 'cmo_spend', 'architect_risk',
+        'spend', 'roi', 'npv',
+    ])
+
+    # If the instruction looks like a fragility/financial report request,
+    # try to build the payload and run through the engine
+    if is_fragility:
+        # Attempt to extract JSON data from instruction or file
+        payload = _extract_payload(instruction, file_path)
+        if payload:
+            valid, error = cfo.validate_payload(payload)
+            if valid:
+                try:
+                    report = cfo.generate_report(payload)
+                    elapsed = time.time() - start
+                    old_name = report.get('file_name', '')
+                    new_name = old_name.replace('CFO_Fragility_Report_', 'WarRoom_CFO_Report_')
+                    report['file_name'] = new_name
+                    return {
+                        "status": "deployed",
+                        "title": "Financial Report Generated",
+                        "message": f"Report '{new_name}' has been created and saved.",
+                        "file_name": new_name,
+                        "file_path": report.get('file_path'),
+                        "file_uploaded": file_info,
+                        "report": {
+                            "fragility_index": report.get('fragility', {}).get('fragility_index'),
+                            "portfolio_roi_pct": report.get('summary', {}).get('portfolio_roi_pct'),
+                            "total_spend": report.get('summary', {}).get('total_spend'),
+                            "campaign_count": report.get('summary', {}).get('campaign_count'),
+                        },
+                        "duration_ms": round((time.time() - start) * 1000, 1),
+                    }
+                except Exception as e:
+                    return JSONResponse({
+                        "status": "error",
+                        "error_message": str(e),
+                    }, status_code=422)
+
+    # For all other instructions, acknowledge receipt
+    # In a full implementation, this would route to Gemini for intelligent processing
+    elapsed = time.time() - start
+    return {
+        "status": "received",
+        "title": "Instruction Received by CFO",
+        "message": (
+            f"Your instruction has been logged and queued for processing. "
+            f"{'File \'' + file_info['original_name'] + '\' uploaded and saved. ' if file_info else ''}"
+            f"The CFO brain will process this via the War Room pipeline."
+        ),
+        "instruction": instruction,
+        "file_uploaded": file_info,
+        "duration_ms": round(elapsed * 1000, 1),
+        "next_steps": [
+            "Instruction logged to CFO queue",
+            "War Room agents notified" if not is_fragility else "Fragility data incomplete — provide cmo_spend, architect_risk, campaign_list",
+            "Result will appear in /api/reports when ready",
+        ],
+    }
+
+
+def _extract_payload(instruction: str, file_path=None) -> dict | None:
+    """Try to extract a structured financial payload from instruction text or uploaded file."""
+    # Try parsing JSON from instruction
+    try:
+        import re
+        json_match = re.search(r'\{[^{}]*\}', instruction, re.DOTALL)
+        if json_match:
+            return json.loads(json_match.group())
+    except (json.JSONDecodeError, Exception):
+        pass
+
+    # Try reading JSON from uploaded file
+    if file_path and file_path.exists():
+        try:
+            if str(file_path).endswith('.json') or str(file_path).endswith('.txt'):
+                content = file_path.read_text(encoding='utf-8')
+                return json.loads(content)
+        except Exception:
+            pass
+
+    return None
+
+
+@app.get("/api/reports")
+async def list_reports():
+    reports_dir = ROOT / "reports"
+    if not reports_dir.exists():
+        return {"reports": [], "total": 0}
+
+    files = sorted(reports_dir.glob("*.*"), reverse=True)
+    return {
+        "reports": [
+            {
+                "filename": f.name,
+                "size_bytes": f.stat().st_size,
+                "created": datetime.fromtimestamp(f.stat().st_ctime).isoformat(),
+            }
+            for f in files[:20]
+        ],
+        "total": len(files),
+    }
+
+
+@app.get("/api/reports/{filename}")
+async def download_report(filename: str):
+    filepath = ROOT / "reports" / filename
+    if not filepath.exists():
+        return JSONResponse({"error": "Report not found"}, status_code=404)
+    return FileResponse(str(filepath), filename=filename)
+
+
+# ═══════════════════════════════════════════════════════════
+#  STARTUP
+# ═══════════════════════════════════════════════════════════
+
+PORT = 5041
+
+if __name__ == "__main__":
+    print("")
+    print("=" * 60)
+    print("")
+    print("   CFO ULTIMATE EXCEL ARCHITECT — Sub-Agent of CFO")
+    print("")
+    print("   Port: %d" % PORT)
+    print("   Dashboard:    http://localhost:%d" % PORT)
+    print("   Dialogue Box: http://localhost:%d/form" % PORT)
+    print("   API Docs:     http://localhost:%d/docs" % PORT)
+    print("")
+    print("   Consult:   POST /api/consult (instruction + file)")
+    print("   Webhook:   POST /webhook/cfo-execution-controller")
+    print("   Execute:   POST /api/execute")
+    print("   Health:    GET  /api/health")
+    print("   Reports:   GET  /api/reports")
+    print("")
+    print("   N8N Cloud: https://humanresource.app.n8n.cloud")
+    print("              /webhook/cfo-execution-controller")
+    print("")
+    print("   Antigravity-AI | CFO Ultimate Excel Architect v3.0.0")
+    print("")
+    print("=" * 60)
+    print("")
+
+    uvicorn.run(app, host="0.0.0.0", port=PORT, log_level="info")

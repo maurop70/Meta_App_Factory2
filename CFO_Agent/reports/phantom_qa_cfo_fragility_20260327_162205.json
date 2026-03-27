@@ -1,0 +1,204 @@
+{
+  "agent": "Phantom_QA_Elite",
+  "target": "CFO Fragility Engine",
+  "target_url": "https://humanresource.app.n8n.cloud/webhook/cfo-execution-controller",
+  "verdict": "PASS",
+  "score": 100,
+  "total_tests": 27,
+  "passed": 27,
+  "failed": 0,
+  "duration_seconds": 5.9,
+  "results": [
+    {
+      "test_name": "Valid payload returns 200",
+      "category": "valid_payload",
+      "passed": true,
+      "details": "Status: 200",
+      "duration_ms": 1762.2
+    },
+    {
+      "test_name": "Agent field is 'CFO'",
+      "category": "valid_payload",
+      "passed": true,
+      "details": "OK",
+      "duration_ms": 0
+    },
+    {
+      "test_name": "Report.fragility_index = 18.4",
+      "category": "data_integrity",
+      "passed": true,
+      "details": "Expected 18.4, got 18.4. Fragility Index = 100 - 81.6 = 18.4",
+      "duration_ms": 0
+    },
+    {
+      "test_name": "Report.composite_score = 81.6",
+      "category": "data_integrity",
+      "passed": true,
+      "details": "Expected 81.6, got 81.6. Composite matches input",
+      "duration_ms": 0
+    },
+    {
+      "test_name": "Report.portfolio_roi_pct = 148.57",
+      "category": "data_integrity",
+      "passed": true,
+      "details": "Expected 148.57, got 148.57. ROI = (87000-35000)/35000*100",
+      "duration_ms": 0
+    },
+    {
+      "test_name": "Report.total_spend = 35000",
+      "category": "data_integrity",
+      "passed": true,
+      "details": "Expected 35000, got 35000. Sum of budgets",
+      "duration_ms": 0
+    },
+    {
+      "test_name": "Report.total_revenue = 87000",
+      "category": "data_integrity",
+      "passed": true,
+      "details": "Expected 87000, got 87000. Sum of revenues",
+      "duration_ms": 0
+    },
+    {
+      "test_name": "Report.spend_utilization_pct = 84.0",
+      "category": "data_integrity",
+      "passed": true,
+      "details": "Expected 84.0, got 84. 42000/50000*100",
+      "duration_ms": 0
+    },
+    {
+      "test_name": "Report.unallocated = 8000.0",
+      "category": "data_integrity",
+      "passed": true,
+      "details": "Expected 8000.0, got 8000. 50000-42000",
+      "duration_ms": 0
+    },
+    {
+      "test_name": "Report.campaign_count = 3",
+      "category": "data_integrity",
+      "passed": true,
+      "details": "Expected 3, got 3. Three campaigns",
+      "duration_ms": 0
+    },
+    {
+      "test_name": "File naming: WarRoom_CFO_Report_[TS].xlsx",
+      "category": "valid_payload",
+      "passed": true,
+      "details": "Got: WarRoom_CFO_Report_20260327202201..xlsx",
+      "duration_ms": 0
+    },
+    {
+      "test_name": "Q2 Launch ROI = 200%",
+      "category": "data_integrity",
+      "passed": true,
+      "details": "(45000-15000)/15000*100 = 200. Got: 200",
+      "duration_ms": 0
+    },
+    {
+      "test_name": "Gatekeeper: Empty payload \u2192 400",
+      "category": "gatekeeper",
+      "passed": true,
+      "details": "Status: 400, missing: ['cmo_spend', 'architect_risk', 'campaign_list']",
+      "duration_ms": 240.7
+    },
+    {
+      "test_name": "Gatekeeper: Only cmo_spend \u2192 400",
+      "category": "gatekeeper",
+      "passed": true,
+      "details": "Status: 400, missing: ['architect_risk', 'campaign_list']",
+      "duration_ms": 253.9
+    },
+    {
+      "test_name": "Gatekeeper: Only architect_risk \u2192 400",
+      "category": "gatekeeper",
+      "passed": true,
+      "details": "Status: 400, missing: ['cmo_spend', 'campaign_list']",
+      "duration_ms": 244.6
+    },
+    {
+      "test_name": "Gatekeeper: Only campaign_list \u2192 400",
+      "category": "gatekeeper",
+      "passed": true,
+      "details": "Status: 400, missing: ['cmo_spend', 'architect_risk']",
+      "duration_ms": 455.4
+    },
+    {
+      "test_name": "Gatekeeper: Missing campaign_list \u2192 400",
+      "category": "gatekeeper",
+      "passed": true,
+      "details": "Status: 400, missing: ['campaign_list']",
+      "duration_ms": 221.9
+    },
+    {
+      "test_name": "Math Safety: All zeros (div-by-zero guard)",
+      "category": "math_safety",
+      "passed": true,
+      "details": "Status: 200",
+      "duration_ms": 230.9
+    },
+    {
+      "test_name": "Math Safety: Negative values",
+      "category": "math_safety",
+      "passed": true,
+      "details": "Status: 200",
+      "duration_ms": 236.4
+    },
+    {
+      "test_name": "Math Safety: Single campaign (100% composite)",
+      "category": "math_safety",
+      "passed": true,
+      "details": "Status: 200",
+      "duration_ms": 231.5
+    },
+    {
+      "test_name": "Math Safety: 50 campaigns (large dataset)",
+      "category": "math_safety",
+      "passed": true,
+      "details": "Status: 200",
+      "duration_ms": 230.7
+    },
+    {
+      "test_name": "Malformed: cmo_spend as string",
+      "category": "malformed_input",
+      "passed": true,
+      "details": "Status: 200 (no 500 crash)",
+      "duration_ms": 229.7
+    },
+    {
+      "test_name": "Malformed: campaign_list as string",
+      "category": "malformed_input",
+      "passed": true,
+      "details": "Status: 200 (no 500 crash)",
+      "duration_ms": 281.2
+    },
+    {
+      "test_name": "Malformed: Non-numeric total",
+      "category": "malformed_input",
+      "passed": true,
+      "details": "Status: 200 (no 500 crash)",
+      "duration_ms": 232.0
+    },
+    {
+      "test_name": "Report schema has 4 tabs",
+      "category": "schema",
+      "passed": true,
+      "details": "Expected ['Dashboard', 'Calculation Engine', 'Input Data', 'Campaign Analysis'], got ['Dashboard', 'Calculation Engine', 'Input Data', 'Campaign Analysis']",
+      "duration_ms": 0
+    },
+    {
+      "test_name": "Formula map has 7+ formulas",
+      "category": "schema",
+      "passed": true,
+      "details": "Got 7 formulas",
+      "duration_ms": 0
+    },
+    {
+      "test_name": "5-concurrent webhook stress",
+      "category": "stress",
+      "passed": true,
+      "details": "5/5 succeeded in 813ms. Statuses: [200, 200, 200, 200, 200]",
+      "duration_ms": 813.4
+    }
+  ],
+  "repair_payloads": [],
+  "timestamp": "2026-03-27T16:22:05"
+}

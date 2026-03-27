@@ -40,5 +40,47 @@
       "resolution": null,
       "round": 1
     }
+  },
+  {
+    "event": "challenge_issued",
+    "timestamp": "2026-03-26T23:22:43.693327",
+    "data": {
+      "gate_result": "CHALLENGED",
+      "challenge_id": "CHG-0001",
+      "status": "PAUSED",
+      "composite_score": 76,
+      "gap_from_threshold": 9,
+      "weaknesses": [
+        {
+          "id": 1,
+          "category": "Credential Surface Area",
+          "severity": "MODERATE",
+          "challenge": "New service introduces a credential that is not covered by the rotation schedule.",
+          "required_evidence": "Provide data or reasoning addressing credential surface area."
+        },
+        {
+          "id": 2,
+          "category": "Horizontal Scaling Barrier",
+          "severity": "MODERATE",
+          "challenge": "File-based locking mechanisms will break under multi-process deployment.",
+          "required_evidence": "Provide data or reasoning addressing horizontal scaling barrier."
+        },
+        {
+          "id": 3,
+          "category": "Fallback Chain Completeness",
+          "severity": "MODERATE",
+          "challenge": "Primary AI provider failure has no fallback. Service will return errors during outage.",
+          "required_evidence": "Provide data or reasoning addressing fallback chain completeness."
+        }
+      ],
+      "options": [
+        "convince",
+        "force_proceed"
+      ],
+      "created_at": "2026-03-26T23:22:43.692925",
+      "resolved_at": null,
+      "resolution": null,
+      "round": 1
+    }
   }
 ]
