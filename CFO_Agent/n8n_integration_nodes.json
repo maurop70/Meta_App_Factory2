@@ -1,0 +1,93 @@
+{
+  "cfo_execution_controller_n8n_nodes": {
+    "description": "n8n node configurations for CFO Execution Controller — Cross-agent financial integration",
+    "version": "1.0.0",
+
+    "nodes": [
+      {
+        "node_name": "CFO Controller — Webhook Trigger",
+        "node_type": "n8n-nodes-base.webhook",
+        "purpose": "Listens for HTTP POST from Gemini Agent Bridge with cmo_spend, architect_risk, campaign_list",
+        "n8n_integration_point": "Gemini Agent Bridge — CFO Execution",
+        "config": {
+          "httpMethod": "POST",
+          "path": "cfo-execution-controller",
+          "responseMode": "responseNode"
+        },
+        "required_payload": {
+          "cmo_spend": { "total": "number", "allocated": "number", "categories": "object" },
+          "architect_risk": { "structural_score": "number", "logic_score": "number", "security_score": "number", "composite_score": "number" },
+          "campaign_list": "array of { name, budget, projected_revenue }"
+        },
+        "error_handling": {
+          "missing_fields": "400 — CFO Agent: Missing data from CMO or Architect. Cannot calculate Fragility Index."
+        }
+      },
+
+      {
+        "node_name": "CFO Controller — Request from CMO Agent",
+        "node_type": "n8n-nodes-base.httpRequest",
+        "purpose": "Fetches CMO spend and campaign data from CMO Agent (Port 5020)",
+        "n8n_integration_point": "CMO Agent → CFO Pipeline",
+        "config": {
+          "method": "GET",
+          "url": "http://localhost:5020/api/projects/{{project_id}}/campaigns",
+          "headers": { "Content-Type": "application/json" },
+          "options": { "timeout": 15000 }
+        }
+      },
+
+      {
+        "node_name": "CFO Controller — Request from Master Architect",
+        "node_type": "n8n-nodes-base.httpRequest",
+        "purpose": "Fetches risk scores from Master Architect Elite (Port 5050)",
+        "n8n_integration_point": "Master Architect → CFO Pipeline",
+        "config": {
+          "method": "POST",
+          "url": "http://localhost:5050/api/review",
+          "headers": { "Content-Type": "application/json" },
+          "body": {
+            "description": "={{ $json.project_description }}",
+            "change_type": "financial_review"
+          },
+          "options": { "timeout": 30000 }
+        }
+      },
+
+      {
+        "node_name": "CFO Controller — War Room Notification",
+        "node_type": "n8n-nodes-base.httpRequest",
+        "purpose": "Posts CFO report completion to War Room via Factory API",
+        "n8n_integration_point": "War Room — CFO Deliverable",
+        "config": {
+          "method": "POST",
+          "url": "http://localhost:8000/api/warroom/message",
+          "headers": { "Content-Type": "application/json" },
+          "body": {
+            "role": "CFO",
+            "message": "CFO Agent has deployed the Fragility Report to the AI Folder. Access here: {{ $json.drive_link }}",
+            "file_name": "={{ $json.file_name }}",
+            "report_summary": "={{ $json.summary }}"
+          },
+          "options": { "timeout": 10000 }
+        }
+      }
+    ],
+
+    "c_suite_wiring": {
+      "CFO_Agent": { "role": "Financial Modeling & Fragility Analysis", "receives_from": ["CMO_Agent", "Master_Architect_Elite"] },
+      "CMO_Agent": { "port": 5020, "provides": "cmo_spend, campaign_list" },
+      "Master_Architect_Elite": { "port": 5050, "provides": "architect_risk (structural, logic, security scores)" },
+      "War_Room": { "port": 8000, "receives": "Deployment notification with Drive link" }
+    },
+
+    "execution_flow": [
+      "1. Webhook receives POST with cmo_spend + architect_risk + campaign_list",
+      "2. Gatekeeper validates all 3 fields present → 400 if missing",
+      "3. Python node calculates: Fragility Index, Campaign ROI/NPV, Spend Reconciliation",
+      "4. Excel report generated with 4 tabs: Dashboard, Calculation Engine, Input Data, Campaign Analysis",
+      "5. Google Drive uploads to AI FOLDERS",
+      "6. Response sent to War Room: 'CFO Agent has deployed the Fragility Report to the AI Folder. Access here: [Link]'"
+    ]
+  }
+}

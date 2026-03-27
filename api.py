@@ -475,6 +475,7 @@ def get_registry():
                 "type": info.get("type", "App"),
                 "port": info.get("port"),
                 "path": info.get("path", ""),
+                "form_url": info.get("form_url"),
             })
         return {"apps": apps}
     except Exception as e:

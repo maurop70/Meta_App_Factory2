@@ -1,0 +1,146 @@
+{
+  "name": "Antigravity CFO Execution Controller",
+  "description": "N8N-integrated CFO Agent: Webhook → Python Execution → Google Drive → War Room Response",
+  "version": "1.0.0",
+  "port_assignment": null,
+  "n8n_workflow_id": null,
+
+  "nodes": [
+    {
+      "id": "node_1_webhook",
+      "name": "CFO Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "cfo-execution-controller",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "notes": "Node 1 — Master Coordinator: Listens for HTTP POST from Gemini Agent Bridge. Payload MUST contain: cmo_spend, architect_risk, campaign_list."
+    },
+
+    {
+      "id": "node_2_gatekeeper",
+      "name": "CFO Gatekeeper — Payload Validation",
+      "type": "n8n-nodes-base.if",
+      "position": [500, 300],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.hasOwnProperty('cmo_spend') && $json.hasOwnProperty('architect_risk') && $json.hasOwnProperty('campaign_list') }}",
+              "value2": true,
+              "operation": "equal"
+            }
+          ]
+        }
+      },
+      "notes": "The Gatekeeper: If cmo_spend, architect_risk, OR campaign_list are missing → 400 error."
+    },
+
+    {
+      "id": "node_2a_error_response",
+      "name": "CFO 400 Error — Missing Data",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [750, 500],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ error: true, status: 400, agent: 'CFO', message: 'CFO Agent: Missing data from CMO or Architect. Cannot calculate Fragility Index.', required_fields: ['cmo_spend', 'architect_risk', 'campaign_list'], received_fields: Object.keys($json) }) }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "notes": "Returns 400 with diagnostic message when payload is incomplete."
+    },
+
+    {
+      "id": "node_3_python_execution",
+      "name": "CFO Execution Engine — Python 3",
+      "type": "n8n-nodes-base.code",
+      "position": [750, 300],
+      "parameters": {
+        "language": "python",
+        "code": "# ═══════════════════════════════════════════════════════\n# Antigravity CFO Execution Controller — Python 3 Node\n# ═══════════════════════════════════════════════════════\nimport json\nimport io\nfrom datetime import datetime\n\n# Access n8n input data\ndata_in = items[0]['json']\n\ncmo_spend = data_in.get('cmo_spend', {})\narchitect_risk = data_in.get('architect_risk', {})\ncampaign_list = data_in.get('campaign_list', [])\n\n# --- CFO AGENT CORE CODE START ---\n\n# 1. Build Fragility Index from Architect Risk Data\nfragility_components = {\n    'structural_score': architect_risk.get('structural_score', 70),\n    'logic_score': architect_risk.get('logic_score', 70),\n    'security_score': architect_risk.get('security_score', 70),\n    'composite': architect_risk.get('composite_score', 70),\n}\nfragility_index = round(100 - fragility_components['composite'], 1)\n\n# 2. Campaign ROI Calculations\ncampaigns_analysis = []\ntotal_spend = 0\ntotal_projected_revenue = 0\n\nfor campaign in campaign_list:\n    spend = float(campaign.get('budget', 0))\n    projected_rev = float(campaign.get('projected_revenue', 0))\n    roi = round(((projected_rev - spend) / spend) * 100, 2) if spend > 0 else 0\n    npv_rate = 0.10  # 10% discount rate\n    # Simplified NPV: single-period\n    npv = round(projected_rev / (1 + npv_rate) - spend, 2)\n    \n    campaigns_analysis.append({\n        'name': campaign.get('name', 'Unknown'),\n        'budget': spend,\n        'projected_revenue': projected_rev,\n        'roi_pct': roi,\n        'npv': npv,\n        'risk_adjusted_roi': round(roi * (fragility_components['composite'] / 100), 2),\n    })\n    total_spend += spend\n    total_projected_revenue += projected_rev\n\n# 3. CMO Spend Reconciliation\ncmo_total = float(cmo_spend.get('total', 0))\ncmo_allocated = float(cmo_spend.get('allocated', 0))\ncmo_unallocated = round(cmo_total - cmo_allocated, 2)\nspend_utilization = round((cmo_allocated / cmo_total) * 100, 2) if cmo_total > 0 else 0\n\n# 4. Build the Report Schema\nreport = {\n    'report_name': f'CFO_Fragility_Report_{datetime.now().strftime(\"%Y%m%d_%H%M%S\")}',\n    'generated_at': datetime.now().isoformat(),\n    'agent': 'CFO Execution Controller',\n    \n    'schema': {\n        'tabs': [\n            {'name': 'Dashboard', 'purpose': 'Executive summary with Fragility Index, total ROI, and spend utilization gauges'},\n            {'name': 'Calculation Engine', 'purpose': 'All NPV, IRR, ROI formulas with cell references'},\n            {'name': 'Input Data', 'purpose': 'Raw CMO spend, Architect risk scores, and campaign list'},\n            {'name': 'Campaign Analysis', 'purpose': 'Per-campaign ROI, NPV, and risk-adjusted returns'},\n        ]\n    },\n    \n    'formula_map': {\n        'Dashboard!B2': f'=Calculation_Engine!B10  // Fragility Index: {fragility_index}',\n        'Dashboard!B4': f'=SUM(Campaign_Analysis!D:D)  // Total Spend: ${total_spend:,.2f}',\n        'Dashboard!B6': f'=SUM(Campaign_Analysis!E:E)  // Total Projected Revenue: ${total_projected_revenue:,.2f}',\n        'Dashboard!B8': '=((B6-B4)/B4)*100  // Portfolio ROI %',\n        'Dashboard!B10': f'=Input_Data!B5  // Spend Utilization: {spend_utilization}%',\n        'Calculation_Engine!B10': f'=100-Input_Data!B12  // Fragility Index = 100 - Composite Score',\n        'Calculation_Engine!B12': '=E2/(1+$B$1)-D2  // NPV per campaign (discount rate in B1)',\n        'Calculation_Engine!B14': '=((E2-D2)/D2)*100  // ROI % per campaign',\n        'Calculation_Engine!B16': '=B14*(Input_Data!B12/100)  // Risk-Adjusted ROI',\n    },\n    \n    'logic_rationale': 'The Fragility Index is derived as the inverse of the Architect composite score (100 - composite), representing systemic vulnerability. Campaign ROI uses standard return-on-investment calculation ((Revenue - Cost) / Cost × 100). NPV applies a 10% discount rate for single-period projection. Risk-adjusted ROI multiplies raw ROI by the normalized composite score to penalize returns in fragile environments.',\n    \n    'fragility_index': fragility_index,\n    'fragility_components': fragility_components,\n    \n    'cmo_reconciliation': {\n        'total_budget': cmo_total,\n        'allocated': cmo_allocated,\n        'unallocated': cmo_unallocated,\n        'utilization_pct': spend_utilization,\n    },\n    \n    'campaigns': campaigns_analysis,\n    \n    'summary': {\n        'total_spend': total_spend,\n        'total_projected_revenue': total_projected_revenue,\n        'portfolio_roi_pct': round(((total_projected_revenue - total_spend) / total_spend) * 100, 2) if total_spend > 0 else 0,\n        'campaign_count': len(campaigns_analysis),\n    }\n}\n\noutput_filename = report['report_name'] + '.xlsx'\n\n# --- CFO AGENT CORE CODE END ---\n\n# Return the report data and metadata for the next node\nreturn [{'json': {\n    'file_name': output_filename,\n    'status': 'ready_for_upload',\n    'report': report,\n}}]"
+      },
+      "notes": "Node 2 — The Execution Node: Runs the CFO financial model. Takes cmo_spend, architect_risk, campaign_list and produces Fragility Index, Campaign ROI, NPV, and spend reconciliation."
+    },
+
+    {
+      "id": "node_4_google_drive",
+      "name": "CFO Report → Google Drive (AI Folders)",
+      "type": "n8n-nodes-base.googleDrive",
+      "position": [1000, 300],
+      "parameters": {
+        "operation": "upload",
+        "name": "={{ $json.file_name }}",
+        "parents": ["AI_FOLDERS"],
+        "driveId": "myDrive",
+        "options": {}
+      },
+      "credentials": {
+        "googleDriveOAuth2Api": "Antigravity_Full_v2"
+      },
+      "notes": "Node 3 — Automated Storage: Uploads the generated report to AI FOLDERS in Google Drive."
+    },
+
+    {
+      "id": "node_5_response",
+      "name": "CFO Response → War Room",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [1250, 300],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ agent: 'CFO', status: 'deployed', message: 'CFO Agent has deployed the Fragility Report to the AI Folder. Access here: ' + ($node['CFO Report → Google Drive (AI Folders)'].json.webViewLink || '[Link Pending]'), file_name: $json.file_name, report_summary: $json.report }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "notes": "Node 4 — Response: Sends deployment confirmation back to War Room with Google Drive link."
+    }
+  ],
+
+  "connections": {
+    "node_1_webhook": {
+      "main": [["node_2_gatekeeper"]]
+    },
+    "node_2_gatekeeper": {
+      "true": [["node_3_python_execution"]],
+      "false": [["node_2a_error_response"]]
+    },
+    "node_3_python_execution": {
+      "main": [["node_4_google_drive"]]
+    },
+    "node_4_google_drive": {
+      "main": [["node_5_response"]]
+    }
+  },
+
+  "test_payload": {
+    "description": "Use this payload to test the workflow via HTTP POST",
+    "url": "https://humanresource.app.n8n.cloud/webhook/cfo-execution-controller",
+    "method": "POST",
+    "body": {
+      "cmo_spend": {
+        "total": 50000,
+        "allocated": 42000,
+        "categories": {
+          "digital_ads": 20000,
+          "content": 12000,
+          "events": 10000
+        }
+      },
+      "architect_risk": {
+        "structural_score": 82,
+        "logic_score": 78,
+        "security_score": 85,
+        "composite_score": 81.6
+      },
+      "campaign_list": [
+        { "name": "Q2 Product Launch", "budget": 15000, "projected_revenue": 45000 },
+        { "name": "Brand Awareness", "budget": 12000, "projected_revenue": 18000 },
+        { "name": "Retention Program", "budget": 8000, "projected_revenue": 24000 }
+      ]
+    }
+  }
+}
