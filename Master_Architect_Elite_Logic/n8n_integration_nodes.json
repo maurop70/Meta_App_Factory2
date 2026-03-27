@@ -1,0 +1,135 @@
+{
+  "master_architect_elite_n8n_nodes": {
+    "description": "n8n HTTP Request node configurations for Master Architect Elite (Port 5050) C-Suite integration",
+    "version": "1.0.0",
+
+    "nodes": [
+      {
+        "node_name": "Master Architect — Mandatory Review",
+        "node_type": "n8n-nodes-base.httpRequest",
+        "purpose": "Sends all proposed changes through the Triad for scoring before deployment",
+        "n8n_integration_point": "Gemini Agent Bridge — Pre-Deploy Gate",
+        "config": {
+          "method": "POST",
+          "url": "http://localhost:5050/api/review",
+          "headers": { "Content-Type": "application/json" },
+          "body": {
+            "description": "={{ $json.change_description }}",
+            "change_type": "={{ $json.change_type || 'feature' }}",
+            "components": "={{ $json.affected_components || [] }}"
+          },
+          "options": {
+            "timeout": 30000,
+            "fullResponse": true
+          }
+        },
+        "output_routing": {
+          "auto_approve": "composite_score >= 85 → proceed to deploy",
+          "challenged": "composite_score 60-84 → route to Socratic Bridge for review",
+          "rejected": "composite_score < 60 → block deployment, notify Commander"
+        }
+      },
+
+      {
+        "node_name": "Master Architect — Regression Monitor",
+        "node_type": "n8n-nodes-base.httpRequest",
+        "purpose": "Polls active regressions for Antigravity Ops Intelligence",
+        "n8n_integration_point": "Antigravity Ops Intelligence — Health Dashboard",
+        "config": {
+          "method": "GET",
+          "url": "http://localhost:5050/api/regressions",
+          "options": { "timeout": 10000 }
+        },
+        "schedule": {
+          "trigger": "n8n-nodes-base.cron",
+          "interval": "every 15 minutes"
+        }
+      },
+
+      {
+        "node_name": "Master Architect — War Room Advisor",
+        "node_type": "n8n-nodes-base.httpRequest",
+        "purpose": "Routes strategic architecture questions from War Room to Architect Triad",
+        "n8n_integration_point": "Aether: Memory Synthesis — Strategic Advice",
+        "config": {
+          "method": "POST",
+          "url": "http://localhost:5050/api/warroom/respond",
+          "headers": { "Content-Type": "application/json" },
+          "body": {
+            "topic": "={{ $json.debate_topic }}",
+            "context": "={{ $json.war_room_context }}",
+            "requesting_agent": "={{ $json.agent_name || 'CEO' }}"
+          },
+          "options": { "timeout": 45000 }
+        },
+        "response_format": "[ARCHITECT] tag wrapping Triad analysis"
+      },
+
+      {
+        "node_name": "Master Architect — Socratic Convince",
+        "node_type": "n8n-nodes-base.httpRequest",
+        "purpose": "Submits evidence to convince the Adversarial Gate on a challenged review",
+        "n8n_integration_point": "Resonance: Socratic Bridge — Challenge Response",
+        "config": {
+          "method": "POST",
+          "url": "http://localhost:5050/api/gate/convince",
+          "headers": { "Content-Type": "application/json" },
+          "body": {
+            "challenge_id": "={{ $json.challenge_id }}",
+            "evidence": "={{ $json.evidence_text }}",
+            "weakness_id": "={{ $json.weakness_id }}"
+          },
+          "options": { "timeout": 30000 }
+        }
+      },
+
+      {
+        "node_name": "Master Architect — Health Check",
+        "node_type": "n8n-nodes-base.httpRequest",
+        "purpose": "Verifies Master Architect is online and reporting memory stats",
+        "n8n_integration_point": "Antigravity Ops Intelligence — Watchdog",
+        "config": {
+          "method": "GET",
+          "url": "http://localhost:5050/api/health",
+          "options": { "timeout": 5000 }
+        },
+        "expected_response": {
+          "status": "healthy",
+          "memory": { "patterns": ">= 0", "battle_tested": ">= 0", "reviews": ">= 0" }
+        }
+      },
+
+      {
+        "node_name": "Master Architect — Pattern Query",
+        "node_type": "n8n-nodes-base.httpRequest",
+        "purpose": "Retrieves battle-tested winning patterns for reuse in new builds",
+        "n8n_integration_point": "Aether: Memory Synthesis — Pattern Recall",
+        "config": {
+          "method": "GET",
+          "url": "http://localhost:5050/api/patterns",
+          "options": { "timeout": 10000 }
+        }
+      }
+    ],
+
+    "c_suite_wiring": {
+      "Master_Architect_Elite": { "port": 5050, "role": "Architecture Review & Quality Gate" },
+      "CMO_Agent": { "port": 5020, "role": "Market Analysis & Branding" },
+      "Phantom_QA": { "port": 5030, "role": "Automated UI Testing" },
+      "Resonance": { "port": 5001, "role": "Educational Platform" },
+      "Alpha_V2_Genesis": { "port": 5005, "role": "Trading Dashboard" }
+    },
+
+    "socratic_bridge_handshake": {
+      "trigger": "Adversarial Gate returns CHALLENGED (score 60-84)",
+      "flow": [
+        "1. /api/review → gate_result: CHALLENGED, challenge_id: CHG-XXXX",
+        "2. Socratic Bridge receives weakness probes with required_evidence",
+        "3. Agent or Commander submits evidence via /api/gate/convince",
+        "4. If evidence convinces: composite recalculated → AUTO_APPROVE",
+        "5. If evidence insufficient: Commander can /api/gate/override",
+        "6. All gate decisions logged to architect_memory.db for pattern learning"
+      ]
+    }
+  }
+}
