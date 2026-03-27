@@ -204,7 +204,77 @@
             "c_suite_role": "System Design & Logic Gate",
             "visual_accent": "#06B6D4",
             "last_build": "2026-03-27T03:18:00.000Z"
+        },
+        "CMO_Agent": {
+            "status": "active",
+            "type": "Marketing Intelligence Command Center",
+            "version": "1.0.0",
+            "port": 5020,
+            "blueprint": "multi_agent_core",
+            "n8n_project": "CMO Elite",
+            "path": "Meta_App_Factory/CMO_Agent",
+            "isolation": {
+                "boundary": "CMO_Agent",
+                "separated_from": [],
+                "no_code_dependencies": true
+            },
+            "capabilities": [
+                "market research (TAM/SAM/SOM)",
+                "brand architect (identity generation)",
+                "GTM planner (go-to-market playbooks)",
+                "persona engine + Dr. Aris audit",
+                "campaign planner",
+                "competitive matrix (SWOT/moat)",
+                "brand visual + critic",
+                "project management"
+            ],
+            "agents": {
+                "active": [
+                    "Market_Research",
+                    "Brand_Architect",
+                    "GTM_Planner",
+                    "Persona_Engine",
+                    "Campaign_Planner",
+                    "Competitive_Matrix"
+                ]
+            },
+            "c_suite_role": "GTM Strategy & Audience Persona",
+            "visual_accent": "#F43F5E",
+            "last_build": "2026-03-27T03:00:00.000Z"
+        },
+        "Phantom_QA_Elite": {
+            "status": "active",
+            "type": "Autonomous Quality Assurance",
+            "version": "1.0.0",
+            "port": 5030,
+            "blueprint": "multi_agent_core",
+            "n8n_project": "Phantom QA",
+            "path": "Meta_App_Factory/Phantom_QA_Elite",
+            "isolation": {
+                "boundary": "Phantom_QA_Elite",
+                "separated_from": [],
+                "no_code_dependencies": true
+            },
+            "capabilities": [
+                "test architect (endpoint discovery + plan)",
+                "ghost user (Playwright UI testing)",
+                "skeptic (API stress/break testing)",
+                "composite verdict (PASS/WARN/FAIL)",
+                "repair dispatch to Atomizer V2",
+                "ghost stream SSE (real-time)",
+                "system pulse scanner"
+            ],
+            "agents": {
+                "active": [
+                    "Architect",
+                    "Ghost_User",
+                    "Skeptic"
+                ]
+            },
+            "c_suite_role": "Outcome Validation & UI Testing",
+            "visual_accent": "#10B981",
+            "last_build": "2026-03-27T03:00:00.000Z"
         }
     },
-    "last_updated": "2026-03-27T03:45:00.000Z"
+    "last_updated": "2026-03-27T10:27:00.000Z"
 }
