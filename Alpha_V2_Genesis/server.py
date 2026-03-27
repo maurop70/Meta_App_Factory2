@@ -355,7 +355,7 @@ def sync_to_portfolio(entry):
                 "status": "OPEN",
                 "strategy": entry.get('strategy', 'IRON_CONDOR'),
                 "open_date": datetime.now().strftime("%Y-%m-%d"),
-                "expiration_date": entry.get('strategy', '').split('(')[-1].split(')')[0] if '(' in entry.get('strategy', '') else "2026-04-10",
+                "expiration_date": entry.get('expiration') or (entry.get('strategy', '').split('(')[-1].split(')')[0] if '(' in entry.get('strategy', '') else ""),
                 "credit_received": float(re.findall(r"[\d.]+", entry.get('credit_debit', '0'))[0] or 0),
             }
             # Map strikes if we found 4 (standard IC)
@@ -574,30 +574,40 @@ def ocr_execution():
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
         
         prompt = """
-        Extract ALL trade execution details from this screenshot. 
-        Detect if there are multiple orders or fills listed.
-        Return ONLY a valid JSON object containing an array of objects under the key 'trades'.
+        You are reading a thinkorswim (TOS) trade execution screenshot.
+        The table has columns: Exec Time, Spread, Side, Qty/Pos/Effect, Symbol, Exp, Strike, Type, Price, Net Price.
         
-        Example Output Format:
+        INSTRUCTIONS:
+        1. Group rows by Exec Time — each timestamp is ONE spread order.
+        2. The "Spread" column (e.g. "IRON CONDOR") tells you the strategy type.
+        3. The "Qty Pos Effect" column contains "TO OPEN" or "TO CLOSE" — this determines the action.
+           - "TO OPEN" → action = "OPEN"
+           - "TO CLOSE" → action = "CLOSE"
+        4. The "Exp" column has the expiration date (e.g. "15 MAY 26 (AM)", "1 MAY 26 (Weeklys)"). 
+           Convert to a standard format like "15 MAY 26" or "1 MAY 26".
+        5. Read the Strike and Type columns for each leg to get the 4 strikes of the Iron Condor.
+           Format strikes as "short_call/long_call/short_put/long_put" (ALL 4 strikes).
+           - SELL legs are the SHORT strikes
+           - BUY legs are the LONG strikes
+        6. The "Net Price" column (rightmost, may say CREDIT or DEBIT) is the net credit/debit.
+           - If CREDIT, prefix with "+"
+           - If DEBIT, prefix with "-"
+        7. Read EVERY distinct order/timestamp. Do NOT skip any.
+
+        Return ONLY valid JSON:
         {
           "trades": [
             {
               "ticker": "SPX",
               "action": "OPEN",
-              "strategy": "Iron Condor (24 APR 26)",
-              "strikes": "7100/7125/6275/6250",
-              "credit_debit": "+10.00"
-            },
-            {
-              "ticker": "SPX",
-              "action": "CLOSE",
-              "strategy": "Iron Condor (10 APR 26)",
-              "strikes": "7150/7175/6425/6400",
-              "credit_debit": "-7.30"
+              "strategy": "Iron Condor (15 MAY 26)",
+              "strikes": "6915/6930/5890/5875",
+              "credit_debit": "+4.95",
+              "expiration": "2026-05-15"
             }
           ]
         }
-        Return ONLY the raw JSON string. No markdown, no prose.
+        Return ONLY the raw JSON. No markdown, no explanation, no code fences.
         """
         
         payload = {
@@ -621,14 +631,24 @@ def ocr_execution():
             }
         }
         
-        _v3_status = safe_post(url, payload)
+        # OCR requires the full Gemini response body — use requests.post directly
+        # (safe_post discards the response and returns only "sent"/"buffered"/"failed")
+        try:
+            res = requests.post(url, json=payload, timeout=90)
+        except requests.exceptions.Timeout:
+            return jsonify({"error": "Gemini API timed out (90s). Try a smaller/clearer screenshot."}), 504
+        except requests.exceptions.RequestException as e:
+            return jsonify({"error": f"Gemini API request failed: {e}"}), 502
 
-        
-        res = type("Resp", (), {"status_code": 200 if _v3_status == "sent" else 503, "ok": _v3_status == "sent", "text": _v3_status, "json": lambda self: {"status": _v3_status}})()
-        res_data = res.json()
-        
         if res.status_code != 200:
-            return jsonify({"error": f"Gemini error: {res_data.get('error', {}).get('message', 'Unknown error')}"}), 500
+            try:
+                err_detail = res.json().get('error', {}).get('message', res.text[:300])
+            except Exception:
+                err_detail = res.text[:300]
+            print(f"❌ OCR Gemini Error ({res.status_code}): {err_detail}")
+            return jsonify({"error": f"Gemini error ({res.status_code}): {err_detail}"}), 500
+        
+        res_data = res.json()
             
         # Parse Gemini JSON response
         try:
@@ -657,6 +677,7 @@ def ocr_execution():
                     "strategy": item.get("strategy", item.get("spread", "Unknown")),
                     "strikes": item.get("strikes", ""),
                     "credit_debit": item.get("credit_debit", ""),
+                    "expiration": item.get("expiration", item.get("exp_date", "")),
                 }
                 
                 # Handle nested legs format from Gemini 2.5

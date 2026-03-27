@@ -651,16 +651,27 @@ class Loki:
         try:
              if not expiration_date:
                  expiration_date = self.get_dynamic_expiration("^SPX", target_days=7) # Default to 7 days for MMM
+             else:
+                 # Resolve position expiration to the nearest valid option chain date.
+                 # Portfolio dates may not exist in the chain (e.g. 2026-04-10 may not be
+                 # a listed expiration).  Convert to DTE and find the closest real one.
+                 try:
+                     pos_exp = datetime.strptime(expiration_date, "%Y-%m-%d").date()
+                     target_dte = max(1, (pos_exp - datetime.now().date()).days)
+                     expiration_date = self.get_dynamic_expiration("^SPX", target_days=target_dte)
+                     logger.info(f"Position MMM: resolved expiry to {expiration_date} (target {target_dte} DTE)")
+                 except Exception as resolve_err:
+                     logger.warning(f"Could not resolve position expiry, using raw date: {resolve_err}")
 
              chain = self.get_cached_chain("^SPX", expiration_date)
-             if not chain: return 103.016
+             if not chain: return None
              
              # Locate ATM Strike
              calls = chain.calls
              # Find strike closest to SPX
              atm_row = calls.iloc[(calls['strike'] - spx_price).abs().argsort()[:1]]
              if atm_row.empty:
-                 return 103.016 
+                 return None 
                  
              atm_strike = atm_row['strike'].values[0]
              
@@ -677,7 +688,7 @@ class Loki:
              if straddle_price > 0:
                  return round(straddle_price, 2)
                  
-             return 103.016
+             return None
              
         except Exception as e:
             logger.error(f"MMM Calc Failed: {e}")
