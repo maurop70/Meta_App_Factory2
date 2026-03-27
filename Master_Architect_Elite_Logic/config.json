@@ -1,0 +1,27 @@
+{
+  "app_name": "Master_Architect_Elite_Logic",
+  "version": "1.0.0",
+  "port": 5050,
+  "frontend_port": 5175,
+  "model": "gemini-2.5-flash",
+  "triad_weights": {
+    "structural": 0.40,
+    "logic": 0.30,
+    "security": 0.30
+  },
+  "adversarial_gate": {
+    "auto_approve_threshold": 85,
+    "challenge_threshold": 60,
+    "max_challenge_rounds": 3
+  },
+  "memory": {
+    "db_path": "architect_memory.db",
+    "max_patterns": 500,
+    "similarity_threshold": 0.7
+  },
+  "integrations": {
+    "factory_api": "http://localhost:8000",
+    "aether_ws": "ws://localhost:8000/ws/warroom",
+    "n8n_base": "https://humanresource.app.n8n.cloud"
+  }
+}

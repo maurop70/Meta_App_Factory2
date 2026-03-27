@@ -133,11 +133,14 @@ def _build_system_prompt(dashboard_context=None):
     try:
         from eos_context import get_eos
         eos = get_eos()
-        if eos.get("mode") == "venture":
+        eos_mode = getattr(eos, "mode", None) or (eos.get("mode") if isinstance(eos, dict) else None)
+        if eos_mode == "venture":
             parts.append("\n\n--- EOS VENTURE CONTEXT ---")
-            parts.append(eos.get_brand_context_str())
+            brand_ctx = getattr(eos, "get_brand_context_str", None)
+            if callable(brand_ctx):
+                parts.append(brand_ctx())
             parts.append("You are operating as a Venture Architect. Refer to these details when building the app.")
-    except ImportError:
+    except Exception:
         pass
         
     if dashboard_context:

@@ -149,6 +149,130 @@ function TelemetryBar({ streaming }) {
   );
 }
 
+// ── CONSTRUCTION TRACKER ───────────────────────────────────
+const CONSTRUCTION_PHASES = [
+  { id: 'scaffold', label: 'Scaffolding', icon: '📁', keywords: ['scaffold', 'directory', 'folder', 'initialize', 'init'] },
+  { id: 'infrastructure', label: 'Infrastructure', icon: '⚙️', keywords: ['server.py', 'fastapi', 'uvicorn', 'endpoint', 'api'] },
+  { id: 'agents', label: 'Agent Modules', icon: '🤖', keywords: ['agent', 'structural', 'logic_weaver', 'security', 'triad'] },
+  { id: 'engine', label: 'Triad Engine', icon: '🔧', keywords: ['triad_engine', 'orchestrat', 'composite', 'weighted', '40/30/30'] },
+  { id: 'gate', label: 'Adversarial Gate', icon: '🏛️', keywords: ['adversarial', 'socratic', 'challenge', 'gate', 'threshold'] },
+  { id: 'memory', label: 'Memory Layer', icon: '🧠', keywords: ['sqlite', 'memory', 'database', 'architect_memory', 'schema', 'CREATE TABLE'] },
+  { id: 'frontend', label: 'Frontend UI', icon: '🎨', keywords: ['vite', 'react', 'dashboard', 'frontend', 'component', 'gauge', 'css', 'ui'] },
+  { id: 'warroom', label: 'War Room', icon: '⚔️', keywords: ['warroom', 'war room', 'ARCHITECT', 'respond'] },
+  { id: 'validation', label: 'Validation', icon: '✅', keywords: ['launch', 'health', 'curl', 'validate', 'complete', 'bat'] },
+];
+
+function ConstructionTracker({ messages, streaming, building }) {
+  const [phases, setPhases] = useState({});
+  const [currentPhase, setCurrentPhase] = useState(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const startTimeRef = useRef(null);
+  const prevStreamingRef = useRef(false);
+
+  // Reset phases when a NEW streaming session starts
+  useEffect(() => {
+    if ((streaming || building) && !prevStreamingRef.current) {
+      setPhases({});
+      setCurrentPhase(null);
+      setElapsedSeconds(0);
+      startTimeRef.current = Date.now();
+    }
+    if (!streaming && !building) {
+      startTimeRef.current = null;
+    }
+    prevStreamingRef.current = streaming || building;
+  }, [streaming, building]);
+
+  // Timer
+  useEffect(() => {
+    if (!streaming && !building) return;
+    const timer = setInterval(() => {
+      if (startTimeRef.current) {
+        setElapsedSeconds(Math.floor((Date.now() - startTimeRef.current) / 1000));
+      }
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [streaming, building]);
+
+  // Phase detection — only analyze the CURRENT response (after last user message)
+  useEffect(() => {
+    if (!messages?.length) return;
+
+    // Find the last user message index to scope analysis to current turn
+    let lastUserIdx = -1;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === 'user') { lastUserIdx = i; break; }
+    }
+
+    const currentTurn = messages.slice(lastUserIdx + 1);
+    const allText = currentTurn
+      .filter(m => m.role === 'assistant' || m.role === 'system')
+      .map(m => m.text)
+      .join(' ')
+      .toLowerCase();
+
+    if (!allText.trim()) return;
+
+    const newPhases = {};
+    let latest = null;
+    for (const phase of CONSTRUCTION_PHASES) {
+      const matched = phase.keywords.some(kw => allText.includes(kw.toLowerCase()));
+      if (matched) {
+        newPhases[phase.id] = 'done';
+        latest = phase.id;
+      }
+    }
+    // The latest matched phase is the "active" one while still streaming
+    if (latest && (streaming || building)) newPhases[latest] = 'active';
+    setPhases(newPhases);
+    setCurrentPhase(latest);
+  }, [messages, streaming, building]);
+
+  const isActive = streaming || building;
+  const completedCount = Object.values(phases).filter(v => v === 'done').length;
+  const totalPhases = CONSTRUCTION_PHASES.length;
+  const pct = totalPhases > 0 ? Math.round((completedCount / totalPhases) * 100) : 0;
+
+  if (!isActive && completedCount === 0) return null;
+
+  const formatTime = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+
+  return (
+    <div className={`construction-tracker ${isActive ? 'active' : 'complete'}`}>
+      <div className="ct-header">
+        <span className="ct-icon">{isActive ? '🏗️' : '✅'}</span>
+        <span className="ct-title">
+          {isActive ? 'CONSTRUCTION IN PROGRESS' : 'CONSTRUCTION COMPLETE'}
+        </span>
+        <span className="ct-timer">{formatTime(elapsedSeconds)}</span>
+        <span className="ct-pct">{pct}%</span>
+        {isActive && <span className="ct-pulse" />}
+      </div>
+
+      <div className="ct-bar-track">
+        <div className="ct-bar-fill" style={{ width: `${pct}%` }} />
+      </div>
+
+      <div className="ct-phases">
+        {CONSTRUCTION_PHASES.map((phase) => {
+          const status = phases[phase.id]; // 'done', 'active', or undefined
+          return (
+            <div
+              key={phase.id}
+              className={`ct-phase ${status === 'active' ? 'active' : status === 'done' ? 'done' : 'pending'}`}
+            >
+              <span className="ct-phase-icon">
+                {status === 'done' && phase.id !== currentPhase ? '✅' : status === 'active' ? '⏳' : phase.icon}
+              </span>
+              <span className="ct-phase-label">{phase.label}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── BUILDER CHAT ───────────────────────────────────────────
 function BuilderChat({ registry, onAtomizerUpdate, externalCommand, onBuildComplete, onQaGate }) {
   const [messages, setMessages] = useState([]);
@@ -535,33 +659,8 @@ function BuilderChat({ registry, onAtomizerUpdate, externalCommand, onBuildCompl
         </div>
       )}
 
-      {/* ── BUILD PROGRESS BANNER ── */}
-      {(building || streaming) && (
-        <div className="build-progress-banner">
-          <div className="build-progress-header">
-            <span className="build-progress-icon">{building ? '🏗️' : '💬'}</span>
-            <span className="build-progress-label">
-              {building ? 'BUILD IN PROGRESS' : 'PROCESSING...'}
-            </span>
-            <span className="build-progress-pulse" />
-          </div>
-          <div className="build-progress-bar-track">
-            <div className="build-progress-bar-fill" style={{
-              width: building ? '65%' : streaming ? '40%' : '0%',
-              transition: 'width 1.5s ease-in-out',
-            }} />
-          </div>
-          <div className="build-progress-status">
-            {building && <>
-              <span>🧪 Phantom QA & Master Architect are validating...</span>
-              <span className="build-progress-timer">
-                {messages.filter(m => m.role === 'system' || (m.role === 'assistant' && m.text.includes('BUILD'))).length} steps completed
-              </span>
-            </>}
-            {!building && streaming && <span>⚡ Factory AI is generating a response...</span>}
-          </div>
-        </div>
-      )}
+      {/* ── CONSTRUCTION TRACKER ── */}
+      <ConstructionTracker messages={messages} streaming={streaming} building={building} />
 
       <div className="chat-messages">
         {messages.length === 0 && (

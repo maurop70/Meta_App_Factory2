@@ -1,0 +1,271 @@
+{
+  "$schema": "meta_app_factory_v3_ingestion",
+  "app_name": "Master_Architect_Elite_Logic",
+  "version": "1.0.0",
+  "port": 5050,
+  "port_fallback": 5051,
+  "type": "Architecture Intelligence",
+  "status": "active",
+
+  "triad_scoring": {
+    "description": "Three specialized agents analyze every review request in parallel. Their scores are merged via weighted composite.",
+    "agents": {
+      "structural_engineer": {
+        "weight": 0.40,
+        "domain": "DB schemas, API contracts, data models, migration paths, port conflicts",
+        "model": "gemini-2.5-flash",
+        "temperature": 0.2,
+        "max_tokens": 2048,
+        "response_schema": {
+          "domain": "structural",
+          "score": "integer 0-100",
+          "schemas_reviewed": ["string[]"],
+          "api_contracts": ["string[]"],
+          "migration_required": "boolean",
+          "migration_plan": "string",
+          "port_conflicts": ["string[]"],
+          "concerns": ["string[] max 3"],
+          "recommendations": ["string[] max 3"]
+        }
+      },
+      "logic_weaver": {
+        "weight": 0.30,
+        "domain": "n8n workflows, agent routing, inter-service communication, fallback chains",
+        "model": "gemini-2.5-flash",
+        "temperature": 0.2,
+        "max_tokens": 2048,
+        "response_schema": {
+          "domain": "logic",
+          "score": "integer 0-100",
+          "workflow_impacts": ["string[]"],
+          "agent_routing_changes": ["string[]"],
+          "fallback_chain_valid": "boolean",
+          "circuit_breaker_status": "enum: ok|warn|fail",
+          "integration_points": ["string[]"],
+          "concerns": ["string[] max 3"],
+          "recommendations": ["string[] max 3"]
+        }
+      },
+      "security_auditor": {
+        "weight": 0.30,
+        "domain": "Deploy Shield compliance, credential audit, PII exposure, CORS/auth, CVEs",
+        "model": "gemini-2.5-flash",
+        "temperature": 0.2,
+        "max_tokens": 2048,
+        "response_schema": {
+          "domain": "security",
+          "score": "integer 0-100",
+          "credential_exposure": ["string[]"],
+          "pii_risks": ["string[]"],
+          "cors_valid": "boolean",
+          "auth_coverage": "enum: full|partial|none",
+          "deploy_shield_status": "enum: PASS|WARN|FAIL",
+          "dependency_risks": ["string[]"],
+          "concerns": ["string[] max 3"],
+          "recommendations": ["string[] max 3"]
+        }
+      }
+    },
+    "composite_formula": "composite = (structural.score * 0.40) + (logic.score * 0.30) + (security.score * 0.30)"
+  },
+
+  "adversarial_gate": {
+    "description": "Socratic Bridge stress-test protocol. Every merged Triad verdict passes through this gate before finalization.",
+    "thresholds": {
+      "auto_approve": {
+        "min_score": 85,
+        "action": "Store pattern in architect_memory.db with gate_status='approved'",
+        "response": {
+          "gate_result": "AUTO_APPROVE",
+          "message": "Architecture meets elite standards. Auto-approved.",
+          "challenge_id": null,
+          "weaknesses": []
+        }
+      },
+      "challenge": {
+        "min_score": 60,
+        "max_score": 84,
+        "action": "Issue 3 architecture-specific weakness probes. Pause execution. Await Commander reasoning.",
+        "max_rounds": 3,
+        "weakness_categories": [
+          "Single Point of Failure",
+          "Horizontal Scaling Barrier",
+          "State Coupling",
+          "Schema Migration Risk",
+          "Credential Surface Area",
+          "Observability Gap",
+          "Fallback Chain Completeness",
+          "Data Consistency Under Failure"
+        ],
+        "response_on_challenge": {
+          "gate_result": "CHALLENGED",
+          "challenge_id": "CHG-XXXX",
+          "status": "PAUSED",
+          "composite_score": "integer",
+          "gap_from_threshold": "float",
+          "weaknesses": [
+            {
+              "id": 1,
+              "category": "string (from weakness_categories)",
+              "severity": "CRITICAL|SIGNIFICANT|MODERATE",
+              "challenge": "string — specific architectural concern",
+              "required_evidence": "string — what the Commander must address"
+            }
+          ],
+          "options": ["convince", "force_proceed"]
+        },
+        "response_on_convince": {
+          "gate_result": "CONVINCED",
+          "verdict": "CONVINCED|UNCONVINCED",
+          "reasoning_score": "float 0-10",
+          "combined_score": "float 0-10",
+          "message": "string",
+          "analysis": {
+            "word_count": "integer",
+            "strong_signals": "integer (data/evidence keywords)",
+            "weak_signals": "integer (belief/assumption keywords)",
+            "weaknesses_addressed": "string e.g. 2/3"
+          }
+        },
+        "response_on_override": {
+          "gate_result": "COMMANDER_OVERRIDE",
+          "risk_level": "low|medium|high|critical",
+          "risk_description": "string",
+          "weaknesses_unaddressed": ["string[]"],
+          "audit_required": "boolean",
+          "audit_deadline": "string e.g. '30 days'"
+        }
+      },
+      "reject": {
+        "max_score": 59,
+        "action": "Reject with detailed report. Do not store pattern.",
+        "response": {
+          "gate_result": "REJECTED",
+          "message": "Architecture does not meet minimum standards.",
+          "concerns": ["string[] — all Triad concerns merged"],
+          "recommendations": ["string[] — all Triad recommendations merged"]
+        }
+      }
+    },
+    "reasoning_analysis": {
+      "strong_signals": [
+        "data shows", "evidence", "metrics", "measured", "tested",
+        "validated", "benchmark", "analysis", "research", "proven",
+        "ROI", "experiment", "A/B test", "user feedback", "pilot"
+      ],
+      "weak_signals": [
+        "i think", "i believe", "i feel", "probably", "maybe",
+        "could work", "should be fine", "trust me", "gut feeling",
+        "instinct", "hope", "assume"
+      ]
+    }
+  },
+
+  "memory_schema": {
+    "database": "architect_memory.db",
+    "engine": "SQLite3 with WAL journal mode",
+    "tables": {
+      "patterns": {
+        "description": "Winning architecture patterns — stored after gate approval",
+        "sql": "CREATE TABLE IF NOT EXISTS patterns (id INTEGER PRIMARY KEY AUTOINCREMENT, pattern_hash TEXT UNIQUE NOT NULL, domain TEXT NOT NULL, category TEXT NOT NULL, pattern TEXT NOT NULL, rationale TEXT, technologies TEXT, triad_score INTEGER, gate_status TEXT DEFAULT 'approved', use_count INTEGER DEFAULT 1, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, last_used TIMESTAMP DEFAULT CURRENT_TIMESTAMP);"
+      },
+      "reviews": {
+        "description": "Architecture review log — every Triad review is recorded",
+        "sql": "CREATE TABLE IF NOT EXISTS reviews (id INTEGER PRIMARY KEY AUTOINCREMENT, request_hash TEXT NOT NULL, request_summary TEXT NOT NULL, structural_score INTEGER, logic_score INTEGER, security_score INTEGER, composite_score INTEGER, verdict TEXT NOT NULL, gate_result TEXT, weaknesses TEXT, user_reasoning TEXT, reviewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);"
+      },
+      "regressions": {
+        "description": "Leitner regression trackers — past errors detected in current code",
+        "sql": "CREATE TABLE IF NOT EXISTS regressions (id INTEGER PRIMARY KEY AUTOINCREMENT, pattern_id INTEGER REFERENCES patterns(id), app_name TEXT NOT NULL, file_path TEXT NOT NULL, match_type TEXT NOT NULL, severity TEXT NOT NULL, resolved BOOLEAN DEFAULT FALSE, detected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, resolved_at TIMESTAMP);"
+      }
+    }
+  },
+
+  "warroom_protocol": {
+    "description": "JSON response format for /api/warroom/respond — integrates the Triad review into the Aether War Room debate flow.",
+    "endpoint": "/api/warroom/respond",
+    "method": "POST",
+    "request_schema": {
+      "topic": "string — the War Room debate topic",
+      "agent": "ARCHITECT",
+      "context": {
+        "debate_id": "string",
+        "round": "integer",
+        "previous_responses": ["string[] — other C-Suite agent responses"]
+      }
+    },
+    "response_schema": {
+      "agent": "ARCHITECT",
+      "response": "string — natural language architectural assessment",
+      "triad_verdict": {
+        "structural": {"score": "integer", "top_concern": "string"},
+        "logic": {"score": "integer", "top_concern": "string"},
+        "security": {"score": "integer", "top_concern": "string"},
+        "composite_score": "integer"
+      },
+      "gate_status": "AUTO_APPROVE|CHALLENGED|REJECTED",
+      "pattern_match": {
+        "found": "boolean",
+        "pattern_name": "string or null",
+        "use_count": "integer — how many times this pattern has been validated"
+      },
+      "recommendations": ["string[] — max 3 actionable items"],
+      "risk_flags": ["string[] — architectural risks detected"],
+      "confidence": "float 0-1"
+    }
+  },
+
+  "api_endpoints": [
+    {"method": "GET",  "path": "/",                    "description": "Service info"},
+    {"method": "GET",  "path": "/api/health",          "description": "Health check + memory stats"},
+    {"method": "POST", "path": "/api/review",          "description": "Full Triad review (blocking)"},
+    {"method": "POST", "path": "/api/review/stream",   "description": "SSE streaming Triad review"},
+    {"method": "POST", "path": "/api/review/quick",    "description": "Single-agent fast review"},
+    {"method": "GET",  "path": "/api/gate/status",     "description": "Active Socratic challenges"},
+    {"method": "POST", "path": "/api/gate/respond",    "description": "Submit reasoning for challenge"},
+    {"method": "POST", "path": "/api/gate/override",   "description": "Commander Hard Override"},
+    {"method": "GET",  "path": "/api/patterns",        "description": "Query winning patterns"},
+    {"method": "POST", "path": "/api/patterns/similar", "description": "Find similar past patterns"},
+    {"method": "GET",  "path": "/api/regressions",     "description": "Active regression warnings"},
+    {"method": "POST", "path": "/api/audit/flow",      "description": "Trigger FlowAuditor scan"},
+    {"method": "POST", "path": "/api/audit/leitner",   "description": "Trigger Leitner deep review"},
+    {"method": "POST", "path": "/api/warroom/respond",  "description": "War Room architectural advice"}
+  ],
+
+  "capabilities": [
+    "triad_review",
+    "adversarial_gate",
+    "pattern_memory",
+    "regression_scan",
+    "warroom_integration",
+    "flow_audit",
+    "leitner_review"
+  ],
+
+  "integrations": {
+    "factory_api": {
+      "url": "http://localhost:8000",
+      "proxy_endpoint": "/api/architect/review",
+      "fallback": "inline _architect_review() if Port 5050 unreachable"
+    },
+    "aether_warroom": {
+      "url": "ws://localhost:8000/ws/warroom",
+      "message_tag": "[ARCHITECT]",
+      "dispatch": "Forward to /api/warroom/respond for Triad analysis"
+    },
+    "phantom_qa": {
+      "stage": "Stage 2 — Architecture Audit",
+      "upgrade": "Optional deep Triad review via /api/review instead of static FlowAuditor"
+    },
+    "registry": {
+      "file": "registry.json",
+      "entry": {
+        "Master_Architect_Elite_Logic": {
+          "status": "active",
+          "type": "Architecture Intelligence",
+          "port": 5050,
+          "capabilities": ["triad_review", "adversarial_gate", "pattern_memory", "regression_scan"]
+        }
+      }
+    }
+  }
+}

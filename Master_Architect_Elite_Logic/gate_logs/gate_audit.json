@@ -1,0 +1,44 @@
+[
+  {
+    "event": "challenge_issued",
+    "timestamp": "2026-03-26T22:33:39.096359",
+    "data": {
+      "gate_result": "CHALLENGED",
+      "challenge_id": "CHG-0001",
+      "status": "PAUSED",
+      "composite_score": 74,
+      "gap_from_threshold": 11,
+      "weaknesses": [
+        {
+          "id": 1,
+          "category": "Schema Migration Risk",
+          "severity": "SIGNIFICANT",
+          "challenge": "Column rename without backward compatibility will break all existing queries.",
+          "required_evidence": "Provide data or reasoning addressing schema migration risk."
+        },
+        {
+          "id": 2,
+          "category": "Observability Gap",
+          "severity": "SIGNIFICANT",
+          "challenge": "No health check endpoint defined. The watchdog cannot monitor this service.",
+          "required_evidence": "Provide data or reasoning addressing observability gap."
+        },
+        {
+          "id": 3,
+          "category": "Horizontal Scaling Barrier",
+          "severity": "SIGNIFICANT",
+          "challenge": "File-based locking mechanisms will break under multi-process deployment.",
+          "required_evidence": "Provide data or reasoning addressing horizontal scaling barrier."
+        }
+      ],
+      "options": [
+        "convince",
+        "force_proceed"
+      ],
+      "created_at": "2026-03-26T22:33:39.096322",
+      "resolved_at": null,
+      "resolution": null,
+      "round": 1
+    }
+  }
+]
