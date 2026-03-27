@@ -53,5 +53,38 @@
     "tags": [],
     "project": "_global",
     "created_at": "2026-03-26T03:28:51.522130+00:00"
+  },
+  {
+    "id": "L-20260326034816-2733",
+    "category": "War Room debate concluded: 'Quick analysis: Should a startup invest in AI-driven customer support chatbots f' \u2014 CONSENSUS REACHED, Critic score 8/10, 2 rounds",
+    "summary": "warroom_conclusion",
+    "details": "Aether",
+    "source_agent": "SYSTEM",
+    "severity": "normal",
+    "tags": [],
+    "project": "_global",
+    "created_at": "2026-03-26T03:48:16.942923+00:00"
+  },
+  {
+    "id": "L-20260326123104-1218",
+    "category": "War Room debate concluded: 'Should we build a mobile app or web app first for our startup?' \u2014 CONSENSUS REACHED, Critic score 7/10, 3 rounds",
+    "summary": "warroom_conclusion",
+    "details": "Aether",
+    "source_agent": "SYSTEM",
+    "severity": "normal",
+    "tags": [],
+    "project": "_global",
+    "created_at": "2026-03-26T12:31:04.620324+00:00"
+  },
+  {
+    "id": "L-20260326123513-1218",
+    "category": "War Room debate concluded: 'Should we use AWS or GCP for our cloud infrastructure?' \u2014 CONSENSUS REACHED, Critic score 7/10, 3 rounds",
+    "summary": "warroom_conclusion",
+    "details": "Aether",
+    "source_agent": "SYSTEM",
+    "severity": "normal",
+    "tags": [],
+    "project": "_global",
+    "created_at": "2026-03-26T12:35:13.994034+00:00"
   }
 ]
