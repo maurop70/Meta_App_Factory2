@@ -1,17 +1,27 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import axios from 'axios';
 
 // ═══════════════════════════════════════════════════════════
-//  WAR ROOM — Adversarial Boardroom UI (Phase 2 + 3)
-//  Real-time agent dialogue | Socratic Challenger | Convince Logic
+//  WAR ROOM — Commander's Control Panel (Phase 8 Upgrade)
+//  Real-time agent dialogue | Aether-Native UI Stepper
 // ═══════════════════════════════════════════════════════════
 
 const WS_URL = 'ws://localhost:8000/ws/warroom';
 const API_BASE = 'http://localhost:8000';
 
+const SEQUENCE_STAGES = [
+  { id: 'CMO_STRATEGY', label: '1. CMO Strategy', icon: '📈' },
+  { id: 'CTO_FEASIBILITY', label: '2. CTO Stack Evaluator', icon: '⚙️' },
+  { id: 'CFO_FINANCIAL_MODEL', label: '3. CFO Architect', icon: '📊' },
+  { id: 'PHANTOM_STRESS_TEST', label: '4. Critic & UI Phantom', icon: '🛡️' },
+  { id: 'COMMERCIALLY_READY', label: '5. Launch Ready', icon: '🚀' }
+];
+
 const AGENT_STYLES = {
   CEO:       { icon: '👔', color: '#3b82f6', bg: 'rgba(59,130,246,0.08)' },
   CMO:       { icon: '📢', color: '#8b5cf6', bg: 'rgba(139,92,246,0.08)' },
   CFO:       { icon: '💰', color: '#22c55e', bg: 'rgba(34,197,94,0.08)' },
+  CTO:       { icon: '🔧', color: '#06b6d4', bg: 'rgba(6,182,212,0.08)' },
   CRITIC:    { icon: '🔍', color: '#ef4444', bg: 'rgba(239,68,68,0.08)' },
   ARCHITECT: { icon: '🏗️', color: '#06b6d4', bg: 'rgba(6,182,212,0.08)' },
   DR_ARIS:   { icon: '🩻', color: '#14b8a6', bg: 'rgba(20,184,166,0.08)' },
@@ -25,7 +35,24 @@ const SEVERITY_COLORS = {
   MODERATE: '#eab308',
 };
 
-export default function WarRoom({ ventureMode = false, onHandoff, projectName = 'Aether' }) {
+export default function WarRoom({ ventureMode = false, onHandoff }) {
+  const [selectedProject, setSelectedProject] = useState(localStorage.getItem('last_active_project') || '');
+  const [projectList, setProjectList] = useState([]);
+  const projectName = selectedProject; // alias
+  
+  useEffect(() => {
+    fetch('http://localhost:5020/api/projects')
+      .then(r => r.json())
+      .then(data => setProjectList(Array.isArray(data) ? data : data.projects || []))
+      .catch(() => {});
+  }, []);
+
+  const handleProjectSelect = (e) => {
+    const val = e.target.value;
+    setSelectedProject(val);
+    if (val) localStorage.setItem('last_active_project', val);
+  };
+
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [eosState, setEosState] = useState(null);
@@ -44,7 +71,16 @@ export default function WarRoom({ ventureMode = false, onHandoff, projectName = 
   const [implementationPlan, setImplementationPlan] = useState(null);
   const [generatingPlan, setGeneratingPlan] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [workingAgents, setWorkingAgents] = useState([]);
   const [uploading, setUploading] = useState(false);
+  const [consensusIteration, setConsensusIteration] = useState(null);
+  
+  // Phase 8 variables
+  const [sequenceState, setSequenceState] = useState({});
+  const [isExecutingCmd, setIsExecutingCmd] = useState(false);
+  const [isReadyToDeploy, setIsReadyToDeploy] = useState(false);
+  const [marketPulse, setMarketPulse] = useState(null);
+
   const wsRef = useRef(null);
   const feedEndRef = useRef(null);
   const fileRef = useRef(null);
@@ -128,12 +164,43 @@ export default function WarRoom({ ventureMode = false, onHandoff, projectName = 
         } else if (data.type === 'implementation_plan') {
           setImplementationPlan(data);
           setGeneratingPlan(false);
+        } else if (data.type === 'agent_working') {
+          setWorkingAgents(prev => {
+            if (prev.some(a => a.agent === data.agent)) return prev;
+            return [...prev, { agent: data.agent, timestamp: Date.now() }];
+          });
+        } else if (data.type === 'consensus_iteration') {
+          setConsensusIteration({
+            iteration: data.iteration,
+            maxIterations: data.max_iterations,
+            status: data.status || 'RUNNING',
+          });
+          if (data.status === 'CONSENSUS' || data.status === 'MAX_REACHED') {
+            setTimeout(() => setConsensusIteration(null), 8000);
+          }
+        } else if (data.type === 'state_machine') {
+          setSequenceState(prev => ({ ...prev, [data.phase]: data.status }));
+          if (data.phase === 'COMMERCIALLY_READY' && data.status === 'PASS') {
+            setIsReadyToDeploy(true);
+            setIsExecutingCmd(false);
+          }
+          if (data.status === 'FAIL') {
+            setIsExecutingCmd(false);
+          }
+        } else if (data.type === 'market_pulse') {
+          setMarketPulse(data);
+        }
+        
+        // Clear agent from working state when they speak
+        if (data.type === 'dialogue' && data.agent) {
+          setWorkingAgents(prev => prev.filter(a => a.agent !== data.agent));
         }
       };
 
       ws.onclose = () => {
         if (!didCancel) {
           setConnected(false);
+          setWorkingAgents([]);
           reconnectTimer = setTimeout(connect, 3000);
         }
       };
@@ -164,6 +231,29 @@ export default function WarRoom({ ventureMode = false, onHandoff, projectName = 
   useEffect(() => {
     feedEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // ── Trigger Debate on Commander Intervention ──────────
+  const startDebate = useCallback(() => {
+    if (projectName && wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'intervention', message: 'START_DEBATE' }));
+    } else if (projectName) {
+      // Fallback
+      fetch(`${API_BASE}/api/warroom/intervene`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'intervention', message: 'START_DEBATE', project_name: projectName }),
+      }).catch(e => console.error('START_DEBATE HTTP fallback failed:', e));
+    }
+  }, [projectName]);
+
+  useEffect(() => {
+    if (messages.length > 0 && selectedProject) {
+      const lastMsg = messages[messages.length - 1];
+      if (lastMsg.agent === 'COMMANDER' && lastMsg.message && !lastMsg.message.includes('START_DEBATE')) {
+        startDebate();
+      }
+    }
+  }, [messages, selectedProject, startDebate]);
 
   // ── Safe WebSocket Send with HTTP fallback ──────────
   const sendSafe = useCallback((payload) => {
@@ -196,10 +286,22 @@ export default function WarRoom({ ventureMode = false, onHandoff, projectName = 
         }),
       });
     } else {
+      // 1. Dispatch hitting C-Suite trigger
+      axios.post('http://localhost:8000/api/war-room/dispatch', {
+        message: inputText.trim(),
+        project_id: selectedProject || 'AntigravityWorkspace_Q3'
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Antigravity-Project-ID': selectedProject || 'AntigravityWorkspace_Q3'
+        }
+      }).catch(e => console.error('Dispatch failed:', e));
+
+      // 2. Transmit to active the UI session & debate feed
       sendSafe({ type: 'intervention', message: inputText.trim() });
     }
     setInputText('');
-  }, [inputText, convinceMode, activeChallenge, sendSafe]);
+  }, [inputText, convinceMode, activeChallenge, sendSafe, projectName, selectedProject]);
 
   // ── Hard Override (Phase 3 enhanced) ──────────────────
   const sendOverride = useCallback(() => {
@@ -351,12 +453,44 @@ export default function WarRoom({ ventureMode = false, onHandoff, projectName = 
           <span style={styles.headerIcon}>🏛️</span>
           <div>
             <h2 style={styles.headerTitle}>Adversarial War Room</h2>
-            <span style={styles.headerSub}>
-              {convinceMode ? '🔴 STRATEGIC PAUSE — Socratic Challenge Active' : `${projectName} — Boardroom Socratic Dialogue`}
-            </span>
+            {convinceMode ? (
+              <span style={styles.headerSub}>🔴 STRATEGIC PAUSE — Socratic Challenge Active</span>
+            ) : (
+              <select 
+                className="bg-gray-800 text-white p-2 rounded mb-4 w-full"
+                value={selectedProject}
+                onChange={handleProjectSelect}
+                style={{ marginTop: '5px', fontSize: '13px', border: '1px solid rgba(100,116,139,0.3)', minWidth: '220px' }}
+              >
+                <option value="">-- Choose Project --</option>
+                <option value="AntigravityWorkspace_Q3">AntigravityWorkspace_Q3 (Fail-safe)</option>
+                {projectList.map(p => (
+                  <option key={p.name || p} value={p.name || p}>{p.display_name || p}</option>
+                ))}
+              </select>
+            )}
+            <style>{`
+              @keyframes pulsePhase {
+                  0% { box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.4); }
+                  70% { box-shadow: 0 0 0 8px rgba(234, 179, 8, 0); }
+                  100% { box-shadow: 0 0 0 0 rgba(234, 179, 8, 0); }
+              }
+            `}</style>
           </div>
         </div>
         <div style={styles.headerRight}>
+          <button onClick={() => window.open(`file://C:/Users/mpetr/.gemini/antigravity/projects/${projectName}/artifacts/cfo_reports/business_plan.xlsx`, '_blank')}
+            style={{ padding: '6px 14px', borderRadius: '6px', background: '#334155', color: '#f8fafc', border: '1px solid #475569', cursor: 'pointer', fontWeight: 'bold', marginRight: '8px', fontSize: '11px', fontFamily: 'Inter, sans-serif' }}>
+            📊 View Financials
+          </button>
+          <button onClick={() => alert(`🚀 DEPLOYING ${projectName} TO PRODUCTION CLOUD!`)} disabled={!isReadyToDeploy}
+            style={{
+                padding: '6px 14px', borderRadius: '6px', marginRight: '16px', fontWeight: 'bold', border: 'none', cursor: isReadyToDeploy ? 'pointer' : 'not-allowed',
+                background: isReadyToDeploy ? 'linear-gradient(90deg, #10b981, #059669)' : '#1e293b',
+                color: isReadyToDeploy ? '#fff' : '#64748b', transition: 'all 0.3s ease', fontSize: '11px', fontFamily: 'Inter, sans-serif'
+            }}>
+            {isReadyToDeploy ? '🚀 LAUNCH' : '🔒 LOCKED'}
+          </button>
           <button
             onClick={() => { setShowHistory(!showHistory); if (!showHistory) loadHistory(); }}
             style={{
@@ -378,7 +512,52 @@ export default function WarRoom({ ventureMode = false, onHandoff, projectName = 
         </div>
       </div>
 
-      <div style={styles.body}>
+      {selectedProject ? (
+        <>
+          {/* ── Native Stepper (Phase 8 Upgrade) ── */}
+          <div style={{ padding: '20px', background: '#0a0e17', borderTop: '1px solid #1e293b', borderBottom: '1px solid #1e293b', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontFamily: 'Inter, sans-serif' }}>
+            {SEQUENCE_STAGES.map((stage, i) => {
+              const status = sequenceState[stage.id] || 'WAITING';
+              let color = '#475569';
+              if (status === 'PROCESSING') color = '#eab308';
+              if (status === 'PASS') color = '#10b981';
+              if (status === 'FAIL') color = '#ef4444';
+              return (
+                <div key={stage.id} style={{ display: 'flex', flex: 1, alignItems: 'center' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', opacity: status === 'WAITING' ? 0.6 : 1, transition: 'all 0.4s ease' }}>
+                    <div style={{ width: '42px', height: '42px', borderRadius: '50%', border: `2px solid ${color}`, background: `${color}1A`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', animation: status === 'PROCESSING' ? 'pulsePhase 1.5s infinite' : 'none' }}>
+                      {stage.icon}
+                    </div>
+                    <span style={{ fontSize: '12px', fontWeight: 600, color: status === 'WAITING' ? '#94a3b8' : '#e2e8f0', letterSpacing: '0.02em' }}>{stage.label}</span>
+                    <span style={{ fontSize: '10px', background: `${color}25`, color: color, padding: '3px 8px', borderRadius: '12px', fontWeight: 'bold' }}>{status.replace('_', ' ')}</span>
+                  </div>
+                  {i < SEQUENCE_STAGES.length - 1 && <div style={{ flex: 1, height: '2px', background: (sequenceState[SEQUENCE_STAGES[i+1]?.id] && sequenceState[SEQUENCE_STAGES[i+1]?.id] !== 'WAITING') ? '#10b981' : '#1e293b', margin: '0 15px', marginTop: '-25px' }} />}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* ── Strategic Pivot Card (Phase 9) ── */}
+          {marketPulse && (
+            <div style={{
+              margin: '15px 20px', padding: '16px', borderRadius: '8px',
+              background: marketPulse.verdict === 'BEARISH' ? 'rgba(245, 158, 11, 0.15)' : (marketPulse.verdict === 'BULLISH' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(100, 116, 139, 0.1)'),
+              border: `1px solid ${marketPulse.verdict === 'BEARISH' ? '#f59e0b' : (marketPulse.verdict === 'BULLISH' ? '#10b981' : '#64748b')}`,
+              display: 'flex', alignItems: 'center', gap: '15px', fontFamily: 'Inter, sans-serif'
+            }}>
+              <div style={{ fontSize: '24px' }}>{marketPulse.verdict === 'BEARISH' ? '⚠️' : (marketPulse.verdict === 'BULLISH' ? '📈' : '⚖️')}</div>
+              <div>
+                <h4 style={{ margin: 0, color: '#f1f5f9', fontSize: '14px', fontWeight: 600 }}>Strategic Pivot Card: {marketPulse.verdict} Market</h4>
+                <p style={{ margin: '4px 0 0 0', color: '#cbd5e1', fontSize: '13px' }}>
+                  {marketPulse.verdict === 'BEARISH' 
+                    ? `Action Required: Trend velocity is low (${marketPulse.velocity}). System applied a 0.7x target contraction. Commander must review the CMO's Pivot Option.`
+                    : `Velocity: ${marketPulse.velocity} | Sentiment: ${marketPulse.sentiment}. System cleared for aggressive expansion roadmap.`}
+                </p>
+              </div>
+            </div>
+          )}
+
+          <div style={styles.body}>
         {/* ── History Panel (Upgrade 2) ── */}
         {showHistory && (
           <div style={{
@@ -436,6 +615,14 @@ export default function WarRoom({ ventureMode = false, onHandoff, projectName = 
               style={{ ...styles.topicInput, width: '70px', flex: 'none', textAlign: 'center' }}
               min="1" max="10" step="0.5"
             />
+            <button onClick={async () => {
+              setIsExecutingCmd(true); setIsReadyToDeploy(false); setSequenceState({}); setMarketPulse(null);
+              setMessages(prev => [...prev, { type: 'dialogue', agent: 'COMMANDER', message: `▶ PROTOCOL OVERRIDE: Executing Unified Aether-Native Extration Loop for [${projectName}]...`, timestamp: new Date().toISOString() }]);
+              try { await fetch(`${API_BASE}/api/warroom/execute`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ project_id: projectName }) }); } 
+              catch (err) { setMessages(prev => [...prev, { type: 'dialogue', agent: 'SYSTEM', message: `Execution failed: ${err.message}`, isError: true, timestamp: new Date().toISOString() }]); setIsExecutingCmd(false); }
+            }} disabled={isExecutingCmd} style={{ ...styles.topicBtn, background: isExecutingCmd ? '#475569' : 'linear-gradient(135deg, #6366f1, #4f46e5)', width: 'auto' }}>
+              {isExecutingCmd ? '⏳ Executing...' : '▶ Initialize Protocol'}
+            </button>
             <button onClick={seedTopic} style={styles.topicBtn}>🏛️ Debate</button>
             <button onClick={issueChallenge} style={{ ...styles.topicBtn, background: 'linear-gradient(135deg, #ef4444, #dc2626)' }}>🔍 Challenge</button>
             <button onClick={() => fileRef.current?.click()} disabled={uploading} style={{ ...styles.topicBtn, background: uploading ? '#64748b' : 'linear-gradient(135deg, #10b981, #059669)' }}>
@@ -551,6 +738,79 @@ export default function WarRoom({ ventureMode = false, onHandoff, projectName = 
               <div style={{ fontSize: '10px', color: '#64748b', marginTop: '8px', fontStyle: 'italic' }}>
                 Address these weaknesses below or Force Proceed.
               </div>
+            </div>
+          )}
+
+          {/* ── Agent Progress Tracker ── */}
+          {(workingAgents.length > 0 || consensusIteration) && (
+            <div style={styles.agentTrackerContainer}>
+              {/* Consensus Iteration Badge */}
+              {consensusIteration && (
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '8px 14px', marginBottom: '8px', borderRadius: '10px',
+                  background: consensusIteration.status === 'CONSENSUS'
+                    ? 'rgba(16,185,129,0.15)'
+                    : consensusIteration.status === 'MAX_REACHED'
+                      ? 'rgba(239,68,68,0.15)'
+                      : 'rgba(99,102,241,0.12)',
+                  border: `1px solid ${
+                    consensusIteration.status === 'CONSENSUS' ? 'rgba(16,185,129,0.3)'
+                    : consensusIteration.status === 'MAX_REACHED' ? 'rgba(239,68,68,0.3)'
+                    : 'rgba(99,102,241,0.25)'
+                  }`,
+                }}>
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: '#e2e8f0', letterSpacing: '0.5px' }}>
+                    {consensusIteration.status === 'CONSENSUS' ? '✅ CONSENSUS' :
+                     consensusIteration.status === 'MAX_REACHED' ? '🛑 MAX REACHED' :
+                     '🔄 DELIBERATION'}
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {Array.from({ length: consensusIteration.maxIterations }, (_, i) => (
+                      <div key={i} style={{
+                        width: '18px', height: '18px', borderRadius: '50%',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '9px', fontWeight: 700,
+                        background: i < consensusIteration.iteration
+                          ? (consensusIteration.status === 'CONSENSUS' ? '#10b981' : '#6366f1')
+                          : 'rgba(255,255,255,0.06)',
+                        color: i < consensusIteration.iteration ? '#fff' : '#475569',
+                        border: i === consensusIteration.iteration - 1
+                          ? '2px solid #f1f5f9'
+                          : '1px solid rgba(100,116,139,0.15)',
+                        transition: 'all 0.3s ease',
+                      }}>{i + 1}</div>
+                    ))}
+                  </div>
+                  <span style={{
+                    fontSize: '11px', fontWeight: 600,
+                    color: consensusIteration.status === 'CONSENSUS' ? '#10b981'
+                      : consensusIteration.status === 'MAX_REACHED' ? '#ef4444' : '#a5b4fc'
+                  }}>
+                    {consensusIteration.iteration}/{consensusIteration.maxIterations}
+                  </span>
+                </div>
+              )}
+              {workingAgents.map((wa, idx) => {
+                const style = AGENT_STYLES[wa.agent] || AGENT_STYLES['SYSTEM'];
+                return (
+                  <div key={idx} style={styles.agentTrackerCard}>
+                    <div style={styles.agentTrackerHeader}>
+                      <span style={{ fontSize: '16px', animation: 'agent-pulse-glow 1.5s infinite' }}>{style.icon}</span>
+                      <span style={{ color: style.color, fontSize: '12px', fontWeight: 700, letterSpacing: '0.5px' }}>
+                        {wa.agent} is executing task...
+                      </span>
+                    </div>
+                    <div style={styles.agentTrackerBarBg}>
+                      <div className="agent-progress-fill" style={{
+                        ...styles.agentTrackerBarFill,
+                        background: `linear-gradient(90deg, ${style.color}40, ${style.color})`,
+                        boxShadow: `0 0 10px ${style.color}60`
+                      }} />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
 
@@ -732,6 +992,16 @@ export default function WarRoom({ ventureMode = false, onHandoff, projectName = 
           </div>
         </div>
       )}
+        </>
+      ) : (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
+          <span style={{ fontSize: '48px', marginBottom: '16px' }}>⚡</span>
+          <h3>Awaiting Project Context</h3>
+          <p style={{ fontSize: '14px', maxWidth: '400px', textAlign: 'center' }}>
+            To initialize the War Room dialogue, please select an active CMO campaign project from the dropdown.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -908,6 +1178,30 @@ const styles = {
   agentListTitle: { margin: '0 0 10px', fontSize: '12px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' },
   agentItem: {
     display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 0',
+  },
+
+  // ── Agent Progress Tracker ──
+  agentTrackerContainer: {
+    padding: '16px 20px',
+    borderBottom: '1px solid rgba(100,116,139,0.12)',
+    background: 'rgba(15, 23, 42, 0.4)',
+    display: 'flex', flexDirection: 'column', gap: '12px'
+  },
+  agentTrackerCard: {
+    display: 'flex', flexDirection: 'column', gap: '8px',
+    background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '10px',
+    border: '1px solid rgba(100,116,139,0.15)',
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+  },
+  agentTrackerHeader: {
+    display: 'flex', alignItems: 'center', gap: '8px'
+  },
+  agentTrackerBarBg: {
+    height: '4px', width: '100%', background: 'rgba(255,255,255,0.05)',
+    borderRadius: '2px', overflow: 'hidden'
+  },
+  agentTrackerBarFill: {
+    height: '100%', borderRadius: '2px',
   },
 
   // ── EOS Buttons ──

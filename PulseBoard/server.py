@@ -65,7 +65,7 @@ RUNTIME_DIR = os.environ.get(
 os.makedirs(RUNTIME_DIR, exist_ok=True)
 
 # ── Portability: Read port from config.json ──────────────
-DEFAULT_PORT = 5008
+DEFAULT_PORT = 5010
 try:
     with open(os.path.join(SCRIPT_DIR, "config.json"), "r") as _f:
         DEFAULT_PORT = json.load(_f).get("port", DEFAULT_PORT)

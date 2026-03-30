@@ -11,7 +11,7 @@
     "flush_on_recovery": true
   },
   "cloud_health": {
-    "watchdog_url": "https://humanresource.app.n8n.cloud/webhook/system-watchdog-ping",
+    "watchdog_url": "native",
     "timeout_ms": 5000,
     "check_interval_seconds": 900,
     "consecutive_failures_for_offline": 2

@@ -71,6 +71,39 @@ class WatchdogAgent:
             logger.error(f"Error loading portfolio: {e}")
             return None
 
+    def load_portfolio_all(self):
+        """Loads an array of ALL active trades from JSON."""
+        open_trades = []
+        if not os.path.exists(self.portfolio_path):
+            return open_trades
+        try:
+            with open(self.portfolio_path, 'r') as f:
+                data = json.load(f)
+                
+                # Case 1: 'positions' list (New Format)
+                if 'positions' in data:
+                    for pos in data['positions']:
+                        if pos.get('status') == 'OPEN':
+                            if not all(k in pos for k in ['expiration_date', 'short_call_strike', 'short_put_strike']):
+                                logger.error(f"[DATA_CORRUPTION] Invalid OPEN trade in JSON. Missing required schema keys. Ignoring ID: {pos.get('id', 'Unknown')}")
+                                continue
+                            try:
+                                datetime.strptime(pos['expiration_date'], '%Y-%m-%d')
+                            except ValueError:
+                                logger.error(f"[DATA_CORRUPTION] Invalid expiration_date format '{pos['expiration_date']}' in ID {pos.get('id', 'Unknown')}. Expected YYYY-MM-DD.")
+                                continue
+                            open_trades.append(pos)
+                    return open_trades
+                            
+                # Case 2: 'active_trade' dict (Legacy Format)
+                legacy = data.get('active_trade')
+                if legacy and legacy.get('status') != 'CLOSED':
+                     open_trades.append(legacy)
+                return open_trades
+        except Exception as e:
+            logger.error(f"Error loading portfolio all: {e}")
+            return open_trades
+
     def monitor_position(self, current_spx, vol_forecast_signal, sentiment_signal="NEUTRAL"):
         """
         Analyzes the active trade health.

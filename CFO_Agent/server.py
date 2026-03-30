@@ -783,7 +783,7 @@ async def _execute(data: dict):
         logger.info(f"  Fragility Index: {report.get('fragility', {}).get('fragility_index')}")
         logger.info(f"  Portfolio ROI: {report.get('summary', {}).get('portfolio_roi_pct')}%")
 
-        return {
+        response_data = {
             "agent": "CFO",
             "status": "deployed",
             "message": "CFO Agent has deployed the Fragility Report to the AI Folder.",
@@ -809,6 +809,66 @@ async def _execute(data: dict):
             "duration_ms": round(elapsed * 1000, 1),
         }
 
+        # ── Phantom QA Auto-Audit Gate ────────────────────
+        # After CFO generates a report, ping Phantom QA for quality verdict.
+        # On FAIL: block the report. On PASS or unreachable: proceed.
+        qa_verdict = None
+        try:
+            import aiohttp
+            qa_payload = {
+                "source": "CFO_Fragility_Engine",
+                "target_url": "http://localhost:5041",
+                "file_link": report.get('file_path', ''),
+                "file_name": new_name,
+                "audit_mode": "mathematical",
+                "report_data": {
+                    "fragility_index": report.get('fragility', {}).get('fragility_index'),
+                    "composite_score": report.get('fragility', {}).get('composite'),
+                    "portfolio_roi_pct": report.get('summary', {}).get('portfolio_roi_pct'),
+                },
+                "callback_url": "http://localhost:5041/api/audit/correction",
+            }
+            async with aiohttp.ClientSession(
+                timeout=aiohttp.ClientTimeout(total=30)
+            ) as session:
+                async with session.post(
+                    "http://localhost:5030/api/audit/auto",
+                    json=qa_payload,
+                ) as qa_r:
+                    if qa_r.status == 200:
+                        qa_verdict = await qa_r.json()
+                        logger.info(
+                            f"Phantom QA verdict: {qa_verdict.get('verdict')} "
+                            f"(Score: {qa_verdict.get('score')}/100)"
+                        )
+        except Exception as qa_err:
+            logger.warning(f"Phantom QA unreachable — proceeding without QA gate: {qa_err}")
+
+        # If Phantom QA returned FAIL, block the report
+        if qa_verdict and qa_verdict.get("verdict") == "FAIL":
+            logger.warning(f"⛔ Phantom QA BLOCKED report '{new_name}'")
+            return JSONResponse({
+                "agent": "CFO",
+                "status": "qa_blocked",
+                "message": (
+                    f"Report '{new_name}' was generated but BLOCKED by Phantom QA Elite. "
+                    f"Quality score: {qa_verdict.get('score', 0)}/100. "
+                    f"The report will not be released until corrections are made."
+                ),
+                "qa_verdict": qa_verdict.get("verdict"),
+                "qa_score": qa_verdict.get("score"),
+                "qa_findings": qa_verdict.get("findings", []),
+                "correction_request": qa_verdict.get("correction_request", ""),
+                "file_name": new_name,
+            }, status_code=422)
+
+        # Attach QA clearance to the response
+        if qa_verdict:
+            response_data["qa_verdict"] = qa_verdict.get("verdict")
+            response_data["qa_score"] = qa_verdict.get("score")
+
+        return response_data
+
     except (ZeroDivisionError, ValueError, TypeError, OverflowError) as e:
         logger.error(f"Math error: {type(e).__name__}: {e}")
         return JSONResponse({
@@ -818,6 +878,24 @@ async def _execute(data: dict):
             "error_message": str(e),
             "correction_request": f"Math Correction Request: {type(e).__name__} - {e}. Please review the input data and formulas.",
         }, status_code=422)
+
+
+# ── Phantom QA Correction Receiver ───────────────────────
+@app.post("/api/audit/correction")
+async def receive_correction(request: Request):
+    """Receives correction requests from Phantom QA when a report fails the quality gate."""
+    data = await safe_parse_body(request)
+    logger.warning(
+        f"⛔ Correction received from {data.get('source', '?')}: "
+        f"Verdict={data.get('verdict')}, Score={data.get('score')}, "
+        f"File={data.get('file_name', '?')}"
+    )
+    return {
+        "status": "correction_received",
+        "message": "CFO acknowledges the correction request. The report will be reviewed.",
+        "file_name": data.get("file_name"),
+        "qa_score": data.get("score"),
+    }
 
 
 # ═══════════════════════════════════════════════════════════

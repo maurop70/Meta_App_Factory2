@@ -252,8 +252,23 @@ async def api_brand_visualize(request: Request):
         project_name=project_name,
         user_feedback=user_feedback,
     )
+    
+    # Save the successful visual to marketing memory
+    if not result.get("error") and result.get("image_url"):
+        save_analysis(
+            module="brand_visual",
+            result=result,
+            project_name=project_name,
+            input_summary=mockup_type
+        )
+        
     return result
 
+@app.get("/api/memory/visuals/{project_name}")
+async def api_memory_visuals(project_name: str, limit: int = 20):
+    """Retrieve generated brand visuals for a project."""
+    visuals = get_recent_analyses(module="brand_visual", project_name=project_name, limit=limit)
+    return JSONResponse({"visuals": visuals})
 
 # ── Brand Studio: Critique ──────────────────────────────────
 
