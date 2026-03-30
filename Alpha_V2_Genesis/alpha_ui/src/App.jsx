@@ -1108,6 +1108,185 @@ const ExecutionTab = ({ apiBase, onCommit }) => {
 };
 
 
+// ─────────────────────────────────────────────────────────────
+// 🔄 CHALLENGER TRADE PANEL — STABLE / ROLL state
+// Sourced from Strategy Ledger scan_for_challenger() output
+// ─────────────────────────────────────────────────────────────
+const ChallengerTradePanel = ({ defenseData, finalAction, lokiStrategy, ledger, watchdog }) => {
+  // Priority 1: challenger_blueprint injected directly by Loki from ledger_state.json
+  // Priority 2: scan ledger.positions (client-side ledger prop)
+  const directBlueprint = defenseData?.challenger_blueprint || null;
+  const challPositions = ledger?.positions ? Object.values(ledger.positions) : [];
+  const challPos = challPositions.find(p => p.challenger?.available && p.challenger?.pivot_warranted)
+                || challPositions.find(p => p.challenger?.available);
+  const chall = directBlueprint || challPos?.challenger || null;
+  const fin = defenseData?.financials;
+  const netImpact = fin?.net_impact ?? 0;
+  const isRollActive = (finalAction || lokiStrategy || '').includes('ROLL');
+  const borderColor = isRollActive ? '#eab308' : '#475569';
+  const bgColor = isRollActive ? 'rgba(234,179,8,0.07)' : 'rgba(148,163,184,0.06)';
+  const headerColor = isRollActive ? '#fbbf24' : '#94a3b8';
+
+  return (
+    <div style={{ marginTop: '1rem', padding: '1rem', background: bgColor, border: `1px solid ${borderColor}`, borderRadius: '8px', boxShadow: isRollActive ? '0 0 18px rgba(234,179,8,0.12)' : 'none' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+        <h3 style={{ margin: 0, color: headerColor, fontSize: '0.9rem', letterSpacing: '0.05em' }}>🔄 CHALLENGER TRADE SCAN</h3>
+        {isRollActive && (
+          <span style={{ fontSize: '0.65rem', fontWeight: 800, background: 'rgba(234,179,8,0.2)', border: '1px solid #eab308', color: '#fbbf24', padding: '2px 8px', borderRadius: '4px', letterSpacing: '0.06em' }}>ROLL TRIGGERED</span>
+        )}
+      </div>
+
+      {/* Mauro Gate status line */}
+      <p style={{ fontSize: '0.72rem', color: '#64748b', margin: '0 0 0.85rem 0', lineHeight: '1.5' }}>
+        Mauro Risk Gate{' '}
+        <b style={{ color: netImpact > 0 ? '#4ade80' : '#f87171' }}>{netImpact > 0 ? 'OPEN' : 'CLOSED'}</b>
+        {' '}—{' '}
+        Net Credit Roll {netImpact > 0
+          ? `available ($${fin?.credit_open} > $${fin?.debit_close})`
+          : `not available ($${fin?.credit_open} < $${fin?.debit_close})`}.
+        {chall && (
+          <> Strategy Ledger:{' '}
+            <b style={{ color: chall.pivot_warranted ? '#ef4444' : '#10b981' }}>
+              {chall.pivot_warranted ? '⚠ PIVOT RECOMMENDED' : '✔ HOLD CURRENT'}
+            </b>.
+          </>
+        )}
+      </p>
+
+      {/* Full Challenger Blueprint from Strategy Ledger */}
+      {chall?.strikes ? (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+            <div style={{ fontSize: '0.62rem', color: '#475569', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+              Challenger Iron Condor Blueprint
+            </div>
+            <div style={{ fontSize: '0.62rem', color: '#60a5fa', fontWeight: 700, letterSpacing: '0.05em', background: 'rgba(59,130,246,0.1)', padding: '2px 6px', borderRadius: '4px' }}>
+              DEFENDING: {watchdog?.trade_details?.expiration_date || defenseData?.target_trade?.expiration || 'Active Trade'}
+            </div>
+          </div>
+
+          {/* 4-Leg Strike Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.4rem', marginBottom: '0.75rem' }}>
+            {[
+              { label: 'Long Put',   value: chall.strikes.long_put,   color: '#94a3b8', role: 'BUY'  },
+              { label: 'Short Put',  value: chall.strikes.short_put,  color: '#f87171', role: 'SELL' },
+              { label: 'Short Call', value: chall.strikes.short_call, color: '#f87171', role: 'SELL' },
+              { label: 'Long Call',  value: chall.strikes.long_call,  color: '#94a3b8', role: 'BUY'  },
+            ].map(leg => (
+              <div key={leg.label} style={{ background: 'rgba(0,0,0,0.25)', borderRadius: '6px', padding: '0.45rem 0.5rem', border: `1px solid ${leg.role === 'SELL' ? 'rgba(248,113,113,0.25)' : 'rgba(148,163,184,0.15)'}` }}>
+                <div style={{ fontSize: '0.58rem', color: '#475569', fontWeight: 700 }}>{leg.role}</div>
+                <div style={{ fontSize: '0.68rem', color: '#64748b', marginBottom: '0.1rem' }}>{leg.label}</div>
+                <div style={{ fontSize: '1rem', fontWeight: 800, color: leg.value ? leg.color : '#475569', fontFamily: 'monospace' }}>{leg.value || '—'}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Expiry + Margin % */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', marginBottom: '0.75rem' }}>
+            <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.45rem', borderRadius: '6px' }}>
+              <div style={{ color: '#64748b', fontSize: '0.62rem', marginBottom: '0.1rem' }}>New Expiry</div>
+              <div style={{ color: '#60a5fa', fontWeight: 700, fontSize: '0.8rem' }}>{chall.expiry || '—'}</div>
+            </div>
+            <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.45rem', borderRadius: '6px' }}>
+              <div style={{ color: '#64748b', fontSize: '0.62rem', marginBottom: '0.1rem' }}>Put Margin</div>
+              <div style={{ color: '#e2e8f0', fontWeight: 700, fontSize: '0.8rem' }}>{chall.put_margin_pct != null ? chall.put_margin_pct.toFixed(2) : '—'}%</div>
+            </div>
+            <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.45rem', borderRadius: '6px' }}>
+              <div style={{ color: '#64748b', fontSize: '0.62rem', marginBottom: '0.1rem' }}>Call Margin</div>
+              <div style={{ color: '#e2e8f0', fontWeight: 700, fontSize: '0.8rem' }}>{chall.call_margin_pct != null ? chall.call_margin_pct.toFixed(2) : '—'}%</div>
+            </div>
+          </div>
+
+          {/* Financial Summary */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', marginBottom: '0.75rem' }}>
+            <div style={{ background: 'rgba(0,0,0,0.18)', padding: '0.45rem', borderRadius: '6px' }}>
+              <div style={{ color: '#94a3b8', fontSize: '0.62rem' }}>Cost to Close</div>
+              <div style={{ color: '#f87171', fontWeight: 700 }}>-${fin?.debit_close ?? '0.00'}</div>
+            </div>
+            <div style={{ background: 'rgba(0,0,0,0.18)', padding: '0.45rem', borderRadius: '6px' }}>
+              <div style={{ color: '#94a3b8', fontSize: '0.62rem' }}>New IC Credit</div>
+              <div style={{ color: '#4ade80', fontWeight: 700 }}>+${chall.net_credit != null ? chall.net_credit.toFixed(2) : (fin?.credit_open ?? '0.00')}</div>
+            </div>
+            <div style={{ background: netImpact >= 0 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.12)', padding: '0.45rem', borderRadius: '6px', border: `1px solid ${netImpact >= 0 ? 'rgba(16,185,129,0.35)' : 'rgba(239,68,68,0.25)'}` }}>
+              <div style={{ color: '#94a3b8', fontSize: '0.62rem' }}>Net P&amp;L</div>
+              <div style={{ color: netImpact >= 0 ? '#4ade80' : '#f87171', fontWeight: 800, fontSize: '1rem' }}>
+                {netImpact >= 0 ? '+' : ''}${netImpact}
+              </div>
+            </div>
+          </div>
+
+          {/* Pivot Rationale */}
+          {chall.pivot_rationale && (
+            <div style={{ fontSize: '0.7rem', color: chall.pivot_warranted ? '#fca5a5' : '#6ee7b7', background: chall.pivot_warranted ? 'rgba(239,68,68,0.08)' : 'rgba(16,185,129,0.07)', padding: '0.5rem 0.65rem', borderRadius: '6px', borderLeft: `3px solid ${chall.pivot_warranted ? '#ef4444' : '#10b981'}`, marginBottom: '0.5rem' }}>
+              {chall.pivot_rationale}
+            </div>
+          )}
+        </>
+      ) : (
+        /* Fallback: challenger compute in progress or chain unavailable */
+        <div>
+          {/* Searching indicator */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.75rem 0.85rem', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: '8px', marginBottom: '0.75rem' }}>
+            <span style={{ fontSize: '1rem', animation: 'spin 1.5s linear infinite', display: 'inline-block' }}>⟳</span>
+            <div>
+              <div style={{ color: '#60a5fa', fontWeight: 700, fontSize: '0.8rem' }}>Searching for optimal strikes…</div>
+              <div style={{ color: '#475569', fontSize: '0.68rem', marginTop: '2px' }}>
+                Scanning 0.10δ–0.15δ Iron Condor targets at {defenseData?.target_trade?.expiration || '45 DTE'} expiry
+              </div>
+            </div>
+          </div>
+
+          {/* Placeholder strike grid — grey skeletons */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.4rem', marginBottom: '0.75rem', opacity: 0.35 }}>
+            {['Long Put', 'Short Put', 'Short Call', 'Long Call'].map(label => (
+              <div key={label} style={{ background: 'rgba(0,0,0,0.25)', borderRadius: '6px', padding: '0.45rem 0.5rem' }}>
+                <div style={{ fontSize: '0.58rem', color: '#475569', fontWeight: 700 }}>{label.startsWith('Short') ? 'SELL' : 'BUY'}</div>
+                <div style={{ fontSize: '0.68rem', color: '#64748b' }}>{label}</div>
+                <div style={{ fontSize: '1rem', fontWeight: 800, color: '#334155', fontFamily: 'monospace' }}>—</div>
+              </div>
+            ))}
+          </div>
+
+          {/* What we DO know — current position + financials */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', fontSize: '0.82rem' }}>
+            <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.5rem', borderRadius: '6px' }}>
+              <div style={{ color: '#94a3b8', fontSize: '0.68rem', fontWeight: 'bold', marginBottom: '0.2rem' }}>CURRENT POSITION</div>
+              <div style={{ color: '#cbd5e1' }}>
+                {watchdog?.trade_details?.short_put_strike
+                  ? `${watchdog.trade_details.short_put_strike} / ${watchdog.trade_details.short_call_strike}`
+                  : defenseData?.target_trade?.short_put
+                    ? `${defenseData.target_trade.short_put} / ${defenseData.target_trade.long_put}`
+                    : '—'}
+              </div>
+              <div style={{ color: '#475569', fontSize: '0.65rem' }}>Put / Call Strikes</div>
+            </div>
+            <div style={{ background: 'rgba(0,0,0,0.15)', padding: '0.5rem', borderRadius: '6px' }}>
+              <div style={{ color: '#94a3b8', fontSize: '0.68rem' }}>Cost to Close</div>
+              <div style={{ color: '#f87171', fontWeight: 700 }}>{fin?.debit_close ? `-$${fin.debit_close}` : '—'}</div>
+            </div>
+            <div style={{ background: 'rgba(0,0,0,0.15)', padding: '0.5rem', borderRadius: '6px' }}>
+              <div style={{ color: '#94a3b8', fontSize: '0.68rem' }}>Roll Credit (IC)</div>
+              <div style={{ color: '#4ade80', fontWeight: 700 }}>{fin?.credit_open ? `+$${fin.credit_open}` : '—'}</div>
+            </div>
+            <div style={{ background: netImpact >= 0 ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.1)', padding: '0.5rem', borderRadius: '6px' }}>
+              <div style={{ color: '#94a3b8', fontSize: '0.68rem' }}>Net P&amp;L if Rolled</div>
+              <div style={{ color: netImpact >= 0 ? '#4ade80' : '#f87171', fontWeight: 700 }}>
+                {netImpact != 0 ? `${netImpact >= 0 ? '+' : ''}$${netImpact}` : '—'}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <p style={{ fontSize: '0.7rem', marginTop: '0.75rem', color: '#475569', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.5rem' }}>
+        {defenseData?.details}
+      </p>
+    </div>
+  );
+};
+
+
 function App() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -1312,10 +1491,10 @@ function App() {
                 <h2 style={{ color: (data.final_action || loki_proposal.strategy || 'WAIT') === 'ENTRY' ? '#10b981' : ((data.final_action || loki_proposal.strategy || 'WAIT') === 'WAIT' ? '#f59e0b' : '#ef4444'), margin: 0, fontSize: '1.75rem' }}>{data.final_action || loki_proposal.strategy || '—'}</h2>
               </div>
               <div style={{ textAlign: 'center', padding: '0 2rem', borderLeft: '1px solid rgba(255,255,255,0.1)', borderRight: '1px solid rgba(255,255,255,0.1)' }}>
-                <p style={{ color: '#94a3b8', fontSize: '0.875rem', margin: '0 0 0.5rem 0' }}>N8N Risk Score</p>
+                <p style={{ color: '#94a3b8', fontSize: '0.875rem', margin: '0 0 0.5rem 0' }}>System Risk Score</p>
                 <RiskRadar score={loki_proposal.risk_score ?? null} />
-                <div style={{ fontSize: '0.7rem', marginTop: '4px', color: data.n8n_status?.includes('LIVE') ? '#4ade80' : '#f87171' }}>
-                  {data.n8n_status || '🔴 STANDBY'}
+                <div style={{ fontSize: '0.7rem', marginTop: '4px', color: data?.intelligence_source === 'NATIVE' ? '#4ade80' : '#eab308' }}>
+                  {data?.intelligence_source === 'NATIVE' ? '🟢 Native Intelligence' : '🟡 Cached Data'}
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
@@ -1342,90 +1521,34 @@ function App() {
           <div className="metric-large">{loki_proposal.strategy}</div>
           <div className="rationale">{loki_proposal.rationale}</div>
 
+          {/* Sentiment Wing Adjustment Display */}
+          {loki_proposal.delta_call !== undefined && (
+            <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ fontSize: '0.7rem', color: '#64748b', letterSpacing: '0.05em' }}>WING ADJUSTMENT</div>
+              <div style={{
+                padding: '0.25rem 0.6rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 700,
+                background: loki_proposal.sentiment_bias === 'BEARISH' ? 'rgba(239,68,68,0.15)' : loki_proposal.sentiment_bias === 'BULLISH' ? 'rgba(74,222,128,0.15)' : 'rgba(148,163,184,0.15)',
+                border: `1px solid ${loki_proposal.sentiment_bias === 'BEARISH' ? '#ef4444' : loki_proposal.sentiment_bias === 'BULLISH' ? '#4ade80' : '#475569'}`,
+                color: loki_proposal.sentiment_bias === 'BEARISH' ? '#f87171' : loki_proposal.sentiment_bias === 'BULLISH' ? '#4ade80' : '#94a3b8'
+              }}>
+                {loki_proposal.sentiment_bias || 'NEUTRAL'}
+              </div>
+              <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
+                Put δ <b style={{ color: '#60a5fa' }}>{loki_proposal.delta_put?.toFixed(3)}</b>
+                &nbsp;|&nbsp;
+                Call δ <b style={{ color: '#a78bfa' }}>{loki_proposal.delta_call?.toFixed(3)}</b>
+              </div>
+            </div>
+          )}
+
           {data.expert_opinions.defense ? (
-            <div style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', borderRadius: '8px' }}>
-              <h3 style={{ margin: '0 0 0.5rem 0', color: '#f87171' }}>🛡️ Defense Matrix</h3>
-
-              {data.expert_opinions.defense.target_trade && (
-                <div style={{ marginBottom: '0.75rem', paddingBottom: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                  <div style={{ color: '#white', fontWeight: 'bold' }}>
-                    RECOMMENDATION: <span style={{ color: '#60a5fa' }}>ROLL to {data.expert_opinions.defense.target_trade.short_call}/{data.expert_opinions.defense.target_trade.long_call} Call Vertical</span>
-                  </div>
-                  <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                    Exp: {data.expert_opinions.defense.target_trade.expiration}
-                  </div>
-                </div>
-              )}
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.9rem' }}>
-                <div>
-                  <div style={{ color: '#94a3b8' }}>Cost to Close</div>
-                  <div style={{ color: '#f87171', fontWeight: 'bold' }}>-${data.expert_opinions.defense.financials.debit_close}</div>
-                </div>
-                <div>
-                  <div style={{ color: '#94a3b8' }}>Roll Credit</div>
-                  <div style={{ color: '#4ade80', fontWeight: 'bold' }}>+${data.expert_opinions.defense.financials.credit_open}</div>
-                </div>
-                <div style={{ gridColumn: 'span 2', marginTop: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '0.5rem' }}>
-                  <div style={{ color: '#94a3b8' }}>Optimal Width (Avail):</div>
-                  <div style={{ color: 'white' }}>{data.expert_opinions.defense.financials.width}</div>
-                </div>
-                <div style={{ gridColumn: 'span 2', marginTop: '0.5rem', background: 'rgba(0,0,0,0.2)', padding: '0.5rem', borderRadius: '4px' }}>
-                  <div style={{ color: '#94a3b8' }}>Net P&L Impact</div>
-                  <div style={{ color: data.expert_opinions.defense.financials.net_impact > 0 ? '#4ade80' : '#f87171', fontWeight: 'bold' }}>
-                    {data.expert_opinions.defense.financials.net_impact > 0 ? '+' : ''}${data.expert_opinions.defense.financials.net_impact}
-                  </div>
-                </div>
-              </div>
-              <p style={{ fontSize: '0.8rem', marginTop: '0.5rem', color: '#cbd5e1' }}>
-                {data.expert_opinions.defense.details}
-              </p>
-            </div>
-          ) : data.expert_opinions.defense && data.market_state === 'STABLE' ? (
-            /* STABLE STATE: Challenger Trade Scan */
-            <div style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(148, 163, 184, 0.08)', border: '1px solid #475569', borderRadius: '8px' }}>
-              <h3 style={{ margin: '0 0 0.75rem 0', color: '#94a3b8', fontSize: '0.9rem', letterSpacing: '0.05em' }}>🔄 CHALLENGER TRADE SCAN</h3>
-              <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '0 0 0.75rem 0', fontStyle: 'italic', lineHeight: '1.4' }}>
-                A <b style={{ color: '#94a3b8' }}>Challenger Trade</b> is a hypothetical fresh entry at today's optimal strikes (based on {data.delta || '0.15'} delta). Loki compares its margin buffer against your current trade to decide if switching is worth the cost.
-              </p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.85rem' }}>
-                <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.5rem', borderRadius: '6px' }}>
-                  <div style={{ color: '#94a3b8', fontSize: '0.7rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>CURRENT TRADE</div>
-                  <div style={{ color: '#cbd5e1' }}>{data.expert_opinions.watchdog?.trade_details?.short_put_strike || '—'} / {data.expert_opinions.watchdog?.trade_details?.short_call_strike || '—'}</div>
-                  <div style={{ color: '#94a3b8', fontSize: '0.7rem', marginTop: '2px' }}>Strikes (Put / Call)</div>
-                </div>
-                <div style={{ background: 'rgba(59,130,246,0.1)', padding: '0.5rem', borderRadius: '6px', border: '1px solid rgba(59,130,246,0.3)' }}>
-                  <div style={{ color: '#60a5fa', fontSize: '0.7rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>CHALLENGER TARGET</div>
-                  <div style={{ color: '#cbd5e1' }}>{data.expert_opinions.defense?.target_trade?.short_put || '—'} / {data.expert_opinions.defense?.target_trade?.long_put || '—'}</div>
-                  <div style={{ color: '#94a3b8', fontSize: '0.7rem', marginTop: '2px' }}>Put Vertical Strikes</div>
-                </div>
-                <div style={{ background: 'rgba(0,0,0,0.15)', padding: '0.5rem', borderRadius: '6px' }}>
-                  <div style={{ color: '#94a3b8', fontSize: '0.7rem' }}>Cost to Switch (Debit)</div>
-                  <div style={{ color: '#f87171', fontWeight: 'bold' }}>-${data.expert_opinions.defense?.financials?.debit_close ?? '0.00'}</div>
-                </div>
-                <div style={{ background: 'rgba(0,0,0,0.15)', padding: '0.5rem', borderRadius: '6px' }}>
-                  <div style={{ color: '#94a3b8', fontSize: '0.7rem' }}>New Entry Credit</div>
-                  <div style={{ color: '#4ade80', fontWeight: 'bold' }}>+${data.expert_opinions.defense?.financials?.credit_open ?? '0.00'}</div>
-                </div>
-                <div style={{ gridColumn: 'span 2', background: 'rgba(0,0,0,0.2)', padding: '0.5rem', borderRadius: '6px' }}>
-                  <div style={{ color: '#94a3b8', fontSize: '0.7rem' }}>Net P&L if Switched</div>
-                  <div style={{
-                    fontWeight: 'bold',
-                    color: (data.expert_opinions.defense?.financials?.net_impact ?? 0) >= 0 ? '#4ade80' : '#f87171'
-                  }}>
-                    {(data.expert_opinions.defense?.financials?.net_impact ?? 0) >= 0 ? '+' : ''}${data.expert_opinions.defense?.financials?.net_impact ?? '0.00'}
-                  </div>
-                  <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '2px' }}>
-                    {(data.expert_opinions.defense?.financials?.net_impact ?? 0) >= 0
-                      ? '✅ Switch would be net positive — Loki will flag ROLL if gate opens.'
-                      : '⏸ Switch is net negative — HOLD until conditions improve.'}
-                  </div>
-                </div>
-              </div>
-              <p style={{ fontSize: '0.75rem', marginTop: '0.75rem', color: '#475569', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.5rem' }}>
-                {data.expert_opinions.defense?.details}
-              </p>
-            </div>
+            <ChallengerTradePanel
+              defenseData={data.expert_opinions.defense}
+              finalAction={data.final_action}
+              lokiStrategy={loki_proposal.strategy}
+              ledger={ledger}
+              watchdog={data.expert_opinions.watchdog}
+            />
           ) : data.expert_opinions.new_trade ? (
             <div style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(59, 130, 246, 0.1)', border: '1px solid #3b82f6', borderRadius: '8px' }}>
               <h3 style={{ margin: '0 0 0.5rem 0', color: '#60a5fa' }}>🚀 Opportunity Scan</h3>
@@ -1607,7 +1730,7 @@ function App() {
                     <div style={{ textAlign: 'center', background: 'rgba(59,130,246,0.1)', padding: '0.3rem', borderRadius: '4px', border: '1px solid rgba(59,130,246,0.2)' }}>
                       <div style={{ fontSize: '0.6rem', color: '#60a5fa', fontWeight: 600, letterSpacing: '0.04em' }}>POSITION MMM</div>
                       <div style={{ fontSize: '1rem', fontWeight: 800, color: '#60a5fa' }}>
-                        ${data?.expert_opinions?.defense?.financials?.mmm_position || 'N/A'}
+                        ${data?.expert_opinions?.defense?.financials?.mmm_positions?.[expiryStr] || data?.expert_opinions?.defense?.financials?.mmm_position || 'N/A'}
                       </div>
                     </div>
                   </div>
@@ -1702,25 +1825,24 @@ function App() {
           <div style={{ marginTop: '1rem', color: expert_opinions.volatility.signal.includes('SELL') ? '#ef4444' : '#22c55e' }}>
             SIGNAL: {expert_opinions.volatility.signal}
           </div>
-          {/* N8N Cloud Forecast — the authoritative forward-looking bias */}
+          {/* Native Edge Forecast — the authoritative forward-looking bias */}
           {(() => {
-            const n8nForecast = expert_opinions.n8n?.forecast || expert_opinions.volatility.forecast || null;
-            if (!n8nForecast) return null;
-            const fColor = n8nForecast === 'BULLISH' ? '#4ade80' : n8nForecast === 'BEARISH' ? '#f87171' : '#eab308';
-            const fExplain = n8nForecast === 'BULLISH'
-              ? 'Cloud Brain expects upward pressure. Favour call-side buffer.'
-              : n8nForecast === 'BEARISH'
-                ? 'Cloud Brain expects downward pressure. Favour put-side buffer.'
-                : 'Cloud Brain sees no clear directional edge. Fair-value Iron Condor conditions.';
-            const fSource = expert_opinions.n8n?.n8n_live ? '🟢 Genesis v3' : '🔴 Local Cache';
+            const nativeForecast = expert_opinions.n8n?.forecast || expert_opinions.volatility.forecast || null;
+            if (!nativeForecast) return null;
+            const fColor = nativeForecast === 'BULLISH' ? '#4ade80' : nativeForecast === 'BEARISH' ? '#f87171' : '#eab308';
+            const fExplain = nativeForecast === 'BULLISH'
+              ? 'Native Edge expects upward pressure. Favour call-side buffer.'
+              : nativeForecast === 'BEARISH'
+                ? 'Native Edge expects downward pressure. Favour put-side buffer.'
+                : 'Native Edge sees no clear directional bias. Fair-value Iron Condor conditions.';
             return (
               <div style={{ marginTop: '0.75rem', padding: '0.5rem 0.75rem', background: `${fColor}11`, border: `1px solid ${fColor}44`, borderRadius: '6px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 'bold', color: '#94a3b8', letterSpacing: '0.05em', display: 'flex', alignItems: 'center' }}>N8N FORECAST <InfoTooltip text="Cloud Brain's 7-day directional bias from Gemini AI. BULLISH = widen call buffer. BEARISH = widen put buffer. NEUTRAL = symmetric IC. 🟢 = live Genesis v3. 🔴 = Gemini direct fallback." /></span>
-                  <span style={{ fontSize: '0.65rem', color: expert_opinions.n8n?.n8n_live ? '#4ade80' : '#f87171' }}>{fSource}</span>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 'bold', color: '#94a3b8', letterSpacing: '0.05em', display: 'flex', alignItems: 'center' }}>NATIVE FORECAST <InfoTooltip text="Native Intelligence 7-day directional bias from Gemini AI. BULLISH = widen call buffer. BEARISH = widen put buffer. NEUTRAL = symmetric IC." /></span>
+                  <span style={{ fontSize: '0.65rem', color: '#4ade80' }}>🟢 Native Engine</span>
                 </div>
-                <div style={{ fontSize: '1rem', fontWeight: 'bold', color: fColor }}>{n8nForecast}</div>
-                <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.25rem', lineHeight: '1.3' }}>{fExplain}</div>
+                <div style={{ fontSize: '1rem', fontWeight: 'bold', color: fColor }}>{nativeForecast}</div>
+                <div style={{ fontSize: '0.75rem', color: '#94a3b8', margin: '0.25rem 0 0', lineHeight: '1.3' }}>{fExplain}</div>
               </div>
             );
           })()}

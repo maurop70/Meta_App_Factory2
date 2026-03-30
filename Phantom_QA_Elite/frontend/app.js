@@ -462,9 +462,15 @@ function connectGhostStream() {
         } catch { /* ignore parse errors */ }
     };
 
-    _ghostStreamSource.onerror = () => {
+    _ghostStreamSource.onerror = (err) => {
+        console.error('Ghost Stream SSE Error:', err);
         dot.classList.remove('connected');
         label.textContent = 'Disconnected — Reconnecting...';
+        if (_ghostStreamSource) {
+            _ghostStreamSource.close();
+            _ghostStreamSource = null;
+        }
+        setTimeout(connectGhostStream, 5000);
     };
 }
 
@@ -667,3 +673,177 @@ function formatTime(ts) {
         });
     } catch { return ts; }
 }
+
+// ══════════════════════════════════════════════════════════
+//  AUDITOR'S DESK
+// ══════════════════════════════════════════════════════════
+
+let _auditHistory = [];
+
+// ── File Drag & Drop ────────────────────────────────────
+(function initAuditDragDrop() {
+    document.addEventListener('DOMContentLoaded', () => {
+        const dropZone = document.getElementById('auditDropZone');
+        const fileInput = document.getElementById('auditFileInput');
+        const filePreview = document.getElementById('auditFilePreview');
+        const fileName = document.getElementById('auditFileName');
+        const fileSize = document.getElementById('auditFileSize');
+        const removeBtn = document.getElementById('auditRemoveFile');
+
+        if (!dropZone) return; // Guard
+
+        ['dragenter', 'dragover'].forEach(e => {
+            dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.classList.add('dragover'); });
+        });
+        ['dragleave', 'drop'].forEach(e => {
+            dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.classList.remove('dragover'); });
+        });
+        dropZone.addEventListener('drop', ev => {
+            if (ev.dataTransfer.files.length) {
+                fileInput.files = ev.dataTransfer.files;
+                _showAuditFile(ev.dataTransfer.files[0]);
+            }
+        });
+        dropZone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length) _showAuditFile(fileInput.files[0]);
+        });
+        removeBtn.addEventListener('click', () => {
+            fileInput.value = '';
+            filePreview.classList.remove('show');
+            dropZone.style.display = 'block';
+        });
+    });
+})();
+
+function _showAuditFile(file) {
+    document.getElementById('auditFileName').textContent = file.name;
+    document.getElementById('auditFileSize').textContent = (file.size / 1024).toFixed(1) + ' KB';
+    document.getElementById('auditFilePreview').classList.add('show');
+    document.getElementById('auditDropZone').style.display = 'none';
+}
+
+// ── Launch Audit ────────────────────────────────────────
+async function runAudit() {
+    const targetUrl = document.getElementById('auditTargetUrl').value.trim();
+    const auditMode = document.getElementById('auditMode').value;
+    const fileLink = document.getElementById('auditFileLink').value.trim();
+    const fileInput = document.getElementById('auditFileInput');
+
+    if (!targetUrl) { showToast('Enter a target agent URL', 'error'); return; }
+
+    showProgress('🛡️ Phantom QA — Systems Audit');
+
+    try {
+        const fd = new FormData();
+        fd.append('target_url', targetUrl);
+        fd.append('audit_mode', auditMode);
+        if (fileLink) fd.append('file_link', fileLink);
+        if (fileInput.files.length) fd.append('file', fileInput.files[0]);
+
+        const r = await fetch(`${API}/audit`, {
+            method: 'POST',
+            body: fd,
+        });
+        const data = await r.json();
+
+        hideProgress(true);
+
+        if (data.error) {
+            showToast(`Audit error: ${data.error}`, 'error');
+            return;
+        }
+
+        renderAuditVerdict(data);
+        showToast(`Audit complete — ${data.verdict}`, data.verdict === 'PASS' ? 'success' : 'error');
+
+        // Track history locally
+        _auditHistory.unshift(data);
+        if (_auditHistory.length > 20) _auditHistory.pop();
+        renderAuditHistory();
+        loadDashboard();
+    } catch (e) {
+        hideProgress(false);
+        showToast(`Audit failed: ${e.message}`, 'error');
+    }
+}
+
+// ── Render Verdict ──────────────────────────────────────
+function renderAuditVerdict(data) {
+    const container = document.getElementById('auditResults');
+    container.style.display = 'block';
+
+    const scoreClass = data.score >= 80 ? 'pass' : data.score >= 50 ? 'warn' : 'fail';
+    const verdictIcon = data.verdict === 'PASS' ? '✅' : data.verdict === 'WARN' ? '⚠️' : '❌';
+    const blocked = data.blocked ? '<span style="color:var(--fail);font-weight:700;margin-left:12px">⛔ BLOCKED</span>' : '';
+
+    container.innerHTML = `
+        <div class="audit-verdict ${data.verdict}">
+            <div class="verdict-left">
+                <span class="verdict-icon">${verdictIcon}</span>
+                <div class="verdict-text">
+                    <h2>${data.verdict} ${blocked}</h2>
+                    <p>${esc(data.audit_mode || '')} audit of ${esc(data.target_url || '')}</p>
+                </div>
+            </div>
+            <div class="audit-verdict-score ${scoreClass}">${data.score}</div>
+        </div>
+
+        <div class="audit-meta">
+            <div class="audit-meta-item">🕐 Duration: <strong>${data.duration_seconds || '?'}s</strong></div>
+            <div class="audit-meta-item">🔢 Tests: <strong>${data.total_tests || '?'}</strong></div>
+            <div class="audit-meta-item">✅ Passed: <strong>${data.passed || 0}</strong></div>
+            <div class="audit-meta-item">❌ Failed: <strong>${data.failed || 0}</strong></div>
+            ${data.run_id ? `<div class="audit-meta-item">📋 Run: <strong>#${data.run_id}</strong></div>` : ''}
+            ${data.source ? `<div class="audit-meta-item">📡 Source: <strong>${esc(data.source)}</strong></div>` : ''}
+        </div>
+
+        ${data.findings && data.findings.length > 0 ? `
+            <div class="result-card" style="margin-top:16px">
+                <h3>🔍 Findings (${data.findings.length})</h3>
+                <div class="test-list">
+                    ${data.findings.map(f => `
+                        <div class="test-item">
+                            <span class="test-icon">${f.passed ? '✅' : '❌'}</span>
+                            <span class="test-name">${esc(f.test_name || f.check || '')}</span>
+                            <span class="test-detail">${esc(f.details || f.message || '')}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        ` : ''}
+
+        ${data.correction_request ? `
+            <div class="repair-card" style="margin-top:16px">
+                <div class="repair-title">⛔ Correction Request Sent to Source Agent</div>
+                <div class="repair-detail">${esc(data.correction_request)}</div>
+            </div>
+        ` : ''}
+
+        ${data.verdict === 'PASS' ? `
+            <div class="result-card" style="margin-top:16px;border-color:rgba(16,185,129,0.2)">
+                <h3 style="color:var(--pass)">✅ Quality Cleared</h3>
+                <p style="font-size:13px;color:var(--text-secondary)">
+                    This output has passed the Phantom QA quality gate and is safe to present to the user.
+                </p>
+            </div>
+        ` : ''}
+    `;
+}
+
+function renderAuditHistory() {
+    const el = document.getElementById('auditHistory');
+    if (_auditHistory.length === 0) {
+        el.innerHTML = '<div class="empty-state">No audits yet. Target an agent and launch an audit above.</div>';
+        return;
+    }
+    el.innerHTML = _auditHistory.slice(0, 10).map(a => `
+        <div class="recent-item" style="cursor:default">
+            <span class="verdict-badge verdict-${a.verdict}">${a.verdict}</span>
+            <span class="recent-app">${esc(a.audit_mode || 'audit')} · ${esc(a.target_url || '')}</span>
+            <span class="recent-score">${a.score}/100</span>
+            <span class="recent-time">${formatTime(a.timestamp)}</span>
+        </div>
+    `).join('');
+}
+

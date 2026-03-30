@@ -89,6 +89,17 @@ if FRONTEND_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
 
+# ── No-cache for development ─────────────────────────────
+@app.middleware("http")
+async def no_cache_static(request: Request, call_next):
+    response = await call_next(request)
+    if request.url.path.startswith("/static/"):
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
+
+
 # ── Global Exception Handler ─────────────────────────────
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -628,6 +639,461 @@ async def list_repairs():
     repairs = get_repair_dispatches()
     pending = get_pending_repairs()
     return {"repairs": repairs, "pending_count": len(pending)}
+
+
+# ═══════════════════════════════════════════════════════════
+#  ROUTES — Auditor's Desk (Manual + Automated Audit)
+# ═══════════════════════════════════════════════════════════
+
+from fastapi import UploadFile, File, Form
+
+AUDIT_UPLOADS_DIR = ROOT / "audit_uploads"
+AUDIT_UPLOADS_DIR.mkdir(exist_ok=True)
+
+
+@app.post("/api/audit")
+async def manual_audit(
+    target_url: str = Form(...),
+    audit_mode: str = Form("structural"),
+    file_link: str = Form(""),
+    file: UploadFile | None = File(None),
+):
+    """
+    Manual audit from the Auditor's Desk UI.
+    Routes to the appropriate agent based on audit_mode.
+    """
+    start = time.time()
+
+    # Handle optional file upload
+    file_path = None
+    if file and file.filename:
+        safe_name = f"audit_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{file.filename}"
+        file_path = AUDIT_UPLOADS_DIR / safe_name
+        content = await file.read()
+        file_path.write_bytes(content)
+        logger.info(f"[AUDIT] File uploaded: {file.filename} ({len(content)} bytes)")
+
+    logger.info(f"[AUDIT] Manual {audit_mode} audit of {target_url}")
+    result = await _run_audit(target_url, audit_mode, file_link, file_path)
+    result["duration_seconds"] = round(time.time() - start, 1)
+    result["source"] = "manual"
+    return result
+
+
+@app.post("/api/audit/auto")
+async def automated_audit(request: Request):
+    """
+    Automated quality gate — called by CFO or other agents after report generation.
+    Accepts: { source, target_url, file_link, file_name, report_data }
+    Returns: verdict + blocks on FAIL + sends correction request.
+    """
+    data = await safe_parse_body(request)
+    source = data.get("source", "unknown")
+    target_url = data.get("target_url", "http://localhost:5041")
+    file_link = data.get("file_link", "")
+    file_name = data.get("file_name", "")
+    report_data = data.get("report_data", {})
+
+    start = time.time()
+    logger.info(f"[AUDIT-AUTO] Automated audit from {source}: {file_name or target_url}")
+
+    # Auto-audits always use mathematical mode for CFO reports
+    audit_mode = data.get("audit_mode", "mathematical")
+    result = await _run_audit(target_url, audit_mode, file_link, None, report_data)
+    result["duration_seconds"] = round(time.time() - start, 1)
+    result["source"] = source
+    result["file_name"] = file_name
+
+    # If FAIL → block file and send correction request back to source
+    if result["verdict"] == "FAIL":
+        result["blocked"] = True
+        correction = (
+            f"[Phantom QA] Quality gate FAILED for '{file_name}'. "
+            f"Score: {result['score']}/100. "
+            f"Failed checks: {result.get('failed', 0)}/{result.get('total_tests', 0)}. "
+            f"Please review and correct the following issues before resubmission."
+        )
+        result["correction_request"] = correction
+
+        # Try to send correction back to the source agent
+        try:
+            import aiohttp
+            callback_url = data.get("callback_url", f"{target_url}/api/audit/correction")
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as session:
+                payload = {
+                    "source": "Phantom_QA_Elite",
+                    "verdict": "FAIL",
+                    "score": result["score"],
+                    "correction_request": correction,
+                    "findings": result.get("findings", []),
+                    "file_name": file_name,
+                }
+                async with session.post(callback_url, json=payload) as r:
+                    logger.info(f"[AUDIT-AUTO] Correction sent to {callback_url}: HTTP {r.status}")
+        except Exception as e:
+            logger.warning(f"[AUDIT-AUTO] Failed to send correction to source: {e}")
+    else:
+        result["blocked"] = False
+
+    logger.info(f"[AUDIT-AUTO] Verdict: {result['verdict']} (Score: {result['score']}/100)")
+    return result
+
+
+# ── Mathematical Audit Hardening ─────────────────────────
+import re
+
+EXCEL_ERROR_CODES = ["#DIV/0!", "#REF!", "#VALUE!", "#NAME?", "#NULL!", "#N/A", "#NUM!"]
+SPEND_BUDGET_KEYWORDS = ["spend", "budget", "cost", "expense", "investment", "outlay"]
+
+
+def _run_mathematical_hardening(file_path=None, file_link: str = "",
+                                 report_data: dict = None) -> list:
+    """
+    Strict financial integrity checks. Returns a list of critical findings.
+    Any finding = automatic FAIL (score < 40).
+
+    Checks:
+      1. Excel Error Codes: #DIV/0!, #REF!, #VALUE!, #NAME?, etc.
+      2. Financial Impossibilities: Negative spend/budget values.
+      3. Formula Ghosting: Text cells that look like formulas (start with =).
+    """
+    critical_findings = []
+
+    # ── Check uploaded file (Excel) ──────────────────────
+    if file_path and Path(file_path).exists():
+        ext = Path(file_path).suffix.lower()
+        if ext in (".xlsx", ".xls"):
+            critical_findings.extend(_scan_excel_file(file_path))
+        elif ext in (".csv",):
+            critical_findings.extend(_scan_csv_file(file_path))
+
+    # ── Check report_data dict ───────────────────────────
+    if report_data and isinstance(report_data, dict):
+        critical_findings.extend(_scan_report_data(report_data))
+
+    return critical_findings
+
+
+def _scan_excel_file(file_path) -> list:
+    """Scan an Excel file for error codes, negative financials, and formula ghosts."""
+    findings = []
+    try:
+        import openpyxl
+        wb = openpyxl.load_workbook(str(file_path), data_only=True)
+        for sheet_name in wb.sheetnames:
+            ws = wb[sheet_name]
+            # Get header row to identify financial columns
+            headers = {}
+            for col_idx, cell in enumerate(ws[1] if ws.max_row >= 1 else [], 1):
+                if cell.value and isinstance(cell.value, str):
+                    headers[col_idx] = cell.value.strip().lower()
+
+            for row_idx, row in enumerate(ws.iter_rows(min_row=1, values_only=False), 1):
+                for col_idx, cell in enumerate(row, 1):
+                    val = cell.value
+                    if val is None:
+                        continue
+                    cell_ref = f"{sheet_name}!{cell.coordinate}"
+
+                    # Check 1: Excel Error Codes
+                    if isinstance(val, str):
+                        for err_code in EXCEL_ERROR_CODES:
+                            if err_code in val.upper():
+                                findings.append({
+                                    "test_name": f"Excel Error Code: {err_code}",
+                                    "passed": False,
+                                    "details": f"Cell {cell_ref} contains error '{val}'",
+                                })
+
+                        # Check 3: Formula Ghosting
+                        if val.strip().startswith("=") and cell.data_type == "s":
+                            findings.append({
+                                "test_name": "Formula Ghosting",
+                                "passed": False,
+                                "details": (
+                                    f"Cell {cell_ref} contains text '{val[:60]}' "
+                                    f"that looks like a formula but is stored as static text"
+                                ),
+                            })
+
+                    # Check 2: Financial Impossibilities
+                    if isinstance(val, (int, float)) and val < 0:
+                        col_header = headers.get(col_idx, "")
+                        if any(kw in col_header for kw in SPEND_BUDGET_KEYWORDS):
+                            findings.append({
+                                "test_name": "Financial Impossibility: Negative Spend",
+                                "passed": False,
+                                "details": (
+                                    f"Cell {cell_ref} in column '{headers.get(col_idx, '?')}' "
+                                    f"has value {val} — spend/budget cannot be negative"
+                                ),
+                            })
+
+        wb.close()
+    except ImportError:
+        logger.warning("[AUDIT] openpyxl not installed — skipping Excel file scan")
+    except Exception as e:
+        logger.error(f"[AUDIT] Excel scan error: {e}")
+        findings.append({
+            "test_name": "Excel File Scan",
+            "passed": False,
+            "details": f"Failed to scan file: {str(e)[:200]}",
+        })
+    return findings
+
+
+def _scan_csv_file(file_path) -> list:
+    """Scan a CSV file for error codes, negative financials, and formula ghosts."""
+    findings = []
+    try:
+        import csv
+        with open(str(file_path), "r", encoding="utf-8", errors="replace") as f:
+            reader = csv.reader(f)
+            headers = []
+            for row_idx, row in enumerate(reader, 1):
+                if row_idx == 1:
+                    headers = [h.strip().lower() for h in row]
+                    continue
+                for col_idx, val in enumerate(row):
+                    val = val.strip()
+                    if not val:
+                        continue
+                    cell_ref = f"Row {row_idx}, Col {col_idx + 1}"
+
+                    # Check 1: Excel Error Codes
+                    for err_code in EXCEL_ERROR_CODES:
+                        if err_code in val.upper():
+                            findings.append({
+                                "test_name": f"Excel Error Code: {err_code}",
+                                "passed": False,
+                                "details": f"{cell_ref} contains error '{val}'",
+                            })
+
+                    # Check 3: Formula Ghosting
+                    if val.startswith("="):
+                        findings.append({
+                            "test_name": "Formula Ghosting",
+                            "passed": False,
+                            "details": f"{cell_ref} contains text '{val[:60]}' — looks like a formula stored as text",
+                        })
+
+                    # Check 2: Financial Impossibilities
+                    col_header = headers[col_idx] if col_idx < len(headers) else ""
+                    if any(kw in col_header for kw in SPEND_BUDGET_KEYWORDS):
+                        try:
+                            numeric = float(val.replace(",", "").replace("$", ""))
+                            if numeric < 0:
+                                findings.append({
+                                    "test_name": "Financial Impossibility: Negative Spend",
+                                    "passed": False,
+                                    "details": f"{cell_ref} in '{col_header}' = {numeric} — cannot be negative",
+                                })
+                        except ValueError:
+                            pass
+    except Exception as e:
+        logger.error(f"[AUDIT] CSV scan error: {e}")
+    return findings
+
+
+def _scan_report_data(report_data: dict, path: str = "") -> list:
+    """Recursively scan report_data dict for error codes and negative financials."""
+    findings = []
+
+    def _walk(obj, key_path="root"):
+        if isinstance(obj, dict):
+            for k, v in obj.items():
+                _walk(v, f"{key_path}.{k}")
+        elif isinstance(obj, list):
+            for i, v in enumerate(obj):
+                _walk(v, f"{key_path}[{i}]")
+        elif isinstance(obj, str):
+            # Check for Excel error codes
+            for err_code in EXCEL_ERROR_CODES:
+                if err_code in obj.upper():
+                    findings.append({
+                        "test_name": f"Excel Error Code: {err_code}",
+                        "passed": False,
+                        "details": f"Field '{key_path}' contains error code '{obj[:80]}'",
+                    })
+            # Check for formula ghosting
+            if obj.strip().startswith("="):
+                findings.append({
+                    "test_name": "Formula Ghosting",
+                    "passed": False,
+                    "details": f"Field '{key_path}' contains formula-like text: '{obj[:60]}'",
+                })
+        elif isinstance(obj, (int, float)):
+            # Check for negative spend/budget
+            key_lower = key_path.lower()
+            if any(kw in key_lower for kw in SPEND_BUDGET_KEYWORDS) and obj < 0:
+                findings.append({
+                    "test_name": "Financial Impossibility: Negative Spend",
+                    "passed": False,
+                    "details": f"Field '{key_path}' = {obj} — spend/budget cannot be negative",
+                })
+
+    _walk(report_data)
+    return findings
+
+
+async def _run_audit(target_url: str, audit_mode: str, file_link: str = "",
+                     file_path=None, report_data: dict = None) -> dict:
+    """
+    Core audit logic — runs the appropriate agent(s) based on audit mode
+    and returns a unified verdict response.
+    """
+    findings = []
+    total_tests = 0
+    passed = 0
+    failed = 0
+
+    try:
+        if audit_mode in ("structural", "mathematical"):
+            # Use Skeptic for structural/mathematical audits
+            skeptic_result = await run_skeptic(target_url)
+            results = skeptic_result.get("results", [])
+            for r in results:
+                findings.append({
+                    "test_name": r.get("test_name", ""),
+                    "passed": r.get("passed", False),
+                    "details": r.get("details", ""),
+                })
+            total_tests = skeptic_result.get("total_tests", len(results))
+            passed = skeptic_result.get("passed", 0)
+            failed = skeptic_result.get("failed", 0)
+            score = skeptic_result.get("score", 0)
+
+            # ── HARDENED MATHEMATICAL AUDIT ───────────────
+            # If mode is "mathematical", apply strict financial checks
+            # on file contents and report_data.
+            if audit_mode == "mathematical":
+                math_findings = _run_mathematical_hardening(
+                    file_path=file_path,
+                    file_link=file_link,
+                    report_data=report_data,
+                )
+                if math_findings:
+                    # Critical failures found — force score < 40
+                    for mf in math_findings:
+                        findings.append(mf)
+                        total_tests += 1
+                        failed += 1
+                    # Recalculate score — cap at 35 if any critical check fails
+                    critical_count = len(math_findings)
+                    score = min(score, max(0, 35 - (critical_count * 8)))
+                    logger.warning(
+                        f"[AUDIT] Mathematical hardening: {critical_count} "
+                        f"critical issues found — score capped at {score}"
+                    )
+
+        elif audit_mode == "stress-test":
+            # Full Skeptic battery
+            skeptic_result = await run_skeptic(target_url)
+            results = skeptic_result.get("results", [])
+            for r in results:
+                findings.append({
+                    "test_name": r.get("test_name", ""),
+                    "passed": r.get("passed", False),
+                    "details": r.get("details", ""),
+                })
+            total_tests = skeptic_result.get("total_tests", len(results))
+            passed = skeptic_result.get("passed", 0)
+            failed = skeptic_result.get("failed", 0)
+            score = skeptic_result.get("score", 0)
+
+        elif audit_mode == "uiux":
+            # Ghost User UI tests
+            try:
+                ghost_result = await run_ghost_user(target_url, test_plan=None,
+                                                     event_callback=ghost_event_callback)
+                results = ghost_result.get("results", [])
+                for r in results:
+                    findings.append({
+                        "test_name": r.get("test_name", ""),
+                        "passed": r.get("passed", False),
+                        "details": r.get("details", ""),
+                    })
+                total_tests = ghost_result.get("total_tests", len(results))
+                passed = ghost_result.get("passed", 0)
+                failed = ghost_result.get("failed", 0)
+                score = ghost_result.get("score", 0)
+            except Exception as e:
+                logger.error(f"[AUDIT] Ghost User failed: {e}")
+                findings.append({"test_name": "Ghost User Launch", "passed": False,
+                                  "details": str(e)[:200]})
+                total_tests = 1
+                failed = 1
+                score = 0
+
+        else:
+            # Default: Architect discovery
+            architect_result = await run_architect(target_url)
+            endpoints = architect_result.get("_discovery", {}).get("endpoints", [])
+            total_tests = len(endpoints) + 1
+            has_frontend = architect_result.get("_discovery", {}).get("has_frontend", False)
+
+            findings.append({
+                "test_name": "Endpoint Discovery",
+                "passed": len(endpoints) > 0,
+                "details": f"Found {len(endpoints)} endpoints",
+            })
+            if len(endpoints) > 0:
+                passed += 1
+            else:
+                failed += 1
+
+            for ep in endpoints[:10]:
+                findings.append({
+                    "test_name": f"Endpoint: {ep.get('path', '?')}",
+                    "passed": True,
+                    "details": f"{ep.get('method', '?')} — {ep.get('description', 'discovered')}",
+                })
+                passed += 1
+
+            score = round((passed / max(total_tests, 1)) * 100)
+
+    except Exception as e:
+        logger.error(f"[AUDIT] Error during {audit_mode} audit: {e}")
+        findings.append({"test_name": "Audit Engine", "passed": False,
+                          "details": f"Internal error: {str(e)[:200]}"})
+        total_tests = 1
+        failed = 1
+        score = 0
+
+    # Determine verdict
+    if score >= 80:
+        verdict = "PASS"
+    elif score >= 50:
+        verdict = "WARN"
+    else:
+        verdict = "FAIL"
+
+    # Save to memory
+    run_id = save_test_run(
+        app_name=f"AUDIT:{audit_mode}",
+        app_url=target_url,
+        verdict=verdict,
+        score=score,
+        duration=0,
+        report_data={"verdict": verdict, "score": score, "audit_mode": audit_mode},
+        architect_plan=None,
+        ghost_summary=None,
+        skeptic_summary=None,
+    )
+
+    return {
+        "verdict": verdict,
+        "score": score,
+        "audit_mode": audit_mode,
+        "target_url": target_url,
+        "file_link": file_link,
+        "run_id": run_id,
+        "total_tests": total_tests,
+        "passed": passed,
+        "failed": failed,
+        "findings": findings,
+        "timestamp": datetime.now().isoformat(),
+    }
 
 
 # ═══════════════════════════════════════════════════════════

@@ -18,7 +18,7 @@
             "status": "active",
             "type": "Trading Dashboard",
             "version": "2.6-hardened",
-            "port": 5005,
+            "port": 5008,
             "workflow_id": "VkE0dmwynRPMIyjdmiONL",
             "webhook_url": "https://humanresource.app.n8n.cloud/webhook/alpha-macro-poll",
             "blueprint": "trading_intelligence",
@@ -166,18 +166,16 @@
         "PulseBoard": {
             "status": "scaffolding",
             "type": "Multi-agent educational app",
-            "port": null,
+            "port": 5010,
             "blueprint": "multi_agent_core",
             "capabilities": [],
             "last_build": "2026-03-25T00:55:41.637573+00:00"
         },
         "Master_Architect_Elite": {
-            "status": "active",
+            "status": "native",
             "type": "Architecture Review & Quality Gate",
             "version": "1.0.0",
             "port": 5050,
-            "workflow_id": "wunoJBl6p6hfiHOX",
-            "webhook_url": "https://humanresource.app.n8n.cloud/webhook/master-architect-review",
             "blueprint": "multi_agent_core",
             "n8n_project": "Master Architect Elite",
             "path": "Meta_App_Factory/Master_Architect_Elite_Logic",
@@ -278,7 +276,7 @@
             "last_build": "2026-03-27T03:00:00.000Z",
             "form_url": "/"
         },
-        "CFO_Fragility_Engine": {
+        "CFO_Ultimate_Excel_Architect": {
             "status": "active",
             "type": "Financial Execution Pipeline",
             "version": "2.0.0",
@@ -310,10 +308,57 @@
                     "Report_Generator"
                 ]
             },
-            "c_suite_role": "CFO Sub-Agent — Financial Modeling & Fragility Analysis",
+            "c_suite_role": "CFO Sub-Agent \u00e2\u20ac\u201d Financial Modeling & Fragility Analysis",
             "visual_accent": "#E94560",
             "last_build": "2026-03-27T20:25:00.000Z",
             "form_url": "/form"
+        },
+        "CTO_Agent": {
+            "status": "active",
+            "type": "Technical Feasibility & Architecture Gate",
+            "version": "3.0.0",
+            "port": 5060,
+            "blueprint": "multi_agent_core",
+            "n8n_project": "Elite Council",
+            "path": "Meta_App_Factory/Project_Aether/C-Suite_Active_Logic/CTO",
+            "parent_agent": "CTO",
+            "isolation": {
+                "boundary": "Project_Aether",
+                "separated_from": [
+                    "Resonance"
+                ],
+                "no_code_dependencies": true
+            },
+            "capabilities": [
+                "technical feasibility scoring (1-10)",
+                "V3 resilience core enforcement",
+                "tech stack selection & analysis",
+                "Master Architect Elite Pre-Deploy Gate",
+                "n8n workflow orchestration",
+                "Aether Runtime engineering",
+                "architecture review & approval"
+            ],
+            "agents": {
+                "active": [
+                    "Feasibility_Assessor",
+                    "Stack_Selector",
+                    "PreDeploy_Gate"
+                ]
+            },
+            "c_suite_role": "Technical Feasibility Gate & Meta_App_Factory Executor",
+            "visual_accent": "#06B6D4",
+            "last_build": "2026-03-29T21:10:00.000Z",
+            "form_url": "/"
+        },
+        "Project_Aegis": {
+            "status": "active",
+            "type": "Legal Compliance & Trademark Auditor",
+            "port": 5070,
+            "blueprint": "compliance_auditor",
+            "path": "Meta_App_Factory/agents/Project_Aegis",
+            "capabilities": [],
+            "form_url": "",
+            "n8n_project": ""
         }
     },
     "last_updated": "2026-03-27T20:55:00.000Z"

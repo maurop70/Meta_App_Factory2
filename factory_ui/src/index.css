@@ -1228,6 +1228,167 @@ body {
   box-shadow: 0 0 15px rgba(6, 214, 160, 0.15);
 }
 
+/* ══ REFINE PROGRESS BAR ═══════════════════════════════ */
+.refine-progress {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  animation: fadeIn 0.4s ease;
+}
+
+.refine-progress.active {
+  border-color: rgba(245, 158, 11, 0.35);
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.08);
+}
+
+.refine-progress.complete {
+  border-color: rgba(16, 185, 129, 0.35);
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.08);
+}
+
+.refine-progress.error {
+  border-color: rgba(239, 68, 68, 0.35);
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.08);
+}
+
+.rp-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.rp-icon {
+  font-size: 1rem;
+}
+
+.rp-title {
+  font-size: 0.72rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  flex: 1;
+}
+
+.refine-progress.active .rp-title { color: #f59e0b; }
+.refine-progress.complete .rp-title { color: #10b981; }
+.refine-progress.error .rp-title { color: #ef4444; }
+
+.rp-timer {
+  font-size: 0.7rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-muted);
+}
+
+.rp-pct {
+  font-size: 0.72rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  color: #f59e0b;
+  min-width: 2.5rem;
+  text-align: right;
+}
+
+.refine-progress.complete .rp-pct { color: #10b981; }
+.refine-progress.error .rp-pct { color: #ef4444; }
+
+.rp-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f59e0b;
+  animation: rpPulse 1.4s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes rpPulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.5); }
+  50% { opacity: 0.5; box-shadow: 0 0 0 6px transparent; }
+}
+
+.rp-bar-track {
+  height: 8px;
+  background: rgba(15, 23, 42, 0.9);
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(99, 102, 241, 0.08);
+}
+
+.rp-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #f59e0b, #f97316, #10b981);
+  border-radius: 10px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.rp-bar-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.15) 50%, transparent 100%);
+  animation: rpShimmer 2s ease-in-out infinite;
+}
+
+@keyframes rpShimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.refine-progress.complete .rp-bar-fill {
+  background: linear-gradient(90deg, #10b981, #06d6a0);
+}
+
+.refine-progress.error .rp-bar-fill {
+  background: linear-gradient(90deg, #ef4444, #f97316);
+}
+
+.rp-phases {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.rp-phase {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-family: 'JetBrains Mono', monospace;
+  border: 1px solid var(--border);
+  background: rgba(15, 23, 42, 0.5);
+  color: var(--text-muted);
+  transition: all 0.3s ease;
+}
+
+.rp-phase.done {
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.25);
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.rp-phase.active {
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.35);
+  background: rgba(245, 158, 11, 0.1);
+  animation: rpPhaseGlow 1.5s ease-in-out infinite;
+}
+
+@keyframes rpPhaseGlow {
+  0%, 100% { box-shadow: 0 0 6px rgba(245, 158, 11, 0.1); }
+  50% { box-shadow: 0 0 14px rgba(245, 158, 11, 0.25); }
+}
+
+.rp-phase-icon { font-size: 0.7rem; }
+.rp-phase-label { font-weight: 500; }
+
 /* ══ WELCOME ═══════════════════════════════════════════ */
 .welcome-msg {
   text-align: center;
@@ -2024,4 +2185,22 @@ body {
   opacity: 0.35;
   cursor: not-allowed;
   transform: none;
+}
+
+/* ── War Room Agent Operations Tracker ── */
+@keyframes agent-pulse-glow {
+  0%, 100% { opacity: 1; transform: scale(1); filter: drop-shadow(0 0 2px currentColor); }
+  50% { opacity: 0.6; transform: scale(0.9); filter: drop-shadow(0 0 8px currentColor); }
+}
+
+@keyframes agent-progress-fill {
+  0% { width: 0%; }
+  30% { width: 45%; }
+  70% { width: 75%; }
+  95% { width: 95%; }
+  100% { width: 98%; }
+}
+
+.agent-progress-fill {
+  animation: agent-progress-fill 15s cubic-bezier(0.1, 0.82, 0.25, 1) forwards;
 }

@@ -1012,7 +1012,8 @@ def chat_clear():
 
 @app.route('/')
 def home():
-    return jsonify({"status": "online", "port": PORT, "system": "Alpha V2 Genesis"})
+    from flask import redirect
+    return redirect("http://localhost:5174")
 
 @app.route('/api/analyze', methods=['GET'])
 def analyze_market():

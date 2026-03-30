@@ -1144,3 +1144,162 @@ button {
     padding: 8px 16px;
     font-size: 12px;
 }
+
+/* ═══ AUDITOR'S DESK ═══ */
+.auditor-badge {
+    background: linear-gradient(135deg, #0891b2, #06b6d4) !important;
+}
+
+.auditor-section {
+    border-color: rgba(8, 145, 178, 0.2);
+}
+
+.audit-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2394A3B8' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+    cursor: pointer;
+}
+
+.audit-select option {
+    background: var(--bg-card);
+    color: var(--text-primary);
+    padding: 8px;
+}
+
+.audit-drop-zone {
+    border: 2px dashed rgba(6, 182, 212, 0.2);
+    border-radius: var(--radius);
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+    margin-top: 10px;
+    overflow: hidden;
+}
+
+.audit-drop-zone input[type="file"] {
+    width: 0;
+    height: 0;
+    opacity: 0;
+    position: absolute;
+    pointer-events: none;
+}
+
+.audit-drop-zone:hover,
+.audit-drop-zone.dragover {
+    border-color: rgba(6, 182, 212, 0.5);
+    background: rgba(6, 182, 212, 0.04);
+}
+
+.audit-file-preview {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: rgba(6, 182, 212, 0.06);
+    border: 1px solid rgba(6, 182, 212, 0.2);
+    border-radius: var(--radius-sm);
+    margin-top: 10px;
+}
+
+.audit-file-preview.show {
+    display: flex;
+}
+
+.audit-file-name {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 500;
+    color: #67e8f9;
+}
+
+.audit-file-size {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.audit-remove-file {
+    background: none;
+    border: none;
+    color: var(--fail);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 6px;
+}
+
+.audit-btn {
+    background: linear-gradient(135deg, #0891b2, #06b6d4) !important;
+    box-shadow: 0 4px 16px rgba(6, 182, 212, 0.25) !important;
+    position: relative;
+    z-index: 999;
+    cursor: pointer;
+}
+
+.audit-btn:hover {
+    box-shadow: 0 8px 24px rgba(6, 182, 212, 0.35) !important;
+}
+
+/* ── Audit Verdict Banner ── */
+.audit-verdict {
+    padding: 20px 24px;
+    border-radius: var(--radius);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    animation: fadeIn 0.3s ease;
+}
+
+.audit-verdict.PASS {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(16, 185, 129, 0.04));
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    box-shadow: 0 0 30px rgba(16, 185, 129, 0.08);
+}
+
+.audit-verdict.FAIL {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.12), rgba(239, 68, 68, 0.04));
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    box-shadow: 0 0 30px rgba(239, 68, 68, 0.08);
+}
+
+.audit-verdict.WARN {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(245, 158, 11, 0.04));
+    border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.audit-verdict-score {
+    font-family: var(--font-mono);
+    font-size: 48px;
+    font-weight: 800;
+}
+
+.audit-verdict-score.pass { color: var(--pass); }
+.audit-verdict-score.fail { color: var(--fail); }
+.audit-verdict-score.warn { color: var(--warn); }
+
+.audit-meta {
+    display: flex;
+    gap: 16px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+}
+
+.audit-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    background: var(--bg-surface);
+    padding: 6px 12px;
+    border-radius: 6px;
+}
+
+.audit-meta-item strong {
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+}

@@ -16,7 +16,8 @@ from google import genai
 from google.genai import types
 
 # Folder for generated images
-GENERATED_DIR = Path(__file__).parent.parent / "frontend" / "generated"
+META_ROOT = Path(__file__).parent.parent.parent
+GENERATED_DIR = META_ROOT / "frontend" / "generated"
 GENERATED_DIR.mkdir(parents=True, exist_ok=True)
 
 

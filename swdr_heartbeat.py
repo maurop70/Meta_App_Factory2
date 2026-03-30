@@ -150,29 +150,32 @@ def run_check():
     """Execute a full SWDR heartbeat check."""
     global _last_alert_status
 
-    # ── Primary Health Check: Watchdog Ping (Hardening V3 Sealed) ──
+    # ── Primary Health Check: Native Watchdog Ping (Aether-Native) ──
     _watchdog_ok = False
     try:
-        import requests as _req
-        _rc_path = os.path.join(SCRIPT_DIR, "resilience_config.json")
-        if os.path.exists(_rc_path):
-            with open(_rc_path) as _f:
-                _rc = json.load(_f)
-            _wdog_url = _rc.get("cloud_health", {}).get("watchdog_url", "")
-            if _wdog_url:
-                _start = time.time()
-                try:
-                    _r = _req.get(_wdog_url, timeout=5)
-                    _ms = (time.time() - _start) * 1000
-                    _watchdog_ok = _r.status_code == 200
-                    print(f"[{timestamp()}] Watchdog Ping:       {'🟢' if _watchdog_ok else '🟡'} {_r.status_code} ({_ms:.0f}ms)")
-                    if _ms > 3000:
-                        _watchdog_ok = False
-                        print(f"[{timestamp()}] ⚠️ Cloud latency {_ms:.0f}ms > 3000ms threshold")
-                except Exception as _e:
-                    print(f"[{timestamp()}] Watchdog Ping:       🔴 UNREACHABLE ({_e})")
-    except Exception:
-        pass
+        import time as _time
+        _start = _time.time()
+        
+        # Instantiate/Get the built-in watchdog directly
+        sys.path.insert(0, SCRIPT_DIR)
+        from native_watchdog import get_native_watchdog
+        
+        watchdog = get_native_watchdog()
+        pulse = watchdog.get_system_pulse()
+        if pulse.get("status") == "initializing":
+            watchdog._run_health_checks()
+            pulse = watchdog.get_system_pulse()
+        
+        _ms = (_time.time() - _start) * 1000
+        _watchdog_ok = (pulse.get("status") == "healthy")
+        
+        print(f"[{timestamp()}] Native Watchdog:     {'🟢' if _watchdog_ok else '🟡'} {pulse.get('status').upper()} ({_ms:.0f}ms)")
+        
+        if not _watchdog_ok:
+            print(f"[{timestamp()}] ⚠️ Local Native Watchdog reported degraded state.")
+            
+    except Exception as _e:
+        print(f"[{timestamp()}] Native Watchdog:     🔴 LOCAL_FAULT ({_e})")
 
     # ── Safe-Buffer Mode Toggle ──────────────────────────────
     try:

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import './App.css'
 import WarRoom from './WarRoom'
+import CommandCenter from './CommandCenter'
 import SupportFAB from './SupportFAB'
 import ModeSelectionScreen from './ModeSelectionScreen'
 import VentureSuite from './VentureSuite'
@@ -129,13 +130,17 @@ function TelemetryBar({ streaming }) {
     const interval = setInterval(() => {
       fetch(`${API_BASE}/api/health`)
         .then(r => r.json())
-        .then(d => setTelemetryStatus(d.status === 'healthy' ? 'ACTIVE' : 'WARNING'))
+        .then(d => {
+          if (d.status === 'processing') setTelemetryStatus('PROCESSING');
+          else setTelemetryStatus(d.status === 'healthy' ? 'ACTIVE' : 'WARNING');
+        })
         .catch(() => setTelemetryStatus('OFFLINE'));
     }, 5000);
     return () => clearInterval(interval);
   }, []);
 
-  const color = telemetryStatus === 'ACTIVE' ? '#10b981' : telemetryStatus === 'WARNING' ? '#f59e0b' : '#ef4444';
+  const color = telemetryStatus === 'ACTIVE' ? '#10b981' : telemetryStatus === 'PROCESSING' ? '#00FFFF' : telemetryStatus === 'WARNING' ? '#f59e0b' : '#ef4444';
+  const pulseText = telemetryStatus === 'PROCESSING' ? '| PULSE PROCESSING' : '| PULSE OK';
 
   return (
     <div className="telemetry-bar">
@@ -143,7 +148,7 @@ function TelemetryBar({ streaming }) {
         <div className="telemetry-fill" style={{ width: streaming ? '60%' : '0%', background: streaming ? '#6366f1' : 'transparent' }} />
       </div>
       <span className="telemetry-label" style={{ color }}>
-        TELEMETRY: {telemetryStatus} {streaming ? '| STREAMING...' : '| PULSE OK'}
+        TELEMETRY: {telemetryStatus} {streaming ? '| STREAMING...' : pulseText}
       </span>
     </div>
   );
@@ -717,12 +722,95 @@ function BuilderChat({ registry, onAtomizerUpdate, externalCommand, onBuildCompl
   );
 }
 
+// ── REFINE APP — PROGRESS BAR ──────────────────────────────
+const REFINE_PHASES = [
+  { id: 'DISCOVER', label: 'Scan Files',   icon: '📂' },
+  { id: 'ASSETS',   label: 'Assets',       icon: '🖼️' },
+  { id: 'DIAGNOSE', label: 'Analysis',     icon: '🔬' },
+  { id: 'ANALYZE',  label: 'Prompt',       icon: '🧠' },
+  { id: 'GENERATE', label: 'Generate',     icon: '⚡' },
+  { id: 'PARSE',    label: 'Parse',        icon: '🔍' },
+  { id: 'WRITE',    label: 'Write',        icon: '✏️' },
+  { id: 'LINT',     label: 'Lint',         icon: '🔎' },
+  { id: 'VALIDATE', label: 'Validate',     icon: '🧪' },
+];
+
+function RefineProgressBar({ log, refining }) {
+  const [elapsed, setElapsed] = useState(0);
+  const startRef = useRef(null);
+
+  // Start / stop timer
+  useEffect(() => {
+    if (refining && !startRef.current) startRef.current = Date.now();
+    if (!refining) startRef.current = null;
+  }, [refining]);
+
+  useEffect(() => {
+    if (!refining) return;
+    const iv = setInterval(() => {
+      if (startRef.current) setElapsed(Math.floor((Date.now() - startRef.current) / 1000));
+    }, 1000);
+    return () => clearInterval(iv);
+  }, [refining]);
+
+  // Derive phase statuses from log
+  const reachedSteps = new Set(log.map(e => e.step));
+  const isComplete = reachedSteps.has('COMPLETE');
+  const hasError = reachedSteps.has('ERROR');
+
+  let completedCount = 0;
+  let activePhaseId = null;
+  for (const phase of REFINE_PHASES) {
+    if (reachedSteps.has(phase.id)) {
+      completedCount++;
+      activePhaseId = phase.id;
+    }
+  }
+
+  const pct = isComplete ? 100 : Math.round((completedCount / REFINE_PHASES.length) * 100);
+  const formatTime = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+
+  const barClass = isComplete ? 'complete' : hasError ? 'error' : refining ? 'active' : '';
+
+  if (!refining && completedCount === 0 && !isComplete && !hasError) return null;
+
+  return (
+    <div className={`refine-progress ${barClass}`}>
+      <div className="rp-header">
+        <span className="rp-icon">{isComplete ? '✅' : hasError ? '❌' : '⚙️'}</span>
+        <span className="rp-title">
+          {isComplete ? 'REFINEMENT COMPLETE' : hasError ? 'REFINEMENT FAILED' : 'REFINING...'}
+        </span>
+        <span className="rp-timer">{formatTime(elapsed)}</span>
+        <span className="rp-pct">{pct}%</span>
+        {refining && !isComplete && <span className="rp-pulse" />}
+      </div>
+      <div className="rp-bar-track">
+        <div className="rp-bar-fill" style={{ width: `${pct}%` }} />
+      </div>
+      <div className="rp-phases">
+        {REFINE_PHASES.map((phase) => {
+          const reached = reachedSteps.has(phase.id);
+          const active = refining && phase.id === activePhaseId && !isComplete;
+          return (
+            <div
+              key={phase.id}
+              className={`rp-phase ${reached && !active ? 'done' : active ? 'active' : 'pending'}`}
+            >
+              <span className="rp-phase-icon">
+                {reached && !active ? '✅' : active ? '⏳' : phase.icon}
+              </span>
+              <span className="rp-phase-label">{phase.label}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── REFINE APP PANEL ───────────────────────────────────────
-function RefinePanel({ registry }) {
-  const [selectedApp, setSelectedApp] = useState('');
-  const [feedback, setFeedback] = useState('');
-  const [refining, setRefining] = useState(false);
-  const [log, setLog] = useState([]);
+function RefinePanel({ registry, refineLog: log, setRefineLog: setLog, refining, setRefining, refineApp: selectedApp, setRefineApp: setSelectedApp, refineFeedback: feedback, setRefineFeedback: setFeedback }) {
   const logEndRef = useRef(null);
 
   useEffect(() => {
@@ -733,7 +821,9 @@ function RefinePanel({ registry }) {
   useEffect(() => {
     if (!selectedApp && registry.length) {
       const active = registry.find(a => a.status === 'active');
-      setSelectedApp(active?.name || registry[0].name);
+      const fallback = localStorage.getItem('last_active_project') || active?.name || registry[0].name;
+      setSelectedApp(fallback);
+      localStorage.setItem('last_active_project', fallback);
     }
   }, [registry, selectedApp]);
 
@@ -814,10 +904,15 @@ function RefinePanel({ registry }) {
           <label>Target App</label>
           <select
             value={selectedApp}
-            onChange={e => setSelectedApp(e.target.value)}
+            onChange={e => {
+              const val = e.target.value;
+              setSelectedApp(val);
+              if (val) localStorage.setItem('last_active_project', val);
+            }}
             disabled={refining}
             className="refine-select"
           >
+            <option value="">-- Choose App --</option>
             {registry.map(app => (
               <option key={app.name} value={app.name}>
                 {app.name} — {app.type} {app.status === 'active' ? '🟢' : '⚪'}
@@ -847,6 +942,9 @@ function RefinePanel({ registry }) {
         </button>
       </div>
 
+      {/* ── PROGRESS BAR ── */}
+      <RefineProgressBar log={log} refining={refining} />
+
       {log.length > 0 && (
         <div className="refine-log">
           <h4>Pipeline Log</h4>
@@ -867,29 +965,118 @@ function RefinePanel({ registry }) {
 }
 
 // ── BRAND STUDIO PANEL ────────────────────────────────────
+const CMO_BASE = 'http://localhost:5020';
+
 function BrandStudioPanel({ registry }) {
-  const [selectedProject, setSelectedProject] = useState('');
+  const [selectedProject, setSelectedProject] = useState(localStorage.getItem('last_active_project') || '');
   const [activeMode, setActiveMode] = useState(null);
   const [currentBrand, setCurrentBrand] = useState(null);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(null);
   const [description, setDescription] = useState('');
+  const [cmoProjects, setCmoProjects] = useState([]);
+  const [brandVisuals, setBrandVisuals] = useState([]);
   const fileRef = useRef(null);
+
+  // Fetch CMO projects on mount
+  useEffect(() => {
+    fetch(`${CMO_BASE}/api/projects?status=active`, { signal: AbortSignal.timeout(3000) })
+      .then(r => r.json())
+      .then(data => {
+        const projects = Array.isArray(data) ? data : (data.projects || []);
+        const names = projects.map(p => p.name || p.project_name).filter(Boolean);
+        setCmoProjects(names);
+      })
+      .catch(() => { /* CMO offline */ });
+  }, []);
+
+  // Merge: registry apps + CMO-only projects
+  const registryNames = new Set(registry.map(a => a.name));
+  const cmoOnlyProjects = cmoProjects.filter(n => !registryNames.has(n));
 
   // Auto-select first project
   useEffect(() => {
     if (!selectedProject && registry.length) {
-      setSelectedProject(registry[0].name);
+      const fallback = localStorage.getItem('last_active_project') || registry[0].name;
+      setSelectedProject(fallback);
+      localStorage.setItem('last_active_project', fallback);
     }
   }, [registry, selectedProject]);
 
-  // Load current brand when project changes
+  // Load current brand — try CMO direct first, fallback to Factory proxy
   useEffect(() => {
     if (!selectedProject) return;
-    fetch(`${API_BASE}/api/brand/${encodeURIComponent(selectedProject)}`)
-      .then(r => r.json())
-      .then(data => setCurrentBrand(data.brand || null))
-      .catch(() => setCurrentBrand(null));
+    let cancelled = false;
+
+    const fetchBrand = async () => {
+      // ── Attempt 1: Direct CMO Elite (port 5020) ──
+      try {
+        const cmoRes = await fetch(
+          `${CMO_BASE}/api/memory/brand/${encodeURIComponent(selectedProject)}`,
+          { signal: AbortSignal.timeout(3000) }
+        );
+        if (cmoRes.ok) {
+          const cmoData = await cmoRes.json();
+          // CMO returns the brand object directly (not wrapped in .brand)
+          if (!cancelled && cmoData && cmoData.company_name) {
+            // Normalize: CMO stores rich data inside full_identity blob
+            const fi = typeof cmoData.full_identity === 'string'
+              ? JSON.parse(cmoData.full_identity)
+              : (cmoData.full_identity || {});
+            const normalized = { ...fi, ...cmoData };
+
+            // Ensure colors from top-level .colors OR nested visual_identity
+            if (!normalized.colors && normalized.visual_identity?.color_palette) {
+              normalized.colors = normalized.visual_identity.color_palette;
+            }
+            if (!normalized.fonts && normalized.visual_identity?.typography) {
+              const typo = normalized.visual_identity.typography;
+              normalized.fonts = {
+                heading_font: typo.heading_font,
+                body_font: typo.body_font,
+                mono_font: typo.mono_font,
+              };
+            }
+            setCurrentBrand(normalized);
+            // Pre-fill description with positioning statement
+            const pos = normalized.positioning_statement || fi.positioning_statement;
+            if (pos && !description) {
+              setDescription(pos);
+            }
+            return; // Success — skip fallback
+          }
+        }
+      } catch { /* CMO offline — fall through */ }
+
+      // ── Attempt 2: Factory proxy (port 8000) ──
+      try {
+        const res = await fetch(`${API_BASE}/api/brand/${encodeURIComponent(selectedProject)}`);
+        const data = await res.json();
+        if (!cancelled) {
+          setCurrentBrand(data.brand || null);
+        }
+      } catch {
+        if (!cancelled) setCurrentBrand(null);
+      }
+    };
+
+    const fetchVisuals = async () => {
+      try {
+        const res = await fetch(`${CMO_BASE}/api/memory/visuals/${encodeURIComponent(selectedProject)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (!cancelled) setBrandVisuals(data.visuals || []);
+        } else {
+          if (!cancelled) setBrandVisuals([]);
+        }
+      } catch {
+        if (!cancelled) setBrandVisuals([]);
+      }
+    };
+
+    fetchBrand();
+    fetchVisuals();
+    return () => { cancelled = true; };
   }, [selectedProject]);
 
   const handleAIGenerate = async () => {
@@ -966,8 +1153,18 @@ function BrandStudioPanel({ registry }) {
     }
   };
 
-  const brandColors = currentBrand?.colors || {};
-  const brandFonts = currentBrand?.fonts || {};
+  // Extract colors — handle both CMO nested format and Factory flattened format
+  const brandColors = currentBrand?.colors
+    || currentBrand?.visual_identity?.color_palette
+    || {};
+  const brandFonts = currentBrand?.fonts
+    || (currentBrand?.visual_identity?.typography
+      ? {
+          heading_font: currentBrand.visual_identity.typography.heading_font,
+          body_font: currentBrand.visual_identity.typography.body_font,
+          mono_font: currentBrand.visual_identity.typography.mono_font,
+        }
+      : {});
   const hasBrand = currentBrand && currentBrand.company_name;
 
   return (
@@ -984,14 +1181,30 @@ function BrandStudioPanel({ registry }) {
         <label>Target Project</label>
         <select
           value={selectedProject}
-          onChange={e => { setSelectedProject(e.target.value); setStatus(null); }}
+          onChange={e => { 
+            const val = e.target.value;
+            setSelectedProject(val); 
+            if (val) localStorage.setItem('last_active_project', val);
+            setStatus(null); 
+          }}
           className="brand-select"
         >
+          <option value="">-- Choose Project --</option>
+          <option value="AntigravityWorkspace_Q3">AntigravityWorkspace_Q3 (Fail-safe)</option>
           {registry.map(app => (
             <option key={app.name} value={app.name}>
               {app.name} — {app.type} {app.status === 'active' ? '🟢' : '⚪'}
             </option>
           ))}
+          {cmoOnlyProjects.length > 0 && (
+            <optgroup label="🎨 CMO Projects">
+              {cmoOnlyProjects.map(name => (
+                <option key={`cmo-${name}`} value={name}>
+                  {name} — CMO Brand 🎨
+                </option>
+              ))}
+            </optgroup>
+          )}
         </select>
       </div>
 
@@ -1059,7 +1272,7 @@ function BrandStudioPanel({ registry }) {
             value={description}
             onChange={e => setDescription(e.target.value)}
             onClick={e => e.stopPropagation()}
-            placeholder="My brand should feel modern, trustworthy, with dark tones and gold accents..."
+            placeholder={currentBrand?.positioning_statement || "My brand should feel modern, trustworthy, with dark tones and gold accents..."}
             rows={3}
           />
           <button
@@ -1096,9 +1309,33 @@ function BrandStudioPanel({ registry }) {
               )}
               <div className="brand-info-block">
                 <span className="brand-label">Tone</span>
-                <span className="brand-value">{currentBrand.tone_of_voice || '—'}</span>
+                <span className="brand-value">{currentBrand.visual_style || currentBrand.visual_identity?.visual_style || '—'}</span>
               </div>
             </div>
+
+            {/* Visual Concept Gallery */}
+            {brandVisuals.length > 0 && (
+              <div className="brand-visuals-section" style={{ marginTop: '30px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '20px' }}>
+                <h4 style={{ color: '#00FFFF', marginBottom: '16px' }}>Visual Concept Gallery</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+                  {brandVisuals.map(v => (
+                    <div key={v.id} className="brand-visual-card" style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '8px', overflow: 'hidden' }}>
+                      <img 
+                        src={`${CMO_BASE}${v.result?.image_url}`} 
+                        alt={v.result?.mockup_type || 'Brand Visual'} 
+                        style={{ width: '100%', height: 'auto', display: 'block' }}
+                      />
+                      <div style={{ padding: '12px', fontSize: '13px' }}>
+                        <strong style={{ color: '#8A2BE2', textTransform: 'capitalize' }}>
+                          {v.result?.mockup_type?.replace('_', ' ')}
+                        </strong>
+                        <p style={{ margin: '8px 0 0 0', opacity: 0.8 }}>{v.result?.description || 'AI Rendered Visual'}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="brand-preview-row">
               <div className="brand-info-block">
@@ -1118,9 +1355,11 @@ function BrandStudioPanel({ registry }) {
               <div className="brand-info-block">
                 <span className="brand-label">Typography</span>
                 <div className="brand-fonts">
-                  {Object.entries(brandFonts).map(([role, name]) => (
-                    <span key={role} className="font-tag">{role}: <strong>{name}</strong></span>
-                  ))}
+                  {Object.entries(brandFonts)
+                    .filter(([role]) => role !== 'rationale')
+                    .map(([role, name]) => (
+                      <span key={role} className="font-tag">{role}: <strong>{name}</strong></span>
+                    ))}
                 </div>
               </div>
               {currentBrand.visual_style && (
@@ -1153,6 +1392,12 @@ function App() {
   const [externalCommand, setExternalCommand] = useState(null);
   const [streaming, setStreaming] = useState(false);
   const [selectedApp, setSelectedApp] = useState(null);
+
+  // ── Lifted Refine Panel State (persists across tab switches) ──
+  const [refineLog, setRefineLog] = useState([]);
+  const [refining, setRefining] = useState(false);
+  const [refineApp, setRefineApp] = useState(localStorage.getItem('last_active_project') || '');
+  const [refineFeedback, setRefineFeedback] = useState('');
 
   // ── UPGRADE 6: n8n Health State ──────────────────────────
   const [n8nHealth, setN8nHealth] = useState({ status: 'unknown', circuit_breaker: { state: 'CLOSED' } });
@@ -1398,9 +1643,9 @@ function App() {
           </div>
         )}
 
-        {/* War Room — Adversarial Boardroom */}
+        {/* War Room — Commander's Control Panel (Phase 8) */}
         {activeView === 'warroom' && (
-          <WarRoom key={selectedApp || 'Aether'} projectName={selectedApp || 'Aether'} />
+          <CommandCenter key={selectedApp || 'Aether'} projectName={selectedApp || 'Aether'} />
         )}
 
         {/* Builder Chat / Mode Selector (EOS V3.1) */}
@@ -1519,7 +1764,7 @@ function App() {
 
         {/* Refine App */}
         {activeView === 'refine' && (
-          <RefinePanel registry={registry} />
+          <RefinePanel registry={registry} refineLog={refineLog} setRefineLog={setRefineLog} refining={refining} setRefining={setRefining} refineApp={refineApp} setRefineApp={setRefineApp} refineFeedback={refineFeedback} setRefineFeedback={setRefineFeedback} />
         )}
 
         {/* Brand Studio */}

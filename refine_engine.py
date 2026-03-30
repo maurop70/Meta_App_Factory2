@@ -45,6 +45,16 @@ except ImportError:
     def get_secret(key, default="", **kw):
         return os.getenv(key, default)
 
+# ── Load factory .env so keys are available via os.getenv fallback ──
+try:
+    from dotenv import load_dotenv
+    _factory_env = os.path.join(SCRIPT_DIR, ".env")
+    if os.path.exists(_factory_env):
+        load_dotenv(_factory_env, override=False)
+except ImportError:
+    pass
+
+
 
 # ── File Discovery ───────────────────────────────────────────
 
@@ -205,9 +215,13 @@ def static_analysis(source_files: Dict[str, str]) -> List[str]:
 # ── Gemini API Call ──────────────────────────────────────────
 
 def _call_gemini(prompt: str, max_tokens: int = 65536) -> Optional[str]:
-    """Non-streaming Gemini call. Returns complete text response."""
+    """Non-streaming Gemini call with retry. Returns complete text response."""
+    import requests as _requests
+    import time as _time
+
     api_key = get_secret("GEMINI_API_KEY")
     if not api_key:
+        logger.error("GEMINI_API_KEY not found in vault, env, or .env files")
         return None
 
     url = (
@@ -222,19 +236,35 @@ def _call_gemini(prompt: str, max_tokens: int = 65536) -> Optional[str]:
         },
     }
 
-    try:
-        _v3_status = healed_post(url, payload)
+    last_error = None
+    for attempt in range(3):
+        try:
+            resp = _requests.post(url, json=payload, timeout=120)
+            if resp.status_code == 200:
+                data = resp.json()
+                parts = data.get("candidates", [{}])[0].get("content", {}).get("parts", [])
+                text = "".join(p.get("text", "") for p in parts)
+                if text:
+                    return text
+                logger.error(f"Gemini returned empty content: {resp.text[:300]}")
+                return None
+            else:
+                last_error = f"HTTP {resp.status_code}: {resp.text[:300]}"
+                logger.warning(f"Gemini attempt {attempt+1}/3 failed: {last_error}")
+        except _requests.exceptions.Timeout:
+            last_error = "Request timed out (120s)"
+            logger.warning(f"Gemini attempt {attempt+1}/3 timed out")
+        except Exception as e:
+            last_error = str(e)
+            logger.warning(f"Gemini attempt {attempt+1}/3 error: {e}")
 
-        resp = type("Resp", (), {"status_code": 200 if _v3_status == "sent" else 503, "ok": _v3_status == "sent", "text": _v3_status, "json": lambda: {"status": _v3_status}})()
-        if resp.status_code != 200:
-            logger.error(f"Gemini error: {resp.status_code} {resp.text[:200]}")
-            return None
-        data = resp.json()
-        parts = data.get("candidates", [{}])[0].get("content", {}).get("parts", [])
-        return "".join(p.get("text", "") for p in parts)
-    except Exception as e:
-        logger.error(f"Gemini call failed: {e}")
-        return None
+        if attempt < 2:
+            wait = 2 ** (attempt + 1)
+            logger.info(f"Retrying Gemini in {wait}s...")
+            _time.sleep(wait)
+
+    logger.error(f"Gemini call failed after 3 attempts. Last error: {last_error}")
+    return None
 
 
 # ── Response Parser ──────────────────────────────────────────

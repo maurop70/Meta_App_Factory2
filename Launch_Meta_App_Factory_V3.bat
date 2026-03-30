@@ -74,7 +74,7 @@ if not exist node_modules npm.cmd install
 set PORT=5173
 netstat -ano | findstr ":5173 " >nul
 if %errorlevel% equ 0 (
-    echo  [WARN] Port 5173 is in use (likely Alpha_V2). Auto-healing to port 5174...
+    echo  [WARN] Port 5173 is in use - likely Alpha_V2. Auto-healing to port 5174...
     set PORT=5174
 )
 start "Meta Factory UI" /min cmd /k "npm.cmd run dev -- --host --port %PORT%"
