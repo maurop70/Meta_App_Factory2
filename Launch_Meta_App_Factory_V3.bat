@@ -59,12 +59,31 @@ if exist bootstrap_env.bat (
     set "PYTHON=python"
 )
 
-:: ── Start Backend (api.py on port 8000) ───────────────────
-echo  [1/3] Starting Backend on port 8000...
+:: ── Start Backend (api.py on port 5000) ───────────────────
+echo  [1/3] Starting Backend on port 5000...
 start "Meta Factory Backend" /min "%PYTHON%" api.py
 
+:: ── Gateway Stabilization Delay ──────────────────────────
+echo  [1.2/3] Waiting for API Gateway to stabilize...
+timeout /t 5 /nobreak >nul
+
+:: ── Set PYTHONPATH for shared_modules resolution ─────────
+set "PYTHONPATH=%CD%;%CD%\shared_modules;%PYTHONPATH%"
+
+:: ── Auto-Start Resonance (Aether-Native) ────────────────────
+echo  [1.5/3] Starting Resonance (Backend & UI)...
+start "Resonance Backend" /min cmd /c "cd Resonance && \"%PYTHON%\" server.py"
+start "Resonance Frontend" /min cmd /c "cd Resonance\resonance_ui && npm.cmd run dev -- --host --port 5174"
+
+:: ── Auto-Start Neural Network Clusters ──────────────────────
+echo  [1.6/3] Starting C-Suite and Elite Nodes...
+start "C-Suite Cluster" /min cmd /c "cd CFO_Agent && \"%PYTHON%\" server.py"
+start "Phantom QA Elite" /min cmd /c "cd Phantom_QA_Elite && Launch_Phantom_QA.bat"
+start "Master Architect Elite" /min cmd /c "cd Master_Architect_Elite_Logic && Launch_Master_Architect.bat"
+start "CLO Legal Dept" /min cmd /c "cd apps\CLO_Agent && \"%PYTHON%\" legal_engine.py"
+
 :: ── Start n8n Credential Watchdog (V3 Active Self-Repair) ──
-echo  [1.5/3] Starting N8N Watchdog Daemon...
+echo  [1.8/3] Starting Aether Watchdog Daemon...
 start "V3 Watchdog Daemon" /min "%PYTHON%" n8n_watchdog.py --daemon
 
 :: ── Start Frontend UI (Auto-detect port 5173 vs 5174) ────

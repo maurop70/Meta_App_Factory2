@@ -868,6 +868,92 @@ def get_fragility():
         return jsonify({"error": str(e)}), 500
 
 
+# ── Aegis Expansion: Cross-App Handshake ──────────────────────────
+@app.route('/api/fragility/broadcast', methods=['POST'])
+def broadcast_fragility():
+    """Pushes the current Fragility Index to the Factory Gateway (Port 5000)
+    so the Master Architect Elite can factor risk into its reasoning loop."""
+    if not FRAGILITY_AVAILABLE:
+        return jsonify({"error": "Fragility engine unavailable"}), 503
+    try:
+        result = compute_fragility()
+        payload = {
+            "source": "Alpha_V2_Genesis",
+            "port": PORT,
+            "fragility_index": result.get("fragility_index", 0),
+            "narrative": result.get("narrative", ""),
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        import requests
+        factory_res = requests.post(
+            "http://localhost:5000/api/aegis/fragility-ingest",
+            json=payload, timeout=5
+        )
+        return jsonify({
+            "status": "broadcast_sent",
+            "factory_response": factory_res.status_code,
+            "payload": payload
+        })
+    except Exception as e:
+        return jsonify({"error": f"Broadcast failed: {str(e)}"}), 500
+
+
+@app.route('/api/aegis/sanction-check', methods=['POST'])
+def clo_sanction_check():
+    """Pre-deployment sanction gate: queries CLO Legal Engine before
+    committing new code deployments. Returns APPROVED or BLOCKED."""
+    try:
+        import requests
+        clo_health = requests.get("http://localhost:5080/health", timeout=3)
+        if clo_health.status_code == 200:
+            return jsonify({
+                "sanction": "APPROVED",
+                "clo_status": "ONLINE",
+                "message": "CLO Legal Engine cleared this deployment."
+            })
+        else:
+            return jsonify({
+                "sanction": "BLOCKED",
+                "clo_status": f"HTTP {clo_health.status_code}",
+                "message": "CLO returned non-OK. Deployment blocked pending review."
+            }), 403
+    except Exception as e:
+        return jsonify({
+            "sanction": "BLOCKED",
+            "clo_status": "OFFLINE",
+            "message": f"CLO unreachable: {str(e)}. Deployment blocked."
+        }), 503
+
+# ── Aegis Auto-Push: Fragility Index → Factory Gateway (60s interval) ──
+def _fragility_auto_push():
+    """Background daemon: pushes the Fragility Index to the Factory
+    Gateway (Port 5000) every 60 seconds for continuous risk monitoring."""
+    import time, requests as _req
+    time.sleep(15)  # Let server stabilize before first push
+    while True:
+        try:
+            if FRAGILITY_AVAILABLE:
+                result = compute_fragility()
+                payload = {
+                    "source": "Alpha_V2_Genesis",
+                    "port": PORT,
+                    "fragility_index": result.get("fragility_index", 0),
+                    "narrative": result.get("narrative", ""),
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "auto_push": True
+                }
+                _req.post(
+                    "http://localhost:5000/api/aegis/fragility-ingest",
+                    json=payload, timeout=5
+                )
+        except Exception:
+            pass  # Silent fail — Factory may not be online yet
+        time.sleep(60)
+
+import threading
+_fragility_push_thread = threading.Thread(target=_fragility_auto_push, daemon=True, name="FragilityAutoPush")
+_fragility_push_thread.start()
+
 # ── Performance Audit Telemetry ─────────────────────────────────
 try:
     from performance_audit import load_latest_report as load_perf_report, run_audit

@@ -4,6 +4,8 @@
 
 # ── Secrets & Credentials ─────────────────────────────
 .env
+*.env.local
+*.env.bak
 !env.template
 .vault_pw
 vault.enc

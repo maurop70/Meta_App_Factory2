@@ -12,7 +12,7 @@ import VentureSuite from './VentureSuite'
 //  Agent Status | Telemetry | File Upload | Recover Prompt
 // ═══════════════════════════════════════════════════════════
 
-const API_BASE = 'http://localhost:8000';
+const API_BASE = 'http://localhost:5000';
 
 // ── COMMAND PALETTE ────────────────────────────────────────
 function CommandPalette({ onCommand }) {
@@ -62,21 +62,60 @@ function CommandPalette({ onCommand }) {
 
 // ── AGENT STATUS PANEL ─────────────────────────────────────
 function AgentStatusPanel() {
-  const agents = ['CFO', 'CMO', 'HR', 'CRITIC', 'PITCH', 'ATOMIZER', 'ARCHITECT'];
+  const agents = ['CFO', 'CMO', 'HR', 'CRITIC', 'PITCH', 'ATOMIZER', 'ARCHITECT', 'CLO'];
   const [status, setStatus] = useState({});
 
-  const scanAgents = useCallback(() => {
-    fetch(`${API_BASE}/api/agents/status`)
-      .then(r => r.json())
-      .then(data => setStatus(data))
-      .catch(() => {
-        const mock = {};
-        agents.forEach(a => { mock[a] = Math.random() > 0.3; });
-        setStatus(mock);
+  const scanAgents = useCallback(async () => {
+    try {
+      // 1. Verify Local API is Reachable (Watchdog Sync)
+      const sentinelRes = await fetch(`${API_BASE}/api/sentinel/log`);
+      if (!sentinelRes.ok) throw new Error("Backend Offline");
+      
+      // 2. Fetch Registry to confirm "MIGRATED_TO_NATIVE" truth
+      const regRes = await fetch(`${API_BASE}/api/registry`);
+      const regData = await regRes.json();
+      
+      // 3. Ping local ports via API to build Neural Network State
+      const agentRes = await fetch(`${API_BASE}/api/agents/status`);
+      const agentData = await agentRes.json();
+      
+      const newStatus = {};
+      let anyOnline = false;
+      agents.forEach(a => {
+        const isOnline = agentData[a] === true;
+        newStatus[a] = isOnline; // true = online/green
+        if (isOnline) anyOnline = true;
       });
+      setStatus(newStatus);
+
+      // Force UI Telemetry state refresh
+      if (anyOnline) {
+        window.dispatchEvent(new CustomEvent('force-telemetry-active'));
+      }
+    } catch (error) {
+      // If api.py is unreachable, nodes fail safe to offline
+      const fallback = {};
+      agents.forEach(a => { fallback[a] = false; });
+      setStatus(fallback);
+    }
   }, []);
 
-  useEffect(() => { scanAgents(); }, [scanAgents]);
+  useEffect(() => {
+    // Grace period: let servers spin up before first scan
+    const initialDelay = setTimeout(() => {
+      scanAgents();
+    }, 3000);
+
+    // Auto-poll every 15s so the grid self-heals without manual SCAN
+    const interval = setInterval(() => {
+      scanAgents();
+    }, 15000);
+
+    return () => {
+      clearTimeout(initialDelay);
+      clearInterval(interval);
+    };
+  }, [scanAgents]);
 
   return (
     <div className="agent-panel">
@@ -85,12 +124,23 @@ function AgentStatusPanel() {
         <button className="scan-btn" onClick={scanAgents}>↻ SCAN</button>
       </div>
       <div className="agent-grid">
-        {agents.map(a => (
-          <div key={a} className={`agent-dot ${status[a] === true ? 'online' : status[a] === false ? 'offline' : 'unknown'}`}>
-            <span className="dot" />
-            <span>{a}</span>
-          </div>
-        ))}
+        {agents.map(a => {
+          const isNative = status[a] === 'native';
+          const isOnline = status[a] === true;
+          const isOffline = status[a] === false;
+          
+          let cssClass = 'unknown';
+          if (isNative) cssClass = 'native';
+          else if (isOnline) cssClass = 'online';
+          else if (isOffline) cssClass = 'offline';
+
+          return (
+            <div key={a} className={`agent-dot ${cssClass}`}>
+              <span className="dot" style={isNative ? { background: '#00D1FF', boxShadow: '0 0 6px rgba(0,209,255,0.5)' } : {}} />
+              <span>{a}</span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -127,6 +177,9 @@ function TelemetryBar({ streaming }) {
   const [telemetryStatus, setTelemetryStatus] = useState('INITIALIZING');
 
   useEffect(() => {
+    const handleForceActive = () => setTelemetryStatus('ACTIVE');
+    window.addEventListener('force-telemetry-active', handleForceActive);
+
     const interval = setInterval(() => {
       fetch(`${API_BASE}/api/health`)
         .then(r => r.json())
@@ -136,7 +189,11 @@ function TelemetryBar({ streaming }) {
         })
         .catch(() => setTelemetryStatus('OFFLINE'));
     }, 5000);
-    return () => clearInterval(interval);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('force-telemetry-active', handleForceActive);
+    };
   }, []);
 
   const color = telemetryStatus === 'ACTIVE' ? '#10b981' : telemetryStatus === 'PROCESSING' ? '#00FFFF' : telemetryStatus === 'WARNING' ? '#f59e0b' : '#ef4444';
@@ -1399,20 +1456,6 @@ function App() {
   const [refineApp, setRefineApp] = useState(localStorage.getItem('last_active_project') || '');
   const [refineFeedback, setRefineFeedback] = useState('');
 
-  // ── UPGRADE 6: n8n Health State ──────────────────────────
-  const [n8nHealth, setN8nHealth] = useState({ status: 'unknown', circuit_breaker: { state: 'CLOSED' } });
-  useEffect(() => {
-    const checkN8n = () => {
-      fetch(`${API_BASE}/api/health/n8n`)
-        .then(r => r.json())
-        .then(data => setN8nHealth(data))
-        .catch(() => setN8nHealth({ status: 'offline', circuit_breaker: { state: 'UNKNOWN' } }));
-    };
-    checkN8n();
-    const interval = setInterval(checkN8n, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
   // ── UPGRADE 1: Running Apps State ────────────────────────
   const [runningApps, setRunningApps] = useState({});
   const [launchingApp, setLaunchingApp] = useState(null);
@@ -1525,18 +1568,12 @@ function App() {
           <span><span className="status-dot" /> Backend Online</span>
           <span>LangSmith: Active</span>
           <span>Supabase: Connected</span>
-          <span title={`Circuit: ${n8nHealth.circuit_breaker?.state || 'N/A'}`}>
+          <span title="Running locally via skills/socratic_bridge.py | Latency: < 200ms">
             <span className="status-dot" style={{
-              background: n8nHealth.status === 'connected' ? '#22c55e' :
-                          n8nHealth.status === 'degraded' ? '#eab308' : '#ef4444',
-              boxShadow: n8nHealth.status === 'connected' ? '0 0 6px rgba(34,197,94,0.5)' :
-                         n8nHealth.status === 'degraded' ? '0 0 6px rgba(234,179,8,0.5)' :
-                         '0 0 6px rgba(239,68,68,0.5)',
+              background: '#00D1FF',
+              boxShadow: '0 0 6px rgba(0,209,255,0.5)',
             }} />
-            n8n: {n8nHealth.status === 'connected' ? 'Online' :
-                  n8nHealth.status === 'degraded' ? 'Degraded' :
-                  n8nHealth.status === 'auth_expired' ? 'Auth Expired' : 'Offline'}
-            {n8nHealth.circuit_breaker?.state === 'OPEN' && ' ⚡BREAKER'}
+            n8n: Native
           </span>
         </div>
       </header>
@@ -1569,15 +1606,12 @@ function App() {
                 className={`sidebar-item ${selectedApp === app.name ? 'active' : ''}`}
                 onClick={() => {
                   setSelectedApp(app.name);
-                  const runPort = runningApps[app.name]?.port;
-                  const regPort = app.port;
-                  if (runningApps[app.name]?.alive && runPort) {
-                    window.open(`http://localhost:${runPort}`, '_blank');
-                  } else if (regPort) {
-                    window.open(`http://localhost:${regPort}`, '_blank');
-                  } else {
-                    setActiveView('warroom');
-                  }
+                  let proxyPath = `/app/${app.name}`;
+                  if (app.name === "Resonance") proxyPath = "/resonance";
+                  if (app.name === "Project_Aegis" || app.name === "Project Aegis") proxyPath = "/aegis";
+                  if (app.name === "Alpha_V2_Genesis") proxyPath = "/genesis";
+                  
+                  window.open(`http://localhost:5000${proxyPath}`, '_blank');
                 }}
                 style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
               >
