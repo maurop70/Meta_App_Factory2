@@ -331,6 +331,30 @@ def auto_heal(func=None, *, max_retries=MAX_RETRIES, project="unknown"):
 #  LOGGING
 # ═══════════════════════════════════════════════════════════
 
+def _sanitize_url(url: str) -> str:
+    """Strip API keys and secrets from URLs before logging.
+    Redacts any query parameter whose name contains:
+    key, token, secret, password, api_key, apikey, auth"""
+    try:
+        from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+        parsed = urlparse(url)
+        if not parsed.query:
+            return url
+        params = parse_qs(parsed.query, keep_blank_values=True)
+        sensitive = ("key", "token", "secret", "password", "api_key",
+                     "apikey", "auth", "access_token", "bearer")
+        cleaned = {}
+        for k, v in params.items():
+            if any(s in k.lower() for s in sensitive):
+                cleaned[k] = ["***REDACTED***"]
+            else:
+                cleaned[k] = v
+        clean_query = urlencode(cleaned, doseq=True)
+        return urlunparse(parsed._replace(query=clean_query))
+    except Exception:
+        return url  # Never crash on sanitization
+
+
 def _log_heal_event(project: str, target: str, outcome: str,
                     attempts: int = None, diagnosis: dict = None,
                     error: str = None):
@@ -338,7 +362,7 @@ def _log_heal_event(project: str, target: str, outcome: str,
     entry = {
         "timestamp": datetime.now().isoformat(),
         "project": project,
-        "target": target,
+        "target": _sanitize_url(target),
         "outcome": outcome,
         "attempts": attempts,
     }
