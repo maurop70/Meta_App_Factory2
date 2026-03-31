@@ -119,5 +119,148 @@
     "tags": [],
     "project": "_global",
     "created_at": "2026-03-27T20:54:20.933008+00:00"
+  },
+  {
+    "id": "L-20260330130201-6159",
+    "category": "App launch verified: Resonance on port 5006",
+    "summary": "launch_success",
+    "details": "Resonance",
+    "source_agent": "SYSTEM",
+    "severity": "normal",
+    "tags": [],
+    "project": "_global",
+    "created_at": "2026-03-30T13:02:01.430654+00:00"
+  },
+  {
+    "id": "L-20260330130358-0978",
+    "category": "Child app CRASHED: Project_Aegis (exit code 0, port 5070). Auto-healing will attempt restart.",
+    "summary": "child_app_crash",
+    "details": "Project_Aegis",
+    "source_agent": "SYSTEM",
+    "severity": "normal",
+    "tags": [],
+    "project": "_global",
+    "created_at": "2026-03-30T13:03:58.692440+00:00"
+  },
+  {
+    "id": "L-20260330130402-2376",
+    "category": "App launch FAILED: Project_Aegis on port 5070. timed out",
+    "summary": "launch_failure",
+    "details": "Project_Aegis",
+    "source_agent": "SYSTEM",
+    "severity": "normal",
+    "tags": [],
+    "project": "_global",
+    "created_at": "2026-03-30T13:04:02.786440+00:00"
+  },
+  {
+    "id": "L-20260330130408-5158",
+    "category": "Auto-restart of Project_Aegis succeeded but smoke test FAILED: timed out",
+    "summary": "auto_restart_smoke_fail",
+    "details": "Project_Aegis",
+    "source_agent": "SYSTEM",
+    "severity": "normal",
+    "tags": [],
+    "project": "_global",
+    "created_at": "2026-03-30T13:04:08.734146+00:00"
+  },
+  {
+    "id": "L-20260330130712-2376",
+    "category": "App launch FAILED: Alpha_V2_Genesis on port 5008. timed out",
+    "summary": "launch_failure",
+    "details": "Alpha_V2_Genesis",
+    "source_agent": "SYSTEM",
+    "severity": "normal",
+    "tags": [],
+    "project": "_global",
+    "created_at": "2026-03-30T13:07:12.806794+00:00"
+  },
+  {
+    "id": "L-20260330131238-2355",
+    "category": "App launch verified: Alpha_V2_Genesis on port 5008",
+    "summary": "launch_success",
+    "details": "Alpha_V2_Genesis",
+    "source_agent": "SYSTEM",
+    "severity": "normal",
+    "tags": [],
+    "project": "_global",
+    "created_at": "2026-03-30T13:12:38.561439+00:00"
+  },
+  {
+    "id": "L-20260330131438-0978",
+    "category": "Child app CRASHED: Project_Aegis (exit code 0, port 5070). Auto-healing will attempt restart.",
+    "summary": "child_app_crash",
+    "details": "Project_Aegis",
+    "source_agent": "SYSTEM",
+    "severity": "normal",
+    "tags": [],
+    "project": "_global",
+    "created_at": "2026-03-30T13:14:38.778159+00:00"
+  },
+  {
+    "id": "L-20260330131439-2376",
+    "category": "App launch FAILED: Project_Aegis on port 5070. timed out",
+    "summary": "launch_failure",
+    "details": "Project_Aegis",
+    "source_agent": "SYSTEM",
+    "severity": "normal",
+    "tags": [],
+    "project": "_global",
+    "created_at": "2026-03-30T13:14:39.711695+00:00"
+  },
+  {
+    "id": "L-20260330131444-2355",
+    "category": "App launch verified: Resonance on port 5007",
+    "summary": "launch_success",
+    "details": "Resonance",
+    "source_agent": "SYSTEM",
+    "severity": "normal",
+    "tags": [],
+    "project": "_global",
+    "created_at": "2026-03-30T13:14:44.219675+00:00"
+  },
+  {
+    "id": "L-20260330131448-5158",
+    "category": "Auto-restart of Project_Aegis succeeded but smoke test FAILED: timed out",
+    "summary": "auto_restart_smoke_fail",
+    "details": "Project_Aegis",
+    "source_agent": "SYSTEM",
+    "severity": "normal",
+    "tags": [],
+    "project": "_global",
+    "created_at": "2026-03-30T13:14:48.842239+00:00"
+  },
+  {
+    "id": "L-20260330131544-2355",
+    "category": "App launch verified: Alpha_V2_Genesis on port 5008",
+    "summary": "launch_success",
+    "details": "Alpha_V2_Genesis",
+    "source_agent": "SYSTEM",
+    "severity": "normal",
+    "tags": [],
+    "project": "_global",
+    "created_at": "2026-03-30T13:15:44.920416+00:00"
+  },
+  {
+    "id": "L-20260330134021-2068",
+    "category": "App launch FAILED: Alpha_V2_Genesis on port 5008. timed out",
+    "summary": "launch_failure",
+    "details": "Alpha_V2_Genesis",
+    "source_agent": "SYSTEM",
+    "severity": "normal",
+    "tags": [],
+    "project": "_global",
+    "created_at": "2026-03-30T13:40:21.888819+00:00"
+  },
+  {
+    "id": "L-20260330160119-1321",
+    "category": "App launch verified: Alpha_V2_Genesis on port 5008",
+    "summary": "launch_success",
+    "details": "Alpha_V2_Genesis",
+    "source_agent": "SYSTEM",
+    "severity": "normal",
+    "tags": [],
+    "project": "_global",
+    "created_at": "2026-03-30T16:01:19.122064+00:00"
   }
 ]

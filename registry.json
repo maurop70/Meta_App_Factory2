@@ -1,11 +1,12 @@
 {
     "services": {
         "CLAUDE_CODE_SERVICE": {
-            "url": "https://humanresource.app.n8n.cloud/webhook/JlEXsH2MbzBx15Mk/claude-exec",
+            "url": "",
             "url_env_key": "N8N_CLAUDE_WEBHOOK_URL",
             "description": "Webhook to trigger Claude Code via n8n",
             "method": "POST",
-            "auth_type": "none"
+            "auth_type": "none",
+            "n8n_status": "MIGRATED_TO_NATIVE"
         },
         "DEBUG_SERVICE_SENTRY": {
             "dsn_env_key": "SENTRY_DSN",
@@ -19,8 +20,8 @@
             "type": "Trading Dashboard",
             "version": "2.6-hardened",
             "port": 5008,
-            "workflow_id": "VkE0dmwynRPMIyjdmiONL",
-            "webhook_url": "https://humanresource.app.n8n.cloud/webhook/alpha-macro-poll",
+            "workflow_id": "DEPRECATED",
+            "webhook_url": "",
             "blueprint": "trading_intelligence",
             "n8n_project": "Alpha Architect",
             "capabilities": [
@@ -28,14 +29,15 @@
                 "strategy ledger",
                 "stability suite"
             ],
-            "last_build": "2026-02-26T12:00:00.000000"
+            "last_build": "2026-02-26T12:00:00.000000",
+            "n8n_status": "MIGRATED_TO_NATIVE"
         },
         "Resonance": {
             "status": "active",
             "type": "Multi-Agent Educational App",
             "port": 5006,
-            "workflow_id": "IT4LuCQm7Ph62Hf2",
-            "webhook_url": "https://humanresource.app.n8n.cloud/webhook/Resonance-webhook",
+            "workflow_id": "DEPRECATED",
+            "webhook_url": "",
             "blueprint": "multi_agent_core",
             "capabilities": [
                 "multi-agent",
@@ -43,7 +45,8 @@
                 "SSE streaming",
                 "V3 web UI"
             ],
-            "last_build": "2026-03-02T22:33:00.000000"
+            "last_build": "2026-03-02T22:33:00.000000",
+            "n8n_status": "MIGRATED_TO_NATIVE"
         },
         "MetaTestApp": {
             "status": "inactive",
@@ -108,7 +111,16 @@
                 "Compliance_Vault": "Secure data storage",
                 "Aether_System_Map": "Pipeline configuration"
             },
-            "last_build": "2026-03-07T04:26:00.000000"
+            "last_build": "2026-03-07T04:26:00.000000",
+            "n8n_status": "MIGRATED_TO_NATIVE",
+            "webhook_url": "",
+            "workflow_id": "DEPRECATED"
+        },
+        "CLO": {
+            "status": "active",
+            "type": "Legal Ops",
+            "port": 5080,
+            "n8n_status": "MIGRATED_TO_NATIVE"
         },
         "Delegate_AI_Beta_Agreement_Vault": {
             "status": "active",
@@ -116,9 +128,9 @@
             "port": 5007,
             "blueprint": "elite_council",
             "n8n_project": "Agreement Vault Agents",
-            "workflow_id": "AUTO_GEN_AGREEMENT_WORKFLOW_ID",
-            "webhook_url": "https://humanresource.app.n8n.cloud/webhook/delegate-agreement-vault",
-            "path": "Meta_App_Factory/Delegate AI Beta-Agreement Vault",
+            "workflow_id": "DEPRECATED",
+            "webhook_url": "",
+            "path": "Meta_App_Factory/Delegate_AI_Beta_Agreement_Vault",
             "capabilities": [
                 "executive delegation",
                 "agreement vault management",
@@ -126,7 +138,8 @@
                 "audit trail",
                 "access control"
             ],
-            "last_build": "2026-03-09T01:29:10.740Z"
+            "last_build": "2026-03-09T01:29:10.740Z",
+            "n8n_status": "MIGRATED_TO_NATIVE"
         },
         "Sentinel_Bridge": {
             "status": "active",
@@ -163,14 +176,6 @@
             "encryption": "Fernet AES-128 (Zero-Leak)",
             "last_build": "2026-03-09T19:00:00.000Z"
         },
-        "PulseBoard": {
-            "status": "scaffolding",
-            "type": "Multi-agent educational app",
-            "port": 5010,
-            "blueprint": "multi_agent_core",
-            "capabilities": [],
-            "last_build": "2026-03-25T00:55:41.637573+00:00"
-        },
         "Master_Architect_Elite": {
             "status": "native",
             "type": "Architecture Review & Quality Gate",
@@ -202,7 +207,10 @@
             "c_suite_role": "System Design & Logic Gate",
             "visual_accent": "#06B6D4",
             "last_build": "2026-03-27T03:18:00.000Z",
-            "form_url": "/"
+            "form_url": "/",
+            "n8n_status": "MIGRATED_TO_NATIVE",
+            "webhook_url": "",
+            "workflow_id": "DEPRECATED"
         },
         "CMO_Agent": {
             "status": "active",
@@ -240,7 +248,10 @@
             "c_suite_role": "GTM Strategy & Audience Persona",
             "visual_accent": "#F43F5E",
             "last_build": "2026-03-27T03:00:00.000Z",
-            "form_url": "/"
+            "form_url": "/",
+            "n8n_status": "MIGRATED_TO_NATIVE",
+            "webhook_url": "",
+            "workflow_id": "DEPRECATED"
         },
         "Phantom_QA_Elite": {
             "status": "active",
@@ -274,15 +285,18 @@
             "c_suite_role": "Outcome Validation & UI Testing",
             "visual_accent": "#10B981",
             "last_build": "2026-03-27T03:00:00.000Z",
-            "form_url": "/"
+            "form_url": "/",
+            "n8n_status": "MIGRATED_TO_NATIVE",
+            "webhook_url": "",
+            "workflow_id": "DEPRECATED"
         },
         "CFO_Ultimate_Excel_Architect": {
             "status": "active",
             "type": "Financial Execution Pipeline",
             "version": "2.0.0",
             "port": 5041,
-            "workflow_id": "beFBb85gonIaMzAo",
-            "webhook_url": "https://humanresource.app.n8n.cloud/webhook/cfo-execution-controller",
+            "workflow_id": "DEPRECATED",
+            "webhook_url": "",
             "blueprint": "multi_agent_core",
             "n8n_project": "CFO Fragility",
             "path": "Meta_App_Factory/CFO_Agent",
@@ -311,7 +325,8 @@
             "c_suite_role": "CFO Sub-Agent \u00e2\u20ac\u201d Financial Modeling & Fragility Analysis",
             "visual_accent": "#E94560",
             "last_build": "2026-03-27T20:25:00.000Z",
-            "form_url": "/form"
+            "form_url": "/form",
+            "n8n_status": "MIGRATED_TO_NATIVE"
         },
         "CTO_Agent": {
             "status": "active",
@@ -348,7 +363,10 @@
             "c_suite_role": "Technical Feasibility Gate & Meta_App_Factory Executor",
             "visual_accent": "#06B6D4",
             "last_build": "2026-03-29T21:10:00.000Z",
-            "form_url": "/"
+            "form_url": "/",
+            "n8n_status": "MIGRATED_TO_NATIVE",
+            "webhook_url": "",
+            "workflow_id": "DEPRECATED"
         },
         "Project_Aegis": {
             "status": "active",
@@ -358,8 +376,35 @@
             "path": "Meta_App_Factory/agents/Project_Aegis",
             "capabilities": [],
             "form_url": "",
-            "n8n_project": ""
+            "n8n_project": "",
+            "n8n_status": "PHASE_2_EXPANSION_ACTIVE",
+            "webhook_url": "",
+            "workflow_id": "DEPRECATED"
+        },
+        "PulseBoard": {
+            "status": "active",
+            "type": "Real-Time Monitoring Dashboard",
+            "port": null,
+            "blueprint": "dashboard",
+            "path": "Meta_App_Factory/PulseBoard",
+            "n8n_status": "MIGRATED_TO_NATIVE",
+            "webhook_url": "",
+            "workflow_id": "DEPRECATED"
         }
     },
-    "last_updated": "2026-03-27T20:55:00.000Z"
+    "last_updated": "2026-03-30T22:15:00-04:00",
+    "skills": {
+        "socratic_bridge": {
+            "status": "native",
+            "type": "Core System Skill",
+            "latency_target": "< 500ms",
+            "description": "Natively debates CMO Strategy and CFO Budget Audit.",
+            "path": "Meta_App_Factory/skills/socratic_bridge.py",
+            "capabilities": [
+                "agent_handshake",
+                "data_extraction",
+                "financial_pivot"
+            ]
+        }
+    }
 }

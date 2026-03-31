@@ -103,8 +103,114 @@ class ChatRequest(BaseModel):
     session_id: str = "factory-builder"
     dashboard_context: dict | None = None
 
+class SentinelAlert(BaseModel):
+    severity: str
+    message: str
+    source: str = "System"
+
+class HRMemo(BaseModel):
+    agent_id: str
+    memo: str
+
+# ── SYSTEM NOTIFIER NATIVE BRIDGE ──────────────────────────────
+try:
+    from systems.notifier import SystemNotifier
+    notifier_bus = SystemNotifier()
+    logger.info("System Notifier connected natively.")
+except ImportError as e:
+    logger.warning(f"System Notifier offline: {e}")
+    notifier_bus = None
 
 # ── ROUTES ────────────────────────────────────────────────────
+
+@app.post("/api/sentinel/alert")
+async def post_sentinel_alert(alert: SentinelAlert):
+    if not notifier_bus:
+        return JSONResponse(status_code=500, content={"error": "Notifier offline"})
+    res = notifier_bus.trigger_sentinel(alert.severity, alert.message, alert.source)
+    return {"status": "success", "alert": res}
+
+@app.post("/api/hr/memo")
+async def post_hr_memo(memo: HRMemo):
+    if not notifier_bus:
+        return JSONResponse(status_code=500, content={"error": "Notifier offline"})
+    res = notifier_bus.trigger_hr_memo(memo.agent_id, memo.memo)
+    return {"status": "success", "memo": res}
+
+@app.get("/api/sentinel/log")
+async def get_sentinel_log():
+    try:
+        if not notifier_bus:
+            return JSONResponse(status_code=500, content={"log": []})
+        return {"log": notifier_bus.get_sentinel_logs()}
+    except Exception as e:
+        logger.error(f"Error fetching sentinel logs: {e}")
+        return {"log": []}
+
+# ── AETHER COMMAND SUITE ENDPOINTS ────────────────────────────
+class ExplainRequest(BaseModel):
+    app_name: str
+
+@app.post("/api/socratic/explain")
+async def socratic_explain(req: ExplainRequest):
+    try:
+        import google.generativeai as genai
+        app_dir = os.path.join(SCRIPT_DIR, req.app_name)
+        state_file = os.path.join(app_dir, "local_state.json")
+        context = f"App Name: {req.app_name}\n"
+        
+        if os.path.exists(state_file):
+            with open(state_file, "r", encoding="utf-8") as f:
+                context += f"State Map:\n{f.read()}\n"
+        else:
+            context += "Warning: App does not have a local_state.json ledger initialized.\n"
+            
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            return JSONResponse(status_code=500, content={"error": "GEMINI_API_KEY missing from environment"})
+            
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel("gemini-2.5-flash")
+        
+        prompt = f"""You are the Master Architect. The Commander clicked the Socratic Explain button for the child app '{req.app_name}'.
+
+Current Local State/Context:
+{context}
+
+Provide a concise, 2-to-3 sentence technical architectural breakdown explaining this app's runtime logic flow based on your factory registry memory and the state provided. Be highly analytical, do not apologize."""
+        
+        res = model.generate_content(prompt)
+        return {"status": "success", "trace": res.text}
+    except Exception as e:
+        logger.error(f"Socratic Explain Error: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+class RefineRequest(BaseModel):
+    app_name: str
+
+@app.post("/api/system/refine")
+async def system_refine(req: RefineRequest):
+    try:
+        from refine_engine import refine_and_apply
+        import threading
+        
+        app_dir = os.path.join(SCRIPT_DIR, req.app_name)
+        
+        def background_refine():
+            logger.info(f"Initiated Phantom QA Refine loop on {req.app_name}")
+            feedback_prompt = "Perform a self-audit optimization sweep on this app. Identify logic bottlenecks, apply production best-practices, and resolve any strict mode UI conflict issues locally without breaking existing patterns."
+            generator = refine_and_apply(req.app_name, app_dir, feedback_prompt)
+            for step in generator:
+                logger.info(f"Refine [{req.app_name}]: {step.get('text')}")
+                
+        # Launch fire-and-forget background job
+        threading.Thread(target=background_refine, daemon=True).start()
+        
+        return {"status": "success", "message": "Phantom QA optimization sweep started in background."}
+    except Exception as e:
+        logger.error(f"System Refine Error: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
 
 @app.get("/")
 def root():
@@ -443,20 +549,36 @@ def get_commands():
         return []
 
 
+import socket
+
+def ping_port(port: int, timeout: float = 2.0) -> bool:
+    try:
+        with socket.create_connection(("127.0.0.1", port), timeout=timeout):
+            return True
+    except OSError:
+        return False
+
 @app.get("/api/agents/status")
 def agent_status():
-    """Check which agents/modules are importable."""
+    """Live Socket Ping for Native Modules."""
     agents = {}
-    for name, module_hint in [
-        ("CFO", "bridge"), ("CMO", "bridge"), ("CTO", "bridge"), ("HR", "bridge"),
-        ("CRITIC", "bridge"), ("PITCH", "bridge"),
-        ("ATOMIZER", "utils.atomizer"), ("ARCHITECT", "ui_designer"),
-    ]:
-        try:
-            mod_path = os.path.join(SCRIPT_DIR, module_hint.replace(".", os.sep) + ".py")
-            agents[name] = os.path.exists(mod_path)
-        except Exception:
-            agents[name] = False
+    
+    # Active Native Ports aligned with watchdog
+    c_suite_active = ping_port(5070)
+    architect_active = ping_port(5050)
+    qa_active = ping_port(5030)
+    core_active = ping_port(5000)
+    clo_active = ping_port(5080)
+    
+    # Map overarching C-Suite
+    for name in ["CFO", "CMO", "HR", "CRITIC"]:
+        agents[name] = c_suite_active
+        
+    agents["ARCHITECT"] = architect_active
+    agents["PITCH"] = qa_active
+    agents["ATOMIZER"] = core_active
+    agents["CLO"] = clo_active
+    
     return agents
 
 
@@ -4292,6 +4414,127 @@ def download_eos_document(filename: str):
         return FileResponse(safe_path)
     return JSONResponse({"error": "File not found"}, status_code=404)
 
+from fastapi.responses import RedirectResponse
+
+@app.get("/resonance")
+def redirect_resonance():
+    """Direct route for Resonance UI."""
+    return RedirectResponse(url="http://localhost:5174", status_code=307)
+
+@app.get("/aegis")
+def redirect_aegis():
+    """Direct route for Project Aegis UI."""
+    return RedirectResponse(url="http://localhost:5070", status_code=307)
+
+@app.get("/clo")
+def redirect_clo():
+    """Direct route for CLO Legal Engine UI/API."""
+    return RedirectResponse(url="http://localhost:5080", status_code=307)
+
+# ── Aegis Expansion: Fragility Ingest from Alpha_V2_Genesis ──────
+_fragility_cache = {}
+
+@app.post("/api/aegis/fragility-ingest")
+def aegis_fragility_ingest(request: Request):
+    """Receives Fragility Index broadcasts from Alpha_V2_Genesis (Port 5008)
+    and caches them for the Master Architect Elite reasoning loop."""
+    import asyncio
+    loop = asyncio.new_event_loop()
+    body = loop.run_until_complete(request.json())
+    loop.close()
+    _fragility_cache["latest"] = body
+    return {"status": "ingested", "fragility_index": body.get("fragility_index")}
+
+@app.get("/api/aegis/fragility-latest")
+def aegis_fragility_latest():
+    """Returns the latest cached Fragility Index for downstream consumers."""
+    if not _fragility_cache.get("latest"):
+        return JSONResponse({"status": "no_data", "message": "No fragility broadcast received yet."}, status_code=404)
+    return _fragility_cache["latest"]
+
+# ── Aegis Expansion: Sentinel Relay (CFO → Phantom QA → PulseBoard) ──
+@app.post("/api/aegis/sentinel-relay")
+async def aegis_sentinel_relay(request: Request):
+    """Traffic controller: receives CFO financial calculations,
+    routes them through Phantom QA for audit before PulseBoard commit.
+    
+    HARDENED: Rejects payloads missing audit signatures (is_audited=False
+    or phantom_audit_id=None) with a 403 before they even reach QA."""
+    import requests as _req
+    body = await request.json()
+    
+    # ── Pre-Flight: Audit Signature Check ──────────────────────
+    is_audited = body.get("is_audited", False)
+    audit_id = body.get("phantom_audit_id")
+    
+    if not is_audited or not audit_id:
+        return JSONResponse({
+            "relay": "REJECTED",
+            "pulseboard_status": "BLOCKED",
+            "detail": "UNAUTHORIZED: Payload missing Phantom QA audit signature. "
+                      "All financial data must pass through /api/phantom-qa/audit "
+                      "before reaching the Sentinel Relay.",
+            "payload_source": body.get("agent", "unknown"),
+            "is_audited": is_audited,
+            "phantom_audit_id": audit_id,
+        }, status_code=403)
+    
+    # ── Step 1: Forward to Phantom QA for verification ─────────
+    qa_verdict = {"status": "UNREACHABLE"}
+    try:
+        qa_res = _req.post("http://localhost:5030/api/audit", json=body, timeout=10)
+        if qa_res.ok:
+            qa_verdict = qa_res.json()
+    except Exception as e:
+        qa_verdict = {"status": "UNREACHABLE", "error": str(e)}
+    
+    # ── Step 2: Only PASSED verdicts unlock PulseBoard ─────────
+    # SKIPPED and UNREACHABLE are treated as failures (zero-trust)
+    pulseboard_status = "BLOCKED"
+    if qa_verdict.get("status") == "PASSED":
+        pulseboard_status = "COMMITTED"
+    
+    return {
+        "relay": "complete",
+        "phantom_qa_verdict": qa_verdict,
+        "pulseboard_status": pulseboard_status,
+        "payload_source": body.get("agent", body.get("source", "unknown"))
+    }
+
+
+@app.get("/genesis")
+def redirect_genesis():
+    """Direct route for Alpha Genesis UI."""
+    return RedirectResponse(url="http://localhost:5173", status_code=307)
+
+@app.get("/app/{app_name}")
+def route_app(app_name: str):
+    """Central proxy router for active apps."""
+    name_lower = app_name.lower()
+    routes = {
+        "resonance": "http://localhost:5174",
+        "alpha_v2_genesis": "http://localhost:5173", # Alpha port
+        "project_aether": "http://localhost:5175",
+        "delegate_ai_beta_agreement_vault": "http://localhost:5176",
+        "pulseboard": "http://localhost:5177",
+    }
+    
+    target_url = routes.get(name_lower)
+    if target_url:
+        return RedirectResponse(url=target_url, status_code=307)
+    
+    # Fallback checking registry.json for 'port'
+    try:
+        with open(REGISTRY_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            app_data = data.get("apps", {}).get(app_name, {})
+            if "port" in app_data and app_data["port"] is not None:
+                return RedirectResponse(url=f"http://localhost:{app_data['port']}", status_code=307)
+    except Exception as e:
+        logger.error(f"Routing error: {e}")
+        
+    return JSONResponse(status_code=404, content={"error": f"UI for '{app_name}' not configured in Aether-Native router."})
+
 # ── Startup: Auto-start incoming watcher ──────────────────
 @app.on_event("startup")
 async def _startup_watcher():
@@ -4301,9 +4544,9 @@ async def _startup_watcher():
         _watcher_thread.start()
         logger.info("Incoming Watcher auto-started (60s poll)")
 
-
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    # AETHER-NATIVE: Lock to port 5000 to act as Central Brain
+    uvicorn.run(app, host="0.0.0.0", port=5000)
 
 # V3 MIGRATION COMPLETE

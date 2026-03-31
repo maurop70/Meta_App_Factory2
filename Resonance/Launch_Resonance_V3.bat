@@ -71,9 +71,9 @@ if exist "%APP_DIR%\create_resonance_shortcut.ps1" (
 )
 
 :: ── Open Browser ──────────────────────────────────────────
-echo  [3/3] Opening browser...
+echo  [3/3] Suppressing browser tab (Headless Mode Active)...
 ping 127.0.0.1 -n 5 >nul
-start http://localhost:5174
+:: start http://localhost:5174
 
 echo.
 echo  ===================================================
