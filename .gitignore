@@ -37,12 +37,20 @@ venv/
 alpha.log
 
 # ── Machine-Specific Runtime Data ────────────────────
+auto_heal_log.json
+local_pending_sync.json
+finance_state.json
+pending_sync/
 Alpha_Data/connection_info.json
 Alpha_Data/ledger_state.json
 Alpha_Data/ledger_cron_meta.json
 Alpha_Data/n8n_execution_log.json
+Alpha_Data/executions/
+Alpha_Data/news_report.json
+Alpha_Data/portfolio.json.bak
 Alpha_Data/.config_snapshots/
 Alpha_Data/LEDGER.md
+projects/*/warroom_history.json
 
 # ── OS Artifacts ─────────────────────────────────────
 .DS_Store
