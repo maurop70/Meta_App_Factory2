@@ -256,6 +256,14 @@ class CFOExecutionController:
             return {"status": "FAIL", "errors": audit_log}
         
         return {"status": "PASS", "message": "XML Structural Integrity Verified."}
+    def inject_fixed_point_solver(self, sheet, target_cell, dependent_cell):
+        """
+        Natively resolves circularities by injecting an iterative 
+        algebraic logic directly into the Excel cell formula.
+        """
+        convergence_formula = f"=({dependent_cell}*0.9) + ({target_cell}*0.1)"
+        sheet[target_cell] = convergence_formula
+        return f"Fixed-Point Convergence applied to {target_cell}"
 
     def _generate_markdown_manual(self, report: dict) -> str:
         md = f"# CFO Report Manual: {report['report_name']}\n\n"
@@ -280,6 +288,11 @@ class CFOExecutionController:
     def _build_excel(self, report: dict, filename: str) -> str:
         """Generates the actual .xlsx with 4 tabs and runs XML Recursive Audit."""
         wb = openpyxl.Workbook()
+
+        # Enable Iterative Convergence for Fixed-Point Solvers
+        wb.calculation.calcMode = 'auto'
+        wb.calculation.iterate = True
+        wb.calculation.maxIterations = 10
 
         # Styles
         header_font = Font(name='Calibri', bold=True, size=12, color='FFFFFF')
