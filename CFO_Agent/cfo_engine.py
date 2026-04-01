@@ -288,7 +288,7 @@ class CFOExecutionController:
                 
             report = self.generate_report(payload_copy)
             
-            # Repath the generated file to reflect the scenario
+        # Repath the generated file to reflect the scenario
             if report.get('file_path') and os.path.exists(report['file_path']):
                 new_filename = f"{project_name}_{scenario}.xlsx"
                 new_path = os.path.join(os.path.dirname(report['file_path']), new_filename)
@@ -298,9 +298,16 @@ class CFOExecutionController:
                 
             scenario_reports[scenario] = report
             
+        master_brochure = self._generate_csuite_brochure({
+            'is_scenario_bundle': True,
+            'scenarios': scenario_reports,
+            'project_name': project_name
+        })
+            
         return {
             'project_name': project_name,
             'scenarios': scenario_reports,
+            'master_brochure': master_brochure,
             'status': 'scenario_bundle_ready'
         }
 
@@ -315,13 +322,58 @@ class CFOExecutionController:
         return md
 
     def _generate_csuite_brochure(self, report: dict) -> str:
-        html = f"<html><head><style>body {{ font-family: sans-serif; padding: 20px; }}</style></head><body>"
-        html += f"<h1>C-Suite Executive Summary</h1>"
-        html += f"<h2>Systemic Vulnerability Level (Fragility): {report['summary']['fragility_index']}</h2>"
-        html += f"<p>Total Capital Deployed: ${report['summary']['total_spend']:,.2f}</p>"
-        html += f"<p>Our optimized projection yields a <b>{report['summary']['portfolio_roi_pct']}% ROI</b> across {report['summary']['campaign_count']} campaigns.</p>"
-        html += "<p><em>Asset natively managed by Antigravity CFO Ultimate Excel Architect</em></p>"
-        html += "</body></html>"
+        css = """
+        <style>
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: linear-gradient(135deg, #0B0E14, #1C2128);
+            color: white;
+            padding: 40px;
+            display: flex;
+            justify-content: center;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            max-width: 800px;
+            width: 100%;
+        }
+        .delta-card {
+            background: rgba(255,255,255,0.02);
+            border-left: 4px solid #E94560;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 0 8px 8px 0;
+        }
+        h1, h2, h3 { color: #E94560; margin-top: 0; }
+        .footer { margin-top:30px; font-size:12px; color:#888; }
+        </style>
+        """
+        html = f"<html><head>{css}</head><body><div class='glass-panel'>"
+        
+        if report.get('is_scenario_bundle'):
+            html += f"<h1>{report.get('project_name', 'C-Suite')} Executive Scenarios</h1>"
+            html += "<p><em>Systemic Resilience & Dynamic Scenario Simulator Output</em></p>"
+            html += "<h2>Scenario Deltas (Revenue & ROI)</h2>"
+            for sc_name, sc_data in report['scenarios'].items():
+                roi = sc_data['summary']['portfolio_roi_pct']
+                rev = sc_data['summary']['total_projected_revenue']
+                html += f"<div class='delta-card'><h3>{sc_name} Projection</h3>"
+                html += f"<p>Total Capital Deployed: ${sc_data['summary']['total_spend']:,.2f}</p>"
+                html += f"<p>Projected Revenue: <b>${rev:,.2f}</b> | Portfolio ROI: <b>{roi}%</b></p></div>"
+        else:
+            html += f"<h1>C-Suite Executive Summary</h1>"
+            html += f"<h2>Systemic Vulnerability Level (Fragility): {report['summary']['fragility_index']}</h2>"
+            html += f"<div class='delta-card'><p>Total Capital Deployed: ${report['summary']['total_spend']:,.2f}</p>"
+            html += f"<p>Our optimized projection yields a <b>{report['summary']['portfolio_roi_pct']}% ROI</b> across {report['summary']['campaign_count']} campaigns.</p></div>"
+            
+        html += "<p class='footer'><em>Asset natively managed by Antigravity CFO Ultimate Excel Architect (Fixed-Point Convergence Enabled)</em></p>"
+        html += "</div></body></html>"
         return html
 
     def _build_excel(self, report: dict, filename: str) -> str:
