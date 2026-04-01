@@ -82,6 +82,10 @@ start "Phantom QA Elite" /min cmd /c "cd Phantom_QA_Elite && Launch_Phantom_QA.b
 start "Master Architect Elite" /min cmd /c "cd Master_Architect_Elite_Logic && Launch_Master_Architect.bat"
 start "CLO Legal Dept" /min cmd /c "cd apps\CLO_Agent && \"%PYTHON%\" legal_engine.py"
 
+:: ── Start Autonomous Service Exposure (Ngrok Zero-Trust) ──
+echo  [1.7/3] Exposing CFO Auditor's Desk via Ngrok (Zero-Trust)...
+start "Ngrok Zero-Trust Tunnel" /min "%PYTHON%" skills\expose_localhost.py
+
 :: ── Start n8n Credential Watchdog (V3 Active Self-Repair) ──
 echo  [1.8/3] Starting Aether Watchdog Daemon...
 start "V3 Watchdog Daemon" /min "%PYTHON%" n8n_watchdog.py --daemon
@@ -107,7 +111,7 @@ start http://localhost:%PORT%
 echo.
 echo  ===================================================
 echo    Meta App Factory is running!
-echo    Backend:  http://localhost:8000
+echo    Backend:  http://localhost:5000
 echo    Frontend: http://localhost:5173
 echo    Machine:  %COMPUTERNAME%
 echo    Press any key to SHUTDOWN...

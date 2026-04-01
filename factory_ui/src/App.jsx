@@ -1478,7 +1478,11 @@ function App() {
       const res = await fetch(`${API_BASE}/api/apps/${encodeURIComponent(appName)}/launch`, { method: 'POST' });
       const data = await res.json();
       if (data.port) {
-        window.open(data.url, '_blank');
+        let targetUrl = data.url;
+        if (appName === 'Alpha_V2_Genesis') targetUrl = 'http://localhost:5175';
+        else if (appName === 'Resonance') targetUrl = 'http://localhost:5174';
+        
+        window.open(targetUrl, '_blank');
         refreshRunning();
       } else {
         alert(data.error || 'Launch failed');
@@ -1609,9 +1613,12 @@ function App() {
                   let proxyPath = `/app/${app.name}`;
                   if (app.name === "Resonance") proxyPath = "/resonance";
                   if (app.name === "Project_Aegis" || app.name === "Project Aegis") proxyPath = "/aegis";
-                  if (app.name === "Alpha_V2_Genesis") proxyPath = "/genesis";
                   
-                  window.open(`http://localhost:5000${proxyPath}`, '_blank');
+                  if (app.name === "Alpha_V2_Genesis") {
+                    window.open(`http://localhost:5175`, '_blank');
+                  } else {
+                    window.open(`http://localhost:5000${proxyPath}`, '_blank');
+                  }
                 }}
                 style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
               >
@@ -1727,10 +1734,12 @@ function App() {
                       <td
                         style={{ color: '#818cf8', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline dotted rgba(99,102,241,0.4)' }}
                         onClick={() => {
-                          if (running && port) {
-                            window.open(`http://localhost:${port}`, '_blank');
-                          } else if (port) {
-                            window.open(`http://localhost:${port}`, '_blank');
+                          let targetUrl = port ? `http://localhost:${port}` : null;
+                          if (app.name === 'Alpha_V2_Genesis') targetUrl = 'http://localhost:5175';
+                          else if (app.name === 'Resonance') targetUrl = 'http://localhost:5174';
+                          
+                          if (running && targetUrl) {
+                            window.open(targetUrl, '_blank');
                           } else {
                             launchApp(app.name);
                           }
@@ -1762,7 +1771,12 @@ function App() {
                           <div style={{ display: 'flex', gap: '6px' }}>
                             <button
                               className="app-action-btn launch"
-                              onClick={() => window.open(`http://localhost:${port}`, '_blank')}
+                              onClick={() => {
+                                let targetUrl = `http://localhost:${port}`;
+                                if (app.name === 'Alpha_V2_Genesis') targetUrl = 'http://localhost:5175';
+                                else if (app.name === 'Resonance') targetUrl = 'http://localhost:5174';
+                                window.open(targetUrl, '_blank');
+                              }}
                               title="Open in browser"
                               style={{ fontSize: '11px', padding: '3px 8px', borderRadius: '4px', border: '1px solid rgba(34,197,94,0.3)', background: 'rgba(34,197,94,0.1)', color: '#22c55e', cursor: 'pointer' }}
                             >🌐 Open</button>
