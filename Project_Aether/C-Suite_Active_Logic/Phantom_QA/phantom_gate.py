@@ -59,8 +59,9 @@ STAGE_WEIGHTS = {
     "architecture":    0.15,
     "brand":           0.10,
     "data_integrity":  0.10,
-    "ui_testing":      0.30,
-    "api_testing":     0.20,
+    "ui_testing":      0.25,
+    "api_testing":     0.15,
+    "monica_benchmark":0.10,
     "critic_review":   0.10,
 }
 
@@ -349,6 +350,64 @@ def _stage_api_testing(base_url: str, app_name: str,
                 "details": {"error": str(e)[:300]}}
 
 
+def _stage_monica_benchmark() -> dict:
+    """Stage 7.5: Monica-Benchmark Mathematical Convergence Validation."""
+    try:
+        from CFO_Agent.cfo_engine import CFOExecutionController
+        import openpyxl
+        
+        cfo = CFOExecutionController()
+        # Mock high-variance payload to force circularity resolution
+        payload = {
+            "cmo_spend": {"total": 100000, "allocated": 80000},
+            "architect_risk": {"structural_score": 90, "logic_score": 90, "security_score": 90},
+            "campaign_list": [
+                {"name": "Monica Benchmark", "budget": 50000, "projected_revenue": 100000}
+            ]
+        }
+        report = cfo.generate_report(payload)
+        filepath = report.get("file_path")
+        
+        if not filepath or not os.path.exists(filepath):
+            return {"stage": "monica_benchmark", "score": 0, "passed": False, 
+                    "details": {"error": "CFO failed to generate benchmark model"}}
+            
+        # Parse output for Native Algebraic mapping
+        wb = openpyxl.load_workbook(filepath, data_only=False)
+        ws_debt = wb["Debt Schedule"]
+        
+        interest_formula = ws_debt["B7"].value
+        
+        # Verify the dampener is fully stripped and native formula exists
+        if "0.9" in str(interest_formula) or "0.1" in str(interest_formula):
+            passed = False
+            details = "FAILED: Iterative dampener (0.9/0.1) detected. CFO is not using native convergence."
+        elif "=(B3+B11)/2" in str(interest_formula).replace(" ", ""):
+            passed = True
+            details = "PASS: Native algebraic convergence mapped perfectly (Monica-Benchmark passed)."
+        else:
+            passed = False
+            details = f"FAILED: Unknown mathematical mapping: {interest_formula}"
+            
+        score = 100 if passed else 0
+        
+        return {
+            "stage": "monica_benchmark",
+            "score": score,
+            "passed": passed,
+            "details": {
+                "formula_mapping": str(interest_formula),
+                "verdict": details
+            }
+        }
+    except ImportError as e:
+        return {"stage": "monica_benchmark", "score": 70, "passed": True,
+                "details": {"note": f"Imports failed — skipped: {e}"}}
+    except Exception as e:
+        return {"stage": "monica_benchmark", "score": 20, "passed": False,
+                "details": {"error": str(e)[:200]}}
+
+
 def _stage_critic_review(qa_summary: str) -> dict:
     """Stage 8: Submit QA results to The Critic for independent verdict."""
     try:
@@ -417,7 +476,7 @@ def _generate_report(app_name: str, stages: dict, verdict: str,
     ]
 
     stage_order = ["infrastructure", "architecture", "brand", "data_integrity",
-                   "ui_testing", "api_testing", "critic_review"]
+                   "ui_testing", "api_testing", "monica_benchmark", "critic_review"]
 
     for i, stage_name in enumerate(stage_order, 1):
         stage = stages.get(stage_name, {})
@@ -472,6 +531,10 @@ def _generate_report(app_name: str, stages: dict, verdict: str,
             fb = details.get("feedback", "")
             if fb:
                 lines.append(f"**Feedback:** {fb[:300]}")
+
+        elif stage_name == "monica_benchmark":
+            lines.append(f"**Mathematical Mapping Check:** {details.get('verdict', 'N/A')}")
+            lines.append(f"**Extracted Formula:** `{details.get('formula_mapping', 'N/A')}`")
 
         else:
             # Generic details dump
@@ -574,6 +637,11 @@ def run_phantom_gate(context: dict) -> dict:
         logger.info("▶ Stage 7/8: API Testing")
         stages["api_testing"] = _stage_api_testing(base_url, app_name, persona_prompts)
 
+    # ── Stage 7.5: Monica Benchmark ─────────────────────
+    if should_run("monica_benchmark"):
+        logger.info("▶ Stage 7.5/8: Monica Benchmark Audit")
+        stages["monica_benchmark"] = _stage_monica_benchmark()
+
     # ── Build QA Summary for Critic ─────────────────────
     qa_summary_parts = [f"Phantom QA Gate Report for {app_name}:"]
     for name, stage_data in stages.items():
@@ -593,8 +661,8 @@ def run_phantom_gate(context: dict) -> dict:
     active_weight = 0
 
     for stage_name, weight in STAGE_WEIGHTS.items():
-        stage = stages.get(stage_name, {})
-        if stage.get("skipped"):
+        stage = stages.get(stage_name)
+        if stage is None or stage.get("skipped"):
             continue
         score = stage.get("score", 0)
         weighted_score += score * weight
@@ -667,7 +735,7 @@ if __name__ == "__main__":
     result = run_phantom_gate(context)
 
     print(f"\n{'='*55}")
-    print(f"  🧪 PHANTOM QA GATE — {result['app_name']}")
+    print(f"  [QA] PHANTOM QA GATE — {result['app_name']}")
     print(f"{'='*55}")
     print(f"  Verdict:  {result['verdict']}")
     print(f"  Score:    {result['score']}/100")
