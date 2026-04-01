@@ -113,6 +113,8 @@ _Ledger engine: Alpha V2 Genesis Quant Architect v2.0 | Antigravity AI_
 ---
 
 ## SECURITY_INTERCEPTIONS
+[2026-04-01T14:41:46.179371Z] | LEAK_MONITOR | ACTION: LEAK_BLOCKED | AGENT: Deep_Crawler_Test | TYPE: TRADE_SECRET | SEVERITY: HIGH | DETAIL: Phase 3 Integration Test — simulated leak block | REVIEW: http://localhost:5173/?view=sop&app=LEAK_Deep_Crawler_Test&score=0
+[2026-04-01T14:41:45.920530Z] | LEAK_MONITOR | ACTION: IP_MILESTONE | APP: Resonance_v3_Integration_Test | TYPE: PATENT | CONFIDENCE: 87.0% | SOP: http://localhost:5173/?view=sop&app=Resonance_v3_Integration_Test&score=87 | DETAIL: Phase 3 Integration Test — verify_fortress_logic.py
 
 <!-- Append-only section. Do not delete or modify existing entries. -->
 

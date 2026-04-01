@@ -141,7 +141,7 @@ async def post_hr_memo(memo: HRMemo):
 async def get_sentinel_log():
     try:
         if not notifier_bus:
-            return JSONResponse(status_code=500, content={"log": []})
+            return {"log": []}
         return {"log": notifier_bus.get_sentinel_logs()}
     except Exception as e:
         logger.error(f"Error fetching sentinel logs: {e}")
@@ -564,7 +564,7 @@ def agent_status():
     agents = {}
     
     # Active Native Ports aligned with watchdog
-    c_suite_active = ping_port(5070)
+    c_suite_active = ping_port(5041)
     architect_active = ping_port(5050)
     qa_active = ping_port(5030)
     core_active = ping_port(5000)
@@ -4513,7 +4513,7 @@ def route_app(app_name: str):
     name_lower = app_name.lower()
     routes = {
         "resonance": "http://localhost:5174",
-        "alpha_v2_genesis": "http://localhost:5173", # Alpha port
+        "alpha_v2_genesis": "http://localhost:5175", # Alpha port
         "project_aether": "http://localhost:5175",
         "delegate_ai_beta_agreement_vault": "http://localhost:5176",
         "pulseboard": "http://localhost:5177",
