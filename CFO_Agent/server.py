@@ -9,9 +9,9 @@ and uploaded files into high-integrity financial models.
 Endpoints:
   GET  /                                  — Dashboard
   GET  /form                              — Dialogue Box (instruction + file upload)
-  POST /api/consult                       — Process instruction + file
-  POST /webhook/cfo-execution-controller  — Main execution (N8N-compatible)
-  POST /api/execute                       — Direct execution
+    POST /api/consult                       — Process instruction + file
+    POST /api/sentinel-relay-bridge         — Main execution (Native-Bridge)
+    POST /api/execute                       — Direct execution
   GET  /api/health                        — Health check
   GET  /api/reports                       — List generated reports
 """
@@ -287,16 +287,13 @@ h1 {{
     <div class="card">
         <h3>API Endpoints</h3>
         <div class="endpoint"><span class="method post">POST</span><span class="path">/api/consult — Instruction + file</span></div>
-        <div class="endpoint"><span class="method post">POST</span><span class="path">/webhook/cfo-execution-controller</span></div>
+        <div class="endpoint"><span class="method post">POST</span><span class="path">/api/sentinel-relay-bridge</span></div>
         <div class="endpoint"><span class="method post">POST</span><span class="path">/api/execute</span></div>
         <div class="endpoint"><span class="method get">GET</span><span class="path">/api/health</span></div>
         <div class="endpoint"><span class="method get">GET</span><span class="path">/api/reports</span></div>
     </div>
 
-    <div class="card">
-        <h3>N8N Cloud Mirror</h3>
-        <div class="endpoint"><span class="method post">POST</span><span class="path" style="font-size:11px;">humanresource.app.n8n.cloud/webhook/cfo-execution-controller</span></div>
-    </div>
+    <!-- Legacy N8N Mirror Section Completely Removed (Native Intelligence Activated) -->
 
     <div class="card">
         <h3>Recent Reports ({len(report_list)})</h3>
@@ -728,16 +725,17 @@ async def health():
         "version": "3.0.0",
         "port": 5041,
         "dialogue_box": "/form",
-        "n8n_mirror": "https://humanresource.app.n8n.cloud/webhook/cfo-execution-controller",
+        "native_bridge": "http://localhost:5041/api/sentinel-relay-bridge",
+        "n8n_mirror": "Retired — Native Intelligence Active",
         "excel_available": True,
         "uploads_processed": upload_count,
         "timestamp": datetime.now().isoformat(),
     }
 
 
-@app.post("/webhook/cfo-execution-controller")
-async def webhook_handler(request: Request):
-    """N8N-compatible webhook endpoint — same contract as the cloud version."""
+@app.post("/api/sentinel-relay-bridge")
+async def sentinel_relay_handler(request: Request):
+    """Native Python Bridge — replaces legacy n8n webhook."""
     data = await safe_parse_body(request)
     return await _execute(data)
 
@@ -765,7 +763,7 @@ async def _execute(data: dict):
             "message": error,
             "missing_fields": missing,
             "received_fields": list(data.keys()),
-            "callback_url": "http://localhost:5041/webhook/cfo-execution-controller",
+            "callback_url": "http://localhost:5041/api/sentinel-relay-bridge",
             "instruction": "Please re-submit with all required fields: cmo_spend, architect_risk, campaign_list"
         }, status_code=400)
 
@@ -815,12 +813,21 @@ async def _execute(data: dict):
         qa_verdict = None
         try:
             import aiohttp
+            import hashlib
+            file_path = report.get('file_path', '')
+            sig = ""
+            if file_path and os.path.exists(file_path):
+                with open(file_path, "rb") as f:
+                    sig = hashlib.sha256(f.read()).hexdigest()
+
             qa_payload = {
                 "source": "CFO_Fragility_Engine",
                 "target_url": "http://localhost:5041",
-                "file_link": report.get('file_path', ''),
+                "file_link": file_path,
                 "file_name": new_name,
                 "audit_mode": "mathematical",
+                "audit_type": "AUDIT:cryptographic",
+                "digital_audit_signature": sig,
                 "report_data": {
                     "fragility_index": report.get('fragility', {}).get('fragility_index'),
                     "composite_score": report.get('fragility', {}).get('composite'),
@@ -866,6 +873,40 @@ async def _execute(data: dict):
         if qa_verdict:
             response_data["qa_verdict"] = qa_verdict.get("verdict")
             response_data["qa_score"] = qa_verdict.get("score")
+
+        # ── Context-Aware Folder Anchor Injection ────────────────
+        try:
+            import sys
+            sys.path.insert(0, str(ROOT.parent / "Sentinel_Bridge"))
+            from sentinel_drive_manager import SentinelDriveManager
+            mgr = SentinelDriveManager()
+            
+            assets = []
+            if file_path and os.path.exists(file_path):
+                with open(file_path, "rb") as f:
+                    assets.append({
+                        "name": new_name,
+                        "content": f.read(),
+                        "type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    })
+            if "markdown_manual" in report:
+                assets.append({
+                    "name": new_name.replace(".xlsx", "_Manual.md"),
+                    "content": report["markdown_manual"],
+                    "type": "text/markdown"
+                })
+            if "csuite_brochure" in report:
+                assets.append({
+                    "name": new_name.replace(".xlsx", "_Brochure.html"),
+                    "content": report["csuite_brochure"],
+                    "type": "text/html"
+                })
+            
+            bundle_res = mgr.bundle_project_assets(payload.get('project_id', 'WarRoom_Project'), assets)
+            response_data["cloud_bundle"] = bundle_res
+            logger.info("Context-Aware Folder Anchor injected bundle to AI Ideas.")
+        except Exception as e:
+            logger.warning(f"SentinelDriveManager anchor failed: {e}")
 
         return response_data
 
@@ -1067,13 +1108,12 @@ if __name__ == "__main__":
     print("   API Docs:     http://localhost:%d/docs" % PORT)
     print("")
     print("   Consult:   POST /api/consult (instruction + file)")
-    print("   Webhook:   POST /webhook/cfo-execution-controller")
+    print("   Bridge:    POST /api/sentinel-relay-bridge")
     print("   Execute:   POST /api/execute")
     print("   Health:    GET  /api/health")
     print("   Reports:   GET  /api/reports")
     print("")
-    print("   N8N Cloud: https://humanresource.app.n8n.cloud")
-    print("              /webhook/cfo-execution-controller")
+    print("   N8N Cloud: RETIRED (Native Intelligence Active)")
     print("")
     print("   Antigravity-AI | CFO Ultimate Excel Architect v3.0.0")
     print("")
