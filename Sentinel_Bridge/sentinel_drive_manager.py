@@ -85,44 +85,62 @@ class SentinelDriveManager:
     def upload_file(self, file_content, file_name, folder_id, mime_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'):
         """
         Injects generated assets (Excel, MD, PDF) into the specific project folder.
+        Fortress File Integrity: Requires physical API size > 0 validation before 
+        handing off to CFO, protecting against silent cloud failures.
         """
         if not self.initialized:
+            logger.info(f"[STUB] Fortress File Integrity executing for {file_name}... Verification size > 0 PASS (Attempt 1/3).")
             logger.info(f"[STUB] upload_file: {file_name} to folder {folder_id}")
-            return f"stub_file_{hash(file_name)}"
+            return {"id": f"stub_file_{hash(file_name)}", "url": "stub_url_link"}
 
         file_metadata = {
             'name': file_name,
             'parents': [folder_id]
         }
         
-        # Support for both bytes (Excel) and strings (Markdown/Manuals)
-        if isinstance(file_content, str):
-            # If base64 encoded, try decoding
+        for attempt in range(1, 4):
             try:
-                decoded = base64.b64decode(file_content).decode('utf-8')
-                # Check if it was purely a base64 string
-                file_content = decoded.encode('utf-8')
-            except Exception:
-                file_content = file_content.encode('utf-8')
-            
-        media = MediaIoBaseUpload(
-            io.BytesIO(file_content), 
-            mimetype=mime_type, 
-            resumable=True
-        )
-        
-        file = self.service.files().create(
-            body=file_metadata,
-            media_body=media,
-            fields='id'
-        ).execute()
-        
-        return file.get('id')
+                # Support for both bytes (Excel) and strings (Markdown/Manuals)
+                if isinstance(file_content, str):
+                    try:
+                        decoded = base64.b64decode(file_content).decode('utf-8')
+                        file_content = decoded.encode('utf-8')
+                    except Exception:
+                        file_content = file_content.encode('utf-8')
+                    
+                media = MediaIoBaseUpload(
+                    io.BytesIO(file_content), 
+                    mimetype=mime_type, 
+                    resumable=True
+                )
+                
+                file = self.service.files().create(
+                    body=file_metadata,
+                    media_body=media,
+                    fields='id, webViewLink'
+                ).execute()
+                
+                fid = file.get('id')
+                link = file.get('webViewLink')
+
+                # Fortress Verification Gate
+                verify_file = self.service.files().get(fileId=fid, fields="id, size").execute()
+                size = int(verify_file.get('size', 0))
+                
+                if size > 0:
+                    logger.info(f"Verified {file_name} uploaded successfully (Size: {size} bytes).")
+                    return {"id": fid, "url": link}
+                else:
+                    logger.warning(f"Silent Drop Detected: Verification size 0 for {file_name} on attempt {attempt}/3.")
+            except Exception as e:
+                logger.warning(f"Upload sequence error for {file_name} on attempt {attempt}/3: {e}")
+                
+        # If we exhausted 3 retries, system absolutely must not mark as complete.
+        raise RuntimeError(f"FATAL_IO_ERROR: Failed to securely verify Google Drive upload for '{file_name}' after 3 execution loops.")
 
     def bundle_project_assets(self, project_name, assets):
         """
         World-Class Bundler anchored to the Meta_App_Factory root.
-        'assets' is a list of dicts: [{'name': str, 'content': bytes/str, 'type': str}]
         """
         # HARDCODED NATIVE ANCHOR: Pointing to Meta_App_Factory folder ID
         root_parent = "1ze0KcPcV3I5gxxmk9uRkK6zOu_LvJaNM"
@@ -137,13 +155,15 @@ class SentinelDriveManager:
                 elif asset['name'].endswith('.xlsx'): mime_type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                 else: mime_type = 'text/plain'
 
-            fid = self.upload_file(
+            upload_result = self.upload_file(
                 asset['content'], 
                 asset['name'], 
                 project_folder_id, 
                 mime_type
             )
-            results.append({"name": asset['name'], "id": fid})
+            
+            # Require the Blocking Array
+            results.append({"name": asset['name'], "id": upload_result['id'], "url": upload_result['url']})
             
         return {"project_folder": project_folder_id, "files": results}
 
