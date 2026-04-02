@@ -15,6 +15,12 @@
         }
     },
     "apps": {
+        "Meta_App_Factory": {
+            "status": "active",
+            "type": "API_Gateway",
+            "port": 5000,
+            "description": "Central orchestration and intelligence gateway"
+        },
         "Alpha_V2_Genesis": {
             "status": "active",
             "type": "Trading Dashboard",

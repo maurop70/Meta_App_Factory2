@@ -112,7 +112,7 @@ export default function VentureSuite({ onComplete, registry }) {
     setLoading(true);
     setError(null);
     try {
-      const resp = await fetch(`http://localhost:8000/api/eos/${endpoint}`, {
+      const resp = await fetch(`http://localhost:5000/api/eos/${endpoint}`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
@@ -288,10 +288,10 @@ export default function VentureSuite({ onComplete, registry }) {
         <div style={styles.card}>
           <h3>✅ Pitch Decks Generated</h3>
           <ul style={{ lineHeight: 2 }}>
-            <li><a href={`http://localhost:8000/api/eos/documents/${decksData.investor?.split('/').pop()}`} target="_blank" rel="noreferrer" style={{color: '#6366f1'}}>Download Investor Deck ({decksData.investor?.split('/').pop()})</a></li>
-            <li><a href={`http://localhost:8000/api/eos/documents/${decksData.customer?.split('/').pop()}`} target="_blank" rel="noreferrer" style={{color: '#6366f1'}}>Download Customer Deck ({decksData.customer?.split('/').pop()})</a></li>
+            <li><a href={`http://localhost:5000/api/eos/documents/${decksData.investor?.split('/').pop()}`} target="_blank" rel="noreferrer" style={{color: '#6366f1'}}>Download Investor Deck ({decksData.investor?.split('/').pop()})</a></li>
+            <li><a href={`http://localhost:5000/api/eos/documents/${decksData.customer?.split('/').pop()}`} target="_blank" rel="noreferrer" style={{color: '#6366f1'}}>Download Customer Deck ({decksData.customer?.split('/').pop()})</a></li>
             {financialData && (
-              <li><a href={`http://localhost:8000/api/eos/documents/${financialData.path?.split('/').pop()}`} target="_blank" rel="noreferrer" style={{color: '#10b981'}}>Download Financial Model XLSX ({financialData.path?.split('/').pop()})</a></li>
+              <li><a href={`http://localhost:5000/api/eos/documents/${financialData.path?.split('/').pop()}`} target="_blank" rel="noreferrer" style={{color: '#10b981'}}>Download Financial Model XLSX ({financialData.path?.split('/').pop()})</a></li>
             )}
           </ul>
           <button style={styles.button} onClick={finishVenture}>Seed War Room & Enter Builder Chat</button>

@@ -103,10 +103,10 @@ export default function ModeSelectionScreen({ onSelectMode }) {
   const [hovered, setHovered] = useState(null);
 
   const resetEosAndSelect = (mode) => {
-    fetch("http://localhost:8000/api/eos/reset", { method: "POST" })
+    fetch("http://localhost:5000/api/eos/reset", { method: "POST" })
       .finally(() => {
         if (mode === 'venture') {
-          fetch("http://localhost:8000/api/eos/state", {
+          fetch("http://localhost:5000/api/eos/state", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ mode: "venture" })

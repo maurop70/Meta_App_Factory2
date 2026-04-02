@@ -10,6 +10,14 @@ import json
 import logging
 import subprocess
 
+# ── Force UTF-8 Output (Windows cp1252 crashes on emoji characters) ──
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass  # Python < 3.7 fallback — PYTHONIOENCODING handles it
+
 from auto_heal import auto_heal, diagnose
 
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, UploadFile, File, Form
@@ -122,6 +130,18 @@ except ImportError as e:
     notifier_bus = None
 
 # ── ROUTES ────────────────────────────────────────────────────
+
+@app.get("/api/registry/raw")
+async def get_registry_raw():
+    """Serve the central architecture SSoT (registry.json) as-is for downstream agents."""
+    try:
+        with open(REGISTRY_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data
+    except Exception as e:
+        logger.error(f"Failed to read registry: {e}")
+        return JSONResponse(status_code=500, content={"error": f"Failed to load registry: {str(e)}"})
+
 
 @app.post("/api/sentinel/alert")
 async def post_sentinel_alert(alert: SentinelAlert):
@@ -2334,6 +2354,8 @@ _WARROOM_PROMPTS = {
     ),
 }
 
+_warroom_sse_queues = {}
+
 async def _broadcast(msg: dict, project: str = "Aether"):
     """Send a message to all connected War Room clients for a project + persist to disk."""
     if project not in _warroom_logs: _warroom_logs[project] = []
@@ -2352,6 +2374,40 @@ async def _broadcast(msg: dict, project: str = "Aether"):
             dead.append(ws)
     for ws in dead:
         _warroom_clients[project].remove(ws)
+        
+    for q in _warroom_sse_queues.get(project, []):
+        q.put_nowait(msg)
+
+
+@app.get("/api/war-room/stream")
+async def war_room_sse_stream(project: str, request: Request):
+    """SSE endpoint for React frontend (CommandCenter.jsx) to receive broadcast events."""
+    import asyncio
+    if project not in _warroom_sse_queues:
+        _warroom_sse_queues[project] = []
+    
+    q = asyncio.Queue()
+    _warroom_sse_queues[project].append(q)
+    
+    async def sse_generator():
+        try:
+            # Send an initial connection event
+            init_msg = {"type": "init", "message": "SSE Connected"}
+            yield f"data: {json.dumps(init_msg)}\n\n"
+            
+            while True:
+                if await request.is_disconnected():
+                    break
+                try:
+                    msg = await asyncio.wait_for(q.get(), timeout=2.0)
+                    yield f"data: {json.dumps(msg)}\n\n"
+                except asyncio.TimeoutError:
+                    yield ": keep-alive\n\n"
+        finally:
+            if q in _warroom_sse_queues.get(project, []):
+                _warroom_sse_queues[project].remove(q)
+                
+    return StreamingResponse(sse_generator(), media_type="text/event-stream")
 
 
 @app.websocket("/ws/warroom")

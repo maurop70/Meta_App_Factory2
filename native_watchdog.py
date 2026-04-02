@@ -102,6 +102,7 @@ class AetherNativeWatchdog:
 
         # Map ports to their restart commands
         restart_commands = {
+            5030: 'start /min "" cmd /c "cd Phantom_QA_Elite\\backend && python server.py"',
             5050: 'start /min "" cmd /c "cd Master_Architect_Elite_Logic && python server.py"',
             5070: 'start /min "" cmd /c "cd CFO_Agent && python server.py"',
             5080: 'start /min "" cmd /c "cd apps\\CLO_Agent && python legal_engine.py"',

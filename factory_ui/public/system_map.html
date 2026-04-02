@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Antigravity System Map</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0e17; color: #e2e8f0; font-family: 'Inter', sans-serif; overflow: hidden; }
+    
+    .map-container {
+      width: 100vw; height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      position: relative;
+    }
+    
+    .map-title {
+      font-size: 16px; font-weight: 700; color: #6366f1;
+      text-transform: uppercase; letter-spacing: 3px;
+      margin-bottom: 24px; text-align: center;
+    }
+    
+    .map-subtitle {
+      font-size: 11px; color: #475569; letter-spacing: 1px;
+      margin-bottom: 32px; text-align: center;
+    }
+    
+    /* SVG Canvas Area */
+    .system-canvas {
+      width: 90%; max-width: 1200px; height: 70vh;
+      position: relative;
+    }
+    
+    /* Node Styling */
+    .node {
+      position: absolute;
+      padding: 12px 18px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 4px;
+      min-width: 120px; text-align: center;
+    }
+    .node:hover {
+      transform: scale(1.05);
+      z-index: 10;
+    }
+    .node .node-icon { font-size: 24px; }
+    .node .node-label { white-space: nowrap; }
+    .node .node-port { font-size: 10px; opacity: 0.6; }
+    
+    .node.core {
+      background: linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.2));
+      border: 1px solid rgba(99,102,241,0.4);
+      box-shadow: 0 0 20px rgba(99,102,241,0.15);
+      color: #c4b5fd;
+    }
+    .node.agent {
+      background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(6,182,212,0.15));
+      border: 1px solid rgba(16,185,129,0.3);
+      box-shadow: 0 0 12px rgba(16,185,129,0.1);
+      color: #6ee7b7;
+    }
+    .node.app {
+      background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(244,63,94,0.15));
+      border: 1px solid rgba(245,158,11,0.3);
+      box-shadow: 0 0 12px rgba(245,158,11,0.1);
+      color: #fcd34d;
+    }
+    .node.infrastructure {
+      background: linear-gradient(135deg, rgba(71,85,105,0.3), rgba(51,65,85,0.3));
+      border: 1px solid rgba(71,85,105,0.4);
+      color: #94a3b8;
+    }
+    
+    /* Status Dot */
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      display: inline-block; margin-right: 4px;
+    }
+    .status-dot.online { background: #22c55e; box-shadow: 0 0 6px rgba(34,197,94,0.5); }
+    .status-dot.offline { background: #64748b; }
+    
+    /* Connection Lines (SVG overlay) */
+    .lines-svg {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+    }
+    .conn-line {
+      stroke: rgba(99,102,241,0.2);
+      stroke-width: 1;
+      stroke-dasharray: 4 4;
+    }
+    
+    /* Legend */
+    .legend {
+      position: absolute; bottom: 16px; left: 16px;
+      display: flex; gap: 16px; font-size: 11px; color: #64748b;
+    }
+    .legend-item { display: flex; align-items: center; gap: 4px; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+    
+    /* Pulse animation */
+    @keyframes pulse-glow {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+    .pulse { animation: pulse-glow 2s ease-in-out infinite; }
+    
+    /* Loading state */
+    .loading { display: flex; align-items: center; justify-content: center; height: 100vh; color: #475569; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="map-container">
+    <div class="map-title">⚡ Antigravity V3 System Architecture</div>
+    <div class="map-subtitle">AETHER-NATIVE • ZERO-DEPENDENCY • REAL-TIME TELEMETRY</div>
+    
+    <div class="system-canvas" id="canvas">
+      <!-- SVG connection lines drawn dynamically -->
+      <svg class="lines-svg" id="linesSvg"></svg>
+      <!-- Nodes injected by JS -->
+    </div>
+    
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:rgba(99,102,241,0.5)"></div> Core</div>
+      <div class="legend-item"><div class="legend-dot" style="background:rgba(16,185,129,0.5)"></div> Agent</div>
+      <div class="legend-item"><div class="legend-dot" style="background:rgba(245,158,11,0.5)"></div> App</div>
+      <div class="legend-item"><div class="legend-dot" style="background:rgba(71,85,105,0.5)"></div> Infrastructure</div>
+    </div>
+  </div>
+
+<script>
+  const NODES = [
+    // Core
+    { id: 'factory', label: 'Meta App Factory', icon: '⚡', port: 5000, type: 'core', x: 45, y: 8 },
+    // Agents (C-Suite ring)
+    { id: 'cfo', label: 'CFO Agent', icon: '📊', port: 5041, type: 'agent', x: 15, y: 25 },
+    { id: 'cmo', label: 'CMO Agent', icon: '📈', port: 5020, type: 'agent', x: 75, y: 25 },
+    { id: 'cto', label: 'CTO Agent', icon: '⚙️', port: 5060, type: 'agent', x: 5, y: 50 },
+    { id: 'phantom', label: 'Phantom QA', icon: '🧪', port: 5030, type: 'agent', x: 85, y: 50 },
+    { id: 'architect', label: 'Master Architect', icon: '🏗️', port: 5050, type: 'agent', x: 15, y: 72 },
+    { id: 'clo', label: 'CLO Legal', icon: '⚖️', port: 5080, type: 'agent', x: 75, y: 72 },
+    // Apps
+    { id: 'alpha', label: 'Alpha V2 Genesis', icon: '📉', port: 5008, type: 'app', x: 30, y: 45 },
+    { id: 'resonance', label: 'Resonance', icon: '🎓', port: 5006, type: 'app', x: 60, y: 45 },
+    { id: 'sentinel', label: 'Sentinel Bridge', icon: '🔔', port: 5009, type: 'app', x: 45, y: 65 },
+    // Infrastructure
+    { id: 'aether', label: 'Project Aether', icon: '🌐', type: 'infrastructure', x: 45, y: 88 },
+    { id: 'aegis', label: 'Project Aegis', icon: '🛡️', port: 5070, type: 'infrastructure', x: 30, y: 88 },
+    { id: 'delegate', label: 'Delegate AI', icon: '📋', port: 5007, type: 'infrastructure', x: 60, y: 88 },
+  ];
+
+  const CONNECTIONS = [
+    ['factory', 'cfo'], ['factory', 'cmo'], ['factory', 'cto'], ['factory', 'phantom'],
+    ['factory', 'architect'], ['factory', 'clo'],
+    ['factory', 'alpha'], ['factory', 'resonance'], ['factory', 'sentinel'],
+    ['cto', 'architect'], ['phantom', 'architect'],
+    ['aether', 'cfo'], ['aether', 'cto'], ['aether', 'clo'],
+    ['aegis', 'clo'],
+  ];
+
+  const canvas = document.getElementById('canvas');
+  const svg = document.getElementById('linesSvg');
+  const nodePositions = {};
+
+  // Render nodes
+  NODES.forEach(node => {
+    const el = document.createElement('div');
+    el.className = `node ${node.type}`;
+    el.style.left = `${node.x}%`;
+    el.style.top = `${node.y}%`;
+    el.style.transform = 'translate(-50%, -50%)';
+    el.innerHTML = `
+      <span class="node-icon">${node.icon}</span>
+      <span class="node-label"><span class="status-dot" id="dot-${node.id}"></span>${node.label}</span>
+      ${node.port ? `<span class="node-port">:${node.port}</span>` : ''}
+    `;
+    el.title = `${node.label}${node.port ? ' (port ' + node.port + ')' : ''}`;
+    canvas.appendChild(el);
+    nodePositions[node.id] = { x: node.x, y: node.y };
+  });
+
+  // Draw connections
+  function drawLines() {
+    svg.innerHTML = '';
+    const rect = canvas.getBoundingClientRect();
+    CONNECTIONS.forEach(([from, to]) => {
+      const a = nodePositions[from];
+      const b = nodePositions[to];
+      if (!a || !b) return;
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', `${a.x}%`);
+      line.setAttribute('y1', `${a.y}%`);
+      line.setAttribute('x2', `${b.x}%`);
+      line.setAttribute('y2', `${b.y}%`);
+      line.setAttribute('class', 'conn-line');
+      svg.appendChild(line);
+    });
+  }
+  drawLines();
+
+  // Live port pinging (via factory API)
+  async function pingNodes() {
+    try {
+      const res = await fetch('/api/agents/status');
+      const data = await res.json();
+      // Also ping the core
+      const healthRes = await fetch('/api/health');
+      const health = await healthRes.json();
+      
+      NODES.forEach(node => {
+        const dot = document.getElementById(`dot-${node.id}`);
+        if (!dot) return;
+        let alive = false;
+        
+        if (node.id === 'factory') alive = health.api_status === 'healthy';
+        else if (data[node.label?.split(' ')[0]?.toUpperCase()]) alive = true;
+        else if (node.port) {
+          // Check via registry
+          alive = false; // default; would need a dedicated ping endpoint
+        }
+        
+        dot.className = `status-dot ${alive ? 'online' : 'offline'}`;
+      });
+    } catch {
+      // API unreachable
+      document.querySelectorAll('.status-dot').forEach(d => d.className = 'status-dot offline');
+    }
+  }
+  
+  // Initial ping after 2s, then every 15s
+  setTimeout(pingNodes, 2000);
+  setInterval(pingNodes, 15000);
+</script>
+</body>
+</html>

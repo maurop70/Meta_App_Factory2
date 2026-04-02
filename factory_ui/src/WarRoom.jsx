@@ -90,7 +90,7 @@ export default function WarRoom({ ventureMode = false, onHandoff }) {
   // Load history
   const loadHistory = () => {
     setHistoryLoading(true);
-    fetch(`${API_BASE}/api/warroom/history?project_name=${encodeURIComponent(projectName)}`)
+    fetch(`/api/warroom/history?project_name=${encodeURIComponent(projectName)}`)
       .then(r => r.json())
       .then(data => setHistorySessions(data.sessions || []))
       .catch(() => {})
@@ -101,7 +101,7 @@ export default function WarRoom({ ventureMode = false, onHandoff }) {
   useEffect(() => {
     if (!ventureMode) return;
     const interval = setInterval(() => {
-      fetch(`${API_BASE}/api/eos/state?project_name=${encodeURIComponent(projectName)}`)
+      fetch(`/api/eos/state?project_name=${encodeURIComponent(projectName)}`)
         .then(r => r.json())
         .then(setEosState)
         .catch(() => {});
@@ -238,7 +238,7 @@ export default function WarRoom({ ventureMode = false, onHandoff }) {
       wsRef.current.send(JSON.stringify({ type: 'intervention', message: 'START_DEBATE' }));
     } else if (projectName) {
       // Fallback
-      fetch(`${API_BASE}/api/warroom/intervene`, {
+      fetch(`/api/warroom/intervene`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'intervention', message: 'START_DEBATE', project_name: projectName }),
@@ -262,7 +262,7 @@ export default function WarRoom({ ventureMode = false, onHandoff }) {
       ws.send(JSON.stringify(payload));
     } else {
       // WS is closed — use HTTP fallback so intervention always reaches backend
-      fetch(`${API_BASE}/api/warroom/intervene`, {
+      fetch(`/api/warroom/intervene`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...payload, project_name: projectName }),
@@ -276,7 +276,7 @@ export default function WarRoom({ ventureMode = false, onHandoff }) {
 
     if (convinceMode && activeChallenge) {
       // Phase 3: Submit as convince reasoning
-      fetch(`${API_BASE}/api/warroom/convince`, {
+      fetch(`/api/warroom/convince`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -307,7 +307,7 @@ export default function WarRoom({ ventureMode = false, onHandoff }) {
   const sendOverride = useCallback(() => {
     if (activeChallenge) {
       // Phase 3: Structured force proceed
-      fetch(`${API_BASE}/api/warroom/force_proceed`, {
+      fetch(`/api/warroom/force_proceed`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -326,7 +326,7 @@ export default function WarRoom({ ventureMode = false, onHandoff }) {
   const issueChallenge = useCallback(() => {
     if (!topicInput.trim()) return;
     const score = parseFloat(challengeScore) || persuasion;
-    fetch(`${API_BASE}/api/warroom/challenge`, {
+    fetch(`/api/warroom/challenge`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -342,7 +342,7 @@ export default function WarRoom({ ventureMode = false, onHandoff }) {
   // ── Seed Topic (Phase 2) ──────────────────────────────
   const seedTopic = useCallback(() => {
     if (!topicInput.trim()) return;
-    fetch(`${API_BASE}/api/warroom/seed`, {
+    fetch(`/api/warroom/seed`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ project_name: projectName, topic: topicInput.trim() }),
@@ -372,7 +372,7 @@ export default function WarRoom({ ventureMode = false, onHandoff }) {
       if (wsRef.current) {
         wsRef.current.send(JSON.stringify({ type: 'intervention', message: `Uploading document: ${file.name}...` }));
       }
-      await fetch(`${API_BASE}/api/warroom/upload`, { method: 'POST', body: fd });
+      await fetch(`/api/warroom/upload`, { method: 'POST', body: fd });
     } catch (err) {
       console.error("Upload failed", err);
     } finally {
@@ -389,7 +389,7 @@ export default function WarRoom({ ventureMode = false, onHandoff }) {
     setGeneratingPlan(true);
     setOutcomeProposal(null);
     try {
-      await fetch(`${API_BASE}/api/warroom/execute_outcome`, {
+      await fetch(`/api/warroom/execute_outcome`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ project_name: projectName, outcome_type: choice }),
@@ -618,7 +618,7 @@ export default function WarRoom({ ventureMode = false, onHandoff }) {
             <button onClick={async () => {
               setIsExecutingCmd(true); setIsReadyToDeploy(false); setSequenceState({}); setMarketPulse(null);
               setMessages(prev => [...prev, { type: 'dialogue', agent: 'COMMANDER', message: `▶ PROTOCOL OVERRIDE: Executing Unified Aether-Native Extration Loop for [${projectName}]...`, timestamp: new Date().toISOString() }]);
-              try { await fetch(`${API_BASE}/api/warroom/execute`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ project_id: projectName }) }); } 
+              try { await fetch(`/api/warroom/execute`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ project_id: projectName }) }); } 
               catch (err) { setMessages(prev => [...prev, { type: 'dialogue', agent: 'SYSTEM', message: `Execution failed: ${err.message}`, isError: true, timestamp: new Date().toISOString() }]); setIsExecutingCmd(false); }
             }} disabled={isExecutingCmd} style={{ ...styles.topicBtn, background: isExecutingCmd ? '#475569' : 'linear-gradient(135deg, #6366f1, #4f46e5)', width: 'auto' }}>
               {isExecutingCmd ? '⏳ Executing...' : '▶ Initialize Protocol'}

@@ -45,6 +45,10 @@ echo.
 
 cd /d "%FACTORY_DIR%"
 
+:: ── Force UTF-8 Encoding (Prevents emoji crash in Python) ──
+set PYTHONIOENCODING=utf-8
+chcp 65001 >nul 2>nul
+
 :: ── Step 0: Cleanup Stale Processes ────────────────────────
 echo  [0/3] Clearing Port 5173 (Alpha/Vite) for a clean start...
 taskkill /f /im python.exe /t 2>nul
@@ -71,9 +75,9 @@ timeout /t 5 /nobreak >nul
 set "PYTHONPATH=%CD%;%CD%\shared_modules;%PYTHONPATH%"
 
 :: ── Auto-Start Resonance (Aether-Native) ────────────────────
-echo  [1.5/3] Starting Resonance (Backend & UI)...
-start "Resonance Backend" /min cmd /c "cd Resonance && \"%PYTHON%\" server.py"
-start "Resonance Frontend" /min cmd /c "cd Resonance\resonance_ui && npm.cmd run dev -- --host --port 5174"
+:: echo  [1.5/3] Starting Resonance (Backend ^& UI)...
+:: start "Resonance Backend" /min cmd /c "cd Resonance && \"%PYTHON%\" server.py"
+:: start "Resonance Frontend" /min cmd /c "cd Resonance\resonance_ui && npm.cmd run dev -- --host --port 5174"
 
 :: ── Auto-Start Neural Network Clusters ──────────────────────
 echo  [1.6/3] Starting C-Suite and Elite Nodes...
