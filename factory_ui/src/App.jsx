@@ -12,14 +12,14 @@ import VentureSuite from './VentureSuite'
 //  Agent Status | Telemetry | File Upload | Recover Prompt
 // ═══════════════════════════════════════════════════════════
 
-const API_BASE = 'http://localhost:5000';
+
 
 // ── COMMAND PALETTE ────────────────────────────────────────
 function CommandPalette({ onCommand }) {
   const [commands, setCommands] = useState([]);
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/commands`)
+    fetch(`/api/commands`)
       .then(r => r.json())
       .then(data => setCommands(data))
       .catch(() => setCommands([
@@ -68,15 +68,15 @@ function AgentStatusPanel() {
   const scanAgents = useCallback(async () => {
     try {
       // 1. Verify Local API is Reachable (Watchdog Sync)
-      const sentinelRes = await fetch(`${API_BASE}/api/sentinel/log`);
+      const sentinelRes = await fetch(`/api/sentinel/log`);
       if (!sentinelRes.ok) throw new Error("Backend Offline");
       
       // 2. Fetch Registry to confirm "MIGRATED_TO_NATIVE" truth
-      const regRes = await fetch(`${API_BASE}/api/registry`);
+      const regRes = await fetch(`/api/registry`);
       const regData = await regRes.json();
       
       // 3. Ping local ports via API to build Neural Network State
-      const agentRes = await fetch(`${API_BASE}/api/agents/status`);
+      const agentRes = await fetch(`/api/agents/status`);
       const agentData = await agentRes.json();
       
       const newStatus = {};
@@ -181,7 +181,7 @@ function TelemetryBar({ streaming }) {
     window.addEventListener('force-telemetry-active', handleForceActive);
 
     const interval = setInterval(() => {
-      fetch(`${API_BASE}/api/health`)
+      fetch(`/api/health`)
         .then(r => r.json())
         .then(d => {
           if (d.status === 'processing') setTelemetryStatus('PROCESSING');
@@ -352,7 +352,7 @@ function BuilderChat({ registry, onAtomizerUpdate, externalCommand, onBuildCompl
   // ── Audience Detection ──────────────────────────────────
   const checkAudienceIntent = async (text) => {
     try {
-      const res = await fetch(`${API_BASE}/api/audience/detect`, {
+      const res = await fetch(`/api/audience/detect`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text }),
@@ -372,7 +372,7 @@ function BuilderChat({ registry, onAtomizerUpdate, externalCommand, onBuildCompl
     setAudienceDetected(null);
     setMessages(prev => [...prev, { role: 'system', text: `🔬 Researching audience profile: "${audienceDetected.audience_hint}"...` }]);
     try {
-      const res = await fetch(`${API_BASE}/api/audience/generate`, {
+      const res = await fetch(`/api/audience/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -408,7 +408,7 @@ function BuilderChat({ registry, onAtomizerUpdate, externalCommand, onBuildCompl
     setMessages(prev => [...prev, { role: 'assistant', text: '' }]);
 
     try {
-      const res = await fetch(`${API_BASE}/api/build/stream`, {
+      const res = await fetch(`/api/build/stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ app_name: appName, blueprint, description, system_prompt: systemPrompt }),
@@ -498,7 +498,7 @@ function BuilderChat({ registry, onAtomizerUpdate, externalCommand, onBuildCompl
       setMessages(prev => [...prev, { role: 'assistant', text: '' }]);
 
       try {
-        const res = await fetch(`${API_BASE}/api/refine`, {
+        const res = await fetch(`/api/refine`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ app_name: appName, feedback }),
@@ -546,7 +546,7 @@ function BuilderChat({ registry, onAtomizerUpdate, externalCommand, onBuildCompl
 
     try {
       const dashboard_context = getContext();
-      const res = await fetch(`${API_BASE}/api/chat/stream`, {
+      const res = await fetch(`/api/chat/stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt, dashboard_context }),
@@ -615,7 +615,7 @@ function BuilderChat({ registry, onAtomizerUpdate, externalCommand, onBuildCompl
 
   const clearChat = async () => {
     setMessages([]);
-    try { await fetch(`${API_BASE}/api/chat/clear`, { method: 'POST' }); } catch { }
+    try { await fetch(`/api/chat/clear`, { method: 'POST' }); } catch { }
   };
 
   const [recovering, setRecovering] = useState(false);
@@ -623,7 +623,7 @@ function BuilderChat({ registry, onAtomizerUpdate, externalCommand, onBuildCompl
   const recoverSession = async () => {
     setRecovering(true);
     try {
-      const res = await fetch(`${API_BASE}/api/chat/history?limit=20`);
+      const res = await fetch(`/api/chat/history?limit=20`);
       const data = await res.json();
       if (data.messages && data.messages.length > 0) {
         setMessages(data.messages);
@@ -655,7 +655,7 @@ function BuilderChat({ registry, onAtomizerUpdate, externalCommand, onBuildCompl
     setParseResult({ loading: true, file: file.name });
 
     try {
-      const res = await fetch(`${API}/api/documents/upload`, { method: 'POST', body: fd });
+      const res = await fetch(`/api/documents/upload`, { method: 'POST', body: fd });
       const data = await res.json();
       setParseResult(data);
 
@@ -911,7 +911,7 @@ function RefinePanel({ registry, refineLog: log, setRefineLog: setLog, refining,
     setLog([]);
 
     try {
-      const res = await fetch(`${API_BASE}/api/refine/apply`, {
+      const res = await fetch(`/api/refine/apply`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ app_name: selectedApp, feedback: feedback.trim() }),
@@ -1107,7 +1107,7 @@ function BrandStudioPanel({ registry }) {
 
       // ── Attempt 2: Factory proxy (port 8000) ──
       try {
-        const res = await fetch(`${API_BASE}/api/brand/${encodeURIComponent(selectedProject)}`);
+        const res = await fetch(`/api/brand/${encodeURIComponent(selectedProject)}`);
         const data = await res.json();
         if (!cancelled) {
           setCurrentBrand(data.brand || null);
@@ -1141,7 +1141,7 @@ function BrandStudioPanel({ registry }) {
     setLoading(true);
     setStatus({ type: 'info', text: '🤖 CMO + Graphic Designer generating your brand...' });
     try {
-      const res = await fetch(`${API_BASE}/api/brand/generate`, {
+      const res = await fetch(`/api/brand/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ project_name: selectedProject }),
@@ -1170,7 +1170,7 @@ function BrandStudioPanel({ registry }) {
     fd.append('file', file);
     fd.append('project_name', selectedProject);
     try {
-      const res = await fetch(`${API_BASE}/api/brand/upload`, { method: 'POST', body: fd });
+      const res = await fetch(`/api/brand/upload`, { method: 'POST', body: fd });
       const data = await res.json();
       if (data.status === 'ok') {
         setCurrentBrand(data.brand);
@@ -1190,7 +1190,7 @@ function BrandStudioPanel({ registry }) {
     setLoading(true);
     setStatus({ type: 'info', text: '💬 Translating your vision into a brand identity...' });
     try {
-      const res = await fetch(`${API_BASE}/api/brand/describe`, {
+      const res = await fetch(`/api/brand/describe`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ project_name: selectedProject, description: description.trim() }),
@@ -1441,6 +1441,19 @@ function BrandStudioPanel({ registry }) {
 
 // ── MAIN APP ────────────────────────────────────────────────
 function App() {
+  // ── Iframe Recursion Guard ──────────────────────────────
+  // If we're embedded inside an iframe (e.g., system map fallback),
+  // render a minimal view to prevent infinite nesting.
+  if (window.self !== window.top) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0a0e17', color: '#6366f1', fontFamily: '"Inter", sans-serif', fontSize: '14px', flexDirection: 'column', gap: '8px' }}>
+        <span style={{ fontSize: '32px' }}>⚡</span>
+        <span>Antigravity Node View</span>
+        <span style={{ color: '#475569', fontSize: '11px' }}>Open in a new tab for the full dashboard</span>
+      </div>
+    );
+  }
+
   const [activeView, setActiveView] = useState('systemmap');
   const [builderMode, setBuilderMode] = useState(null); // 'technical' | 'venture' | null
   const [registry, setRegistry] = useState([]);
@@ -1461,7 +1474,7 @@ function App() {
   const [launchingApp, setLaunchingApp] = useState(null);
 
   const refreshRunning = () => {
-    fetch(`${API_BASE}/api/apps/running`)
+    fetch(`/api/apps/running`)
       .then(r => r.json())
       .then(data => setRunningApps(data))
       .catch(() => {});
@@ -1475,7 +1488,7 @@ function App() {
   const launchApp = async (appName) => {
     setLaunchingApp(appName);
     try {
-      const res = await fetch(`${API_BASE}/api/apps/${encodeURIComponent(appName)}/launch`, { method: 'POST' });
+      const res = await fetch(`/api/apps/${encodeURIComponent(appName)}/launch`, { method: 'POST' });
       const data = await res.json();
       if (data.port) {
         let targetUrl = data.url;
@@ -1496,7 +1509,7 @@ function App() {
 
   const stopApp = async (appName) => {
     try {
-      await fetch(`${API_BASE}/api/apps/${encodeURIComponent(appName)}/stop`, { method: 'POST' });
+      await fetch(`/api/apps/${encodeURIComponent(appName)}/stop`, { method: 'POST' });
       refreshRunning();
     } catch { }
   };
@@ -1506,12 +1519,12 @@ function App() {
 
   const approveGate = async () => {
     if (!qaGate) return;
-    await fetch(`${API_BASE}/api/build/approve/${encodeURIComponent(qaGate.app_name)}`, { method: 'POST' });
+    await fetch(`/api/build/approve/${encodeURIComponent(qaGate.app_name)}`, { method: 'POST' });
     setQaGate(null);
   };
   const abortGate = async () => {
     if (!qaGate) return;
-    await fetch(`${API_BASE}/api/build/abort/${encodeURIComponent(qaGate.app_name)}`, { method: 'POST' });
+    await fetch(`/api/build/abort/${encodeURIComponent(qaGate.app_name)}`, { method: 'POST' });
     setQaGate(null);
   };
 
@@ -1524,7 +1537,7 @@ function App() {
   };
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/registry`)
+    fetch(`/api/registry`)
       .then(r => r.json())
       .then(data => setRegistry(data.apps || []))
       .catch(() => setRegistry([
@@ -1616,6 +1629,8 @@ function App() {
                   
                   if (app.name === "Alpha_V2_Genesis") {
                     window.open(`http://localhost:5175`, '_blank');
+                  } else if (app.name === "Resonance") {
+                    window.open(`http://localhost:5174`, '_blank');
                   } else {
                     window.open(`http://localhost:5000${proxyPath}`, '_blank');
                   }
@@ -1677,7 +1692,7 @@ function App() {
         {activeView === 'systemmap' && (
           <div style={{ width: '100%', height: 'calc(100vh - 140px)', borderRadius: '12px', overflow: 'hidden', background: '#0a0e17' }}>
             <iframe
-              src={`${API_BASE}/system_map.html`}
+              src={`/system_map.html`}
               style={{ width: '100%', height: '100%', border: 'none' }}
               title="V3 System Map"
             />
@@ -1710,7 +1725,7 @@ function App() {
               onAtomizerUpdate={(c, p) => { setAtomizerChunks(c); setAtomizerProgress(p); }}
               externalCommand={externalCommand}
               onBuildComplete={() => {
-                fetch(`${API_BASE}/api/registry`).then(r => r.json()).then(data => setRegistry(data.apps || [])).catch(() => { });
+                fetch(`/api/registry`).then(r => r.json()).then(data => setRegistry(data.apps || [])).catch(() => { });
               }}
               onQaGate={setQaGate}
             />

@@ -321,7 +321,7 @@ export default function SupportFAB({ activeApp, themeColor = '#818cf8' }) {
 
   const checkAudienceIntent = async (text) => {
     try {
-      const res = await fetch(`${API_BASE}/api/audience/detect`, {
+      const res = await fetch(`/api/audience/detect`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text }),
@@ -341,7 +341,7 @@ export default function SupportFAB({ activeApp, themeColor = '#818cf8' }) {
     setAudienceDetected(null);
     setMessages(prev => [...prev, { role: 'system', text: `🔬 Researching audience profile: "${audienceDetected.audience_hint}"...` }]);
     try {
-      const res = await fetch(`${API_BASE}/api/audience/generate`, {
+      const res = await fetch(`/api/audience/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -417,7 +417,7 @@ export default function SupportFAB({ activeApp, themeColor = '#818cf8' }) {
     setMessages(prev => [...prev, { role: 'assistant', text: '' }]);
 
     try {
-      const res = await fetch(`${API_BASE}/api/chat/stream`, {
+      const res = await fetch(`/api/chat/stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

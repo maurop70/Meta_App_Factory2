@@ -174,22 +174,36 @@ async def dashboard():
 #  ROUTES — Pulse (System Health Scan)
 # ═══════════════════════════════════════════════════════════
 
-KNOWN_PORTS = {
-    "Meta_App_Factory": {"url": "http://localhost:8000", "health": "/api/health"},
-    "Alpha_Architect": {"url": "http://localhost:5008", "health": "/api/health"},
-    "CMO_Elite": {"url": "http://localhost:5020", "health": "/api/health"},
-    "Phantom_QA_Elite": {"url": "http://localhost:5030", "health": "/api/health"},
-}
+def get_dynamic_ports():
+    ports = {
+        "Meta_App_Factory": {"url": "http://localhost:5000", "health": "/api/health"},
+        "Phantom_QA_Elite": {"url": "http://localhost:5030", "health": "/api/health"}
+    }
+    try:
+        registry_path = ROOT.parent / "registry.json"
+        if registry_path.exists():
+            with open(registry_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            
+            for app_name, app_info in data.get("apps", {}).items():
+                port = app_info.get("port")
+                if port and isinstance(port, int):
+                    ports[app_name] = {"url": f"http://localhost:{port}", "health": "/api/health"}
+    except Exception as e:
+        logger.error(f"Failed to read registry.json: {e}")
+    
+    return ports
 
 
 @app.get("/api/pulse")
 async def pulse_scan():
-    """Scan all known C-Suite ports and report health."""
+    """Scan all dynamically discovered C-Suite ports and report health."""
     import aiohttp
     results = {}
+    known_ports = get_dynamic_ports()
 
     async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as session:
-        for name, info in KNOWN_PORTS.items():
+        for name, info in known_ports.items():
             try:
                 async with session.get(f"{info['url']}{info['health']}") as r:
                     if r.status == 200:
@@ -208,9 +222,9 @@ async def pulse_scan():
     online = sum(1 for r in results.values() if r["status"] == "online")
     return {
         "timestamp": datetime.now().isoformat(),
-        "total_apps": len(KNOWN_PORTS),
+        "total_apps": len(known_ports),
         "online": online,
-        "offline": len(KNOWN_PORTS) - online,
+        "offline": len(known_ports) - online,
         "apps": results,
     }
 

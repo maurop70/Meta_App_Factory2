@@ -77,7 +77,7 @@ export default function IP_SOP_Modal({ onClose }) {
 
     // Fetch LEDGER entries to find claims.pdf for this app
     useEffect(() => {
-        fetch(`${API_BASE}/api/ip/ledger`)
+        fetch(`/api/ip/ledger`)
             .then(r => r.json())
             .then(data => {
                 const entries = data.entries || [];
@@ -105,7 +105,7 @@ export default function IP_SOP_Modal({ onClose }) {
     const handleConflictCheck = async () => {
         setLoading('conflict');
         try {
-            const res = await fetch(`${API_BASE}/api/ip/conflicts?app_name=${encodeURIComponent(appName)}`);
+            const res = await fetch(`/api/ip/conflicts?app_name=${encodeURIComponent(appName)}`);
             const data = await res.json();
             setConflictResult(data);
             markComplete(3);
@@ -119,7 +119,7 @@ export default function IP_SOP_Modal({ onClose }) {
     const handleFiling = async () => {
         setLoading('filing');
         try {
-            const res = await fetch(`${API_BASE}/api/ip/filing`, {
+            const res = await fetch(`/api/ip/filing`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ app_name: appName, confidence_score: score / 100 }),
@@ -255,7 +255,7 @@ export default function IP_SOP_Modal({ onClose }) {
                                                                     setLoading('claims');
                                                                     try {
                                                                         const res = await fetch(
-                                                                            `${API_BASE}/api/ip/claims?app_name=${encodeURIComponent(appName)}`,
+                                                                            `/api/ip/claims?app_name=${encodeURIComponent(appName)}`,
                                                                             { method: 'POST' }
                                                                         );
                                                                         const data = await res.json();
