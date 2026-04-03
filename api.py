@@ -9,8 +9,8 @@ import sys
 import json
 import logging
 import subprocess
-
-# ── Force UTF-8 Output (Windows cp1252 crashes on emoji characters) ──
+import coo_agent
+from persona_manager import get_persona_manager
 if sys.platform == "win32":
     try:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -19,6 +19,14 @@ if sys.platform == "win32":
         pass  # Python < 3.7 fallback — PYTHONIOENCODING handles it
 
 from auto_heal import auto_heal, diagnose
+from warroom_protocol import (
+    WarRoomReport, ReportStore, WarRoomOrchestrator, PipelineStep,
+    get_orchestrator, get_report_store, parse_agent_response,
+    PIPELINE_FULL_BUSINESS_PLAN, PIPELINE_ADVERSARIAL_DRILL,
+    ChaosScenario, CHAOS_LIBRARY,
+    StrategyMode, STRATEGY_PRESETS, get_strategy_mode,
+)
+from wisdom_vault import get_wisdom_vault
 
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
@@ -727,7 +735,7 @@ try:
     from pre_deploy_gate import get_pre_deploy_gate
     _pre_deploy_gate = get_pre_deploy_gate()
     PRE_DEPLOY_AVAILABLE = True
-    logger.info("PreDeployGate loaded (Aether-Native — bypasses n8n).")
+    logger.info("PreDeployGate loaded (Aether-Native).")
 except ImportError:
     _pre_deploy_gate = None
     PRE_DEPLOY_AVAILABLE = False
@@ -908,6 +916,9 @@ async def war_room_execute_endpoint(req: WarRoomExecuteRequest, request: Request
 class WarRoomDispatchRequest(BaseModel):
     message: str
     project_id: str = None
+    strategy_mode: str = "balanced"    # "aggressive_growth" | "lean_mvp" | "custom" | "balanced"
+    custom_directive: str = ""          # Commander's custom guidance (when strategy_mode="custom")
+    stress_test: bool = False           # If True, run adversarial drill after pipeline
 
 @app.post("/api/war-room/dispatch")
 async def war_room_dispatch(req: WarRoomDispatchRequest, request: Request):
@@ -926,26 +937,159 @@ async def war_room_dispatch(req: WarRoomDispatchRequest, request: Request):
         async def trigger_csuite():
             global ORCHESTRATION_STATE
             try:
+                # Resolve Commander's strategic philosophy
+                _strategy = get_strategy_mode(req.strategy_mode, req.custom_directive)
+                _strategy_label = _strategy.label
+
                 # Broadcast START_DEBATE event via the Server-Sent Events/WS stream
                 await _broadcast({
                     "type": "intervention",
                     "agent": "SYSTEM",
-                    "message": "START_DEBATE — Commencing Consensus Deliberation.",
+                    "message": f"START_DEBATE — Strategy: {_strategy_label} | Stress Test: {req.stress_test}",
                     "timestamp": _dt.now().isoformat()
                 }, project=project_id)
 
                 topic = f"Commander overrides: {req.message}"
+
+                # ── UPGRADE 6: CEO Triage (Dynamic Hierarchy Composition) ──
+                await _broadcast({
+                    "type": "intervention",
+                    "agent": "CEO",
+                    "message": "Staffing Project: Evaluating Commander Intent...",
+                    "timestamp": _dt.now().isoformat()
+                }, project=project_id)
+                
+                triage_prompt = (
+                    "You are the CEO. You must dynamically select the most efficient War Room team to handle the following objective.\n"
+                    f"Objective: '{req.message}'\n"
+                    "Available Agents: [CMO, CFO, CTO, CLO, CRITIC, ARCHITECT]\n"
+                    "Rules:\n"
+                    "1. Return ONLY a valid JSON array of strings containing the selected agent names in order.\n"
+                    "2. The Minimum Squad is 2 agents. The final agent should act as the gate (typically CRITIC or CTO).\n"
+                    "3. Output MUST be only JSON, e.g. [\"CTO\", \"ARCHITECT\", \"CRITIC\"]\n"
+                    "Team Selection:"
+                )
+                loop = asyncio.get_event_loop()
+                triage_resp = await loop.run_in_executor(_warroom_executor, _call_agent, "CEO", triage_prompt)
+                
+                triage_list = []
+                try:
+                    import re
+                    # Clean potential markdown
+                    clean_resp = re.sub(r'```(?:json)?', '', triage_resp).strip()
+                    triage_list = json.loads(clean_resp)
+                    if not isinstance(triage_list, list):
+                        triage_list = []
+                except Exception as e:
+                    logger.error(f"CEO Triage parsing failed: {e} | Raw: {triage_resp}")
+                
+                async def _run_performance_review(pid: str, critic_output: str, score: float, p_type: str = "GLOBAL"):
+                    """Phase 7: Analyzes a brilliant project plan or absolute failure to extract Win Conditions or Scars."""
+                    logger.info(f"Triggering Performance Review for {pid}...")
+                    loop = asyncio.get_event_loop()
+                    pm = get_persona_manager()
+                    
+                    is_win = score >= 8.0
+                    if is_win:
+                        review_prompt = (
+                            f"The Commander rated this {p_type} project plan {score}/10, a massive success.\n"
+                            "Analyze the CRITIC's successful verdict and identify 1 specific strategic behavior or tactic "
+                            "performed by the CTO and/or CFO that made this a success.\n"
+                            f"Prepend the tactic with the context tag: [{p_type}].\n"
+                            "Return ONLY a strict JSON object mapping the agent's name to a single bullet point string.\n"
+                            f"Example: {{\"CTO\": \"[{p_type}] Chose SQLite to minimize dev overhead\"}}\n"
+                            f"CRITIC VERDICT:\n{critic_output}"
+                        )
+                    else:
+                        review_prompt = (
+                            f"The Commander rated this {p_type} project plan {score}/10, an absolute failure.\n"
+                            "Analyze the CRITIC's failed verdict and identify 1 critical mistake "
+                            "performed by the CTO and/or CFO that caused this rejection.\n"
+                            f"Prepend the scar with the context tag: [{p_type}].\n"
+                            "Return ONLY a strict JSON object mapping the agent's name to a single bullet point string.\n"
+                            f"Example: {{\"CFO\": \"[{p_type}] Proposed budget ignoring critical tax law\"}}\n"
+                            f"CRITIC VERDICT:\n{critic_output}"
+                        )
+                    
+                    try:
+                        resp = await loop.run_in_executor(_warroom_executor, _call_agent, "SYSTEM", review_prompt)
+                        clean_json = re.sub(r'^```[\w]*\n|```$', '', resp.strip(), flags=re.MULTILINE).strip()
+                        start = clean_json.find('{')
+                        end = clean_json.rfind('}')
+                        if start != -1 and end != -1:
+                            insights = json.loads(clean_json[start:end+1])
+                            for agent, tactic in insights.items():
+                                if is_win:
+                                    pm.add_win_condition(agent.upper(), tactic)
+                                    msg = f"New Win Condition added: {tactic}"
+                                else:
+                                    pm.add_scar(agent.upper(), tactic)
+                                    msg = f"New Scar added: {tactic}"
+                                
+                                logger.info(f"Agent Persona ({agent}) updated: {tactic}")
+                                
+                                await _broadcast({
+                                    "type": "persona_update",
+                                    "agent": agent.upper(),
+                                    "level_up": is_win,
+                                    "message": msg,
+                                    "timestamp": _dt.now().isoformat()
+                                }, project=pid)
+                    except Exception as e:
+                        logger.error(f"Performance Review failed: {e}")
+
+                # ── WAR ROOM PROTOCOL INTEGRATION ──────────────────────
+                _wr_store = get_report_store()
+                _wr_orchestrator = get_orchestrator()
+                _wr_pipeline = _wr_orchestrator.compose_pipeline(req.message, triage_override=triage_list)
+                _wr_session = _wr_orchestrator.start_session(
+                    project_id, _wr_pipeline, req.message,
+                    strategy_mode=_strategy, stress_test=req.stress_test,
+                )
+                logger.info(f"War Room Session: {_wr_orchestrator.get_pipeline_summary(_wr_pipeline)}")
                 
                 async def trigger_agent_response(agent_name, prompt_override=None):
                     loop = asyncio.get_event_loop()
                     query = prompt_override or topic
+                    
+                    # ── Phase 7: Agent Persona Injection ──
+                    try:
+                        pm = get_persona_manager()
+                        query = pm.inject_memory_into_prompt(agent_name, query)
+                    except Exception as e:
+                        logger.warning(f"Failed to inject persona memory for {agent_name}: {e}")
+
                     logger.info(f"Triggering {agent_name} response")
                     await _broadcast({
                         "type": "agent_working",
                         "agent": agent_name,
                         "timestamp": _dt.now().isoformat()
                     }, project=project_id)
-                    resp = await loop.run_in_executor(_warroom_executor, _call_n8n_agent, agent_name, query)
+                    
+                    try:
+                        resp = await loop.run_in_executor(_warroom_executor, _call_agent, agent_name, query)
+                        coo = coo_agent.get_coo()
+                        ledger = coo.record_usage(project_id, agent_name, query, resp or "")
+                        
+                        await _broadcast({
+                            "type": "coo_alert",
+                            "tokens_total": ledger.total_tokens,
+                            "budget": ledger.max_budget,
+                            "status": ledger.status,
+                            "est_cost": f"${ledger.estimated_cost_usd:.4f}"
+                        }, project=project_id)
+                    except coo_agent.OpBudgetExceeded as e:
+                        logger.error(str(e))
+                        await _broadcast({
+                            "type": "dialogue",
+                            "agent": "SYSTEM",
+                            "icon": "🛑",
+                            "color": "#dc2626",
+                            "message": f"**[COO OPERATION ABORT]** {str(e)}",
+                            "timestamp": _dt.now().isoformat()
+                        }, project=project_id)
+                        raise # break loop
+                        
                     agent_meta = _AGENTS.get(agent_name, {})
                     await _broadcast({
                         "type": "dialogue",
@@ -955,7 +1099,47 @@ async def war_room_dispatch(req: WarRoomDispatchRequest, request: Request):
                         "message": resp or f"{agent_name} logic processed.",
                         "timestamp": _dt.now().isoformat()
                     }, project=project_id)
-                    return resp or ""
+                    
+                    # ── Stealth Extraction (Dual-Output Pattern) ──
+                    structured_data = {}
+                    metadata = {"cost": f"${ledger.estimated_cost_usd:.4f}" if 'ledger' in locals() else "$0.00"}
+                    
+                    from warroom_protocol import HANDOFF_MODELS
+                    model_cls = HANDOFF_MODELS.get(agent_name)
+                    if model_cls and resp:
+                        fields = list(model_cls.model_fields.keys())
+                        stealth_prompt = (
+                            f"Extract the following fields from this debate transcript into a strict JSON payload.\n"
+                            f"Fields required: {fields}\n"
+                            f"Do not summarize. Extract raw values only into JSON format matching the provided Pydantic fields.\n"
+                            f"Transcript:\n{resp}"
+                        )
+                        try:
+                            s_resp = await loop.run_in_executor(_warroom_executor, _call_agent, "SYSTEM", stealth_prompt)
+                            clean_json = re.sub(r'^```[\w]*\n|```$', '', s_resp.strip(), flags=re.MULTILINE).strip()
+                            s_start = clean_json.find('{')
+                            s_end = clean_json.rfind('}')
+                            if s_start != -1 and s_end != -1:
+                                structured_data = json.loads(clean_json[s_start:s_end+1])
+                        except Exception as e:
+                            logger.error(f"Stealth Extraction failed for {agent_name}: {e}")
+                            
+                    return (resp or "", structured_data, metadata)
+
+                async def _propose_wisdom(report):
+                    try:
+                        vault = get_wisdom_vault()
+                        candidate = vault.propose_from_report(report)
+                        if candidate:
+                            await _broadcast({
+                                "type": "wisdom_proposal",
+                                "agent": "SYSTEM",
+                                "message": f"💡 New insight proposed: {candidate.title}",
+                                "standard_id": candidate.standard_id,
+                            }, project=project_id)
+                    except Exception as e:
+                        logger.warning(f"Wisdom proposal failed: {e}")
+
 
                 import re
 
@@ -1027,6 +1211,71 @@ async def war_room_dispatch(req: WarRoomDispatchRequest, request: Request):
                 iteration = 1
                 max_iterations = 5
                 
+
+                # ── Phase 8: Session Checkpoint Mechanics ──
+                import os
+                checkpoint_dir = os.path.join("Boardroom_Exchange", "active_sessions")
+                os.makedirs(checkpoint_dir, exist_ok=True)
+                checkpoint_file = os.path.join(checkpoint_dir, f"{project_id}_state.json")
+
+                def _save_checkpoint(last_agent: str):
+                    coo = coo_agent.get_coo()
+                    ledger = coo.get_ledger(project_id)
+                    def serialize_report(rep):
+                        if hasattr(rep, 'model_dump'):
+                            return rep.model_dump()
+                        elif hasattr(rep, 'dict'):
+                            return rep.dict()
+                        if isinstance(rep, dict):
+                            return rep
+                        return {}
+                    
+                    state = {
+                        "last_agent": last_agent,
+                        "coo": {
+                            "tokens_in": ledger.tokens_in,
+                            "tokens_out": ledger.tokens_out,
+                            "iteration": ledger.iteration_count
+                        },
+                        "reports": {k: serialize_report(v) for k, v in _wr_session['reports'].items()}
+                    }
+                    try:
+                        with open(checkpoint_file, "w", encoding="utf-8") as f:
+                            json.dump(state, f, indent=2)
+                    except Exception as e:
+                        logger.warning(f"Failed writing checkpoint: {e}")
+
+                if os.path.exists(checkpoint_file):
+                    try:
+                        with open(checkpoint_file, "r", encoding="utf-8") as f:
+                            chk = json.load(f)
+                        
+                        coo_agent.get_coo().restore_ledger(
+                            project_id,
+                            chk['coo']['tokens_in'],
+                            chk['coo']['tokens_out'],
+                            chk['coo']['iteration']
+                        )
+                        
+                        from warroom_protocol import WarRoomReport
+                        for k, v in chk['reports'].items():
+                            if 'metadata' not in v:
+                                v['metadata'] = {}
+                            v['metadata']['is_resumed'] = True
+                            _wr_session['reports'][k] = WarRoomReport(**v)
+                            
+                        logger.info(f"Resumed debate {project_id} from {chk.get('last_agent', 'known')} checkpoint.")
+                        asyncio.create_task(_broadcast({
+                            "type": "dialogue",
+                            "agent": "SYSTEM",
+                            "icon": "💾",
+                            "color": "#10b981",
+                            "message": f"**[STATE RECOVERY]** Resuming debate from {chk.get('last_agent', 'previous')} checkpoint...",
+                            "timestamp": _dt.now().isoformat()
+                        }, project=project_id))
+                    except Exception as e:
+                        logger.warning(f"Failed to load checkpoint: {e}")
+
                 while iteration <= max_iterations:
                     logger.info(f"=== LINEAR DEPENDENCY PROTOCOL — Iteration {iteration} ===")
                     # Broadcast iteration counter to UI
@@ -1075,46 +1324,106 @@ async def war_room_dispatch(req: WarRoomDispatchRequest, request: Request):
                         "timestamp": _dt.now().isoformat()
                     }, project=project_id)
 
-                    # 1a. CMO: Market Research + Cost Quantification
-                    cmo_resp = await trigger_agent_response('CMO', cmo_prompt_override)
-                    cmo_data = _parse_agent_json(cmo_resp)
                     
-                    # Extract CMO's critical numbers for downstream handoff
-                    cmo_marketing_cost = cmo_data.get("marketing_cost", 0)
-                    cmo_projected_revenue = cmo_data.get("projected_revenue", 0)
-                    cmo_demographic_reach = cmo_data.get("demographic_reach", 0)
-                    cmo_cpa = cmo_data.get("cost_per_acquisition", 0)
-                    cmo_recommendation = cmo_data.get("recommendation", "UNKNOWN")
-                    cmo_strategy = cmo_data.get("market_strategy", cmo_resp[:300])
+                    # 1a. CMO: Market Research + Cost Quantification
+                    cmo_data = {}
+                    if "CMO" in triage_list:
+                        if 'CMO' not in _wr_session['reports']:
+                            cmo_resp, cmo_data, cmo_meta = await trigger_agent_response('CMO', cmo_prompt_override)
+
+                            # ── WAR ROOM: Parse CMO into typed WarRoomReport ──
+                            _cmo_report = parse_agent_response(cmo_resp, 'CMO', 'market', project_id, iteration, structured_data=cmo_data, metadata=cmo_meta)
+                            _wr_store.save(_cmo_report)
+                            await _propose_wisdom(_cmo_report)
+                            _wr_session['reports']['CMO'] = _cmo_report
+                            _save_checkpoint('CMO')
+
+                        cmo_report = _wr_session['reports']['CMO']
+                        cmo_hp = cmo_report.handoff_payload  # Strictly typed CMOHandoff fields
+                        cmo_data = cmo_hp
+
+                        # Extract CMO's critical numbers from typed handoff
+                        cmo_marketing_cost = cmo_hp.get("marketing_cost", 0)
+                        cmo_projected_revenue = cmo_hp.get("projected_revenue", 0)
+                        cmo_demographic_reach = cmo_hp.get("demographic_reach", 0)
+                        cmo_cpa = cmo_hp.get("cost_per_acquisition", 0)
+                        cmo_recommendation = cmo_report.recommendation
+                        cmo_strategy = cmo_hp.get("market_strategy", cmo_report.detailed_report[:300] if hasattr(cmo_report, 'detailed_report') else "N/A")
+                    else:
+                        logger.info("COO: Skipping CMO per CEO Triage.")
+                        cmo_marketing_cost = 0
+                        cmo_projected_revenue = 0
+                        cmo_demographic_reach = 0
+                        cmo_cpa = 0
+                        cmo_recommendation = "SKIPPED"
+                        cmo_strategy = "N/A"
+                        cmo_hp = {}
 
                     # 1b. CEO: Validate CMO strategy against growth targets
-                    ceo_handoff = (
-                        f"The CMO has presented their Phase 1 strategy. Validate it:\n"
-                        f"- Market Strategy: {cmo_strategy[:200]}\n"
-                        f"- Marketing Cost: ${cmo_marketing_cost:,.0f}\n"
-                        f"- Projected Revenue: ${cmo_projected_revenue:,.0f}\n"
-                        f"- Demographic Reach: {cmo_demographic_reach:,}\n"
-                        f"- Cost Per Acquisition: ${cmo_cpa:.2f}\n"
-                        f"- CMO Recommendation: {cmo_recommendation}\n\n"
-                        f"Original directive: {req.message}"
-                    )
-                    ceo_resp = await trigger_agent_response('CEO', ceo_handoff)
-                    ceo_data = _parse_agent_json(ceo_resp)
-                    ceo_approved = ceo_data.get("approved_for_phase2", True)
-                    ceo_alignment = ceo_data.get("growth_target_alignment", "UNKNOWN")
-                    ceo_target = ceo_data.get("growth_target_annual", 0)
+                    ceo_alignment = "UNKNOWN"
+                    if "CEO" in triage_list:
+                        # Build handoff from upstream CMO report
+                        ceo_handoff = _wr_orchestrator.build_handoff_context(
+                            PipelineStep(agent_name='CEO', phase='validation', depends_on=['CMO']),
+                            _wr_session['reports'],
+                            req.message,
+                            iteration=iteration,
+                            market_pulse=market_pulse_data,
+                            wisdom_vault=get_wisdom_vault(),
+                        )
+                        if 'CEO' not in _wr_session['reports']:
+                            ceo_resp, ceo_data, ceo_meta = await trigger_agent_response('CEO', ceo_handoff)
 
-                    if not ceo_approved:
+                            # ── WAR ROOM: Parse CEO into typed WarRoomReport ──
+                            _ceo_report = parse_agent_response(ceo_resp, 'CEO', 'validation', project_id, iteration, structured_data=ceo_data, metadata=ceo_meta)
+                            _wr_store.save(_ceo_report)
+                            await _propose_wisdom(_ceo_report)
+                            _wr_session['reports']['CEO'] = _ceo_report
+                            _save_checkpoint('CEO')
+
+                        ceo_report = _wr_session['reports']['CEO']
+                        ceo_hp = ceo_report.handoff_payload  # Strictly typed CEOHandoff fields
+
+                        ceo_approved = ceo_hp.get("approved_for_phase2", True)
+                        ceo_alignment = ceo_hp.get("growth_target_alignment", "UNKNOWN")
+                        ceo_target = ceo_hp.get("growth_target_annual", 0)
+
+                        if not ceo_approved:
+                            await _broadcast({
+                                "type": "dialogue",
+                                "agent": "SYSTEM",
+                                "icon": "⚠️",
+                                "color": "#f59e0b",
+                                "message": f"**Phase 1 GATE: CEO flags MISALIGNMENT**\nAlignment: {ceo_alignment} | Growth Target: ${ceo_target:,.0f}\nRevision required. Cycling back.",
+                                "timestamp": _dt.now().isoformat()
+                            }, project=project_id)
+                    else:
+                        logger.info("COO: Skipping CEO validation per CEO Triage.")
+
+# ═══════════════════════════════════════════════════
+                    
+                    # ═══════════════════════════════════════════════════
+                    # PHASE 1.2: THE PRODUCT OFFICER — CPO
+                    # ═══════════════════════════════════════════════════
+                    if "CPO" in triage_list:
                         await _broadcast({
                             "type": "dialogue",
                             "agent": "SYSTEM",
-                            "icon": "⚠️",
-                            "color": "#f59e0b",
-                            "message": f"**Phase 1 GATE: CEO flags MISALIGNMENT**\nAlignment: {ceo_alignment} | Growth Target: ${ceo_target:,.0f}\nCMO must revise. Cycling back.",
+                            "icon": "🎨",
+                            "color": "#ec4899",
+                            "message": f"**PHASE 1.2: THE PRODUCT OFFICER**\nCPO evaluating Commerciability & UX Friction...",
                             "timestamp": _dt.now().isoformat()
                         }, project=project_id)
 
-                    # ═══════════════════════════════════════════════════
+                        cpo_handoff = f"Provide a MoSCoW prioritization and UX alignment report based on intention: '{req.message}'"
+                        if 'CPO' not in _wr_session['reports']:
+                            cpo_resp, cpo_data, cpo_meta = await trigger_agent_response('CPO', cpo_handoff)
+                            _cpo_report = parse_agent_response(cpo_resp, 'CPO', 'product', project_id, iteration, structured_data=cpo_data, metadata=cpo_meta)
+                            _wr_store.save(_cpo_report)
+                            _wr_session['reports']['CPO'] = _cpo_report
+                            _save_checkpoint('CPO')
+                    else:
+                        logger.info("COO: Skipping CPO per CEO Triage.")
                     # PHASE 1.5: THE ENGINEER — CTO
                     # ═══════════════════════════════════════════════════
                     await _broadcast({
@@ -1126,107 +1435,98 @@ async def war_room_dispatch(req: WarRoomDispatchRequest, request: Request):
                         "timestamp": _dt.now().isoformat()
                     }, project=project_id)
 
-                    # CTO receives CMO strategy + CEO validation as input
-                    cto_handoff = (
-                        f"PHASE 1.5 INPUT — Assess Technical Feasibility:\n"
-                        f"=== CMO Strategy ===\n"
-                        f"- Market Strategy: {cmo_strategy[:300]}\n"
-                        f"- Marketing Cost: ${cmo_marketing_cost:,.0f}\n"
-                        f"- Projected Revenue: ${cmo_projected_revenue:,.0f}\n"
-                        f"- Demographic Reach: {cmo_demographic_reach:,}\n"
-                        f"- CPA: ${cmo_cpa:.2f}\n\n"
-                        f"=== CEO Validation ===\n"
-                        f"- Growth Target Alignment: {ceo_alignment}\n"
-                        f"- Growth Target Annual: ${ceo_target:,.0f}\n"
-                        f"- Approved for Phase 2: {ceo_approved}\n\n"
-                        f"Assess: Can this strategy be built with Meta_App_Factory V3? "
-                        f"What tech stack? What timeline? Is V3 Resilience Core achievable?\n"
-                        f"Original directive: {req.message}"
-                    )
-                    cto_resp = await trigger_agent_response('CTO', cto_handoff)
-                    cto_data = _parse_agent_json(cto_resp)
-
-                    # Extract CTO's Technical Feasibility Score + USE fields
-                    cto_feasibility = float(cto_data.get("technical_feasibility_score", 5))
-                    cto_project_type = cto_data.get("project_type", "DIGITAL")
-                    cto_tech_stack = cto_data.get("tech_stack", [])
-                    cto_automation_layer = cto_data.get("automation_monitoring_layer", "")
-                    cto_skills_blocks = cto_data.get("skills_library_blocks", [])
-                    cto_timeline = cto_data.get("implementation_timeline_weeks", 0)
-                    cto_v3_compliance = cto_data.get("v3_compliance", "UNKNOWN")
-                    cto_pre_deploy = cto_data.get("pre_deploy_gate_status", "UNKNOWN")
-                    cto_recommendation = cto_data.get("recommendation", "UNKNOWN")
-
-                    # Extract CFO-ready metrics from CTO (Phase 2 handshake)
-                    cfo_metrics_raw = cto_data.get("cfo_ready_metrics", {})
-                    infra_cost = cfo_metrics_raw.get("infrastructure_cost_estimate", 0)
-                    dev_buffer = cfo_metrics_raw.get("development_buffer_weeks", 0)
-                    tech_debt_premium = cfo_metrics_raw.get("tech_debt_risk_premium_pct", 0)
-                    gate_source = cfo_metrics_raw.get("gate_source", "aether_native" if PRE_DEPLOY_AVAILABLE else "llm_estimate")
-
-                    # Compute development_buffer_weeks if LLM didn't provide it
-                    if not dev_buffer and cto_timeline:
-                        dev_buffer = round(cto_timeline * 1.5, 1) if cto_feasibility < 7 else cto_timeline
-
-                    # ── AETHER-NATIVE PRE-DEPLOY GATE ──────────────────────
-                    # Run actual Triad Review (Structural + Logic + Security)
-                    # locally instead of calling n8n webhook to port 5050
-                    gate_verdict = None
-                    if PRE_DEPLOY_AVAILABLE and _pre_deploy_gate:
-                        try:
-                            gate_verdict = _pre_deploy_gate.verify(
-                                project_id=project_id,
-                                description=f"{req.message} | CTO Stack: {', '.join(cto_tech_stack)}",
-                                components=cto_tech_stack,
-                                change_type="warroom_debate",
-                                context={"cto_feasibility": cto_feasibility, "project_type": cto_project_type}
-                            )
-                            # Override LLM's gate status with REAL gate result
-                            cto_pre_deploy = gate_verdict.get("status", cto_pre_deploy)
-                            logger.info(f"[PreDeployGate] {project_id}: {cto_pre_deploy} (composite={gate_verdict.get('composite_score')})")
-                        except Exception as e:
-                            logger.warning(f"[PreDeployGate] Triad Review failed: {e} — using CTO LLM assessment")
-
-                    # Broadcast CTO Feasibility Score (Universal Stack Evaluator)
-                    feasibility_icon = "✅" if cto_feasibility >= 7 else "⚠️" if cto_feasibility >= 4 else "🛑"
-                    gate_line = f"Gate: {cto_pre_deploy}"
-                    if gate_verdict:
-                        gate_line = (
-                            f"Gate: {cto_pre_deploy} "
-                            f"(S:{gate_verdict.get('structural_score', '?')} "
-                            f"L:{gate_verdict.get('logic_score', '?')} "
-                            f"Sec:{gate_verdict.get('security_score', '?')} "
-                            f"= {gate_verdict.get('composite_score', '?')}/100)"
+                    
+                    # CTO receives CMO strategy + CEO validation via orchestrator handoff
+                    cto_data = {}
+                    cto_hp = {}
+                    if "CTO" in triage_list:
+                        cto_handoff = _wr_orchestrator.build_handoff_context(
+                            PipelineStep(agent_name='CTO', phase='technical', depends_on=['CMO', 'CEO']),
+                            _wr_session['reports'],
+                            req.message,
+                            iteration=iteration,
+                            market_pulse=market_pulse_data,
+                            wisdom_vault=get_wisdom_vault(),
                         )
-                    await _broadcast({
-                        "type": "dialogue",
-                        "agent": "SYSTEM",
-                        "icon": "🔧",
-                        "color": "#06b6d4",
-                        "message": (
-                            f"**CTO Technical Feasibility Report (USE):**\n"
-                            f"{feasibility_icon} Score: {cto_feasibility}/10 | Type: {cto_project_type} | V3: {cto_v3_compliance}\n"
-                            f"Stack: {', '.join(cto_tech_stack) if cto_tech_stack else 'TBD'}\n"
-                            f"Automation Layer: {cto_automation_layer[:100] if cto_automation_layer else 'N/A'}\n"
-                            f"Skills: {', '.join(cto_skills_blocks) if cto_skills_blocks else 'none scanned'}\n"
-                            f"Timeline: {cto_timeline} weeks | {gate_line}\n"
-                            f"Recommendation: {cto_recommendation}"
-                        ),
-                        "timestamp": _dt.now().isoformat()
-                    }, project=project_id)
+                        if 'CTO' not in _wr_session['reports']:
+                            cto_resp, cto_data, cto_meta = await trigger_agent_response('CTO', cto_handoff)
 
-                    # TECHNICAL GATE FAILURE: Score < 4 blocks CFO
-                    if cto_feasibility < 4:
+                            # ── WAR ROOM: Parse CTO into typed WarRoomReport ──
+                            _cto_report = parse_agent_response(cto_resp, 'CTO', 'technical', project_id, iteration, structured_data=cto_data, metadata=cto_meta)
+                            _wr_store.save(_cto_report)
+                            await _propose_wisdom(_cto_report)
+                            _wr_session['reports']['CTO'] = _cto_report
+                            _save_checkpoint('CTO')
+
+                        cto_report = _wr_session['reports']['CTO']
+                        cto_hp = cto_report.handoff_payload  # Strictly typed CTOHandoff fields
+                        cto_data = cto_hp
+                        
+                        # Extract CTO's Technical Feasibility Score + USE fields from typed handoff
+                        cto_feasibility = float(cto_hp.get("technical_feasibility_score", 5))
+                        cto_project_type = cto_hp.get("project_type", "DIGITAL")
+                        cto_tech_stack = cto_hp.get("tech_stack", [])
+                        cto_automation_layer = cto_hp.get("automation_monitoring_layer", "")
+                        cto_skills_blocks = cto_hp.get("skills_library_blocks", [])
+                        cto_timeline = cto_hp.get("implementation_timeline_weeks", 0)
+                        cto_v3_compliance = cto_hp.get("v3_compliance", "UNKNOWN")
+                        cto_pre_deploy = cto_hp.get("pre_deploy_gate_status", "UNKNOWN")
+                        cto_recommendation = cto_report.recommendation
+                        
+                        # Extract CFO-ready metrics from typed CTO handoff (already flattened)
+                        infra_cost = cto_hp.get("infrastructure_cost_estimate", 0)
+                        dev_buffer = cto_hp.get("development_buffer_weeks", 0)
+                        tech_debt_premium = cto_hp.get("tech_debt_risk_premium_pct", 0)
+                        gate_source = cto_hp.get("gate_source", "aether_native" if PRE_DEPLOY_AVAILABLE else "llm_estimate")
+
+                        # Compute development_buffer_weeks if LLM didn't provide it
+                        if not dev_buffer and cto_timeline:
+                            dev_buffer = round(cto_timeline * 1.5, 1) if cto_feasibility < 7 else cto_timeline
+
+                        # TECHNICAL GATE CHECK via Orchestrator
+                        _cto_gate_step = PipelineStep(agent_name='CTO', phase='technical', is_gate=True, gate_threshold=4.0)
+                        _cto_gate_result = _wr_orchestrator.check_gate(_cto_gate_step, cto_report)
+                        if not _cto_gate_result['passed']:
+                            await _broadcast({
+                                "type": "dialogue",
+                                "agent": "SYSTEM",
+                                "icon": "🛑",
+                                "color": "#ef4444",
+                                "message": f"**TECHNICAL GATE FAILURE**\n{_cto_gate_result['reason']}\nCFO modeling BLOCKED. CTO recommends: {cto_recommendation}.\nRevision required.",
+                                "timestamp": _dt.now().isoformat()
+                            }, project=project_id)
+                    else:
+                        logger.info("COO: Skipping CTO per CEO Triage.")
+                        cto_timeline = 0
+                        dev_buffer = 0
+                        infra_cost = 0
+                        tech_debt_premium = 0
+                        cto_pre_deploy = "UNKNOWN"
+
+# ═══════════════════════════════════════════════════
+                    
+                    # ═══════════════════════════════════════════════════
+                    # PHASE 1.8: THE LEGAL OFFICER — CLO
+                    # ═══════════════════════════════════════════════════
+                    if "CLO" in triage_list:
                         await _broadcast({
                             "type": "dialogue",
                             "agent": "SYSTEM",
-                            "icon": "🛑",
-                            "color": "#ef4444",
-                            "message": f"**TECHNICAL GATE FAILURE**\nCTO Feasibility Score: {cto_feasibility}/10 — below threshold (4.0).\nCFO modeling BLOCKED. CTO recommends: {cto_recommendation}.\nRevision required before financial modeling.",
+                            "icon": "⚖️",
+                            "color": "#64748b",
+                            "message": f"**PHASE 1.8: THE LEGAL OFFICER**\nCLO evaluating IP Security & Compliance...",
                             "timestamp": _dt.now().isoformat()
                         }, project=project_id)
 
-                    # ═══════════════════════════════════════════════════
+                        clo_handoff = f"Provide a rapid IP mapping and compliance scan for intention: '{req.message}'"
+                        if 'CLO' not in _wr_session['reports']:
+                            clo_resp, clo_data, clo_meta = await trigger_agent_response('CLO', clo_handoff)
+                            _clo_report = parse_agent_response(clo_resp, 'CLO', 'legal', project_id, iteration, structured_data=clo_data, metadata=clo_meta)
+                            _wr_store.save(_clo_report)
+                            _wr_session['reports']['CLO'] = _clo_report
+                            _save_checkpoint('CLO')
+                    else:
+                        logger.info("COO: Skipping CLO per CEO Triage.")
                     # PHASE 2: THE MODEL — CFO
                     # ═══════════════════════════════════════════════════
                     await _broadcast({
@@ -1272,39 +1572,32 @@ async def war_room_dispatch(req: WarRoomDispatchRequest, request: Request):
                     except Exception as e:
                         logger.warning(f"Native CFO failed: {e}")
 
-                    # CFO LLM receives Exact numbers + CTO metrics + the Native excel results
-                    cfo_handoff = (
-                        f"PHASE 2 INPUT — Use these EXACT CMO numbers (do not invent your own):\n"
-                        f"- marketing_cost: ${cmo_marketing_cost:,.0f}\n"
-                        f"- projected_revenue: ${cmo_projected_revenue:,.0f}\n"
-                        f"- revenue_timeline_months: {cmo_data.get('revenue_timeline_months', 12)}\n"
-                        f"- demographic_reach: {cmo_demographic_reach:,}\n"
-                        f"- cost_per_acquisition: ${cmo_cpa:.2f}\n"
-                        f"- CEO Growth Target: ${ceo_target:,.0f}\n"
-                        f"- CEO Alignment: {ceo_alignment}\n\n"
-                        f"=== CTO Phase 1.5 Output (Universal Stack Evaluator) ===\n"
-                        f"- Technical Feasibility Score: {cto_feasibility}/10\n"
-                        f"- Tech Stack: {', '.join(cto_tech_stack) if cto_tech_stack else 'TBD'}\n"
-                        f"- Implementation Timeline: {cto_timeline} weeks\n"
-                        f"- Development Buffer: {dev_buffer} weeks\n"
-                        f"- Infrastructure Cost Estimate: ${infra_cost:,.0f}/month\n"
-                        f"- V3 Tech Debt Risk Premium: {tech_debt_premium}%\n"
-                        f"- V3 Compliance: {cto_v3_compliance}\n"
-                        f"- Pre-Deploy Gate: {cto_pre_deploy} (Source: {gate_source})\n"
-                        f"- CTO Recommendation: {cto_recommendation}\n\n"
-                        f"Factor the CTO's timeline, buffer, tech debt premium, and infrastructure costs directly into your financial model.\n"
-                        f"Build the business plan with profitability timeline, burn rate, and ROI/ROAS calculation.\n"
-                        f"Original directive: {req.message}"
-                        f"{native_cfo_msg}"
+                    # CFO LLM receives upstream reports via orchestrator + native Excel output
+                    cfo_handoff = _wr_orchestrator.build_handoff_context(
+                        PipelineStep(agent_name='CFO', phase='financials', depends_on=['CMO', 'CEO', 'CTO']),
+                        _wr_session['reports'],
+                        req.message,
+                        iteration=iteration,
+                        market_pulse=market_pulse_data,
+                        wisdom_vault=get_wisdom_vault(),
                     )
-                    cfo_resp = await trigger_agent_response('CFO', cfo_handoff)
-                    cfo_data = _parse_agent_json(cfo_resp)
+                    # Append Native Excel results if available
+                    if native_cfo_msg:
+                        cfo_handoff += native_cfo_msg
+                    cfo_resp, cfo_data, cfo_meta = await trigger_agent_response('CFO', cfo_handoff)
+
+                    # ── WAR ROOM: Parse CFO into typed WarRoomReport ──
+                    cfo_report = parse_agent_response(cfo_resp, 'CFO', 'financials', project_id, iteration, structured_data=cfo_data, metadata=cfo_meta)
+                    _wr_store.save(cfo_report)
+                    await _propose_wisdom(cfo_report)
+                    _wr_session['reports']['CFO'] = cfo_report
+                    cfo_hp = cfo_report.handoff_payload  # Strictly typed CFOHandoff fields
                     
                     # If Native Excel generated, sync the LLM responses to mathematical truth
-                    cfo_roi = float(cfo_native_result.get('roi_percentage')) if native_cfo_msg else cfo_data.get("roi_percentage", 0)
-                    cfo_roas = float(cfo_native_result.get('roas')) if native_cfo_msg else cfo_data.get("roas", 0)
-                    cfo_breakeven = cfo_data.get("breakeven_month", 0)
-                    cfo_recommendation = cfo_data.get("recommendation", "UNKNOWN")
+                    cfo_roi = float(cfo_native_result.get('roi_percentage')) if native_cfo_msg else cfo_hp.get("roi_percentage", 0)
+                    cfo_roas = float(cfo_native_result.get('roas')) if native_cfo_msg else cfo_hp.get("roas", 0)
+                    cfo_breakeven = cfo_hp.get("breakeven_month", 0)
+                    cfo_recommendation = cfo_report.recommendation
 
                     # ═══════════════════════════════════════════════════
                     # PHASE 3: THE ADVERSARY — CRITIC
@@ -1318,31 +1611,14 @@ async def war_room_dispatch(req: WarRoomDispatchRequest, request: Request):
                         "timestamp": _dt.now().isoformat()
                     }, project=project_id)
 
-                    # CRITIC receives the FULL business plan output (including CTO assessment)
-                    critic_handoff = (
-                        f"PHASE 3 — EVALUATE THE COMPLETED BUSINESS PLAN:\n\n"
-                        f"=== CMO Phase 1 Output ===\n"
-                        f"Strategy: {cmo_strategy[:200]}\n"
-                        f"Marketing Cost: ${cmo_marketing_cost:,.0f}\n"
-                        f"Projected Revenue: ${cmo_projected_revenue:,.0f}\n"
-                        f"Demographic Reach: {cmo_demographic_reach:,}\n"
-                        f"CPA: ${cmo_cpa:.2f}\n"
-                        f"CMO Recommendation: {cmo_recommendation}\n\n"
-                        f"=== CEO Validation ===\n"
-                        f"Alignment: {ceo_alignment} | Approved: {ceo_approved}\n\n"
-                        f"=== CTO Phase 1.5 Output ===\n"
-                        f"Feasibility Score: {cto_feasibility}/10 | V3: {cto_v3_compliance}\n"
-                        f"Stack: {', '.join(cto_tech_stack) if cto_tech_stack else 'TBD'}\n"
-                        f"Timeline: {cto_timeline} weeks | Gate: {cto_pre_deploy}\n"
-                        f"CTO Recommendation: {cto_recommendation}\n\n"
-                        f"=== CFO Phase 2 Output ===\n"
-                        f"ROI: {cfo_roi}% | ROAS: {cfo_roas}x\n"
-                        f"Breakeven: Month {cfo_breakeven}\n"
-                        f"CFO Recommendation: {cfo_recommendation}\n"
-                        f"Plan: {cfo_data.get('business_plan_summary', '')[:200]}\n\n"
-                        f"CHALLENGE: (1) Is the CMO's ${cmo_marketing_cost:,.0f} marketing cost realistic? "
-                        f"(2) Is the CFO's {cfo_roi}% ROI achievable or optimistic? "
-                        f"(3) Is the CTO's {cto_feasibility}/10 feasibility and {cto_timeline}-week timeline credible?"
+                    # CRITIC receives ALL upstream reports via orchestrator handoff
+                    critic_handoff = _wr_orchestrator.build_handoff_context(
+                        PipelineStep(agent_name='CRITIC', phase='adversarial', depends_on=['CMO', 'CEO', 'CTO', 'CFO']),
+                        _wr_session['reports'],
+                        req.message,
+                        iteration=iteration,
+                        market_pulse=market_pulse_data,
+                        wisdom_vault=get_wisdom_vault(),
                     )
                     
                     # ═══════════════════════════════════════════════════
@@ -1365,15 +1641,29 @@ async def war_room_dispatch(req: WarRoomDispatchRequest, request: Request):
                     critic_task = asyncio.create_task(trigger_agent_response('CRITIC', critic_handoff))
                     phantom_task = asyncio.to_thread(run_ui_audit, project_id)
                     
-                    critic_resp, phantom_ui_res = await asyncio.gather(critic_task, phantom_task)
-                    
-                    critic_data = _parse_agent_json(critic_resp)
+                    critic_tuple, phantom_ui_res = await asyncio.gather(critic_task, phantom_task)
+                    critic_resp, critic_data, critic_meta = critic_tuple
 
-                    # Extract Critic Agreement Level via json.loads
-                    critic_score = float(critic_data.get("agreement_level", 0))
+                    # ── WAR ROOM: Parse CRITIC into typed WarRoomReport ──
+                    critic_report = parse_agent_response(critic_resp, 'CRITIC', 'adversarial', project_id, iteration, structured_data=critic_data, metadata=critic_meta)
+                    
+                    # Extract Critic Agreement Level from typed report
+                    critic_score = float(critic_report.agreement_level or 0)
                     if critic_score == 0:
                         score_match = re.search(r'(?i)(?:agreement|confidence|score).*?(\d+(?:\.\d+)?)', critic_resp)
                         critic_score = float(score_match.group(1)) if score_match else 5.0
+                        critic_report.agreement_level = critic_score
+                        
+                    _wr_store.save(critic_report, is_gate=True, gate_score=critic_score)
+                    await _propose_wisdom(critic_report)
+                    _wr_session['reports']['CRITIC'] = critic_report
+                    
+                    # ── Phase 7: Performance Review (The Learning Engine) ──
+                    if critic_score >= 8.0 or critic_score <= 4.0:
+                        project_type = locals().get("cto_project_type", "GLOBAL")
+                        asyncio.create_task(_run_performance_review(project_id, critic_resp, critic_score, project_type))
+
+                    # Critic score already evaluated
 
                     # Update Persuasion Score (UI Meter)
                     global _persuasion_score
@@ -1485,8 +1775,10 @@ async def war_room_dispatch(req: WarRoomDispatchRequest, request: Request):
                     }, project=project_id)
 
                 logger.info("Sequential C-Suite Chain Completed.")
+                _wr_orchestrator.end_session(project_id, 'consensus_reached' if iteration <= max_iterations else 'max_iterations')
             except Exception as e:
                 logger.error(f"C-Suite Trigger Chain failed: {e}")
+                _wr_orchestrator.end_session(project_id, f'error: {str(e)[:100]}')
             finally:
                 ORCHESTRATION_STATE = "healthy"
                 
@@ -1630,59 +1922,11 @@ def v3_map_data():
 
 
 # ═══════════════════════════════════════════════════════════════
-#  UPGRADE 5: N8N Circuit Breaker
+#  UPGRADE 5: Agent Call Metrics (Post-N8N)
 # ═══════════════════════════════════════════════════════════════
 import socket as _socket
 
-class _N8NCircuitBreaker:
-    """Circuit breaker for n8n webhooks.
-    CLOSED → n8n calls proceed normally
-    OPEN → skip n8n, go straight to Gemini fallback (cooldown 60s)
-    HALF_OPEN → try one n8n call; success→CLOSED, fail→OPEN
-    """
-    def __init__(self, failure_threshold=3, cooldown_seconds=60):
-        self.failure_threshold = failure_threshold
-        self.cooldown = cooldown_seconds
-        self.failures = 0
-        self.state = "CLOSED"  # CLOSED, OPEN, HALF_OPEN
-        self.last_failure_time = 0
-
-    def can_call(self) -> bool:
-        import time
-        if self.state == "CLOSED":
-            return True
-        if self.state == "OPEN":
-            if time.time() - self.last_failure_time >= self.cooldown:
-                self.state = "HALF_OPEN"
-                return True
-            return False
-        # HALF_OPEN — allow one probe
-        return True
-
-    def record_success(self):
-        self.failures = 0
-        self.state = "CLOSED"
-
-    def record_failure(self):
-        import time
-        self.failures += 1
-        self.last_failure_time = time.time()
-        if self.failures >= self.failure_threshold:
-            self.state = "OPEN"
-            logger.warning(f"[CircuitBreaker] OPENED — {self.failures} consecutive n8n failures, cooldown {self.cooldown}s")
-
-    def get_status(self) -> dict:
-        import time
-        remaining = 0
-        if self.state == "OPEN":
-            remaining = max(0, self.cooldown - (time.time() - self.last_failure_time))
-        return {
-            "state": self.state,
-            "failures": self.failures,
-            "cooldown_remaining": round(remaining, 1),
-        }
-
-_n8n_breaker = _N8NCircuitBreaker()
+_agent_call_stats = {"total": 0, "model_router": 0, "gemini_direct": 0, "cached": 0}
 
 # ═══════════════════════════════════════════════════════════════
 #  UPGRADE 4: Intelligent Model Router (Gemini / Claude)
@@ -1774,21 +2018,8 @@ def architect_review(req: ArchitectReviewRequest):
             pass
     return result
 
-def _gemini_fallback(agent_name: str, topic: str) -> str:
-    """Generate a real AI response using Gemini when n8n is unreachable.
-    Fallback chain: n8n → Model Router (Gemini/Claude) → cached string."""
-    # Prefer the Model Router if available (routes to best-fit LLM)
-    if _MODEL_ROUTER_AVAILABLE:
-        sys_prompt = (
-            f"You are the {agent_name} in a C-suite boardroom war room. "
-            f"Give a concise assessment (3-5 sentences) on this topic. "
-            f"Stay in character as a senior executive."
-        )
-        result = _model_route(agent_name, f"TOPIC: {topic}", sys_prompt)
-        if result:
-            return result[:600]
-    
-    # Legacy Gemini-only fallback
+def _gemini_direct(agent_name: str, topic: str) -> str:
+    """Generate a real AI response via streaming bridge (secondary fallback)."""
     try:
         if STREAMING_AVAILABLE:
             from streaming_bridge import stream_chat
@@ -1798,48 +2029,30 @@ def _gemini_fallback(agent_name: str, topic: str) -> str:
                 f"Stay in character as a senior executive.\n\nTOPIC: {topic}"
             )
             full_response = ""
-            for event in stream_chat(prompt, dashboard_context={"mode": "warroom_fallback", "agent": agent_name}):
+            for event in stream_chat(prompt, dashboard_context={"mode": "warroom", "agent": agent_name}):
                 if event.get("type") == "chunk":
                     full_response += event.get("text", "")
                 elif event.get("type") == "complete":
                     full_response = event.get("text", full_response)
             if full_response.strip():
-                return f"🤖 [Gemini] {full_response.strip()[:600]}"
+                return full_response.strip()[:2000]
     except Exception as e:
-        logger.warning(f"[GeminiFallback] {agent_name} failed: {e}")
+        logger.warning(f"[GeminiDirect] {agent_name} failed: {e}")
     return ""
 
 
 # ═══════════════════════════════════════════════════════════════
-#  UPGRADE 6: N8N Health Endpoint
+#  UPGRADE 6: AI Model Health Endpoint
 # ═══════════════════════════════════════════════════════════════
 
-@app.get("/api/health/n8n")
-def n8n_health():
-    """Return n8n connectivity status and circuit breaker state."""
-    status = "unknown"
-    latency_ms = None
-    try:
-        import time as _t
-        start = _t.time()
-        r = _requests.get(
-            "https://humanresource.app.n8n.cloud/api/v1/workflows?limit=1",
-            headers={"X-N8N-API-KEY": os.getenv("N8N_API_KEY", "")},
-            timeout=5,
-        )
-        latency_ms = round((_t.time() - start) * 1000)
-        if r.status_code == 200:
-            status = "connected"
-        elif r.status_code == 401:
-            status = "auth_expired"
-        else:
-            status = "degraded"
-    except Exception:
-        status = "offline"
+@app.get("/api/health/ai")
+def ai_health():
+    """Return AI model connectivity status and call stats."""
     return {
-        "status": status,
-        "latency_ms": latency_ms,
-        "circuit_breaker": _n8n_breaker.get_status(),
+        "status": "model_router" if _MODEL_ROUTER_AVAILABLE else "gemini_direct",
+        "model_router_available": _MODEL_ROUTER_AVAILABLE,
+        "streaming_available": STREAMING_AVAILABLE,
+        "call_stats": _agent_call_stats.copy(),
     }
 
 
@@ -2218,20 +2431,10 @@ _AGENTS = {
     "SYSTEM": {"icon": "⚡", "color": "#eab308", "role": "System Orchestrator"},
 }
 
-# n8n Agent Webhooks (same registry used by Builder Chat)
-_WARROOM_WEBHOOKS = {
-    "CEO":  "https://humanresource.app.n8n.cloud/webhook/elite-council",
-    "CMO":  "https://humanresource.app.n8n.cloud/webhook/cmo-v2",
-    "CFO":  "https://humanresource.app.n8n.cloud/webhook/cfo-v2",
-    "CTO":  "https://humanresource.app.n8n.cloud/webhook/elite-council",
-    "CRITIC": "http://localhost:5000/api/critic",
-}
+# Agent registry
+_WARROOM_AGENT_NAMES = ["CEO", "CMO", "CFO", "CTO", "CRITIC", "CLO"]
 
 # Role-scoped prompt templates (Linear Dependency Protocol)
-# Phase 1: CMO (market research + costs) → CEO (growth target validation)
-# Phase 2: CFO (business plan using CMO numbers)
-# Phase 3: CRITIC (challenges CMO costs + CFO revenue optimism)
-# Phase 4: PHANTOM QA (technical artifact audit)
 _WARROOM_PROMPTS = {
     "CMO": (
         "You are the CMO in a boardroom war room. You are PHASE 1 of the Linear Dependency Protocol. "
@@ -2326,9 +2529,9 @@ _WARROOM_PROMPTS = {
         '{{\\n'
         '  "technical_feasibility_score": 7.5,\\n'
         '  "project_type": "DIGITAL or PHYSICAL or OPERATIONAL or HYBRID",\\n'
-        '  "tech_stack": ["FastAPI", "React/Vite", "n8n", "Supabase"],\\n'
+        '  "tech_stack": ["FastAPI", "React/Vite", "Supabase"],\\n'
         '  "automation_monitoring_layer": "how Antigravity Ops Intelligence tracks this project",\\n'
-        '  "skills_library_blocks": ["n8n-architect", "regulatory-shield"],\\n'
+        '  "skills_library_blocks": ["model-router", "regulatory-shield"],\\n'
         '  "implementation_timeline_weeks": 3,\\n'
         '  "v3_compliance": "COMPLIANT or NON_COMPLIANT",\\n'
         '  "pre_deploy_gate_status": "CLEAR or BLOCKED",\\n'
@@ -2341,7 +2544,7 @@ _WARROOM_PROMPTS = {
         '    "infrastructure_cost_estimate": 5000,\\n'
         '    "development_buffer_weeks": 4.5,\\n'
         '    "tech_debt_risk_premium_pct": 10,\\n'
-        '    "gate_source": "aether_native or n8n_webhook"\\n'
+        '    "gate_source": "aether_native"\\n'
         '  }\\n'
         '}}\\n\\n'
         "CRITICAL: technical_feasibility_score MUST be 1-10. Scores below 4 trigger a TECHNICAL GATE FAILURE "
@@ -2605,83 +2808,8 @@ async def warroom_websocket(websocket: WebSocket, project: str = "Aether"):
         logger.info(f"War Room '{project}' client disconnected ({len(_warroom_clients.get(project, []))} total)")
 
 
-@auto_heal(project="WarRoom", max_retries=3)
-def _call_n8n_agent_inner(agent_name: str, topic: str) -> str:
-    """V3-resilient call to a real n8n specialist webhook.
-    Wrapped with @auto_heal for retry (2s/4s/8s backoff) + diagnosis.
-    Raises on failure to trigger auto_heal's retry logic.
-    """
-    url = _WARROOM_WEBHOOKS.get(agent_name)
-    if not url:
-        return f"Agent {agent_name} has no dedicated webhook."
-
-    prompt_template = _WARROOM_PROMPTS.get(agent_name, "Analyze: {topic}")
-    prompt = prompt_template.format(topic=topic)
-
-    resp = _requests.post(
-        url,
-        json={"prompt": prompt, "sessionId": "warroom", "project_name": "WarRoom"},
-        timeout=45,
-    )
-    resp.raise_for_status()  # Let auto_heal catch 4xx/5xx
-
-    try:
-        data = resp.json()
-        text = (
-            data.get("text")
-            or data.get("output")
-            or data.get("commentary")
-            or str(data)
-        )
-        return text.strip()[:600]
-    except Exception:
-        return resp.text.strip()[:600]
 
 
-def _call_n8n_agent(agent_name: str, topic: str) -> str:
-    """3-tier fallback: n8n (via circuit breaker) → Gemini → cached string."""
-    # Tier 1: n8n via circuit breaker
-    if _n8n_breaker.can_call():
-        result = _call_n8n_agent_inner(agent_name, topic)
-        if result:
-            _n8n_breaker.record_success()
-            return result
-        _n8n_breaker.record_failure()
-    else:
-        logger.info(f"[CircuitBreaker] Skipping n8n for {agent_name} — circuit OPEN")
-
-    # Tier 2: Gemini fallback (real AI response)
-    gemini_response = _gemini_fallback(agent_name, topic)
-    if gemini_response:
-        return gemini_response
-
-    # Tier 3: Static cached string (last resort)
-    cached = _FALLBACK_RESPONSES.get(agent_name, ["No response available."])
-    return f"⚠️ [Cached] {random.choice(cached)}"
-
-
-_FALLBACK_RESPONSES = {
-    "CEO": [
-        "Based on our strategic priorities, this direction warrants further board analysis. I've noted the proposal.",
-        "The strategic implications are significant. Let me hear from the specialists before I weigh in fully.",
-    ],
-    "CMO": [
-        "From a market positioning standpoint, we need more audience data before committing to this direction.",
-        "The go-to-market implications require A/B testing. I'll reserve my full assessment pending data.",
-    ],
-    "CFO": [
-        "The financial model needs stress-testing. I'll need projected cash flows before approving spend.",
-        "Unit economics are unclear at this stage. We should run the numbers through our financial model.",
-    ],
-    "CRITIC": [
-        "I remain skeptical. Where is the evidence that this outperforms the baseline? Show me data, not conviction.",
-        "Interesting direction, but my core objections about scalability and validation remain unaddressed.",
-    ],
-    "CTO": [
-        "Universal Stack Evaluator ONLINE. Project classified as HYBRID. Technical Feasibility Score: 6/10. Stack: FastAPI + React/Vite + n8n orchestration. Automation Layer: Sentinel_Bridge alerts + Supabase dashboards. Pre-Deploy Gate: PENDING. Skills scan: n8n-architect available.",
-        "USE Assessment: Project Type DIGITAL. Technical Feasibility Score: 5/10. Scaling bottlenecks detected in proposed architecture. Recommend prototyping via Meta_App_Factory before committing. V3 compliance: requires healed_post integration. Monitoring: PulseBoard telemetry.",
-    ],
-}
 
 
 
@@ -2708,7 +2836,7 @@ async def _directed_response(agent_name: str, user_msg: str, project_name: str =
         "timestamp": _dt.now().isoformat(),
     }, project=project_name)
 
-    response = await loop.run_in_executor(_warroom_executor, _call_n8n_agent, agent_name, directed_prompt)
+    response = await loop.run_in_executor(_warroom_executor, _call_agent, agent_name, directed_prompt)
 
     if not response:
         response = f"[{agent_name}] I've received your request. I'll prepare the analysis and report back."
@@ -2757,8 +2885,8 @@ async def _board_quick_response(user_msg: str, project_name: str = "Aether"):
             "timestamp": _dt.now().isoformat()
         }, project=project_name)
 
-    ceo_future = loop.run_in_executor(_warroom_executor, _call_n8n_agent, "CEO", prompt)
-    critic_future = loop.run_in_executor(_warroom_executor, _call_n8n_agent, "CRITIC", prompt)
+    ceo_future = loop.run_in_executor(_warroom_executor, _call_agent, "CEO", prompt)
+    critic_future = loop.run_in_executor(_warroom_executor, _call_agent, "CRITIC", prompt)
 
     ceo_resp = await ceo_future
     await asyncio.sleep(0.8)
@@ -2784,7 +2912,7 @@ async def _board_quick_response(user_msg: str, project_name: str = "Aether"):
 
 
 async def _live_debate(topic: str, project_name: str = "Aether", phase: str = None):
-    """Route the debate topic to real n8n specialist agents and stream responses."""
+    """Route the debate topic to C-Suite agents via Model Router and stream responses."""
     global _persuasion_score
     loop = asyncio.get_event_loop()
 
@@ -2804,11 +2932,11 @@ async def _live_debate(topic: str, project_name: str = "Aether", phase: str = No
     futures = {}
     for agent in agents_to_call:
         await _broadcast({"type": "agent_working", "agent": agent, "timestamp": _dt.now().isoformat()}, project=project_name)
-        futures[agent] = loop.run_in_executor(_warroom_executor, _call_n8n_agent, agent, topic)
+        futures[agent] = loop.run_in_executor(_warroom_executor, _call_agent, agent, topic)
 
     # Also call CEO (elite council) for a real strategic take
     await _broadcast({"type": "agent_working", "agent": "CEO", "timestamp": _dt.now().isoformat()}, project=project_name)
-    futures["CEO"] = loop.run_in_executor(_warroom_executor, _call_n8n_agent, "CEO", topic)
+    futures["CEO"] = loop.run_in_executor(_warroom_executor, _call_agent, "CEO", topic)
 
     # Stream responses as they arrive, with staggered timing for natural feel
     agent_order = ["CEO", "CMO", "CFO", "CRITIC"]
@@ -2916,7 +3044,7 @@ async def _live_debate(topic: str, project_name: str = "Aether", phase: str = No
             for agent in round_agents:
                 prompt = followup_prompts.get(agent, f"Continue the debate on: {topic}")
                 round_futures[agent] = loop.run_in_executor(
-                    _warroom_executor, _call_n8n_agent, agent, prompt
+                    _warroom_executor, _call_agent, agent, prompt
                 )
 
             debate_history.append(f"\nROUND {round_num} DISCUSSION:")
@@ -3367,7 +3495,7 @@ async def warroom_seed(request: Request):
     })
     await _broadcast({"type": "persuasion_update", "score": 5, "reason": "Session reset"})
 
-    # Kick off live debate via real n8n agents
+    # Kick off live debate via Model Router agents
     asyncio.create_task(_live_debate(topic))
     return {"status": "ok", "topic": topic}
 
@@ -3592,7 +3720,7 @@ async def warroom_force_proceed(request: Request):
     return override
 
 
-# ── Phase 4: Incoming Watcher + n8n Archiver + Master Audit ───
+# ── Phase 4: Incoming Watcher + Archiver + Master Audit ────────────────
 
 import threading
 
@@ -3857,7 +3985,7 @@ def brand_generate(req: BrandGenerateRequest):
     if not project_dir:
         return {"status": "error", "message": f"Project '{req.project_name}' not found"}
 
-    # Generate brand using CMO agent via n8n (or fallback to template)
+    # Generate brand using CMO agent via Model Router (or fallback to template)
     from datetime import datetime
     brand_data = {
         "company_name": req.project_name,
@@ -3881,28 +4009,22 @@ def brand_generate(req: BrandGenerateRequest):
     }
 
     try:
-        # Try to enrich via CMO agent
-        cmo_url = "https://humanresource.app.n8n.cloud/webhook/cmo-v2"
+        # Enrich brand via CMO agent (Model Router)
         cmo_prompt = (
             f"Generate a brand identity for a project called '{req.project_name}'. "
             f"Return JSON with: company_name, tagline, mission, colors (primary/secondary/accent hex), "
             f"fonts (heading/body), tone_of_voice, visual_style."
         )
-        import requests as _req
-        resp = _req.post(cmo_url, json={"prompt": cmo_prompt, "sessionId": "brand-studio"}, timeout=15)
-        if resp.status_code == 200:
-            cmo_data = resp.json()
-            cmo_text = cmo_data.get("text") or cmo_data.get("output") or ""
-            # Try to extract JSON from CMO response
-            if "{" in cmo_text:
-                import re
-                json_match = re.search(r'\{[^{}]*\}', cmo_text, re.DOTALL)
-                if json_match:
-                    try:
-                        enriched = json.loads(json_match.group())
-                        brand_data.update({k: v for k, v in enriched.items() if v})
-                    except json.JSONDecodeError:
-                        pass
+        cmo_text = _call_agent("CMO", cmo_prompt)
+        if cmo_text and "{" in cmo_text:
+            import re
+            json_match = re.search(r'\{[^{}]*\}', cmo_text, re.DOTALL)
+            if json_match:
+                try:
+                    enriched = json.loads(json_match.group())
+                    brand_data.update({k: v for k, v in enriched.items() if v})
+                except json.JSONDecodeError:
+                    pass
     except Exception as e:
         logger.warning(f"CMO enrichment failed, using template: {e}")
 
@@ -3998,27 +4120,22 @@ def brand_describe(req: BrandDescribeRequest):
     }
 
     try:
-        cmo_url = "https://humanresource.app.n8n.cloud/webhook/cmo-v2"
         cmo_prompt = (
             f"A user described their brand vision for '{req.project_name}' as: \"{req.description}\"\n\n"
             f"Based on that description, generate a brand identity. Return JSON with: "
             f"company_name, tagline, mission, colors (primary/secondary/accent as hex), "
             f"fonts (heading/body), tone_of_voice, visual_style."
         )
-        import requests as _req
-        resp = _req.post(cmo_url, json={"prompt": cmo_prompt, "sessionId": "brand-studio"}, timeout=15)
-        if resp.status_code == 200:
-            cmo_data = resp.json()
-            cmo_text = cmo_data.get("text") or cmo_data.get("output") or ""
-            if "{" in cmo_text:
-                import re
-                json_match = re.search(r'\{[^{}]*\}', cmo_text, re.DOTALL)
-                if json_match:
-                    try:
-                        enriched = json.loads(json_match.group())
-                        brand_data.update({k: v for k, v in enriched.items() if v})
-                    except json.JSONDecodeError:
-                        pass
+        cmo_text = _call_agent("CMO", cmo_prompt)
+        if cmo_text and "{" in cmo_text:
+            import re
+            json_match = re.search(r'\{[^{}]*\}', cmo_text, re.DOTALL)
+            if json_match:
+                try:
+                    enriched = json.loads(json_match.group())
+                    brand_data.update({k: v for k, v in enriched.items() if v})
+                except json.JSONDecodeError:
+                    pass
     except Exception as e:
         logger.warning(f"CMO interpretation failed, using defaults: {e}")
 
@@ -4590,6 +4707,176 @@ def route_app(app_name: str):
         logger.error(f"Routing error: {e}")
         
     return JSONResponse(status_code=404, content={"error": f"UI for '{app_name}' not configured in Aether-Native router."})
+
+# ═══════════════════════════════════════════════════════════════
+# WAR ROOM EVOLUTION ENDPOINTS — Phase 1 (Red Team) + Phase 2 (Strategic Mirror)
+# ═══════════════════════════════════════════════════════════════
+
+@app.get("/api/warroom/strategies")
+async def list_strategies():
+    """Return available strategy presets for the Commander's Intent modal."""
+    return {
+        "presets": {
+            k: {"label": v.label, "risk_tolerance": v.risk_tolerance,
+                "budget_priority": v.budget_priority, "modifier": v.gate_threshold_modifier}
+            for k, v in STRATEGY_PRESETS.items()
+        },
+        "supports_custom": True,
+    }
+
+
+class StrategySelectRequest(BaseModel):
+    project_id: str
+    mode: str = "balanced"         # "aggressive_growth" | "lean_mvp" | "custom"
+    custom_directive: str = ""
+
+@app.post("/api/warroom/strategy")
+async def select_strategy(req: StrategySelectRequest):
+    """Commander selects strategic mode for an active session."""
+    orch = get_orchestrator()
+    session = orch.get_session(req.project_id)
+    if not session:
+        return JSONResponse({"error": f"No active session for {req.project_id}"}, status_code=404)
+    strategy = get_strategy_mode(req.mode, req.custom_directive)
+    session["strategy_mode"] = strategy
+    logger.info(f"Strategy updated for {req.project_id}: {strategy.label}")
+    return {"status": "updated", "strategy": strategy.model_dump()}
+
+
+@app.get("/api/warroom/chaos-library")
+async def list_chaos_scenarios():
+    """Return available chaos scenarios for manual drill triggering."""
+    return {
+        "scenarios": [
+            {"id": s.scenario_id, "type": s.type, "severity": s.severity,
+             "description": s.description}
+            for s in CHAOS_LIBRARY
+        ]
+    }
+
+
+class DrillRequest(BaseModel):
+    project_id: str
+    scenario_id: str = None  # If None, random from CHAOS_LIBRARY
+
+@app.post("/api/warroom/drill")
+async def trigger_drill(req: DrillRequest):
+    """Manually trigger an adversarial drill on an active session."""
+    import asyncio
+
+    orch = get_orchestrator()
+    session = orch.get_session(req.project_id)
+    if not session:
+        return JSONResponse({"error": f"No active session for {req.project_id}"}, status_code=404)
+    if session["status"] != "active":
+        return JSONResponse({"error": f"Session {req.project_id} is {session['status']}, not active"}, status_code=400)
+
+    # Select scenario
+    scenario = None
+    if req.scenario_id:
+        scenario = next((s for s in CHAOS_LIBRARY if s.scenario_id == req.scenario_id), None)
+        if not scenario:
+            return JSONResponse({"error": f"Unknown scenario: {req.scenario_id}"}, status_code=404)
+
+    # Broadcast drill start
+    await _broadcast({
+        "type": "intervention",
+        "agent": "SYSTEM",
+        "message": f"RED TEAM DRILL INITIATED — Scenario: {scenario.scenario_id if scenario else 'random'}",
+        "timestamp": _dt.now().isoformat()
+    }, project=req.project_id)
+
+    # Run drill with live agent calls
+    loop = asyncio.get_event_loop()
+    def _drill_agent_call(agent_name, prompt):
+        return _call_agent(agent_name, prompt)
+
+    result = orch.run_adversarial_drill(
+        session, scenario=scenario, max_retries=3,
+        agent_call_fn=_drill_agent_call,
+    )
+
+    # Broadcast result
+    status_emoji = {"passed": "\u2705", "escalated": "\u26a0\ufe0f", "failed": "\u274c"}
+    await _broadcast({
+        "type": "intervention",
+        "agent": "RED_TEAM",
+        "message": (
+            f"{status_emoji.get(result['status'], '?')} Drill {result['status'].upper()} "
+            f"(Score: {result['final_score']}/10, Iterations: {result['iterations']})"
+        ),
+        "timestamp": _dt.now().isoformat()
+    }, project=req.project_id)
+
+    return {
+        "status": result["status"],
+        "scenario": result["scenario"].model_dump() if hasattr(result["scenario"], "model_dump") else result["scenario"],
+        "iterations": result["iterations"],
+        "final_score": result["final_score"],
+        "escalation_reason": result.get("escalation_reason"),
+    }
+
+# ═══════════════════════════════════════════════════════════════
+# WAR ROOM EVOLUTION ENDPOINTS — Phase 3 (Wisdom Vault)
+# ═══════════════════════════════════════════════════════════════
+
+class WisdomApproveRequest(BaseModel):
+    standard_id: str
+
+@app.get("/api/wisdom/standards")
+async def list_approved_standards(domain: str = None, applicability: str = None):
+    """List approved corporate standards."""
+    vault = get_wisdom_vault()
+    standards = vault.get_approved(domain=domain, applicability=applicability)
+    return [s.model_dump() for s in standards]
+
+@app.get("/api/wisdom/pending")
+async def list_pending_standards():
+    """List standards awaiting Commander review."""
+    vault = get_wisdom_vault()
+    standards = vault.get_pending()
+    return [s.model_dump() for s in standards]
+
+@app.post("/api/wisdom/approve")
+async def approve_standard(req: WisdomApproveRequest):
+    """Commander approves a proposed standard."""
+    vault = get_wisdom_vault()
+    result = vault.approve(req.standard_id)
+    if result:
+        return {"status": "success", "standard": result.model_dump()}
+    return JSONResponse({"error": "Standard not found or already processed"}, status_code=404)
+
+@app.post("/api/wisdom/reject")
+async def reject_standard(req: WisdomApproveRequest):
+    """Commander rejects a proposed standard."""
+    vault = get_wisdom_vault()
+    result = vault.reject(req.standard_id)
+    if result:
+        return {"status": "success", "standard": result.model_dump()}
+    return JSONResponse({"error": "Standard not found or already processed"}, status_code=404)
+
+# ═══════════════════════════════════════════════════════════════
+# COO ENDPOINTS — Phase 4 Resource Tracking
+# ═══════════════════════════════════════════════════════════════
+
+@app.get("/api/coo/budget")
+async def get_coo_budget(project_id: str):
+    coo = coo_agent.get_coo()
+    ledger = coo.get_ledger(project_id)
+    return {
+        "project_id": ledger.project_id,
+        "tokens_total": ledger.total_tokens,
+        "budget": ledger.max_budget,
+        "status": ledger.status,
+        "est_cost": f"${ledger.estimated_cost_usd:.4f}"
+    }
+
+@app.post("/api/coo/reset")
+async def reset_coo_budget(project_id: str):
+    coo = coo_agent.get_coo()
+    ledger = coo.reset_ledger(project_id)
+    return {"status": "success", "message": f"Budget reset for {project_id}"}
+
 
 # ── Startup: Auto-start incoming watcher ──────────────────
 @app.on_event("startup")

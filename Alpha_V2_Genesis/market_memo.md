@@ -1,9 +1,9 @@
 # ALPHA ARCHITECT: SYSTEM RATIONALE
-**Timestamp:** 2026-03-30 15:59:55
-**Recommended Strategy:** ROLL
+**Timestamp:** 2026-04-03 16:27:49
+**Recommended Strategy:** HOLD
 
 ### Market Regime Analysis
-* **VIX Level:** 30.79
+* **VIX Level:** 23.87
 * **Rationale:** Volatility present; favoring 45 DTE for higher premium and safety margin.
 
 ### 🛡️ 7-Day Macro Outlook
