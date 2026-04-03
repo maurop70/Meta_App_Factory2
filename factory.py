@@ -89,7 +89,7 @@ except ImportError:
     pass  # dotenv not installed; relies on system env vars
 N8N_API_KEY = os.getenv("N8N_API_KEY", "")
 if not N8N_API_KEY:
-    print("⚠️ WARNING: N8N_API_KEY not set. n8n operations will fail.", flush=True)
+    print("[WARNING] N8N_API_KEY not set. n8n operations will fail.", flush=True)
 N8N_HEADERS = {"X-N8N-API-KEY": N8N_API_KEY, "Content-Type": "application/json"}
 DEFAULT_PROJECT_ID = os.getenv("N8N_DEFAULT_PROJECT_ID", "boV7btArBtpvCiXm")
 

@@ -262,5 +262,170 @@
     "tags": [],
     "project": "_global",
     "created_at": "2026-03-30T16:01:19.122064+00:00"
+  },
+  {
+    "id": "L-20260403004649-6209",
+    "category": "Child app CRASHED: Delegate_AI_Beta_Agreement_Vault (exit code 1, port 5007). Auto-healing will attempt restart.",
+    "summary": "child_app_crash",
+    "details": "Delegate_AI_Beta_Agreement_Vault",
+    "source_agent": "SYSTEM",
+    "severity": "normal",
+    "tags": [],
+    "project": "_global",
+    "created_at": "2026-04-03T00:46:49.003705+00:00"
+  },
+  {
+    "id": "L-20260403004650-1893",
+    "category": "App launch FAILED: Alpha_V2_Genesis on port 5008. timed out",
+    "summary": "launch_failure",
+    "details": "Alpha_V2_Genesis",
+    "source_agent": "SYSTEM",
+    "severity": "normal",
+    "tags": [],
+    "project": "_global",
+    "created_at": "2026-04-03T00:46:50.240953+00:00"
+  },
+  {
+    "id": "L-20260403004650-1893",
+    "category": "App launch FAILED: Resonance on port 5006. timed out",
+    "summary": "launch_failure",
+    "details": "Resonance",
+    "source_agent": "SYSTEM",
+    "severity": "normal",
+    "tags": [],
+    "project": "_global",
+    "created_at": "2026-04-03T00:46:50.742904+00:00"
+  },
+  {
+    "id": "L-20260403004652-1893",
+    "category": "App launch FAILED: Delegate_AI_Beta_Agreement_Vault on port 5007. timed out",
+    "summary": "launch_failure",
+    "details": "Delegate_AI_Beta_Agreement_Vault",
+    "source_agent": "SYSTEM",
+    "severity": "normal",
+    "tags": [],
+    "project": "_global",
+    "created_at": "2026-04-03T00:46:52.845619+00:00"
+  },
+  {
+    "id": "L-20260403004654-1893",
+    "category": "App launch FAILED: CMO_Agent on port 5020. timed out",
+    "summary": "launch_failure",
+    "details": "CMO_Agent",
+    "source_agent": "SYSTEM",
+    "severity": "normal",
+    "tags": [],
+    "project": "_global",
+    "created_at": "2026-04-03T00:46:54.318769+00:00"
+  },
+  {
+    "id": "L-20260403004657-1893",
+    "category": "App launch FAILED: Project_Aegis on port 5070. timed out",
+    "summary": "launch_failure",
+    "details": "Project_Aegis",
+    "source_agent": "SYSTEM",
+    "severity": "normal",
+    "tags": [],
+    "project": "_global",
+    "created_at": "2026-04-03T00:46:57.726446+00:00"
+  },
+  {
+    "id": "L-20260403004659-0905",
+    "category": "Auto-restart of Delegate_AI_Beta_Agreement_Vault succeeded but smoke test FAILED: timed out",
+    "summary": "auto_restart_smoke_fail",
+    "details": "Delegate_AI_Beta_Agreement_Vault",
+    "source_agent": "SYSTEM",
+    "severity": "normal",
+    "tags": [],
+    "project": "_global",
+    "created_at": "2026-04-03T00:46:59.767757+00:00"
+  },
+  {
+    "id": "L-20260403004729-6209",
+    "category": "Child app CRASHED: Delegate_AI_Beta_Agreement_Vault (exit code 1, port 5007). Auto-healing will attempt restart.",
+    "summary": "child_app_crash",
+    "details": "Delegate_AI_Beta_Agreement_Vault",
+    "source_agent": "SYSTEM",
+    "severity": "normal",
+    "tags": [],
+    "project": "_global",
+    "created_at": "2026-04-03T00:47:29.825837+00:00"
+  },
+  {
+    "id": "L-20260403020059-5425",
+    "category": "Child app CRASHED: Delegate_AI_Beta_Agreement_Vault (exit code 1, port 5007). Auto-healing will attempt restart.",
+    "summary": "child_app_crash",
+    "details": "Delegate_AI_Beta_Agreement_Vault",
+    "source_agent": "SYSTEM",
+    "severity": "normal",
+    "tags": [],
+    "project": "_global",
+    "created_at": "2026-04-03T02:00:59.490916+00:00"
+  },
+  {
+    "id": "L-20260403020101-8317",
+    "category": "App launch verified: CMO_Agent on port 5020",
+    "summary": "launch_success",
+    "details": "CMO_Agent",
+    "source_agent": "SYSTEM",
+    "severity": "normal",
+    "tags": [],
+    "project": "_global",
+    "created_at": "2026-04-03T02:01:01.852557+00:00"
+  },
+  {
+    "id": "L-20260403020103-8317",
+    "category": "App launch verified: Resonance on port 5006",
+    "summary": "launch_success",
+    "details": "Resonance",
+    "source_agent": "SYSTEM",
+    "severity": "normal",
+    "tags": [],
+    "project": "_global",
+    "created_at": "2026-04-03T02:01:03.297398+00:00"
+  },
+  {
+    "id": "L-20260403020104-8317",
+    "category": "App launch verified: Alpha_V2_Genesis on port 5008",
+    "summary": "launch_success",
+    "details": "Alpha_V2_Genesis",
+    "source_agent": "SYSTEM",
+    "severity": "normal",
+    "tags": [],
+    "project": "_global",
+    "created_at": "2026-04-03T02:01:04.568568+00:00"
+  },
+  {
+    "id": "L-20260403020108-4819",
+    "category": "App launch FAILED: Delegate_AI_Beta_Agreement_Vault on port 5007. timed out",
+    "summary": "launch_failure",
+    "details": "Delegate_AI_Beta_Agreement_Vault",
+    "source_agent": "SYSTEM",
+    "severity": "normal",
+    "tags": [],
+    "project": "_global",
+    "created_at": "2026-04-03T02:01:08.054843+00:00"
+  },
+  {
+    "id": "L-20260403020109-9621",
+    "category": "Auto-restart of Delegate_AI_Beta_Agreement_Vault succeeded but smoke test FAILED: timed out",
+    "summary": "auto_restart_smoke_fail",
+    "details": "Delegate_AI_Beta_Agreement_Vault",
+    "source_agent": "SYSTEM",
+    "severity": "normal",
+    "tags": [],
+    "project": "_global",
+    "created_at": "2026-04-03T02:01:09.542636+00:00"
+  },
+  {
+    "id": "L-20260403020112-4819",
+    "category": "App launch FAILED: Project_Aegis on port 5070. timed out",
+    "summary": "launch_failure",
+    "details": "Project_Aegis",
+    "source_agent": "SYSTEM",
+    "severity": "normal",
+    "tags": [],
+    "project": "_global",
+    "created_at": "2026-04-03T02:01:12.521406+00:00"
   }
 ]

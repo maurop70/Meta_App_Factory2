@@ -47,8 +47,10 @@ logger = logging.getLogger("CFO_Excel_Architect")
 
 sys.path.insert(0, str(ROOT))
 from cfo_engine import CFOExecutionController
+from cfo_compiler import CFOCompiler
 
 cfo = CFOExecutionController()
+cfo_compiler = CFOCompiler()
 
 # ═══════════════════════════════════════════════════════════
 #  APP
@@ -975,16 +977,23 @@ async def consult(
 
     logger.info(f"Consult received — Instruction: {instruction[:100]}...")
 
-    # Detect intent from instruction
+    # 1. Complexity detection for dynamic models
     instruction_lower = instruction.lower()
+    complexity = 'mid_market'  # default
+    if any(kw in instruction_lower for kw in ['kid', 'elementary', 'lemonade', 'simple', 'basic']):
+        complexity = 'elementary'
+    elif any(kw in instruction_lower for kw in ['vc', 'institutional', 'lbo', 'waterfall', 'debt sculpting', 'complex']):
+        complexity = 'institutional'
+
     is_fragility = any(kw in instruction_lower for kw in [
         'fragility', 'risk', 'campaign', 'cmo_spend', 'architect_risk',
-        'spend', 'roi', 'npv',
+    ])
+    is_model = any(kw in instruction_lower for kw in [
+        'build', 'model', 'budget', 'forecast', 'lbo', 'waterfall', 'spreadsheet', 'financial'
     ])
 
-    # If the instruction looks like a fragility/financial report request,
-    # try to build the payload and run through the engine
-    if is_fragility:
+    # If the instruction looks like a fragility report request (legacy)
+    if is_fragility and not is_model:
         # Attempt to extract JSON data from instruction or file
         payload = _extract_payload(instruction, file_path)
         if payload:
@@ -998,44 +1007,51 @@ async def consult(
                     report['file_name'] = new_name
                     return {
                         "status": "deployed",
-                        "title": "Financial Report Generated",
-                        "message": f"Report '{new_name}' has been created and saved.",
+                        "title": "Fragility Report Deployed",
+                        "message": f"Generated in {elapsed:.2f}s",
                         "file_name": new_name,
-                        "file_path": report.get('file_path'),
-                        "file_uploaded": file_info,
-                        "report": {
-                            "fragility_index": report.get('fragility', {}).get('fragility_index'),
-                            "portfolio_roi_pct": report.get('summary', {}).get('portfolio_roi_pct'),
-                            "total_spend": report.get('summary', {}).get('total_spend'),
-                            "campaign_count": report.get('summary', {}).get('campaign_count'),
-                        },
-                        "duration_ms": round((time.time() - start) * 1000, 1),
+                        "report": report.get('summary', {})
                     }
                 except Exception as e:
-                    return JSONResponse({
-                        "status": "error",
-                        "error_message": str(e),
-                    }, status_code=422)
+                    logger.error(f"Error generating fragility report: {e}")
+                    
+    # Otherwise, build a dynamic model via the new CFO Compiler if indicated
+    if is_model:
+        logger.info(f"Routing to Dynamic CFO Compiler with '{complexity}' tier complexity.")
+        try:
+            spec = {
+                "model_name": "Dynamic_CFO_Model",
+                "complexity": complexity,
+                "blocks": ["revenue", "debt", "returns"],
+                "parameters": {
+                    "price": 5, "volume": 100, 
+                    "beginning_debt": 50000000 if complexity == 'institutional' else 1000000,
+                    "interest_rate": 0.08,
+                    "periods": 5
+                }
+            }
+            res = cfo_compiler.compile_model(spec)
+            elapsed = time.time() - start
+            
+            if res['status'] == 'PASS':
+                return {
+                    "status": "deployed",
+                    "title": f"Dynamic Model Deployed ({complexity.upper()})",
+                    "message": f"Generated {res['file_name']} in {elapsed:.2f}s",
+                    "file_name": res['file_name'],
+                    "report": {"complexity": complexity, "blocks_used": spec['blocks']}
+                }
+            else:
+                return {"status": "error", "message": res.get("message")}
+        except Exception as e:
+            logger.error(f"Error generating dynamic model: {e}")
+            return {"status": "error", "message": str(e)}
 
-    # For all other instructions, acknowledge receipt
-    # In a full implementation, this would route to Gemini for intelligent processing
-    elapsed = time.time() - start
+    # Fallback response
     return {
         "status": "received",
-        "title": "Instruction Received by CFO",
-        "message": (
-            f"Your instruction has been logged and queued for processing. "
-            f"{'File \'' + file_info['original_name'] + '\' uploaded and saved. ' if file_info else ''}"
-            f"The CFO brain will process this via the War Room pipeline."
-        ),
-        "instruction": instruction,
-        "file_uploaded": file_info,
-        "duration_ms": round(elapsed * 1000, 1),
-        "next_steps": [
-            "Instruction logged to CFO queue",
-            "War Room agents notified" if not is_fragility else "Fragility data incomplete — provide cmo_spend, architect_risk, campaign_list",
-            "Result will appear in /api/reports when ready",
-        ],
+        "title": "Instruction Received",
+        "message": "The CFO Agent analyzed the instruction but no modeling or fragility intent was explicitly detected."
     }
 
 
