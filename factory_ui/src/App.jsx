@@ -12,7 +12,12 @@ import VentureSuite from './VentureSuite'
 //  Agent Status | Telemetry | File Upload | Recover Prompt
 // ═══════════════════════════════════════════════════════════
 
-
+const maskSecrets = (text) => {
+  if (!text || typeof text !== 'string') return text;
+  return text.replace(/AIzaSy[A-Za-z0-9_-]{30,}/g, 'AIzaSy...[REDACTED]')
+             .replace(/sk-ant-[A-Za-z0-9a-zA-Z_-]{30,}/g, 'sk-ant-...[REDACTED]')
+             .replace(/sk-[A-Za-z0-9_-]{40,}/g, 'sk-...[REDACTED]');
+};
 
 // ── COMMAND PALETTE ────────────────────────────────────────
 function CommandPalette({ onCommand }) {
@@ -734,7 +739,7 @@ function BuilderChat({ registry, onAtomizerUpdate, externalCommand, onBuildCompl
         )}
         {messages.map((msg, i) => (
           <div key={i} className={`msg ${msg.role}`}>
-            {msg.text}
+            {maskSecrets(msg.text)}
             {msg.role === 'assistant' && streaming && i === messages.length - 1 && (
               <span className="cursor" />
             )}
@@ -1009,7 +1014,7 @@ function RefinePanel({ registry, refineLog: log, setRefineLog: setLog, refining,
             {log.map((entry, i) => (
               <div key={i} className={`refine-step ${stepClass(entry.step)} ${entry.step === 'COMPLETE' ? 'highlight' : ''}`}>
                 <span className="step-badge">{entry.step}</span>
-                <span className="step-text">{entry.text}</span>
+                <span className="step-text">{maskSecrets(entry.text)}</span>
                 <span className="step-time">{entry.ts}</span>
               </div>
             ))}
@@ -1623,17 +1628,6 @@ function App() {
                 className={`sidebar-item ${selectedApp === app.name ? 'active' : ''}`}
                 onClick={() => {
                   setSelectedApp(app.name);
-                  let proxyPath = `/app/${app.name}`;
-                  if (app.name === "Resonance") proxyPath = "/resonance";
-                  if (app.name === "Project_Aegis" || app.name === "Project Aegis") proxyPath = "/aegis";
-                  
-                  if (app.name === "Alpha_V2_Genesis") {
-                    window.open(`http://localhost:5175`, '_blank');
-                  } else if (app.name === "Resonance") {
-                    window.open(`http://localhost:5174`, '_blank');
-                  } else {
-                    window.open(`http://localhost:5000${proxyPath}`, '_blank');
-                  }
                 }}
                 style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
               >

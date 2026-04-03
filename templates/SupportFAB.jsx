@@ -253,7 +253,7 @@ function scrubResponse(text) {
  */
 function friendlyError(errorText) {
   const lower = (errorText || '').toLowerCase();
-  if (lower.includes('403') || lower.includes('forbidden') || lower.includes('leaked') || lower.includes('permission')) {
+  if (lower.includes('403') || lower.includes('forbidden') || lower.includes('leaked key') || lower.includes('permission')) {
     return 'We\'re doing a quick security update right now — the assistant will be back in just a moment. ' +
            'Your data is still fully encrypted and secure.\n\n' +
            'In the meantime, feel free to browse the app — everything else is working normally!';

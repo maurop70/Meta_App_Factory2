@@ -1,0 +1,28 @@
+{
+  "system_memory": [
+    {
+      "rule": "protect_math",
+      "action": "wrap_iferror",
+      "rationale": "Always wrap calculation formulas in IFERROR(..., 0) to prevent cascading #DIV/0! and #VALUE! errors in downstream aggregations. Sourced from Phase 8 debugging.",
+      "implemented_in": "Layer 3 Renderer (openpyxl injection)"
+    },
+    {
+      "rule": "circular_debt_sculpting",
+      "action": "toggle_iteration",
+      "rationale": "Institutional LBOs require circular debt sculpting (Interest Expense -> Avg Debt Balance -> CFADS -> Taxes -> Tax Shield -> Interest Expense). Requires wb.calculation.iterate = True.",
+      "implemented_in": "Layer 1 Compiler (Excel setup)"
+    },
+    {
+      "rule": "linearized_debt_fallback",
+      "action": "linearize_formula",
+      "rationale": "For Google Sheets compatibility, use linear standard interest formulas (Beg_Debt * Rate) instead of average debt, to avoid #REF! iteration failures.",
+      "implemented_in": "debt_block.py (Mid-Market tier)"
+    },
+    {
+      "rule": "audit_traceability",
+      "action": "ghost_note_injection",
+      "rationale": "Provide analysts with visibility into which cells had errors suppressed to 0 natively. Ghost Note placed in Audit Signature cell.",
+      "implemented_in": "Layer 3 Renderer & recursive_xml_audit module"
+    }
+  ]
+}

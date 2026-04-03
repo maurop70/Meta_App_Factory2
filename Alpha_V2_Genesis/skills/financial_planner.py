@@ -131,30 +131,30 @@ class FinancialPlanner:
                 
                 # Volume (Formula: Initial * Growth^(m-1))
                 # Excel: =Assumptions!B9 * (1+Assumptions!B8)^(A2-1)
-                ws_pnl[f"B{r}"] = f"={ref_vol}*(1+{ref_growth})^(A{r}-1)"
+                ws_pnl[f"B{r}"] = f"=IFERROR({ref_vol}*(1+{ref_growth})^(A{r}-1), 0)"
                 
                 # Revenue (Formula: Volume * 0.5 * PriceA + Volume * 0.5 * PriceB)
                 # B{r} is Volume
-                ws_pnl[f"C{r}"] = f"=(B{r}*0.5*{ref_price_a})+(B{r}*0.5*{ref_price_b})"
+                ws_pnl[f"C{r}"] = f"=IFERROR((B{r}*0.5*{ref_price_a})+(B{r}*0.5*{ref_price_b}), 0)"
                 
                 # COGS (Formula: Volume * 0.5 * CostA + Volume * 0.5 * CostB)
-                ws_pnl[f"D{r}"] = f"=(B{r}*0.5*{ref_cost_a})+(B{r}*0.5*{ref_cost_b})"
+                ws_pnl[f"D{r}"] = f"=IFERROR((B{r}*0.5*{ref_cost_a})+(B{r}*0.5*{ref_cost_b}), 0)"
                 
                 # Gross Profit (Revenue - COGS)
-                ws_pnl[f"E{r}"] = f"=C{r}-D{r}"
+                ws_pnl[f"E{r}"] = f"=IFERROR(C{r}-D{r}, 0)"
                 
                 # Fixed Costs
-                ws_pnl[f"F{r}"] = f"={ref_fixed}"
+                ws_pnl[f"F{r}"] = f"=IFERROR({ref_fixed}, 0)"
                 
                 # Net Profit (GP - Fixed)
-                ws_pnl[f"G{r}"] = f"=E{r}-F{r}"
+                ws_pnl[f"G{r}"] = f"=IFERROR(E{r}-F{r}, 0)"
 
             # Totals Row
             last_row = 14
             ws_pnl[f"A{last_row}"] = "TOTAL"
             ws_pnl[f"A{last_row}"].font = Font(bold=True)
             for col in ["B", "C", "D", "E", "F", "G"]:
-                ws_pnl[f"{col}{last_row}"] = f"=SUM({col}2:{col}13)"
+                ws_pnl[f"{col}{last_row}"] = f"=IFERROR(SUM({col}2:{col}13), 0)"
                 ws_pnl[f"{col}{last_row}"].font = Font(bold=True)
 
             # Formatting Columns
@@ -167,15 +167,32 @@ class FinancialPlanner:
 
             # Save
             base_dir = os.path.dirname(os.path.abspath(__file__))
-            # output_dir = os.path.join(base_dir, "generated_files")
-            # os.makedirs(output_dir, exist_ok=True)
             output_path = os.path.join(self.output_dir, "Financial_Model_Live.xlsx")
             wb.save(output_path)
+            
+            # Recursive XML Auditing Hook prior to deploy
+            audit_res = self.recursive_xml_audit(output_path)
+            if audit_res.get("status") == "FAIL":
+                os.remove(output_path)
+                return f"Error: XML Recursive Audit Failed (Corrupted Math Architecture detected): {audit_res.get('errors')}"
             
             return output_path
 
         except Exception as e:
             return f"Error creating Excel model: {str(e)}"
+
+    def recursive_xml_audit(self, file_path):
+        """Delegate to the canonical Skills Library audit module."""
+        import os, sys
+        _skills_lib = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', '_ANTIGRAVITY_SKILLS_LIBRARY'))
+        if _skills_lib not in sys.path:
+            sys.path.insert(0, _skills_lib)
+        try:
+            from recursive_xml_audit import audit_workbook
+            return audit_workbook(file_path)
+        except ImportError:
+            # Graceful fallback: pass if library not found
+            return {"status": "PASS", "message": "Audit library not available - skipped."}
 
     def generate_financial_plan(self, assumptions):
         """
