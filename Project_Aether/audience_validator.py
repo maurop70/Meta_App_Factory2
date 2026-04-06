@@ -530,7 +530,7 @@ Respond ONLY with valid JSON (no markdown, no code fences):
         """Call Gemini API for validation."""
         if not self._api_key:
             raise RuntimeError("GEMINI_API_KEY not set. Cannot perform audience validation.")
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{VALIDATION_MODEL}:generateContent?key={self._api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{VALIDATION_MODEL}:generateContent"
         payload = {
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {

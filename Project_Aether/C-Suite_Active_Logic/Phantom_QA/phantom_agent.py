@@ -414,7 +414,7 @@ Include both happy-path and edge-case tests.
 Respond ONLY with valid JSON array, no markdown fences."""
 
         try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
             payload = {
                 "contents": [{"parts": [{"text": gen_prompt}]}],
                 "generationConfig": {"temperature": 0.5, "maxOutputTokens": 4096},

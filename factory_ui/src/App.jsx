@@ -341,7 +341,7 @@ function ConstructionTracker({ messages, streaming, building }) {
 }
 
 // ── BUILDER CHAT ───────────────────────────────────────────
-function BuilderChat({ registry, onAtomizerUpdate, externalCommand, onBuildComplete, onQaGate }) {
+function BuilderChat({ registry, onAtomizerUpdate, externalCommand, onBuildComplete, onQaGate, mode, profile }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [streaming, setStreaming] = useState(false);
@@ -409,14 +409,14 @@ function BuilderChat({ registry, onAtomizerUpdate, externalCommand, onBuildCompl
 
   const triggerBuild = async (appName, blueprint = 'multi_agent_core', description = '', systemPrompt = null) => {
     setBuilding(true);
-    setMessages(prev => [...prev, { role: 'system', text: `🏗️ BUILD STARTED: ${appName} [${blueprint}]` }]);
+    setMessages(prev => [...prev, { role: 'system', text: `🏗️ BUILD STARTED: ${appName} [${blueprint}] (Mode: ${mode}, Profile: ${profile})` }]);
     setMessages(prev => [...prev, { role: 'assistant', text: '' }]);
 
     try {
       const res = await fetch(`/api/build/stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ app_name: appName, blueprint, description, system_prompt: systemPrompt }),
+        body: JSON.stringify({ app_name: appName, blueprint, description, system_prompt: systemPrompt, mode: mode, user_profile: profile }),
       });
 
       const reader = res.body.getReader();
@@ -1461,6 +1461,7 @@ function App() {
 
   const [activeView, setActiveView] = useState('systemmap');
   const [builderMode, setBuilderMode] = useState(null); // 'technical' | 'venture' | null
+  const [builderProfile, setBuilderProfile] = useState('executive'); // 'executive' | 'copilot'
   const [registry, setRegistry] = useState([]);
   const [atomizerChunks, setAtomizerChunks] = useState([]);
   const [atomizerProgress, setAtomizerProgress] = useState(0);
@@ -1701,7 +1702,10 @@ function App() {
         {/* Builder Chat / Mode Selector (EOS V3.1) */}
         {activeView === 'builder' && (
           builderMode === null ? (
-            <ModeSelectionScreen onSelectMode={setBuilderMode} />
+            <ModeSelectionScreen onSelectMode={(mode, profile) => {
+              setBuilderMode(mode);
+              setBuilderProfile(profile || 'executive');
+            }} />
           ) : builderMode === 'venture' ? (
             <WarRoom 
               key={`venture-${selectedApp || 'Aether'}`}
@@ -1722,6 +1726,8 @@ function App() {
                 fetch(`/api/registry`).then(r => r.json()).then(data => setRegistry(data.apps || [])).catch(() => { });
               }}
               onQaGate={setQaGate}
+              mode={builderMode}
+              profile={builderProfile}
             />
           )
         )}

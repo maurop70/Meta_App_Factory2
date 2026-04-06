@@ -85,7 +85,7 @@ class SecurityAuditor:
 
         try:
             import re
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}"
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent"
             payload = {
                 "contents": [
                     {"role": "user", "parts": [{"text": SYSTEM_PROMPT + "\n\n" + prompt}]}

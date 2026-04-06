@@ -196,7 +196,7 @@ Do NOT use special unicode characters in your response. Use only ASCII."""
         try:
             import requests as _req
             import re
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
             payload = {
                 "contents": [{"parts": [{"text": analysis_prompt}]}],
                 "generationConfig": {"temperature": 0.2, "maxOutputTokens": 1024},
@@ -513,7 +513,7 @@ If no gaps found, return []. Use only ASCII characters. No markdown fences."""
         try:
             import requests as _req
             import re as _re
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
             payload = {
                 "contents": [{"parts": [{"text": prompt}]}],
                 "generationConfig": {"temperature": 0.3, "maxOutputTokens": 4096},

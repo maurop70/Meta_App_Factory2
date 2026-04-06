@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 
-const API_BASE = 'http://localhost:8000';
+const API_BASE = 'http://localhost:5000';
 
 // ═══════════════════════════════════════════════════════════
 //  SCOPED SUPPORT FAB — Commercial Concierge

@@ -454,7 +454,7 @@ class Loki:
             logger.warning("GEMINI_API_KEY not found in vault/.env — falling back to OFFLINE stub.")
             return self._offline_stub()
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
 
         system_prompt = (
             "You are the Lead Quant Architect for Alpha V2 Genesis, an SPX Iron Condor trading system. "

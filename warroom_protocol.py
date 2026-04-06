@@ -92,6 +92,20 @@ class CFOHandoff(BaseModel):
     business_plan_summary: str = Field("", description="Executive business plan summary")
     funding_required: float = Field(0.0, description="Capital required ($)")
 
+class CPOHandoff(BaseModel):
+    """CPO -> Critic/CEO handoff. Synthesized product strategy output using forced Chain-of-Thought (CoT)."""
+    # NODE 1: User Empathy Engine (Forces the UX logic first)
+    friction_elimination_notes: List[str] = Field(default_factory=list, description="UI/UX friction points actively mitigated")
+    
+    # NODE 2: Commercial Strategist (Forces the money logic second)
+    value_capture_mechanism: str = Field(..., description="Clear monetization strategy for survival")
+    commercial_viability_score: float = Field(5.0, ge=1.0, le=10.0, description="Commercial viability rating")
+    
+    # NODE 3: MVP Butcher (Synthesizes Nodes 1 & 2 into the final cut)
+    cut_features: List[str] = Field(default_factory=list, description="Ruthlessly butchered features to save timeline")
+    moscow_must_haves: List[str] = Field(default_factory=list, description="Critical features for launch")
+    moscow_should_haves: List[str] = Field(default_factory=list, description="Important differentiators")
+
 
 class CLOHandoff(BaseModel):
     """CLO -> Critic/CEO handoff. Legal compliance output."""

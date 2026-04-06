@@ -485,7 +485,7 @@ class GeoTalentScout:
             try:
                 url = (
                     f"https://generativelanguage.googleapis.com/v1beta/"
-                    f"models/{model_name}:generateContent?key={api_key}"
+                    f"models/{model_name}:generateContent"
                 )
                 self._log(f"  [Gemini] Trying model: {model_name}")
 

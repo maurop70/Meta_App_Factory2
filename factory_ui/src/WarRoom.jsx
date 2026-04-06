@@ -6,8 +6,8 @@ import axios from 'axios';
 //  Real-time agent dialogue | Aether-Native UI Stepper
 // ═══════════════════════════════════════════════════════════
 
-const WS_URL = 'ws://localhost:8000/ws/warroom';
-const API_BASE = 'http://localhost:8000';
+const WS_URL = 'ws://localhost:5000/ws/warroom';
+const API_BASE = 'http://localhost:5000';
 
 const SEQUENCE_STAGES = [
   { id: 'CMO_STRATEGY', label: '1. CMO Strategy', icon: '📈' },
@@ -81,11 +81,53 @@ export default function WarRoom({ ventureMode = false, onHandoff }) {
   const [isReadyToDeploy, setIsReadyToDeploy] = useState(false);
   const [marketPulse, setMarketPulse] = useState(null);
 
-  // ── UI Integration (Phase 1, 2, 3) ────────────────────
+  // ── UI Integration (Phase 1, 2, 3 & 11) ────────────────────
   const [showDispatchModal, setShowDispatchModal] = useState(false);
   const [strategyMode, setStrategyMode] = useState('balanced');
   const [customDirective, setCustomDirective] = useState('');
   const [stressTest, setStressTest] = useState(false);
+  
+  // Phase 11 Autonomous Forge Command Bar — fully isolated from legacy messages state
+  const [operatorCmd, setOperatorCmd] = useState('');
+  const [isSendingCmd, setIsSendingCmd] = useState(false);
+  const [operatorLog, setOperatorLog] = useState([]);
+  const [isFeedExpanded, setIsFeedExpanded] = useState(false);
+  // Floating detached popup
+  const [isFeedPopped, setIsFeedPopped] = useState(false);
+  const [popPos, setPopPos] = useState({ x: 80, y: 80, w: 680, h: 520 });
+  const _dragRef = useRef(null);
+
+  const sendOperatorCmd = async () => {
+    if (!operatorCmd.trim()) return;
+    const cmdText = operatorCmd.trim();
+    setIsSendingCmd(true);
+    // Prepend @operator prefix so backend routing is guaranteed
+    const payload = cmdText.toLowerCase().startsWith('@operator')
+      ? cmdText
+      : `@operator ${cmdText}`;
+    // Immediately write to the ISOLATED operator log — never to legacy messages
+    setOperatorLog(prev => [...prev, {
+      type: 'sent', text: payload, ts: new Date().toLocaleTimeString()
+    }]);
+    setOperatorCmd('');
+    try {
+      const res = await axios.post('/api/war-room/dispatch', {
+        message: payload,
+        project_id: selectedProject || 'AntigravityWorkspace_Q3',
+        strategy_mode: 'operator_directive'
+      });
+      setOperatorLog(prev => [...prev, {
+        type: 'ack', text: `INCUBATOR GATE STARTED — status: ${res?.data?.status || 'ok'}`, ts: new Date().toLocaleTimeString()
+      }]);
+    } catch(e) {
+      console.error('Operator dispatch failed', e);
+      setOperatorLog(prev => [...prev, {
+        type: 'error', text: `DISPATCH FAILED: ${e.message}`, ts: new Date().toLocaleTimeString()
+      }]);
+    } finally {
+      setIsSendingCmd(false);
+    }
+  };
   
   const [showWisdomVault, setShowWisdomVault] = useState(false);
   const [pendingStandards, setPendingStandards] = useState([]);
@@ -98,6 +140,7 @@ export default function WarRoom({ ventureMode = false, onHandoff }) {
 
   const wsRef = useRef(null);
   const feedEndRef = useRef(null);
+  const feedScrollRef = useRef(null);
   const fileRef = useRef(null);
   const _seenIds = useRef(new Set());
   const _msgIdCounter = useRef(0);
@@ -156,10 +199,40 @@ export default function WarRoom({ ventureMode = false, onHandoff }) {
         if (didCancel) return;
         const data = JSON.parse(event.data);
 
+        // ── Phase 11 sentinel strings that must NEVER trigger startDebate ──
+        const _isPhase11Msg = (msg) => {
+          if (!msg) return false;
+          const m = msg.toLowerCase();
+          return m.includes('[state_machine]') ||
+                 m.includes('executive fork') ||
+                 m.includes('incubator gate') ||
+                 m.includes('incubator_gate') ||
+                 m.includes('pre-flight intelligence') ||
+                 m.includes('@operator approve') ||
+                 m.includes('@operator reject');
+        };
+
         if (data.type === 'init') {
           setMessages(data.history || []);
           setPersuasion(data.persuasion || 5);
         } else if (data.type === 'dialogue') {
+          // ── Intercept [state_machine] messages masquerading as dialogue ──
+          const rawMsg = data.message || '';
+          if (rawMsg.includes('[state_machine]')) {
+            // Parse: "[state_machine] phase=CMO_STRATEGY status=ACTIVE"
+            // Also handles: "[state_machine] CMO_STRATEGY: ACTIVE" and similar variants
+            const phaseMatch = rawMsg.match(/phase=([\w]+)/) || rawMsg.match(/\[state_machine\]\s+([\w]+)[:\s]/);
+            const statusMatch = rawMsg.match(/status=([\w]+)/) || rawMsg.match(/(?:ACTIVE|PROCESSING|DONE|PASS|FAIL|WAITING)/);
+            if (phaseMatch) {
+              const phase = phaseMatch[1];
+              // Map verbose status strings to canonical UI status tokens
+              const rawStatus = statusMatch ? statusMatch[1] || statusMatch[0] : 'PROCESSING';
+              const STATUS_MAP = { ACTIVE: 'PROCESSING', DONE: 'PASS', STARTED: 'PROCESSING', COMPLETE: 'PASS', COMPLETED: 'PASS', ERROR: 'FAIL' };
+              const status = STATUS_MAP[rawStatus.toUpperCase()] || rawStatus.toUpperCase();
+              setSequenceState(prev => ({ ...prev, [phase]: status }));
+            }
+            return; // swallow — do NOT render in feed
+          }
           if (!dedup(data)) {
             data._id = ++_msgIdCounter.current;
             setMessages(prev => [...prev, data]);
@@ -226,6 +299,17 @@ export default function WarRoom({ ventureMode = false, onHandoff }) {
             message: `**[${data.level_up ? 'PERSISTENT MEMORY UPDATE' : 'SCAR RECORDED'}]**\n\n${data.message}`,
             timestamp: data.timestamp
           }]);
+        } else if (data.type === 'telemetry') {
+          if (!dedup(data)) {
+            data._id = ++_msgIdCounter.current;
+            setMessages(prev => [...prev, {
+              type: 'dialogue',
+              agent: 'FORGE_QA',
+              icon: '⚙️',
+              message: `📡 **TELEMETRY CORE FEED**\n${data.message}`,
+              timestamp: data.timestamp || Date.now()
+            }]);
+          }
         }
         
         // Clear agent from working state when they speak
@@ -267,21 +351,21 @@ export default function WarRoom({ ventureMode = false, onHandoff }) {
   const loadWisdom = async () => {
     setWisdomLoading(true);
     try {
-      const pRes = await axios.get('http://localhost:8000/api/wisdom/pending');
+      const pRes = await axios.get('http://localhost:5000/api/wisdom/pending');
       setPendingStandards(pRes.data);
-      const aRes = await axios.get('http://localhost:8000/api/wisdom/standards');
+      const aRes = await axios.get('http://localhost:5000/api/wisdom/standards');
       setActiveStandards(aRes.data);
     } catch(e) { console.error('Wisdom load failed', e); }
     setWisdomLoading(false);
   };
 
   const approveStandard = async (id) => {
-    await axios.post('http://localhost:8000/api/wisdom/approve', { standard_id: id });
+    await axios.post('http://localhost:5000/api/wisdom/approve', { standard_id: id });
     loadWisdom();
   };
 
   const rejectStandard = async (id) => {
-    await axios.post('http://localhost:8000/api/wisdom/reject', { standard_id: id });
+    await axios.post('http://localhost:5000/api/wisdom/reject', { standard_id: id });
     loadWisdom();
   };
 
@@ -293,10 +377,47 @@ export default function WarRoom({ ventureMode = false, onHandoff }) {
       .catch(e => console.error("COO fetch failed", e));
   }, [projectName]);
 
-  // ── Auto-scroll ───────────────────────────────────────
+  // ── Auto-scroll (smart: only scrolls if Commander is near bottom) ──────────
   useEffect(() => {
-    feedEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    const container = feedScrollRef.current;
+    if (!container) { feedEndRef.current?.scrollIntoView({ behavior: 'smooth' }); return; }
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    // Only auto-scroll if within 200px of the bottom — respect manual scroll position
+    if (distanceFromBottom < 200) {
+      feedEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, operatorLog]);
+
+  // ── Escape key closes expanded feed / popup ────────────────────────────────────────
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        if (isFeedExpanded) setIsFeedExpanded(false);
+        if (isFeedPopped)   setIsFeedPopped(false);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isFeedExpanded, isFeedPopped]);
+
+  // ── Popup drag handler ────────────────────────────────────────────────────
+  const startPopupDrag = useCallback((e) => {
+    e.preventDefault();
+    const startX = e.clientX - popPos.x;
+    const startY = e.clientY - popPos.y;
+    const onMove = (ev) => {
+      setPopPos(p => ({ ...p,
+        x: Math.max(0, ev.clientX - startX),
+        y: Math.max(0, ev.clientY - startY),
+      }));
+    };
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }, [popPos]);
 
   // ── Trigger Debate on Commander Intervention ──────────
   const startDebate = useCallback(() => {
@@ -315,7 +436,24 @@ export default function WarRoom({ ventureMode = false, onHandoff }) {
   useEffect(() => {
     if (messages.length > 0 && selectedProject) {
       const lastMsg = messages[messages.length - 1];
-      if (lastMsg.agent === 'COMMANDER' && lastMsg.message && !lastMsg.message.includes('START_DEBATE')) {
+      // ── Phase 11: Agents that must NEVER trigger startDebate ──
+      const _isOperatorAgent = [
+        'INCUBATOR_GATE', 'GHOST_OPERATOR', 'FORGE_QA', 'OPERATOR', 'SYSTEM'
+      ].includes(lastMsg.agent);
+
+      if (lastMsg.agent === 'COMMANDER' && lastMsg.message && !lastMsg.message.includes('START_DEBATE') && !_isOperatorAgent) {
+        const m = lastMsg.message.toLowerCase();
+        // Phase 11 hard mute — never debate these payloads
+        if (
+          m.includes('[operator command]') ||
+          m.includes('@operator') ||
+          m.includes('executive fork') ||
+          m.includes('[state_machine]') ||
+          m.includes('incubator gate') ||
+          m.includes('incubator_gate') ||
+          m.includes('pre-flight intelligence') ||
+          m.includes('ghost operator')
+        ) return;
         startDebate();
       }
     }
@@ -353,7 +491,7 @@ export default function WarRoom({ ventureMode = false, onHandoff }) {
       });
     } else {
       // 1. Dispatch hitting C-Suite trigger
-      axios.post('http://localhost:8000/api/war-room/dispatch', {
+      axios.post('http://localhost:5000/api/war-room/dispatch', {
         message: inputText.trim(),
         project_id: selectedProject || 'AntigravityWorkspace_Q3'
       }, {
@@ -677,10 +815,34 @@ export default function WarRoom({ ventureMode = false, onHandoff }) {
             )}
           </div>
         )}
-        {/* ── Left: Dialogue Feed ── */}
+        {/* ── Left: LIVE COMMAND CORE FEED ── */}
         <div style={styles.feedPanel}>
           {/* Topic Seeder + Challenge Trigger */}
           <div style={styles.topicBar}>
+            {/* ── Feed Expand Toggle ── */}
+            <button
+              id="war-room-expand-btn"
+              onClick={() => setIsFeedExpanded(v => !v)}
+              title={isFeedExpanded ? 'Collapse feed (Esc)' : 'Expand feed to full-screen'}
+              style={{
+                padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(139,92,246,0.4)',
+                background: isFeedExpanded ? 'rgba(139,92,246,0.25)' : 'rgba(139,92,246,0.08)',
+                color: '#a78bfa', fontSize: '14px', cursor: 'pointer',
+                flexShrink: 0, transition: 'all 0.2s ease',
+              }}
+            >{isFeedExpanded ? '⊡' : '⛶'}</button>
+            {/* ── Pop Out Button ── */}
+            <button
+              id="war-room-popout-btn"
+              onClick={() => setIsFeedPopped(v => !v)}
+              title={isFeedPopped ? 'Close floating popup (Esc)' : 'Pop debate feed into floating window'}
+              style={{
+                padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(6,182,212,0.4)',
+                background: isFeedPopped ? 'rgba(6,182,212,0.2)' : 'rgba(6,182,212,0.06)',
+                color: '#22d3ee', fontSize: '13px', cursor: 'pointer',
+                flexShrink: 0, transition: 'all 0.2s ease', fontWeight: 700,
+              }}
+            >{isFeedPopped ? '🗗 Docked' : '🗗 Pop Out'}</button>
             <input
               type="text"
               value={topicInput}
@@ -700,7 +862,7 @@ export default function WarRoom({ ventureMode = false, onHandoff }) {
             <button onClick={async () => {
               setIsExecutingCmd(true); setIsReadyToDeploy(false); setSequenceState({}); setMarketPulse(null);
               setMessages(prev => [...prev, { type: 'dialogue', agent: 'COMMANDER', message: `▶ PROTOCOL OVERRIDE: Executing Unified Aether-Native Extration Loop for [${projectName}]...`, timestamp: new Date().toISOString() }]);
-              try { await fetch(`/api/warroom/execute`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ project_id: projectName }) }); } 
+              try { await fetch(`/api/warroom/execute`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ project_id: projectName, intent: "Genesis" }) }); } 
               catch (err) { setMessages(prev => [...prev, { type: 'dialogue', agent: 'SYSTEM', message: `Execution failed: ${err.message}`, isError: true, timestamp: new Date().toISOString() }]); setIsExecutingCmd(false); }
             }} disabled={isExecutingCmd} style={{ ...styles.topicBtn, background: isExecutingCmd ? '#475569' : 'linear-gradient(135deg, #6366f1, #4f46e5)', width: 'auto' }}>
               {isExecutingCmd ? '⏳ Executing...' : '▶ Initialize Protocol'}
@@ -713,8 +875,186 @@ export default function WarRoom({ ventureMode = false, onHandoff }) {
             <input type="file" ref={fileRef} onChange={uploadFile} style={{ display: 'none' }} />
           </div>
 
-          {/* Message Feed */}
-          <div style={styles.feed}>
+          {/* ── FLOATING POPUP (detached draggable chat window) ── */}
+          {isFeedPopped && (
+            <div style={{
+              position: 'fixed',
+              left: popPos.x, top: popPos.y,
+              width: popPos.w, height: popPos.h,
+              minWidth: 380, minHeight: 300,
+              zIndex: 9999,
+              background: 'linear-gradient(160deg, #0b1120, #0d1829)',
+              border: '1px solid rgba(6,182,212,0.35)',
+              borderRadius: '14px',
+              boxShadow: '0 24px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(6,182,212,0.1)',
+              display: 'flex', flexDirection: 'column',
+              fontFamily: 'Inter, sans-serif',
+              resize: 'both', overflow: 'hidden',
+            }}>
+              {/* Drag handle / title bar */}
+              <div
+                onMouseDown={startPopupDrag}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '10px 16px',
+                  background: 'linear-gradient(90deg, rgba(6,182,212,0.12), rgba(99,102,241,0.08))',
+                  borderBottom: '1px solid rgba(6,182,212,0.2)',
+                  cursor: 'grab', userSelect: 'none', borderRadius: '14px 14px 0 0',
+                  flexShrink: 0,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '14px' }}>🏛️</span>
+                  <span style={{ color: '#22d3ee', fontWeight: 700, fontSize: '12px', letterSpacing: '0.5px' }}>
+                    WAR ROOM — DEBATE FEED
+                  </span>
+                  <span style={{ fontSize: '10px', color: '#475569', marginLeft: '4px' }}>
+                    {messages.filter(m => m.type === 'dialogue').length} messages
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button
+                    onClick={() => setIsFeedExpanded(true)}
+                    title="Go full-screen"
+                    style={{
+                      background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.3)',
+                      color: '#a78bfa', borderRadius: '6px', padding: '3px 10px',
+                      cursor: 'pointer', fontSize: '11px', fontWeight: 700,
+                    }}
+                  >⛶</button>
+                  <button
+                    onClick={() => setIsFeedPopped(false)}
+                    title="Close popup (Esc)"
+                    style={{
+                      background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)',
+                      color: '#ef4444', borderRadius: '6px', padding: '3px 10px',
+                      cursor: 'pointer', fontSize: '13px', fontWeight: 700, lineHeight: 1,
+                    }}
+                  >✕</button>
+                </div>
+              </div>
+
+              {/* Popup message list */}
+              <div style={{
+                flex: 1, overflowY: 'auto', padding: '12px 14px',
+                display: 'flex', flexDirection: 'column', gap: '8px',
+              }}>
+                {messages.filter(m => m.type === 'dialogue').length === 0 && (
+                  <div style={{ textAlign: 'center', marginTop: '40px', color: '#475569' }}>
+                    <div style={{ fontSize: '32px', marginBottom: '8px' }}>🏛️</div>
+                    <div style={{ fontSize: '13px' }}>No debate messages yet.</div>
+                  </div>
+                )}
+                {messages.filter(m => m.type === 'dialogue').map((msg, i) => {
+                  const agentStyle = AGENT_STYLES[msg.agent] || AGENT_STYLES.SYSTEM;
+                  const isUser = msg.is_user || msg.agent === 'COMMANDER';
+                  return (
+                    <div key={i} style={{
+                      padding: '10px 14px', borderRadius: '10px',
+                      background: isUser ? 'rgba(249,115,22,0.1)' : agentStyle.bg,
+                      borderLeft: `3px solid ${isUser ? '#f97316' : agentStyle.color}`,
+                      flexShrink: 0,
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                        <span style={{ fontSize: '14px' }}>{agentStyle.icon}</span>
+                        <span style={{ fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', color: agentStyle.color }}>{msg.agent}</span>
+                        <span style={{ fontSize: '10px', color: '#475569', marginLeft: 'auto' }}>{formatTime(msg.timestamp)}</span>
+                        {isUser && <span style={{ padding: '1px 5px', borderRadius: '4px', fontSize: '9px', fontWeight: 700, background: 'rgba(249,115,22,0.2)', color: '#f97316' }}>YOU</span>}
+                      </div>
+                      <div style={{ fontSize: '12.5px', lineHeight: 1.65, color: '#cbd5e1', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{msg.message}</div>
+                    </div>
+                  );
+                })}
+                <div ref={isFeedPopped ? feedEndRef : undefined} />
+              </div>
+
+              {/* Quick-reply bar at bottom of popup */}
+              <div style={{
+                display: 'flex', gap: '6px', padding: '10px 12px',
+                borderTop: '1px solid rgba(6,182,212,0.12)',
+                background: 'rgba(0,0,0,0.2)', flexShrink: 0,
+              }}>
+                <input
+                  type="text"
+                  placeholder="Quick intervention..."
+                  value={inputText}
+                  onChange={e => setInputText(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendIntervention()}
+                  style={{
+                    flex: 1, background: '#0f172a', border: '1px solid rgba(6,182,212,0.2)',
+                    color: '#e2e8f0', padding: '8px 12px', borderRadius: '8px',
+                    fontSize: '12px', fontFamily: 'Inter, sans-serif', outline: 'none',
+                  }}
+                />
+                <button
+                  onClick={sendIntervention}
+                  disabled={!inputText.trim()}
+                  style={{
+                    background: inputText.trim() ? 'linear-gradient(135deg, #06b6d4, #0891b2)' : '#1e293b',
+                    border: 'none', color: '#fff', padding: '8px 16px',
+                    borderRadius: '8px', fontWeight: 700, fontSize: '11px',
+                    cursor: inputText.trim() ? 'pointer' : 'not-allowed',
+                  }}
+                >Send</button>
+              </div>
+            </div>
+          )}
+
+          {/* Message Feed — normal or full-screen overlay */}
+          {isFeedExpanded && (
+            <div style={{
+              position: 'fixed', inset: 0, zIndex: 10000,
+              background: 'rgba(2,6,15,0.97)',
+              display: 'flex', flexDirection: 'column',
+              fontFamily: 'Inter, sans-serif',
+            }}>
+              {/* Expanded header */}
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '12px 20px', borderBottom: '1px solid rgba(139,92,246,0.3)',
+                background: 'rgba(15,10,30,0.95)',
+              }}>
+                <span style={{ color: '#a78bfa', fontWeight: 700, fontSize: '14px', letterSpacing: '0.5px' }}>
+                  ⛶ WAR ROOM — FULL-SCREEN FEED
+                </span>
+                <button
+                  onClick={() => setIsFeedExpanded(false)}
+                  style={{
+                    background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)',
+                    color: '#ef4444', borderRadius: '6px', padding: '4px 14px',
+                    cursor: 'pointer', fontSize: '12px', fontWeight: 700,
+                  }}
+                >✕ Close (Esc)</button>
+              </div>
+              {/* Expanded feed body */}
+              <div ref={feedScrollRef} style={{
+                flex: 1, overflowY: 'auto', padding: '20px 24px',
+                display: 'flex', flexDirection: 'column', gap: '10px',
+              }}>
+                {messages.filter(m => m.type === 'dialogue').map((msg, i) => {
+                  const agentStyle = AGENT_STYLES[msg.agent] || AGENT_STYLES.SYSTEM;
+                  const isUser = msg.is_user || msg.agent === 'COMMANDER';
+                  return (
+                    <div key={i} style={{
+                      padding: '14px 18px', borderRadius: '10px',
+                      background: isUser ? 'rgba(249,115,22,0.1)' : agentStyle.bg,
+                      borderLeft: `3px solid ${isUser ? '#f97316' : agentStyle.color}`,
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                        <span style={{ fontSize: '16px' }}>{agentStyle.icon}</span>
+                        <span style={{ fontWeight: 700, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', color: agentStyle.color }}>{msg.agent}</span>
+                        <span style={{ fontSize: '10px', color: '#475569', marginLeft: 'auto' }}>{formatTime(msg.timestamp)}</span>
+                        {isUser && <span style={{ padding: '1px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: 700, background: 'rgba(249,115,22,0.2)', color: '#f97316' }}>YOU</span>}
+                      </div>
+                      <div style={{ fontSize: '14px', lineHeight: 1.7, color: '#e2e8f0', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{msg.message}</div>
+                    </div>
+                  );
+                })}
+                <div ref={feedEndRef} />
+              </div>
+            </div>
+          )}
+          <div ref={feedScrollRef} style={styles.feed}>
             {messages.length === 0 && (
               <div style={styles.emptyState}>
                 <span style={{ fontSize: '48px' }}>🏛️</span>
@@ -757,12 +1097,67 @@ export default function WarRoom({ ventureMode = false, onHandoff }) {
                   </div>
                   <div style={{
                     ...styles.msgText,
-                    ...(isLong ? { maxHeight: '400px', overflowY: 'auto', paddingRight: '8px' } : {}),
+                    // Phase 11 Executive Fork briefs are long — let them breathe
+                    ...(isLong ? { maxHeight: '70vh', overflowY: 'auto', paddingRight: '8px' } : {}),
                   }}>{msg.message}</div>
                 </div>
               );
             })}
             <div ref={feedEndRef} />
+          </div>
+
+          {/* ── Phase 11 Operator Log (isolated — never touches legacy messages) ── */}
+          {operatorLog.length > 0 && (
+            <div style={{
+              flex: '0 0 auto', maxHeight: '180px', overflowY: 'auto',
+              padding: '8px 16px',
+              background: '#070c14', borderTop: '1px solid rgba(16,185,129,0.15)',
+              fontFamily: 'JetBrains Mono, monospace', fontSize: '12px'
+            }}>
+              {operatorLog.map((entry, i) => (
+                <div key={i} style={{
+                  color: entry.type === 'error' ? '#ef4444'
+                       : entry.type === 'ack'   ? '#10b981'
+                       : '#94a3b8',
+                  marginBottom: '2px'
+                }}>
+                  <span style={{ color: '#475569', marginRight: '8px' }}>[{entry.ts}]</span>
+                  {entry.type === 'sent' ? '⚡ ' : entry.type === 'ack' ? '✅ ' : '❌ '}
+                  {entry.text}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ── Active Command Bar (Phase 11) ── */}
+          <div style={{
+            display: 'flex', gap: '8px', padding: '16px',
+            background: '#0a0f18', borderTop: '1px solid rgba(100,116,139,0.2)'
+          }}>
+            <span style={{ fontSize: '20px', display: 'flex', alignItems: 'center' }}>⚡</span>
+            <input 
+              type="text"
+              placeholder="@Operator command / directives..."
+              value={operatorCmd}
+              onChange={e => setOperatorCmd(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && sendOperatorCmd()}
+              style={{
+                  flex: 1, background: '#1e293b', border: '1px solid #475569',
+                  color: '#f8fafc', padding: '12px 16px', borderRadius: '8px',
+                  fontSize: '14px', fontFamily: 'JetBrains Mono, monospace'
+              }}
+            />
+            <button 
+              onClick={sendOperatorCmd}
+              disabled={!operatorCmd.trim() || isSendingCmd}
+              style={{
+                background: operatorCmd.trim() ? 'linear-gradient(135deg, #10b981, #059669)' : '#334155',
+                color: 'white', border: 'none', padding: '0 24px', borderRadius: '8px',
+                fontWeight: 'bold', cursor: operatorCmd.trim() ? 'pointer' : 'not-allowed'
+              }}
+            >
+              {isSendingCmd ? '...' : 'DISPATCH'}
+            </button>
           </div>
         </div>
 
@@ -1251,7 +1646,7 @@ const styles = {
     fontFamily: 'Inter, sans-serif',
   },
   feed: {
-    flex: 1, overflowY: 'auto', padding: '16px',
+    flex: 1, minHeight: 0, overflowY: 'auto', padding: '16px',
     display: 'flex', flexDirection: 'column', gap: '8px',
   },
   emptyState: {

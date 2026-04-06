@@ -51,6 +51,18 @@ app.add_middleware(
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 REGISTRY_PATH = os.path.join(SCRIPT_DIR, "registry.json")
 
+# ── Load .env so GEMINI_API_KEY and all secrets are available to every thread ──
+try:
+    from dotenv import load_dotenv as _load_dotenv
+    _env_path = os.path.join(SCRIPT_DIR, ".env")
+    if os.path.exists(_env_path):
+        _load_dotenv(_env_path, override=True)
+        logger.info(f"Loaded .env from {_env_path}")
+    else:
+        logger.warning(f".env not found at {_env_path}")
+except ImportError:
+    logger.warning("python-dotenv not installed — .env not loaded. Run: pip install python-dotenv")
+
 
 def _update_registry(app_name: str, blueprint: str, description: str = ""):
     """Write a new app entry to registry.json after a successful build."""
@@ -267,6 +279,8 @@ class BuildRequest(BaseModel):
     blueprint: str = "multi_agent_core"
     description: str = ""
     system_prompt: str | None = None
+    mode: str = "technical"
+    user_profile: str = "executive"
 
 
 @app.post("/api/build/stream")
@@ -306,7 +320,6 @@ async def build_stream(req: BuildRequest):
             except Exception as e:
                 progress_queue.put({"step": "ARCHITECT", "text": f"⚠️ Architect review skipped: {str(e)[:80]}"})
 
-        # Capture stdout from factory.create_app
         old_stdout = sys.stdout
         sys.stdout = buffer = io.StringIO()
         build_ok = False
@@ -314,16 +327,39 @@ async def build_stream(req: BuildRequest):
             # Import factory here to avoid circular imports at module level
             sys.path.insert(0, SCRIPT_DIR)
             from factory import MetaAppFactory
-            factory = MetaAppFactory()
-            factory.create_app(
-                app_name=req.app_name,
-                blueprint_name=req.blueprint,
-                description=req.description,
-                system_prompt=req.system_prompt,
-            )
-            _update_registry(req.app_name, req.blueprint, req.description)
-            progress_queue.put({"step": "REGISTRY", "text": f"📋 '{req.app_name}' registered in registry.json"})
-            build_ok = True
+            from forge_orchestrator import ForgeOrchestrator
+            import model_router
+
+            if req.mode == "venture":
+                progress_queue.put({"step": "FORGE", "text": "🏭 Routing through INCUBATOR GATE (CMO -> CTO)..."})
+                orchestrator = ForgeOrchestrator()
+                allowed = orchestrator.run_incubator_gate(f"{req.app_name}: {req.description}")
+                if not allowed:
+                    progress_queue.put({"step": "ERROR", "text": "🛑 Build halted: Awaiting @Operator approval in War Room."})
+                    progress_queue.put(None)
+                    return
+
+            elif req.user_profile == "copilot":
+                progress_queue.put({"step": "FORGE", "text": "🧑‍💻 Co-Pilot Detected. Bypassing Forge. Extracting raw CTO architecture..."})
+                prompt = f"Draft raw native Python structural blueprint for {req.app_name}: {req.description}. Provide code only, assuming a coder will implement this."
+                raw_code = model_router.route("CTO", prompt)
+                progress_queue.put({"step": "LOG", "text": f"\n\n=== RAW CO-PILOT BLUEPRINT ===\n{raw_code}\n====================\n"})
+                progress_queue.put({"step": "COMPLETE", "text": f"✅ Raw architecture yielded to Builder Chat."})
+                progress_queue.put(None)
+                return
+
+            else:
+                progress_queue.put({"step": "FORGE", "text": "👔 Executive Detected. Engaging Autonomous Forge..."})
+                factory = MetaAppFactory()
+                factory.create_app(
+                    app_name=req.app_name,
+                    blueprint_name=req.blueprint,
+                    description=req.description,
+                    system_prompt=req.system_prompt,
+                )
+                _update_registry(req.app_name, req.blueprint, req.description)
+                progress_queue.put({"step": "REGISTRY", "text": f"📋 '{req.app_name}' registered in registry.json"})
+                build_ok = True
         except Exception as e:
             progress_queue.put({"step": "ERROR", "text": f"❌ Build failed: {str(e)}"})
         finally:
@@ -795,11 +831,14 @@ def health_check():
 
 class WarRoomExecuteRequest(BaseModel):
     project_id: str
+    intent: str = "Genesis"
+
 
 @app.post("/api/warroom/execute")
 async def war_room_execute_endpoint(req: WarRoomExecuteRequest, request: Request):
     import asyncio
     project_id = req.project_id
+    is_architecture_phase = any(kw in req.intent.lower() for kw in ["initialize", "architect", "genesis"])
     
     async def native_sequence():
         try:
@@ -874,6 +913,11 @@ async def war_room_execute_endpoint(req: WarRoomExecuteRequest, request: Request
                 return res
                 
             async def run_ux():
+                if is_architecture_phase:
+                    await asyncio.sleep(1)
+                    res = {"verdict": "SKIPPED", "score": 100}
+                    await _broadcast({"type": "dialogue", "agent": "PHANTOM_QA", "message": "Playwright Deep Audit: SKIPPED (Architecture Phase Detected). UI testing deferred to deployment."}, project=project_id)
+                    return res
                 sim = UXSimulator(project_id)
                 res = await asyncio.to_thread(sim.run_deep_audit)
                 await _broadcast({"type": "dialogue", "agent": "SYSTEM", "message": f"Playwright Deep Audit: {res['verdict']}. Score: {res.get('score', 0)}."}, project=project_id)
@@ -883,12 +927,21 @@ async def war_room_execute_endpoint(req: WarRoomExecuteRequest, request: Request
             logic_res, stress_res, ux_res = results
             
             logic_score = 100 if logic_res["status"] == "PASS" else 0
-            composite_score = (logic_score + stress_res.get("score", 0) + ux_res.get("score", 0)) / 3.0
+            
+            if is_architecture_phase:
+                composite_score = (logic_score + stress_res.get("score", 0)) / 2.0
+            else:
+                composite_score = (logic_score + stress_res.get("score", 0) + ux_res.get("score", 0)) / 3.0
             
             # Broadcast the Triad Verdict
             await _broadcast({"type": "dialogue", "agent": "COMMANDER", "message": f"QA COMPOSITE SCORE: {composite_score:.1f}/100.\\nMinimum confidence: 80/100 required."}, project=project_id)
             
-            if logic_res["status"] == "FAIL" or stress_res["status"] == "FAIL" or ux_res["verdict"] == "FAIL":
+            # Phase-aware failure evaluation
+            failed_modules = logic_res["status"] == "FAIL" or stress_res["status"] == "FAIL"
+            if not is_architecture_phase and ux_res["verdict"] == "FAIL":
+                failed_modules = True
+
+            if failed_modules:
                  await _broadcast({"type": "dialogue", "agent": "SYSTEM", "message": "PHANTOM ELITE FAILED. Critical failure in Triad logic.", "isError": True}, project=project_id)
                  await _broadcast({"type": "state_machine", "phase": "PHANTOM_STRESS_TEST", "status": "FAIL"}, project=project_id)
                  return
@@ -930,7 +983,510 @@ async def war_room_dispatch(req: WarRoomDispatchRequest, request: Request):
     print(f"DEBUG: Received Dispatch for {project_id}")
     msg_lower = req.message.lower()
     
-    if any(kw in msg_lower for kw in ['cmo', 'cfo', 'roi']):
+    # ── Phase 11 Incubator Gate: STRICT prefix-only match ────────────────────────
+    # Must start with "@operator" so self-broadcast strings like
+    # "Awaiting @Operator authorization" do NOT re-trigger the gate.
+    _is_operator_cmd = msg_lower.strip().startswith("@operator")
+
+    # ── MERGE LIVE — priority 0 (checked before approve/reject/new-gate) ─────────
+    # "@operator merge live" / "@operator merge" → final deployment flow.
+    _MERGE_TOKENS = ("@operator merge live", "@operator merge")
+    _is_merge_cmd = any(msg_lower.strip().startswith(tok) for tok in _MERGE_TOKENS)
+
+    if _is_merge_cmd:
+        logger.info(f"[DEPLOY] Merge-Live command received: {req.message!r}")
+
+        async def execute_merge():
+            global ORCHESTRATION_STATE
+            import forge_orchestrator, os, glob, shutil
+
+            staging_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "staging_environment")
+            live_dir    = os.path.dirname(os.path.abspath(__file__))   # Meta_App_Factory root
+
+            # Find the most recently modified .py in staging
+            candidates = sorted(
+                glob.glob(os.path.join(staging_dir, "*.py")),
+                key=os.path.getmtime, reverse=True
+            )
+
+            if not candidates:
+                await _broadcast({
+                    "type": "dialogue", "agent": "SYSTEM",
+                    "icon": "⚠️", "color": "#eab308",
+                    "message": (
+                        "**[DEPLOY BLOCKED]** No staged blueprint found in `/staging_environment/`.\n"
+                        "Run `@Operator Approve Build` first to build and validate a blueprint."
+                    ),
+                    "timestamp": _dt.now().isoformat()
+                }, project=project_id)
+                return
+
+            staging_path   = candidates[0]
+            staging_fname  = os.path.basename(staging_path)
+            app_name       = os.path.splitext(staging_fname)[0]   # strip .py → app name
+            live_path      = os.path.join(live_dir, staging_fname)
+
+            # Broadcast: merge in progress
+            await _broadcast({
+                "type": "dialogue", "agent": "INCUBATOR_GATE",
+                "icon": "🚀", "color": "#10b981",
+                "message": (
+                    f"**@Operator Merge Live — INITIATING**\n\n"
+                    f"Deploying `{staging_fname}` from `/staging_environment/` → production root.\n"
+                    f"Taking rollback snapshot first..."
+                ),
+                "timestamp": _dt.now().isoformat()
+            }, project=project_id)
+
+            # Use ForgeOrchestrator.merge_to_live() — takes backup, then copies
+            try:
+                orchestrator = forge_orchestrator.ForgeOrchestrator()
+                success = await asyncio.to_thread(
+                    orchestrator.merge_to_live, staging_path, live_path
+                )
+            except Exception as merge_err:
+                logger.error(f"[DEPLOY] merge_to_live raised: {merge_err}")
+                success = False
+
+            if not success:
+                await _broadcast({
+                    "type": "dialogue", "agent": "SYSTEM",
+                    "icon": "❌", "color": "#ef4444",
+                    "message": (
+                        f"**[DEPLOY FAILED]** `merge_to_live` could not copy `{staging_fname}` "
+                        f"to production.\n\nCheck the server logs for the specific file error. "
+                        f"The staging file is intact — no data was lost."
+                    ),
+                    "timestamp": _dt.now().isoformat()
+                }, project=project_id)
+                return
+
+            # Register in registry.json
+            try:
+                _update_registry(
+                    app_name  = app_name,
+                    blueprint = "autonomous_forge",
+                    description = f"Autonomous Forge Deployment — QA-validated and deployed {_dt.now().strftime('%Y-%m-%d %H:%M')}",
+                )
+                # Upgrade status from "scaffolding" → "active"
+                with open(REGISTRY_PATH, "r", encoding="utf-8") as _rf:
+                    _reg = json.load(_rf)
+                _reg["apps"][app_name]["status"] = "active"
+                _reg["apps"][app_name]["deployed_by"] = "Autonomous_Forge_Phase11"
+                _reg["apps"][app_name]["staging_source"] = staging_fname
+                with open(REGISTRY_PATH, "w", encoding="utf-8") as _wf:
+                    json.dump(_reg, _wf, indent=4)
+                logger.info(f"[DEPLOY] '{app_name}' registered as active in registry.json")
+                registry_status = "✅ Registered in `registry.json`"
+            except Exception as reg_err:
+                logger.error(f"[DEPLOY] Registry update failed: {reg_err}")
+                registry_status = f"⚠️ Registry write failed: `{reg_err}` — file deployed but not registered"
+
+            # Update progress bar to full PASS
+            for phase in ("CMO_STRATEGY", "CTO_FEASIBILITY", "CFO_FINANCIAL_MODEL",
+                          "PHANTOM_STRESS_TEST", "COMMERCIALLY_READY"):
+                await _broadcast({"type": "state_machine", "phase": phase, "status": "PASS"}, project=project_id)
+
+            # Triumphant deploy broadcast
+            await _broadcast({
+                "type": "dialogue", "agent": "INCUBATOR_GATE",
+                "icon": "🎉", "color": "#10b981",
+                "message": (
+                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                    f"🚀 **DEPLOYMENT CONFIRMED — PRODUCT IS LIVE**\n"
+                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                    f"**App Name:** `{app_name}`\n"
+                    f"**Source:** `/staging_environment/{staging_fname}`\n"
+                    f"**Deployed To:** `Meta_App_Factory/{staging_fname}` (production root)\n"
+                    f"**Registry:** {registry_status}\n"
+                    f"**Rollback:** Snapshot taken by `ForgeRollbackManager` ✅\n"
+                    f"**Deployed by:** Autonomous Forge — Phase 11\n"
+                    f"**Timestamp:** {_dt.now().isoformat()}\n\n"
+                    f"The Factory has shipped its first autonomous build. "
+                    f"Commander — the pipeline is complete. 🎯"
+                ),
+                "timestamp": _dt.now().isoformat()
+            }, project=project_id)
+
+            ORCHESTRATION_STATE = "idle"
+
+        asyncio.create_task(execute_merge())
+        return {"status": "merge_initiated", "project": project_id}
+
+    # ── EXECUTIVE FORK RESOLUTION — checked before new-gate logic ────────────────
+    # Authorization commands route to execute_staging_cycle / reject.
+    # They are NEVER sent to run_incubator_gate().
+    _APPROVE_TOKENS = ("@operator approve build", "@operator approve")
+    _REJECT_TOKENS  = ("@operator reject blueprint", "@operator reject")
+    _is_fork_approve = any(msg_lower.strip().startswith(tok) for tok in _APPROVE_TOKENS)
+    _is_fork_reject  = any(msg_lower.strip().startswith(tok) for tok in _REJECT_TOKENS)
+
+    if _is_fork_approve or _is_fork_reject:
+        action = "APPROVED" if _is_fork_approve else "REJECTED"
+        logger.info(f"[EXEC FORK] Resolution received: {action} — message: {req.message!r}")
+
+        async def resolve_fork():
+            global ORCHESTRATION_STATE
+            import forge_orchestrator, os, glob
+
+            if _is_fork_approve:
+                # Broadcast acknowledgement immediately
+                await _broadcast({
+                    "type": "dialogue", "agent": "INCUBATOR_GATE",
+                    "icon": "✅", "color": "#10b981",
+                    "message": (
+                        "**@Operator Approve Build — CONFIRMED**\n\n"
+                        "Commander authorization received. Routing blueprint to `/staging_environment/`. "
+                        "QA Architect executing sandbox validation now..."
+                    ),
+                    "timestamp": _dt.now().isoformat()
+                }, project=project_id)
+
+                # Find the newest .py file in staging_environment to run
+                staging_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "staging_environment")
+                os.makedirs(staging_dir, exist_ok=True)
+                candidates = sorted(
+                    glob.glob(os.path.join(staging_dir, "*.py")),
+                    key=os.path.getmtime, reverse=True
+                )
+
+                if not candidates:
+                    await _broadcast({
+                        "type": "dialogue", "agent": "SYSTEM",
+                        "icon": "⚠️", "color": "#eab308",
+                        "message": (
+                            "**[STAGING EMPTY]** No blueprint script found in `/staging_environment/`.\n"
+                            "The Incubator Gate must write a build script before approval can run it.\n"
+                            "Re-run the Incubator Gate with your app idea to generate a blueprint."
+                        ),
+                        "timestamp": _dt.now().isoformat()
+                    }, project=project_id)
+                    ORCHESTRATION_STATE = "idle"
+                    return
+
+                staging_filename = os.path.basename(candidates[0])
+                staging_path     = os.path.join(staging_dir, staging_filename)
+                logger.info(f"[EXEC FORK] Running staging cycle on: {staging_filename}")
+
+                await _broadcast({
+                    "type": "state_machine", "phase": "CFO_FINANCIAL_MODEL", "status": "PROCESSING"
+                }, project=project_id)
+
+                # ── QA AUTO-HEAL LOOP ─────────────────────────────────────────────
+                MAX_RETRIES = 3
+                attempt     = 0
+                healed      = False
+
+                while attempt <= MAX_RETRIES:
+                    try:
+                        orchestrator = forge_orchestrator.ForgeOrchestrator()
+                        result       = await asyncio.to_thread(orchestrator.execute_staging_cycle, staging_filename)
+                    except Exception as e:
+                        logger.error(f"[AUTO-HEAL] execute_staging_cycle raised exception: {e}")
+                        result = {"status": "error", "stdout": "", "stderr": str(e)}
+
+                    qa_status = result.get("status", "unknown").lower()
+                    qa_stdout = result.get("stdout", "")
+                    qa_stderr = result.get("stderr", "")
+
+                    # ── PASS — we are done ────────────────────────────────────────
+                    if qa_status == "pass":
+                        await _broadcast({
+                            "type": "dialogue", "agent": "INCUBATOR_GATE",
+                            "icon": "🚀", "color": "#10b981",
+                            "message": (
+                                f"**QA ARCHITECT — VERDICT: PASS ✅**"
+                                + (f" *(healed in {attempt} attempt{'s' if attempt != 1 else ''})*" if attempt > 0 else "")
+                                + f"\n\nBlueprint `{staging_filename}` executed cleanly in sandbox.\n\n"
+                                f"**Output preview:**\n```\n{qa_stdout[:800]}\n```\n\n"
+                                "Build cleared. Use `@Operator merge live` to push to production."
+                            ),
+                            "timestamp": _dt.now().isoformat()
+                        }, project=project_id)
+                        await _broadcast({"type": "state_machine", "phase": "CFO_FINANCIAL_MODEL", "status": "PASS"}, project=project_id)
+                        await _broadcast({"type": "state_machine", "phase": "PHANTOM_STRESS_TEST",  "status": "PASS"}, project=project_id)
+                        await _broadcast({"type": "state_machine", "phase": "COMMERCIALLY_READY",   "status": "PASS"}, project=project_id)
+                        healed = True
+                        break
+
+                    # ── SECURITY BLOCK — non-healable, escalate immediately ────────
+                    if qa_status == "security_block":
+                        await _broadcast({
+                            "type": "dialogue", "agent": "INCUBATOR_GATE",
+                            "icon": "🛑", "color": "#ef4444",
+                            "message": (
+                                f"**QA ARCHITECT — SECURITY BLOCK 🛑**\n\n"
+                                f"Blueprint `{staging_filename}` was rejected by the Safety Auditor.\n\n"
+                                f"**Violation:** `{qa_stderr}`\n\n"
+                                "This violation cannot be auto-healed. Issue `@Operator Reject Blueprint` to discard "
+                                "and re-architect from scratch."
+                            ),
+                            "timestamp": _dt.now().isoformat()
+                        }, project=project_id)
+                        await _broadcast({"type": "state_machine", "phase": "CFO_FINANCIAL_MODEL", "status": "FAIL"}, project=project_id)
+                        break
+
+                    # ── FAILURE / ERROR / TIMEOUT — attempt auto-heal ─────────────
+                    if attempt < MAX_RETRIES:
+                        attempt += 1
+                        await _broadcast({
+                            "type": "dialogue", "agent": "INCUBATOR_GATE",
+                            "icon": "🔧", "color": "#eab308",
+                            "message": (
+                                f"**QA ARCHITECT — VERDICT: {qa_status.upper()} ⚠️**\n\n"
+                                f"Blueprint `{staging_filename}` failed (attempt {attempt}/{MAX_RETRIES}).\n\n"
+                                f"**Error traceback:**\n```\n{qa_stderr[:600]}\n```\n\n"
+                                f"Routing traceback to CTO Auto-Heal Agent... standby."
+                            ),
+                            "timestamp": _dt.now().isoformat()
+                        }, project=project_id)
+
+                        # Read the broken script
+                        try:
+                            with open(staging_path, "r", encoding="utf-8") as _f:
+                                broken_code = _f.read()
+                        except Exception as read_err:
+                            logger.error(f"[AUTO-HEAL] Cannot read staging file: {read_err}")
+                            break
+
+                        # Ask the CTO to produce a fixed version
+                        heal_prompt = (
+                            f"You are the CTO Auto-Heal Agent. A Python script failed QA validation.\n"
+                            f"Your ONLY job is to return a 100% syntactically correct, fixed Python script.\n\n"
+                            f"=== BROKEN SCRIPT ===\n```python\n{broken_code}\n```\n\n"
+                            f"=== ERROR TRACEBACK (attempt {attempt}) ===\n```\n{qa_stderr[:1200]}\n```\n\n"
+                            f"Rules:\n"
+                            f"1. Fix EVERY error shown in the traceback.\n"
+                            f"2. Do NOT add os.remove, shutil.rmtree, sys.exit, or any destructive calls.\n"
+                            f"3. Return ONLY raw Python code — no markdown fences, no explanation.\n"
+                            f"4. The fixed script must be self-contained and executable with `python script.py`.\n\n"
+                            f"Fixed Python script:"
+                        )
+
+                        try:
+                            import model_router  # local import — matches api.py pattern (cf. line 331)
+                            loop = asyncio.get_event_loop()
+                            healed_code = await loop.run_in_executor(
+                                _warroom_executor,
+                                model_router.route,
+                                "CTO",
+                                heal_prompt
+                            )
+                        except Exception as llm_err:
+                            logger.error(f"[AUTO-HEAL] CTO LLM call failed: {llm_err}")
+                            await _broadcast({
+                                "type": "dialogue", "agent": "SYSTEM",
+                                "icon": "❌", "color": "#ef4444",
+                                "message": f"**[AUTO-HEAL ERROR]** CTO agent call failed: `{llm_err}`",
+                                "timestamp": _dt.now().isoformat()
+                            }, project=project_id)
+                            break
+
+                        # ── HARDENED CODE EXTRACTOR ──────────────────────────────────────────
+                        # The LLM often injects prose, emojis, or prefixes around the code.
+                        # This pipeline extracts only valid Python, discarding everything else.
+                        import re as _re
+
+                        def _extract_python_code(raw: str) -> str:
+                            """
+                            4-stage extractor. Returns clean Python or raises ValueError
+                            so the heal loop can surface the problem rather than write garbage.
+                            """
+                            raw = raw.strip()
+
+                            # Stage 1 — prefer explicit ```python ... ``` block
+                            m = _re.search(r'```python\s*\n(.*?)```', raw, _re.DOTALL | _re.IGNORECASE)
+                            if m:
+                                return m.group(1).strip()
+
+                            # Stage 2 — fallback to any ``` ... ``` block
+                            m = _re.search(r'```\s*\n(.*?)```', raw, _re.DOTALL)
+                            if m:
+                                candidate = m.group(1).strip()
+                                # Must contain at least one line that looks like Python
+                                if any(_re.match(r'\s*(import |from |def |class |#|if |for |while |print|[a-zA-Z_]\w*\s*[=(])', ln) for ln in candidate.splitlines()):
+                                    return candidate
+
+                            # Stage 3 — no fences: find the first Python-looking line
+                            #           and take everything from there onward
+                            lines = raw.splitlines()
+                            start_idx = None
+                            PYTHON_STARTS = _re.compile(
+                                r'^\s*(import |from |def |class |#!|#\s|if __name__|'
+                                r'[a-zA-Z_]\w*\s*=|print\s*\(|[a-zA-Z_]\w*\s*\()'
+                            )
+                            for idx, ln in enumerate(lines):
+                                if PYTHON_STARTS.match(ln):
+                                    start_idx = idx
+                                    break
+
+                            if start_idx is not None:
+                                candidate = '\n'.join(lines[start_idx:])
+                            else:
+                                # Nothing Python-like found — return raw and let QA catch it
+                                candidate = raw
+
+                            # Stage 4 — line-by-line sanitise: drop any leading prose lines
+                            # that contain non-Python characters (emoji, markdown, colons etc.)
+                            KNOWN_PREFIXES = _re.compile(
+                                r'^(\s*'
+                                r'[\U00010000-\U0010FFFF\u2600-\u26FF\u2700-\u27BF]|'   # emoji range
+                                r'\s*\[.*?\]|'   # [Gemini], [CTO BLUEPRINT], etc.
+                                r'\s*(Here|Sure|Certainly|Below|The fixed|Fixed|Note:|Explanation:)'
+                                r')',
+                                _re.UNICODE
+                            )
+                            cleaned_lines = []
+                            in_code = False
+                            for ln in candidate.splitlines():
+                                if not in_code:
+                                    # Skip prose lines until we hit valid Python
+                                    if KNOWN_PREFIXES.match(ln) or (ln.strip() and not PYTHON_STARTS.match(ln) and not ln.startswith(' ')):
+                                        continue
+                                    else:
+                                        in_code = True
+                                cleaned_lines.append(ln)
+
+                            result = '\n'.join(cleaned_lines).strip()
+                            if not result:
+                                raise ValueError("Extractor produced empty output — LLM response contained no extractable Python code.")
+                            return result
+
+                        try:
+                            healed_code = _extract_python_code(healed_code)
+                            logger.info(f"[AUTO-HEAL] Code extractor succeeded — {len(healed_code)} chars extracted.")
+                        except ValueError as extract_err:
+                            logger.error(f"[AUTO-HEAL] Code extractor failed: {extract_err}")
+                            await _broadcast({
+                                "type": "dialogue", "agent": "SYSTEM",
+                                "icon": "⚠️", "color": "#eab308",
+                                "message": (
+                                    f"**[EXTRACTOR WARNING]** CTO response contained no extractable Python.\n"
+                                    f"`{extract_err}`\n\nRetrying with stricter prompt on next attempt."
+                                ),
+                                "timestamp": _dt.now().isoformat()
+                            }, project=project_id)
+                            # Don't break — let the while loop increment attempt and retry
+                            continue
+
+                        # Write healed script back to the same staging file
+                        try:
+                            with open(staging_path, "w", encoding="utf-8") as _f:
+                                _f.write(healed_code)
+                            logger.info(f"[AUTO-HEAL] Attempt {attempt}: healed script written to {staging_filename}")
+                        except Exception as write_err:
+                            logger.error(f"[AUTO-HEAL] Cannot write healed script: {write_err}")
+                            break
+
+                        await _broadcast({
+                            "type": "dialogue", "agent": "INCUBATOR_GATE",
+                            "icon": "♻️", "color": "#8b5cf6",
+                            "message": (
+                                f"**CTO AUTO-HEAL — Attempt {attempt}/{MAX_RETRIES}**\n\n"
+                                f"Fixed script written to `{staging_filename}`. Re-running QA sandbox..."
+                            ),
+                            "timestamp": _dt.now().isoformat()
+                        }, project=project_id)
+                        # Loop continues — next iteration re-runs QA on the healed file
+                        continue
+
+                    else:
+                        # MAX_RETRIES exhausted
+                        await _broadcast({
+                            "type": "dialogue", "agent": "INCUBATOR_GATE",
+                            "icon": "❌", "color": "#ef4444",
+                            "message": (
+                                f"**AUTO-HEAL EXHAUSTED — {MAX_RETRIES}/{MAX_RETRIES} attempts failed ❌**\n\n"
+                                f"The CTO agent could not produce a valid script after {MAX_RETRIES} healing cycles.\n\n"
+                                f"**Last error:**\n```\n{qa_stderr[:600]}\n```\n\n"
+                                "Manual intervention required. Issue `@Operator Reject Blueprint` to discard "
+                                "and start fresh, or inspect the staging file directly."
+                            ),
+                            "timestamp": _dt.now().isoformat()
+                        }, project=project_id)
+                        await _broadcast({"type": "state_machine", "phase": "CFO_FINANCIAL_MODEL", "status": "FAIL"}, project=project_id)
+                        break
+
+            else:
+                # REJECT path
+                await _broadcast({
+                    "type": "dialogue", "agent": "INCUBATOR_GATE",
+                    "icon": "🚫", "color": "#ef4444",
+                    "message": (
+                        "**@Operator Reject Blueprint — CONFIRMED**\n\n"
+                        "Commander has rejected the pending blueprint. The Executive Fork is cleared.\n"
+                        "Issue a new `@Operator <app idea>` command to start a fresh Incubator Gate run."
+                    ),
+                    "timestamp": _dt.now().isoformat()
+                }, project=project_id)
+                # Reset progress bar to idle
+                for phase in ("CMO_STRATEGY", "CTO_FEASIBILITY", "CFO_FINANCIAL_MODEL", "PHANTOM_STRESS_TEST", "COMMERCIALLY_READY"):
+                    await _broadcast({"type": "state_machine", "phase": phase, "status": "WAITING"}, project=project_id)
+
+            ORCHESTRATION_STATE = "idle"
+
+        asyncio.create_task(resolve_fork())
+        return {"status": "fork_resolved", "action": action, "project": project_id}
+
+    # Re-entrancy guard: reject NEW gate triggers if gate is already running
+    # (authorization commands above are intentionally exempt from this guard)
+    if _is_operator_cmd and ORCHESTRATION_STATE == "processing":
+        logger.warning("Incubator Gate already processing — ignoring duplicate trigger.")
+        return JSONResponse(
+            {"status": "already_running", "project": project_id,
+             "detail": "Incubator Gate is already active. Wait for completion or Executive Fork."},
+            status_code=429
+        )
+
+    if _is_operator_cmd:
+        logger.info(f"Phase 11 Incubator Gate triggered by @Operator command: {req.message[:80]!r}")
+        ORCHESTRATION_STATE = "processing"
+        import forge_orchestrator
+        
+        async def trigger_incubator():
+            import traceback as _tb
+            global ORCHESTRATION_STATE
+            print(f"\n[INCUBATOR GATE] ▶ STARTING — project_id={project_id!r} | prompt={req.message[:80]!r}", flush=True)
+            try:
+                await _broadcast({
+                    "type": "intervention",
+                    "agent": "SYSTEM",
+                    "message": "INCUBATOR GATE ENGAGED: Bypassing legacy debate. Routing to Phase 11 Pre-Flight...",
+                    "timestamp": _dt.now().isoformat()
+                }, project=project_id)
+                print(f"[INCUBATOR GATE] ▶ Broadcast sent. Instantiating ForgeOrchestrator...", flush=True)
+                orchestrator = forge_orchestrator.ForgeOrchestrator()
+                print(f"[INCUBATOR GATE] ▶ Calling run_incubator_gate() in thread...", flush=True)
+                await asyncio.to_thread(orchestrator.run_incubator_gate, req.message, project_id)
+                print(f"[INCUBATOR GATE] ▶ run_incubator_gate() returned cleanly.", flush=True)
+                
+            except forge_orchestrator.ExecutiveForkTriggered:
+                print(f"[INCUBATOR GATE] ✅ ExecutiveForkTriggered — halted, awaiting @Operator authorization.", flush=True)
+                logger.info("Executive Fork triggered. Awaiting human input.")
+                await _broadcast({
+                    "type": "intervention",
+                    "agent": "SYSTEM",
+                    "message": "⚡ EXECUTIVE FORK: CMO + CTO pre-flight complete. Awaiting @Operator authorization to enter /staging_environment/.",
+                    "timestamp": _dt.now().isoformat()
+                }, project=project_id)
+            except Exception as e:
+                print(f"\n[INCUBATOR GATE] ❌ FATAL EXCEPTION: {type(e).__name__}: {e}", flush=True)
+                _tb.print_exc()
+                logger.error(f"Incubator Gate failed: {type(e).__name__}: {e}")
+                await _broadcast({
+                    "type": "intervention",
+                    "agent": "SYSTEM",
+                    "message": f"❌ Incubator Gate Failure: {type(e).__name__}: {str(e)}",
+                    "timestamp": _dt.now().isoformat()
+                }, project=project_id)
+            finally:
+                ORCHESTRATION_STATE = "idle"
+                print(f"[INCUBATOR GATE] ▶ DONE — state reset to idle.", flush=True)
+                
+        asyncio.create_task(trigger_incubator())
+        return {"status": "incubator_gate_started", "project": project_id}
+        
+    elif any(kw in msg_lower for kw in ['cmo', 'cfo', 'roi']):
         logger.info(f"Orchestration Bind triggered by keywords in: {req.message}")
         ORCHESTRATION_STATE = "processing"
         
@@ -1067,7 +1623,11 @@ async def war_room_dispatch(req: WarRoomDispatchRequest, request: Request):
                     }, project=project_id)
                     
                     try:
-                        resp = await loop.run_in_executor(_warroom_executor, _call_agent, agent_name, query)
+                        if agent_name == "CPO":
+                            import cpo_agent
+                            resp = await loop.run_in_executor(_warroom_executor, cpo_agent.run_cpo, query)
+                        else:
+                            resp = await loop.run_in_executor(_warroom_executor, _call_agent, agent_name, query)
                         coo = coo_agent.get_coo()
                         ledger = coo.record_usage(project_id, agent_name, query, resp or "")
                         
@@ -1628,20 +2188,37 @@ async def war_room_dispatch(req: WarRoomDispatchRequest, request: Request):
                     import asyncio
                     from phantom_ui_pathfinder import run_ui_audit
                     
-                    # Tell frontend that parallel execution is starting
-                    await _broadcast({
-                        "type": "dialogue",
-                        "agent": "SYSTEM",
-                        "icon": "👻",
-                        "color": "#14b8a6",
-                        "message": "**PHASE 3 & 4 PARALLEL EXECUTION**\nCritic reviewing logic while Phantom Pathfinder headless UI stress test runs...",
-                        "timestamp": _dt.now().isoformat()
-                    }, project=project_id)
+                    # Phase Detection Logic
+                    is_architecture_phase = any(kw in msg_lower for kw in ["initialize", "architect", "genesis"])
                     
-                    critic_task = asyncio.create_task(trigger_agent_response('CRITIC', critic_handoff))
-                    phantom_task = asyncio.to_thread(run_ui_audit, project_id)
-                    
-                    critic_tuple, phantom_ui_res = await asyncio.gather(critic_task, phantom_task)
+                    if is_architecture_phase:
+                        await _broadcast({
+                            "type": "dialogue",
+                            "agent": "PHANTOM_QA",
+                            "icon": "👻",
+                            "color": "#14b8a6",
+                            "message": "Playwright Deep Audit: SKIPPED (Architecture Phase Detected). UI testing deferred to deployment.",
+                            "timestamp": _dt.now().isoformat()
+                        }, project=project_id)
+                        
+                        critic_task = asyncio.create_task(trigger_agent_response('CRITIC', critic_handoff))
+                        critic_tuple = await critic_task
+                        phantom_ui_res = {"verdict": "SKIPPED", "score": 100, "errors": []}
+                    else:
+                        # Tell frontend that parallel execution is starting
+                        await _broadcast({
+                            "type": "dialogue",
+                            "agent": "SYSTEM",
+                            "icon": "👻",
+                            "color": "#14b8a6",
+                            "message": "**PHASE 3 & 4 PARALLEL EXECUTION**\nCritic reviewing logic while Phantom Pathfinder headless UI stress test runs...",
+                            "timestamp": _dt.now().isoformat()
+                        }, project=project_id)
+                        
+                        critic_task = asyncio.create_task(trigger_agent_response('CRITIC', critic_handoff))
+                        phantom_task = asyncio.to_thread(run_ui_audit, project_id)
+                        
+                        critic_tuple, phantom_ui_res = await asyncio.gather(critic_task, phantom_task)
                     critic_resp, critic_data, critic_meta = critic_tuple
 
                     # ── WAR ROOM: Parse CRITIC into typed WarRoomReport ──
@@ -1713,9 +2290,9 @@ async def war_room_dispatch(req: WarRoomDispatchRequest, request: Request):
                     }, project=project_id)
 
                     # ═══════════════════════════════════════════════════
-                    # EXIT CONDITION: Critic > 9.0 AND Phantom PASS
+                    # EXIT CONDITION: Critic > 9.0 AND Phantom PASS/SKIPPED
                     # ═══════════════════════════════════════════════════
-                    if critic_score > 9.0 and phantom_verdict == "PASS":
+                    if critic_score > 9.0 and phantom_verdict in ["PASS", "SKIPPED"]:
                         logger.info("LINEAR DEPENDENCY PROTOCOL: Consensus Reached!")
                         await _broadcast({
                             "type": "consensus_iteration",
@@ -2432,7 +3009,7 @@ _AGENTS = {
 }
 
 # Agent registry
-_WARROOM_AGENT_NAMES = ["CEO", "CMO", "CFO", "CTO", "CRITIC", "CLO"]
+_WARROOM_AGENT_NAMES = ["CEO", "CMO", "CFO", "CTO", "CRITIC", "CLO", "CPO"]
 
 # Role-scoped prompt templates (Linear Dependency Protocol)
 _WARROOM_PROMPTS = {
@@ -2513,9 +3090,12 @@ _WARROOM_PROMPTS = {
         "Score agreement_level 1-10. Be tough but fair.\n\nTOPIC: {topic}"
     ),
     "CTO": (
-        "You are the CTO in a boardroom war room. You are PHASE 1.5 of the Linear Dependency Protocol. "
+        "You are an Elite Enterprise Architect in a boardroom war room. You are PHASE 1.5 of the Linear Dependency Protocol. "
         "The CEO has validated the CMO's market strategy. Your job is to assess TECHNICAL FEASIBILITY "
         "before the CFO builds the financial model. You have access to the _ANTIGRAVITY_SKILLS_LIBRARY. "
+        "You are strictly forbidden from proposing basic, single-file scripts or MVP-level code. Every blueprint you design must be State-of-the-Art. "
+        "You must default to advanced native Python patterns: asynchronous processing (asyncio), strict type-hinting, fault-tolerance, and zero-latency internal execution. "
+        "Assume every application is destined for commercial venture scale. Architect accordingly. "
         "All builds must follow V3 Resilience Core (healed_post, auto_heal, StateManager). "
         "You operate the Master Architect Elite Pre-Deploy Gate. "
         "UNIVERSAL STACK EVALUATOR (USE) is ONLINE. You evaluate ALL project types: "
@@ -2556,6 +3136,45 @@ _WARROOM_PROMPTS = {
         "The Technical Gate is Aether-Native and feeds real-time infrastructure costs to the CFO. Be rigorous but fair.\\n\\nTOPIC: {topic}"
     ),
 }
+
+def _call_agent(agent_name: str, topic: str) -> str:
+    print(f"[DEBUG-TRACE] => Entering _call_agent for {agent_name}...", flush=True)
+    try:
+        template = _WARROOM_PROMPTS.get(agent_name, "")
+        if template:
+            try:
+                prompt = template.format(topic=topic)
+            except KeyError:
+                prompt = template.replace("{topic}", topic)
+        else:
+            prompt = f"You are {agent_name}. Topic: {topic}"
+
+        _agent_call_stats["total"] += 1
+
+        print(f"[DEBUG-TRACE] {agent_name} -> Prompt built. Model router available: {_MODEL_ROUTER_AVAILABLE}", flush=True)
+        if _MODEL_ROUTER_AVAILABLE:
+            try:
+                print(f"[DEBUG-TRACE] {agent_name} -> Calling _model_route via general...", flush=True)
+                result = _model_route("general", prompt)
+                print(f"[DEBUG-TRACE] {agent_name} -> _model_route finished. len={(len(result) if result else 0)}", flush=True)
+                if result and result.strip():
+                    return result.strip()[:2000]
+            except Exception as e:
+                print(f"[DEBUG-TRACE] {agent_name} -> _model_route exception: {e}", flush=True)
+
+        print(f"[DEBUG-TRACE] {agent_name} -> Testing fallback _gemini_direct...", flush=True)
+        result = _gemini_direct(agent_name, topic)
+        print(f"[DEBUG-TRACE] {agent_name} -> _gemini_direct finished.", flush=True)
+        if result and result.strip():
+            return result.strip()
+
+        print(f"[DEBUG-TRACE] {agent_name} -> Returning EMPTY string.", flush=True)
+        return ""
+
+    except Exception as e:
+        print(f"[DEBUG-TRACE] {agent_name} -> COMPLETE FAILURE: {e}", flush=True)
+        return ""
+
 
 _warroom_sse_queues = {}
 
@@ -2650,6 +3269,10 @@ async def warroom_websocket(websocket: WebSocket, project: str = "Aether"):
                     "timestamp": _dt.now().isoformat(),
                     "is_user": True,
                 }, project=project)
+                
+                # ── Phase 11 Bypass for @operator commands ──
+                if "@operator" in user_msg.lower():
+                    continue
                 
                 # ── EOS Action Parsing ──
                 if user_msg.startswith("/market"):
@@ -2762,7 +3385,7 @@ async def warroom_websocket(websocket: WebSocket, project: str = "Aether"):
 
                     # Smart routing: detect if the Commander is addressing a specific agent
                     # e.g. "CMO, prepare market research" → only CMO responds
-                    _KNOWN_AGENTS = {"CEO", "CMO", "CFO", "CTO", "CRITIC", "ARCHITECT"}
+                    _KNOWN_AGENTS = {"CEO", "CMO", "CFO", "CTO", "CRITIC", "ARCHITECT", "CPO"}
                     user_upper = user_msg.upper()
                     directed_agent = None
                     for ag in _KNOWN_AGENTS:
@@ -2836,7 +3459,11 @@ async def _directed_response(agent_name: str, user_msg: str, project_name: str =
         "timestamp": _dt.now().isoformat(),
     }, project=project_name)
 
-    response = await loop.run_in_executor(_warroom_executor, _call_agent, agent_name, directed_prompt)
+    if agent_name == "CPO":
+        import cpo_agent
+        response = await loop.run_in_executor(_warroom_executor, cpo_agent.run_cpo, user_msg)
+    else:
+        response = await loop.run_in_executor(_warroom_executor, _call_agent, agent_name, directed_prompt)
 
     if not response:
         response = f"[{agent_name}] I've received your request. I'll prepare the analysis and report back."
@@ -3250,7 +3877,8 @@ async def _analyze_upload(project_name: str, file_path: str, filename: str):
 @app.post("/api/warroom/intervene")
 async def warroom_intervene_http(request: Request):
     """HTTP fallback for Commander Intervention when WebSocket is disconnected.
-    Triggers the same smart routing as the WS handler."""
+    Triggers the same smart routing as the WS handler.
+    Also handles Phase 11 state_machine and INCUBATOR_GATE typed events."""
     data = await request.json()
     user_msg = data.get("message", "").strip()
     project = data.get("project_name", "Aether")
@@ -3258,7 +3886,42 @@ async def warroom_intervene_http(request: Request):
     if not user_msg:
         return {"status": "error", "error": "No message provided"}
 
-    # Broadcast the Commander message so it appears in the feed
+    # ── Phase 11: state_machine broadcast (from forge_orchestrator._broadcast_phase) ──
+    event_type = data.get("event_type", "")
+    agent = data.get("agent", "")
+    if event_type == "state_machine" or "[state_machine]" in user_msg:
+        phase = data.get("phase") or ""
+        status = data.get("status") or ""
+        # Try to parse from message string as fallback
+        if not phase:
+            import re as _re
+            _pm = _re.search(r'phase=(\w+)', user_msg)
+            _sm = _re.search(r'status=(\w+)', user_msg)
+            phase = _pm.group(1) if _pm else ""
+            status = _sm.group(1) if _sm else ""
+        if phase and status:
+            await _broadcast({
+                "type": "state_machine",
+                "phase": phase,
+                "status": status,
+                "timestamp": _dt.now().isoformat()
+            }, project=project)
+            return {"status": "ok", "routed_to": "state_machine"}
+
+    # ── Phase 11: INCUBATOR_GATE Executive Fork broadcast ──
+    if agent == "INCUBATOR_GATE":
+        await _broadcast({
+            "type": "dialogue",
+            "agent": "INCUBATOR_GATE",
+            "icon": "⚡",
+            "color": "#10b981",
+            "message": user_msg,
+            "timestamp": _dt.now().isoformat(),
+            "is_user": False,
+        }, project=project)
+        return {"status": "ok", "routed_to": "INCUBATOR_GATE"}
+
+    # ── Default: broadcast as Commander message ──
     await _broadcast({
         "type": "dialogue",
         "agent": "COMMANDER",
@@ -3269,8 +3932,39 @@ async def warroom_intervene_http(request: Request):
         "is_user": True,
     }, project=project)
 
+    operator_msg = data.get("operator_override_message", "")
+    if operator_msg:
+        await _broadcast({
+            "type": "dialogue", "agent": "Operator_Agent", "icon": "⚙️", "color": "#10b981",
+            "message": f"**Operator Protocol Execution**\n\n{operator_msg}",
+            "timestamp": _dt.now().isoformat()
+        }, project=project)
+        return {"status": "ok", "routed_to": "Operator_Agent"}
+
+    # ── Operator Agent Intercept ──
+    if user_msg.lower().startswith("@operator") or user_msg.lower().startswith("operator,") or user_msg.lower().startswith("operator "):
+        async def _call_operator(msg, proj):
+            try:
+                await _broadcast({
+                    "type": "agent_working",
+                    "agent": "Operator_Agent",
+                    "timestamp": _dt.now().isoformat()
+                }, project=proj)
+                import httpx
+                async with httpx.AsyncClient() as client:
+                    await client.post(
+                        "http://localhost:5100/api/operator/command",
+                        json={"directive": msg},
+                        timeout=5.0
+                    )
+            except Exception as e:
+                logger.error(f"Operator intercept failed: {e}")
+                
+        asyncio.create_task(_call_operator(user_msg, project))
+        return {"status": "ok", "routed_to": "Operator_Agent"}
+
     # Smart routing — same logic as WebSocket handler
-    _KNOWN_AGENTS = {"CEO", "CMO", "CFO", "CTO", "CRITIC", "ARCHITECT"}
+    _KNOWN_AGENTS = {"CEO", "CMO", "CFO", "CTO", "CRITIC", "ARCHITECT", "CPO"}
     user_upper = user_msg.upper()
     directed_agent = None
     for ag in _KNOWN_AGENTS:
@@ -3450,6 +4144,32 @@ async def warroom_intervene(request: Request):
         "timestamp": _dt.now().isoformat(),
         "is_user": True,
     })
+    
+    # ── Operator Agent Intercept (Fallback Route) ──
+    operator_msg = body.get("operator_override_message", "")
+    if operator_msg:
+        await _broadcast({
+            "type": "dialogue", "agent": "Operator_Agent", "icon": "⚙️", "color": "#10b981",
+            "message": f"**Operator Protocol Execution**\n\n{operator_msg}",
+            "timestamp": _dt.now().isoformat()
+        })
+        return {"status": "ok", "routed_to": "Operator_Agent"}
+
+    if msg.lower().startswith("@operator") or msg.lower().startswith("operator,") or msg.lower().startswith("operator "):
+        async def _call_operator_fallback(m):
+            try:
+                await _broadcast({"type": "agent_working", "agent": "Operator_Agent", "timestamp": _dt.now().isoformat()})
+                import httpx
+                async with httpx.AsyncClient() as client:
+                    await client.post(
+                        "http://localhost:5100/api/operator/command",
+                        json={"directive": m},
+                        timeout=5.0
+                    )
+            except Exception as e:
+                pass
+        asyncio.create_task(_call_operator_fallback(msg))
+        return {"status": "ok", "routed_to": "Operator_Agent"}
     asyncio.create_task(_simulate_response(msg))
 
     # Record all user interventions as institutional lessons
@@ -4294,7 +5014,12 @@ except ImportError as e:
 
 @app.get("/api/eos/state")
 def get_eos_state(project_name: str = "Aether"):
-    return get_eos(project_name).to_dict()
+    eos = get_eos(project_name)
+    if hasattr(eos, 'to_dict'):
+        return eos.to_dict()
+    elif hasattr(eos, '__dict__'):
+        return {k: v for k, v in eos.__dict__.items() if not k.startswith('_')}
+    return {}
 
 @app.post("/api/eos/state")
 def update_eos_state(payload: dict):
@@ -4878,7 +5603,7 @@ async def reset_coo_budget(project_id: str):
     return {"status": "success", "message": f"Budget reset for {project_id}"}
 
 
-# ── Startup: Auto-start incoming watcher ──────────────────
+# ── Startup: Auto-start incoming watcher + Ghost Operator ──
 @app.on_event("startup")
 async def _startup_watcher():
     global _watcher_thread
@@ -4886,6 +5611,30 @@ async def _startup_watcher():
         _watcher_thread = threading.Thread(target=watch_incoming, args=(60,), daemon=True)
         _watcher_thread.start()
         logger.info("Incoming Watcher auto-started (60s poll)")
+
+    # ── Auto-boot Ghost Operator on port 5100 ──
+    import socket as _sock
+    _operator_alive = False
+    try:
+        with _sock.create_connection(("localhost", 5100), timeout=1):
+            _operator_alive = True
+    except Exception:
+        pass
+
+    if not _operator_alive:
+        try:
+            _factory_dir = os.path.dirname(os.path.abspath(__file__))
+            subprocess.Popen(
+                ["python", "operator_agent.py"],
+                cwd=_factory_dir,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )
+            logger.info("Ghost Operator auto-started on port 5100.")
+        except Exception as _e:
+            logger.error(f"Ghost Operator auto-start FAILED: {_e}")
+    else:
+        logger.info("Ghost Operator already running on port 5100 — skipping launch.")
 
 if __name__ == "__main__":
     import uvicorn

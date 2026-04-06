@@ -21,8 +21,36 @@ export default function CommandCenter({ projectName = "Aether" }) {
   const [isExecuting, setIsExecuting] = useState(false);
   const [currentPhase, setCurrentPhase] = useState(null);
   const [isReady, setIsReady] = useState(false);
+  const [operatorCmd, setOperatorCmd] = useState('');
+  const [isSendingCmd, setIsSendingCmd] = useState(false);
   
   const bottomRef = useRef(null);
+
+  const sendOperatorCmd = async () => {
+    if (!operatorCmd.trim()) return;
+    setIsSendingCmd(true);
+    try {
+      await fetch('/api/war-room/dispatch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: operatorCmd.trim(),
+          project_id: projectName || 'AntigravityWorkspace_Q3',
+          strategy_mode: 'operator_directive'
+        })
+      });
+      setLogs(prev => [...prev, {
+        time: new Date().toLocaleTimeString(),
+        agent: 'COMMANDER',
+        message: `[OPERATOR COMMAND] ${operatorCmd.trim()}`
+      }]);
+      setOperatorCmd('');
+    } catch(e) {
+      console.error('Operator dispatch failed', e);
+    } finally {
+      setIsSendingCmd(false);
+    }
+  };
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -197,6 +225,38 @@ export default function CommandCenter({ projectName = "Aether" }) {
                 )}
                 <div ref={bottomRef} />
             </div>
+        </div>
+
+        {/* ── Active Command Bar (Phase 11) ── */}
+        <div style={{
+          display: 'flex', gap: '8px', padding: '16px',
+          background: '#0a0f18', borderTop: '1px solid rgba(100,116,139,0.2)',
+          borderRadius: '0 0 8px 8px'
+        }}>
+          <span style={{ fontSize: '20px', display: 'flex', alignItems: 'center' }}>⚡</span>
+          <input 
+            type="text"
+            placeholder="@Operator command / directives..."
+            value={operatorCmd}
+            onChange={e => setOperatorCmd(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && sendOperatorCmd()}
+            style={{
+                flex: 1, background: '#1e293b', border: '1px solid #475569',
+                color: '#f8fafc', padding: '12px 16px', borderRadius: '8px',
+                fontSize: '14px', fontFamily: '"Fira Code", monospace'
+            }}
+          />
+          <button 
+            onClick={sendOperatorCmd}
+            disabled={!operatorCmd.trim() || isSendingCmd}
+            style={{
+              background: operatorCmd.trim() ? 'linear-gradient(135deg, #10b981, #059669)' : '#334155',
+              color: 'white', border: 'none', padding: '0 24px', borderRadius: '8px',
+              fontWeight: 'bold', cursor: operatorCmd.trim() ? 'pointer' : 'not-allowed'
+            }}
+          >
+            {isSendingCmd ? '...' : 'DISPATCH'}
+          </button>
         </div>
 
         {/* Commercial Action Footer */}
