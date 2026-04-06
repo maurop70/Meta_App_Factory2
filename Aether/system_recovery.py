@@ -577,7 +577,7 @@ def gemini_design_slide(slide_type, audience="investor"):
         try:
             import requests
             url = (f"https://generativelanguage.googleapis.com/v1beta/"
-                   f"models/gemini-2.5-flash:generateContent?key={key}")
+                   f"models/gemini-2.5-flash:generateContent")
             resp = requests.post(url, json={
                 "contents": [{"role": "user", "parts": [{"text":
                     f"Design a '{slide_type}' slide for '{audience}' audience. "

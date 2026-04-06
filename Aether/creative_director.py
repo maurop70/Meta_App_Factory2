@@ -206,7 +206,7 @@ class DesignReasoning:
             url = (
                 f"https://generativelanguage.googleapis.com/v1beta/"
                 f"models/gemini-2.5-flash:generateContent"
-                f"?key={self._gemini_key}"
+                f""
             )
 
             prompt = (

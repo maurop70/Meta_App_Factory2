@@ -218,7 +218,7 @@ def generate_news_report(market_snapshot=None):
         for model_name, api_version in MODELS:
             url = (
                 f"https://generativelanguage.googleapis.com/{api_version}/models/"
-                f"{model_name}:generateContent?key={api_key}"
+                f"{model_name}:generateContent"
             )
             logger.info(f"Trying model {model_name} ({api_version})...")
             resp = _req.post(url, json=payload, timeout=60)

@@ -101,18 +101,20 @@ const styles = {
 
 export default function ModeSelectionScreen({ onSelectMode }) {
   const [hovered, setHovered] = useState(null);
+  const [userProfile, setUserProfile] = useState('executive');
 
   const resetEosAndSelect = (mode) => {
-    fetch("http://localhost:5000/api/eos/reset", { method: "POST" })
+    const profile = mode === 'technical' ? userProfile : 'executive';
+    fetch("/api/eos/reset", { method: "POST" })
       .finally(() => {
         if (mode === 'venture') {
-          fetch("http://localhost:5000/api/eos/state", {
+          fetch("/api/eos/state", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ mode: "venture" })
-          }).then(() => onSelectMode(mode));
+          }).finally(() => onSelectMode(mode, profile));
         } else {
-          onSelectMode(mode);
+          onSelectMode(mode, profile);
         }
       });
   };
@@ -139,11 +141,19 @@ export default function ModeSelectionScreen({ onSelectMode }) {
           </div>
           <h3 style={styles.cardTitle}>Technical Architect</h3>
           <p style={styles.cardDesc}>App Only. Standard scaffolding, UI generation, and deployment.</p>
+          <div style={{ marginTop: '8px', fontSize: '12px', color: '#cbd5e1' }} onClick={e => e.stopPropagation()}>
+             <strong>User Profile:</strong><br/>
+             <label style={{ marginRight: '10px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <input type="radio" checked={userProfile === 'executive'} onChange={() => setUserProfile('executive')} /> Executive (Non-Coder)
+             </label>
+             <label style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <input type="radio" checked={userProfile === 'copilot'} onChange={() => setUserProfile('copilot')} /> Co-Pilot (Coder)
+             </label>
+          </div>
           <ul style={styles.featureList}>
             <li>✓ Codebase generation</li>
             <li>✓ UI/UX Scaffolding</li>
             <li>✓ GitHub deployment</li>
-            <li>✓ N8n configuration</li>
           </ul>
         </div>
 

@@ -224,10 +224,8 @@ def _call_gemini(prompt: str, max_tokens: int = 65536) -> Optional[str]:
         logger.error("GEMINI_API_KEY not found in vault, env, or .env files")
         return None
 
-    url = (
-        f"https://generativelanguage.googleapis.com/v1beta/models/"
-        f"gemini-2.5-flash:generateContent?key={api_key}"
-    )
+    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+    _headers = {"Content-Type": "application/json", "x-goog-api-key": api_key}
     payload = {
         "contents": [{"role": "user", "parts": [{"text": prompt}]}],
         "generationConfig": {
@@ -239,7 +237,7 @@ def _call_gemini(prompt: str, max_tokens: int = 65536) -> Optional[str]:
     last_error = None
     for attempt in range(3):
         try:
-            resp = _requests.post(url, json=payload, timeout=120)
+            resp = _requests.post(url, json=payload, headers=_headers, timeout=120)
             if resp.status_code == 200:
                 data = resp.json()
                 parts = data.get("candidates", [{}])[0].get("content", {}).get("parts", [])
