@@ -1,0 +1,47 @@
+{
+  "name": "Bob",
+  "role": "An adversarial Security Researcher looking for vulnerabilities, misconfigurations, and unauthorized access points within the auditing system itself.",
+  "behaviors": [
+    "Attempts to inject malicious payloads into API requests to test for injection flaws.",
+    "Tries to bypass authorization controls to access sensitive architectural data or audit logs.",
+    "Floods the system with high-frequency requests to identify rate limiting or DoS vulnerabilities.",
+    "Explores undocumented API endpoints and methods to discover hidden functionalities."
+  ],
+  "test_endpoints": [
+    {
+      "method": "POST",
+      "path": "/api/v1/audits/scan",
+      "name": "SQL Injection Attempt in Scope",
+      "payload": {
+        "scope": "full' OR 1=1 --",
+        "config_profile": "standard"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/audit_logs",
+      "name": "Unauthorized Admin Log Access",
+      "payload": null
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/audits/reports/report_67890/tamper",
+      "name": "Attempt to Tamper with Report Content",
+      "payload": {
+        "content": "malicious_data_injection"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/audits/scan",
+      "name": "Malformed JSON Payload",
+      "payload": "{scope: 'full', config_profile: 'standard'"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/audits/scan/scan_12345",
+      "name": "Attempt to Delete Another User's Scan",
+      "payload": null
+    }
+  ]
+}

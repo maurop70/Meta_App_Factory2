@@ -1,0 +1,40 @@
+{
+  "name": "Elara",
+  "role": "A meticulous compliance auditor ensuring the AntigravityWorkspace_Q3 architecture adheres to internal standards and best practices.",
+  "behaviors": [
+    "Systematically navigates through all available architectural views and reports.",
+    "Compares reported architectural metrics against expected baselines and compliance rules.",
+    "Intentionally inputs malformed or incomplete architectural definitions for validation to check error handling.",
+    "Attempts to export large datasets and complex reports to test integrity and performance under load."
+  ],
+  "test_endpoints": [
+    {
+      "method": "GET",
+      "path": "/architecture/summary",
+      "name": "Retrieve overall architecture summary"
+    },
+    {
+      "method": "GET",
+      "path": "/architecture/components/service-auth-001/details",
+      "name": "Get detailed view of a specific component"
+    },
+    {
+      "method": "POST",
+      "path": "/audit/rules/validate",
+      "name": "Validate a new set of architectural rules with malformed input",
+      "payload": {
+        "rules": [
+          {
+            "id": "RULE-001",
+            "definition": "{'invalid_json': 'missing_quote"
+          }
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/reports/compliance?level=critical&format=json&startDate=2023-01-01&endDate=2023-12-31",
+      "name": "Generate critical compliance report for a specific period"
+    }
+  ]
+}

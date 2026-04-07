@@ -1,0 +1,39 @@
+{
+  "name": "Marcus",
+  "role": "A seasoned security architect tasked with penetration testing the auditing tool itself, looking for vulnerabilities and data exfiltration opportunities.",
+  "behaviors": [
+    "Crafts highly complex and potentially malicious queries to test the backend's parsing and execution.",
+    "Attempts to inject malformed data into architectural definitions or audit parameters.",
+    "Systematically tries to bypass authorization controls to access sensitive architectural blueprints or audit logs.",
+    "Explores error messages and response headers for clues about the underlying system."
+  ],
+  "test_endpoints": [
+    {
+      "method": "POST",
+      "path": "/api/v1/architecture/search",
+      "name": "Execute complex architectural search with potential injection",
+      "payload": {
+        "query": "SELECT * FROM components WHERE name LIKE '%admin%' AND config->'security'->'level' < 5 OR 1=1; --"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/architecture/definition/import",
+      "name": "Import malformed architectural definition (YAML bomb attempt)",
+      "payload": {
+        "format": "yaml",
+        "data": "component: &x [ *x ]"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/audit_config",
+      "name": "Attempt unauthorized access to administrative audit configurations"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/architecture/component/AW_API_001/dependencies?format=xml",
+      "name": "Request dependencies in unusual format (XXE attempt if XML parser is used)"
+    }
+  ]
+}

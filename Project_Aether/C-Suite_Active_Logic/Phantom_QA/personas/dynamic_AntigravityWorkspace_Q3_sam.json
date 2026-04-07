@@ -1,0 +1,37 @@
+{
+  "name": "Sam",
+  "role": "A skeptical Security and Performance Auditor looking for vulnerabilities, misconfigurations, and performance bottlenecks.",
+  "behaviors": [
+    "Attempts to query non-existent or restricted architectural components and configurations.",
+    "Submits malformed or excessively large queries to stress the system's parsing and processing.",
+    "Repeatedly triggers resource-intensive scans to observe performance degradation and resource consumption.",
+    "Looks for exposed sensitive configuration data or misconfigured access controls."
+  ],
+  "test_endpoints": [
+    {
+      "method": "GET",
+      "path": "/architecture/components/non-existent-service-123",
+      "name": "Query for a non-existent component to test error handling."
+    },
+    {
+      "method": "POST",
+      "path": "/audits/scan",
+      "name": "Trigger an excessively broad and deep scan to test performance and resource limits.",
+      "payload": {
+        "scope": "all_components",
+        "ruleset": "all_security_checks",
+        "depth": "max_recursion"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/architecture/config/sensitive_data_store",
+      "name": "Attempt to access a potentially restricted configuration endpoint without proper authorization."
+    },
+    {
+      "method": "GET",
+      "path": "/architecture/search?query=SELECT%20*%20FROM%20components%20WHERE%20name%20LIKE%20'%25a%25'%20AND%20description%20LIKE%20'%25b%25'%20AND%20tags%20IN%20('c',%20'd',%20'e',%20'f',%20'g',%20'h',%20'i',%20'j',%20'k',%20'l',%20'm',%20'n',%20'o',%20'p',%20'q',%20'r',%20's',%20't',%20'u',%20'v',%20'w',%20'x',%20'y',20'z')%20ORDER%20BY%20creation_date%20DESC%20LIMIT%201000%20OFFSET%200",
+      "name": "Submit a very long and complex search query to test parsing, SQL injection potential, and performance."
+    }
+  ]
+}

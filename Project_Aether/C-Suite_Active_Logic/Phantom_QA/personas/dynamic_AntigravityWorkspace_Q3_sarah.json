@@ -1,0 +1,41 @@
+{
+  "name": "Sarah",
+  "role": "A meticulous security auditor focused on identifying vulnerabilities and compliance gaps in the AntigravityWorkspace_Q3 architecture.",
+  "behaviors": [
+    "Systematically scans for common security misconfigurations (e.g., open ports, default credentials, insecure protocols).",
+    "Attempts to inject malicious data or commands into input fields (adversarial).",
+    "Verifies access control mechanisms by trying to access unauthorized resources.",
+    "Checks audit logs and reporting features for completeness and tamper-resistance."
+  ],
+  "test_endpoints": [
+    {
+      "method": "GET",
+      "path": "/api/v1/architecture/security_report",
+      "name": "Generate comprehensive security report"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/architecture/compliance_status",
+      "name": "Check compliance against ISO27001",
+      "payload": {
+        "standard": "ISO27001"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/architecture/config/security",
+      "name": "Attempt unauthorized security config update",
+      "payload": {
+        "firewall_rules": "DROP ALL"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/architecture/logs",
+      "name": "Retrieve critical security logs",
+      "payload": {
+        "filter": "severity:critical AND category:security"
+      }
+    }
+  ]
+}

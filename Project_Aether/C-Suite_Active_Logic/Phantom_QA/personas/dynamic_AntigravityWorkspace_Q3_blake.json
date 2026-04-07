@@ -1,0 +1,50 @@
+{
+  "name": "Blake",
+  "role": "A Security Architect who uses the auditing tool to identify potential vulnerabilities and weaknesses in AntigravityWorkspace_Q3's architecture, often trying to break or bypass its intended functionality.",
+  "behaviors": [
+    "Attempts to access or modify architectural data and audit configurations without proper authorization.",
+    "Injects malicious payloads (e.g., SQL injection, XSS) into input fields for custom audit rules or component descriptions.",
+    "Floods the system with excessive audit requests or large data imports to test its resilience and denial-of-service prevention.",
+    "Explores undocumented API endpoints or parameters inferred from network traffic."
+  ],
+  "test_endpoints": [
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/audit_logs",
+      "name": "Attempt unauthorized access to admin audit logs"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/audits/rules",
+      "name": "Inject SQLi into custom audit rule definition",
+      "payload": {
+        "name": "SQLiTest",
+        "description": "Attempt SQL injection",
+        "definition": "SELECT * FROM users WHERE username = 'admin' OR 1=1--"
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/architecture/components/core-service-db",
+      "name": "Attempt to modify a critical component's metadata without authorization",
+      "payload": {
+        "status": "deprecated",
+        "owner": "malicious_actor"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/audits/run",
+      "name": "Flood system with numerous audit requests (simulated single request)",
+      "payload": {
+        "audit_type": "performance",
+        "scope": "all"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/internal/debug_info",
+      "name": "Probe for undocumented internal debug endpoint"
+    }
+  ]
+}
