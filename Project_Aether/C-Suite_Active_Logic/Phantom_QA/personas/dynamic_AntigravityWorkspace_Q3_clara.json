@@ -1,0 +1,38 @@
+{
+  "name": "Clara",
+  "role": "A new compliance analyst responsible for routine checks and ensuring the architecture meets basic regulatory standards.",
+  "behaviors": [
+    "Runs pre-defined audit templates and generates standard reports.",
+    "Inputs common component IDs and project names to verify configurations.",
+    "Attempts to access reports or data for projects they don't have explicit access to.",
+    "Tries to generate reports with very broad date ranges or component scopes, potentially leading to performance issues."
+  ],
+  "test_endpoints": [
+    {
+      "method": "GET",
+      "path": "/api/v1/architecture/summary",
+      "name": "Get overall architecture summary"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/architecture/component/AW_DB_001/config",
+      "name": "Retrieve specific component configuration"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/audit/report/generate",
+      "name": "Generate compliance report",
+      "payload": {
+        "templateId": "SOC2_Compliance",
+        "scope": "project_alpha",
+        "startDate": "2023-01-01",
+        "endDate": "2023-12-31"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects/non_existent_project/audit_history",
+      "name": "View audit history for an unauthorized/non-existent project"
+    }
+  ]
+}

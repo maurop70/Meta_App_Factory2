@@ -1,0 +1,77 @@
+{
+  "name": "Ben",
+  "role": "A senior architect evaluating the system's performance, scalability, and adherence to design principles.",
+  "behaviors": [
+    "Queries large datasets of architectural metrics and dependencies to identify potential performance bottlenecks or design flaws.",
+    "Submits complex, deeply nested queries for architectural relationships to stress the API's parsing and processing capabilities. (Edge-case)",
+    "Attempts to define circular dependencies or logically impossible architectural relationships to test validation rules. (Adversarial)",
+    "Compares current architecture against historical snapshots to detect regressions, unauthorized changes, or drift from design standards."
+  ],
+  "test_endpoints": [
+    {
+      "method": "GET",
+      "path": "/api/v1/architecture/dependencies?component_id=core-data-layer&depth=5",
+      "name": "Get deep architectural dependencies for a critical component"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/architecture/metrics?type=latency&period=last_24h",
+      "name": "Retrieve performance metrics for all components"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/architecture/design_proposal",
+      "name": "Submit valid architectural design proposal",
+      "payload": {
+        "proposal_id": "new-messaging-bus",
+        "components": [
+          {
+            "name": "Kafka",
+            "type": "message_queue"
+          }
+        ],
+        "relationships": [
+          {
+            "source": "service-A",
+            "target": "Kafka"
+          }
+        ],
+        "status": "pending"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/architecture/design_proposal",
+      "name": "Submit design proposal with circular dependency (adversarial)",
+      "payload": {
+        "proposal_id": "circular-test",
+        "components": [
+          {
+            "name": "A",
+            "type": "service"
+          },
+          {
+            "name": "B",
+            "type": "service"
+          }
+        ],
+        "relationships": [
+          {
+            "source": "A",
+            "target": "B"
+          },
+          {
+            "source": "B",
+            "target": "A"
+          }
+        ],
+        "status": "pending"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/architecture/snapshot?date=2023-01-15",
+      "name": "Retrieve historical architecture snapshot for a specific date"
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "name": "Anya",
+  "role": "A meticulous security analyst focused on identifying architectural vulnerabilities and compliance breaches.",
+  "behaviors": [
+    "Systematically checks every configuration against security baselines, looking for misconfigurations.",
+    "Attempts to inject malicious or malformed data into configuration updates or queries to test input validation and error handling. (Adversarial)",
+    "Focuses on data access controls, ensuring sensitive architectural details are only accessible to authorized roles.",
+    "Queries for non-existent or deleted architectural components to test error handling and data integrity. (Edge-case)"
+  ],
+  "test_endpoints": [
+    {
+      "method": "GET",
+      "path": "/api/v1/architecture/components",
+      "name": "Retrieve all architectural components"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/architecture/component/auth-service/security_config",
+      "name": "Get security configuration for a specific component"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/architecture/security_policy",
+      "name": "Apply new valid security policy",
+      "payload": {
+        "policy_name": "StrictTLSv1.3",
+        "rules": [
+          {
+            "component_id": "auth-service",
+            "rule": "TLS_ONLY_1_3"
+          }
+        ],
+        "applied_by": "Anya"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/architecture/security_policy",
+      "name": "Attempt to apply malformed security policy (adversarial)",
+      "payload": {
+        "policy_name": "BrokenPolicy",
+        "rules": "not_an_array"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/audit/logs?level=critical&component=all",
+      "name": "Access critical audit logs"
+    }
+  ]
+}

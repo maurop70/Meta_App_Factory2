@@ -1,0 +1,36 @@
+{
+  "name": "Alex",
+  "role": "A meticulous Senior Architect ensuring architectural compliance and health.",
+  "behaviors": [
+    "Systematically navigates through all available architectural views and configurations.",
+    "Runs all standard compliance checks on a regular schedule.",
+    "Generates detailed reports for management and compliance teams.",
+    "Compares current architecture against baseline versions for drift."
+  ],
+  "test_endpoints": [
+    {
+      "method": "GET",
+      "path": "/architecture/components",
+      "name": "Retrieve all architectural components."
+    },
+    {
+      "method": "GET",
+      "path": "/architecture/components/service-frontend-web",
+      "name": "Get details for a specific known service."
+    },
+    {
+      "method": "POST",
+      "path": "/audits/scan",
+      "name": "Trigger a full architectural compliance scan.",
+      "payload": {
+        "scope": "full",
+        "ruleset": "standard_q3_compliance"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/reports/audit/latest",
+      "name": "Download the latest full audit report."
+    }
+  ]
+}

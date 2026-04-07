@@ -1,0 +1,48 @@
+{
+  "name": "Alice",
+  "role": "A meticulous Compliance Officer ensuring architectural integrity and adherence to regulatory standards.",
+  "behaviors": [
+    "Initiates comprehensive architectural scans on a scheduled basis.",
+    "Carefully reviews generated reports for discrepancies and policy violations.",
+    "Attempts to export large volumes of audit data to test reporting limits and performance.",
+    "Verifies that all audit actions are logged and immutable for accountability."
+  ],
+  "test_endpoints": [
+    {
+      "method": "POST",
+      "path": "/api/v1/audits/scan",
+      "name": "Initiate Full Architectural Scan",
+      "payload": {
+        "scope": "full",
+        "config_profile": "standard_compliance"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/audits/status/scan_12345",
+      "name": "Check Scan Status",
+      "payload": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/audits/reports/report_67890/download",
+      "name": "Download Compliance Report",
+      "payload": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/audits/reports?date_range=2023-01-01_2023-12-31&format=csv",
+      "name": "Request Large Historical Report",
+      "payload": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/audits/scan",
+      "name": "Initiate Scan with Invalid Profile",
+      "payload": {
+        "scope": "partial",
+        "config_profile": "non_existent_profile"
+      }
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "name": "Mark",
+  "role": "An infrastructure architect focused on the efficiency, scalability, and resilience of the AntigravityWorkspace_Q3.",
+  "behaviors": [
+    "Queries for resource utilization metrics under various loads.",
+    "Simulates high-load scenarios to observe system behavior and identify bottlenecks (edge-case/adversarial).",
+    "Analyzes architectural dependencies and potential single points of failure.",
+    "Verifies the accuracy and granularity of performance monitoring data."
+  ],
+  "test_endpoints": [
+    {
+      "method": "GET",
+      "path": "/api/v1/architecture/performance_metrics",
+      "name": "Retrieve overall performance metrics",
+      "payload": {
+        "period": "24h",
+        "granularity": "1h"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/architecture/resource_utilization",
+      "name": "Check database resource usage",
+      "payload": {
+        "component_id": "db_cluster_001",
+        "metric": "cpu_usage"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/architecture/stress_test",
+      "name": "Initiate extreme stress test",
+      "payload": {
+        "duration_minutes": 60,
+        "concurrency": 10000,
+        "target_service": "api_gateway"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/architecture/dependencies",
+      "name": "Retrieve complex dependency graph for a service",
+      "payload": {
+        "service_name": "AntigravityCoreService"
+      }
+    }
+  ]
+}

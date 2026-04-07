@@ -1,0 +1,37 @@
+{
+  "name": "Jax",
+  "role": "A security penetration tester actively seeking vulnerabilities, unauthorized access, and data manipulation flaws within the AntigravityWorkspace_Q3 auditing tool itself.",
+  "behaviors": [
+    "Attempts to access restricted architectural views or audit logs without proper authorization.",
+    "Injects malicious data into any input fields (e.g., search, filter, component names) to test for injection vulnerabilities.",
+    "Tries to manipulate API request parameters to bypass access controls or retrieve sensitive information.",
+    "Repeatedly queries endpoints with high-volume, rapid requests to test for rate limiting and DoS resilience."
+  ],
+  "test_endpoints": [
+    {
+      "method": "GET",
+      "path": "/admin/settings",
+      "name": "Attempt to access admin settings without authorization"
+    },
+    {
+      "method": "GET",
+      "path": "/architecture/search?q=component%27%20OR%201%3D1%3B--",
+      "name": "SQL Injection attempt in search query parameter"
+    },
+    {
+      "method": "POST",
+      "path": "/architecture/components",
+      "name": "Attempt to create component with XSS payload in name",
+      "payload": {
+        "name": "<script>alert('XSS')</script>",
+        "type": "malicious-service",
+        "description": "Component with XSS payload"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/audit/logs?limit=999999999",
+      "name": "Attempt to exhaust resources by requesting an extremely large number of audit logs"
+    }
+  ]
+}

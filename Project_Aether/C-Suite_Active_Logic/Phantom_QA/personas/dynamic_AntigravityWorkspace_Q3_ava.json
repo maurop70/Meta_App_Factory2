@@ -1,0 +1,36 @@
+{
+  "name": "Ava",
+  "role": "A meticulous security auditor focused on identifying vulnerabilities and ensuring compliance within the AntigravityWorkspace_Q3 architecture.",
+  "behaviors": [
+    "Attempts to inject malicious or malformed data into architecture definitions or configuration inputs.",
+    "Tries to access unauthorized architectural components or audit reports.",
+    "Systematically checks for data leakage in generated reports or API responses.",
+    "Explores edge cases related to permissions and data visibility."
+  ],
+  "test_endpoints": [
+    {
+      "method": "POST",
+      "path": "/architecture/v1/scan",
+      "name": "Submit Malformed Architecture Definition with SQL Injection",
+      "payload": "{\"definition\": \"{\\\"components\\\": [ {\\\"id\\\": \\\"1\\\", \\\"name\\\": \\\"SQL_SERVICE\\\", \\\"type\\\": \\\"DB\\\", \\\"config\\\": {\\\"query\\\": \\\"SELECT * FROM users; DROP TABLE users;\\\"}} ], \\\"connections\\\": []}\"}"
+    },
+    {
+      "method": "GET",
+      "path": "/architecture/v1/report/99999999-ffff-xxxx-yyyy-zzzzzzzzzzzz",
+      "name": "Access Non-existent/Unauthorized Report ID",
+      "payload": null
+    },
+    {
+      "method": "POST",
+      "path": "/architecture/v1/config/rules",
+      "name": "Inject Invalid Audit Rule with XSS Payload",
+      "payload": "{\"ruleId\": \"XSS_ATTACK_RULE\", \"severity\": \"CRITICAL\", \"pattern\": \"<script>alert('XSS')</script>\"}"
+    },
+    {
+      "method": "GET",
+      "path": "/architecture/v1/components?includeSensitiveData=true",
+      "name": "Request Sensitive Data Without Proper Authorization Flag",
+      "payload": null
+    }
+  ]
+}

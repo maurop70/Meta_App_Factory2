@@ -1,0 +1,60 @@
+# ═══════════════════════════════════════════════════════
+#  Meta App Factory — Security Shield (.gitignore)
+# ═══════════════════════════════════════════════════════
+
+# ── Secrets & Credentials ─────────────────────────────
+.env
+*.env.local
+*.env.bak
+!env.template
+.vault_pw
+vault.enc
+vault.enc.salt
+*.key
+*.pem
+google_creds.json
+client_secret*.json
+token*.json
+token*.pickle
+utils/auth/
+
+# ── Node / Frontend ──────────────────────────────────
+node_modules/
+dist/
+.vite/
+
+# ── Python ───────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.eggs/
+venv/
+.venv/
+
+# ── Logs ─────────────────────────────────────────────
+*.log
+alpha.log
+
+# ── Machine-Specific Runtime Data ────────────────────
+Alpha_Data/connection_info.json
+Alpha_Data/ledger_state.json
+Alpha_Data/ledger_cron_meta.json
+Alpha_Data/n8n_execution_log.json
+Alpha_Data/.config_snapshots/
+Alpha_Data/LEDGER.md
+
+# ── OS Artifacts ─────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── IDE ──────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── Gemini State (session cache, not secrets) ────────
+.Gemini_state/
+
