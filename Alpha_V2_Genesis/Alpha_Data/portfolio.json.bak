@@ -53,7 +53,7 @@
         },
         {
             "id": "exec_1774037257",
-            "status": "OPEN",
+            "status": "CLOSED",
             "strategy": "42 DTE IRON CONDOR",
             "open_date": "2026-03-20",
             "expiration_date": "2026-05-01",
@@ -62,6 +62,30 @@
             "long_put_strike": 5975,
             "short_call_strike": 6975,
             "long_call_strike": 6950
+        },
+        {
+            "id": "exec_1774625614",
+            "status": "OPEN",
+            "strategy": "35 DTE Iron Condor",
+            "open_date": "2026-03-27",
+            "expiration_date": "2026-05-01",
+            "credit_received": 10.2,
+            "long_put_strike": 5975,
+            "short_put_strike": 6000,
+            "short_call_strike": 6800,
+            "long_call_strike": 6825
+        },
+        {
+            "id": "exec_1774626782",
+            "status": "OPEN",
+            "strategy": "48 DTE Iron Condor",
+            "open_date": "2026-03-27",
+            "expiration_date": "2026-05-15",
+            "credit_received": 4.95,
+            "long_put_strike": 5875,
+            "short_put_strike": 5890,
+            "short_call_strike": 6915,
+            "long_call_strike": 6930
         }
     ]
 }
