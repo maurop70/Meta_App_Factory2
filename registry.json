@@ -1,4 +1,4 @@
-﻿{
+{
     "services":  {
                      "CLAUDE_CODE_SERVICE":  {
                                                  "url":  "",
@@ -446,7 +446,7 @@
                  "schema_sage":  {
                                      "status":  "active",
                                      "type":  "Schema Intelligence Agent",
-                                     "port":  null,
+                                     "port":  5010,
                                      "blueprint":  "autonomous_forge",
                                      "description":  "Schema Sage — AI-powered schema analysis and data mapping agent. Renamed from syntax_error_test.",
                                      "path":  "Meta_App_Factory/schema_sage.py",

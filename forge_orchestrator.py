@@ -2,6 +2,7 @@ import os
 import time
 import requests
 import logging
+from datetime import datetime
 from typing import Optional, List, Dict, Any
 
 from forge_rollback_manager import ForgeRollbackManager
@@ -14,6 +15,29 @@ logging.basicConfig(level=logging.INFO)
 FACTORY_DIR = os.path.dirname(os.path.abspath(__file__))
 # Note: Ghost Operator is assumed to be running on port 5100
 OPERATOR_URL = "http://localhost:5100"
+# QA telemetry ingest — Phantom QA Elite SSE bridge
+QA_INGEST_URL = "http://localhost:5030/api/qa/ingest"
+
+
+def _push_forge_event(agent: str, message: str, status: str,
+                      filename: str = None, attempt: int = None):
+    """Fire-and-forget QA telemetry push. Never blocks the forge loop."""
+    payload = {
+        "agent":     agent,
+        "message":   message,
+        "status":    status,
+        "timestamp": datetime.now().isoformat(),
+    }
+    if filename is not None:
+        payload["filename"] = filename
+    if attempt is not None:
+        payload["attempt"] = attempt
+    try:
+        requests.post(QA_INGEST_URL, json=payload, timeout=2)
+    except Exception:
+        pass  # telemetry never blocks the forge
+
+
 
 class ExecutiveForkTriggered(Exception):
     """Raised when an ambiguous architectural choice halts the autonomous loop."""
@@ -92,17 +116,111 @@ class ForgeOrchestrator:
             project=project
         )
 
-    def execute_staging_cycle(self, staging_filename: str) -> Dict[str, Any]:
+    def execute_staging_cycle(self, staging_filename: str,
+                               max_heal_attempts: int = 3) -> Dict[str, Any]:
         """
         Invokes QA Architect on a staging file after it has been safely written.
-        Returns the execution result dict.
+        On FAIL, triggers the CTO Auto-Heal rewrite loop (up to max_heal_attempts).
+        Every attempt + verdict is broadcast to the Ghost Stream SSE feed.
+        Returns the final execution result dict.
         """
         logger.info(f"[ForgeOrchestrator] Beginning staging cycle for {staging_filename}")
-        
-        # In a real environment, we ensure the file is closed.
-        # Direct programmatic execution to QA Architect:
-        result = self.qa.execute_staging_script(staging_filename)
+
+        _push_forge_event(
+            "FORGE_ORCHESTRATOR",
+            f"Staging cycle initiated: {staging_filename}",
+            "RUNNING",
+            filename=staging_filename,
+        )
+
+        staging_path = os.path.join(FACTORY_DIR, "staging_environment", staging_filename)
+
+        for attempt in range(1, max_heal_attempts + 1):
+            result = self.qa.execute_staging_script(staging_filename, attempt=attempt)
+
+            if result["status"] == "pass":
+                _push_forge_event(
+                    "FORGE_ORCHESTRATOR",
+                    f"✅ Staging cycle COMPLETE — {staging_filename} passed on attempt {attempt}.",
+                    "HEAL_PASS" if attempt > 1 else "PASS",
+                    filename=staging_filename,
+                    attempt=attempt,
+                )
+                return result
+
+            # Non-pass statuses that the CTO cannot fix (security / missing file)
+            if result["status"] in ("security_block", "error") and "File not found" in result.get("error", ""):
+                _push_forge_event(
+                    "FORGE_ORCHESTRATOR",
+                    f"🛑 Staging cycle BLOCKED — {result['status']}. Auto-Heal aborted.",
+                    "FAIL",
+                    filename=staging_filename,
+                )
+                return result
+
+            # ── Auto-Heal: ask CTO to rewrite the failed script ──────────
+            if attempt < max_heal_attempts:
+                err_summary = result.get("stderr", "")[:500] or result.get("error", "Unknown error")
+                _push_forge_event(
+                    "CTO_AGENT",
+                    f"🔧 HEAL_ATTEMPT {attempt}/{max_heal_attempts - 1} — Rewriting {staging_filename}. "
+                    f"Error: {err_summary[:120]}",
+                    "HEAL_ATTEMPT",
+                    filename=staging_filename,
+                    attempt=attempt,
+                )
+
+                heal_prompt = (
+                    f"You are the CTO Auto-Heal Agent. A sandboxed Python script failed QA.\n\n"
+                    f"Script: {staging_filename}\n"
+                    f"Failure reason:\n{err_summary}\n\n"
+                    f"Read the script, identify the bug, and return ONLY the corrected, "
+                    f"complete Python source. No explanation, no markdown — raw Python only."
+                )
+                try:
+                    # Read current source to include in context
+                    with open(staging_path, "r", encoding="utf-8") as f:
+                        current_source = f.read()
+                    heal_prompt = (
+                        f"{heal_prompt}\n\nCurrent source:\n```python\n{current_source[:3000]}\n```"
+                    )
+                except Exception:
+                    pass
+
+                try:
+                    healed_code = model_router.route("CTO", heal_prompt)
+                    # Strip accidental markdown fences
+                    if "```" in healed_code:
+                        lines = healed_code.splitlines()
+                        healed_code = "\n".join(
+                            l for l in lines
+                            if not l.strip().startswith("```")
+                        )
+                    self.rollback.create_backup(staging_path)  # snapshot before overwrite
+                    with open(staging_path, "w", encoding="utf-8") as f:
+                        f.write(healed_code)
+                    logger.info(f"[ForgeOrchestrator] CTO healed {staging_filename} (attempt {attempt}).")
+                except Exception as heal_err:
+                    _push_forge_event(
+                        "CTO_AGENT",
+                        f"❌ HEAL_FAIL — CTO rewrite failed: {heal_err}",
+                        "HEAL_FAIL",
+                        filename=staging_filename,
+                        attempt=attempt,
+                    )
+                    return result  # give up — can't write the heal
+            else:
+                # Final attempt exhausted
+                _push_forge_event(
+                    "FORGE_ORCHESTRATOR",
+                    f"❌ Auto-Heal EXHAUSTED after {max_heal_attempts} attempts. {staging_filename} remains FAIL.",
+                    "HEAL_FAIL",
+                    filename=staging_filename,
+                    attempt=attempt,
+                )
+
         return result
+
 
     def trigger_executive_fork(self, context: str, options: List[str], project: str = "AntigravityWorkspace_Q3"):
         """

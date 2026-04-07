@@ -232,7 +232,13 @@ class SkepticRunner:
     async def attack_valid_endpoint(self, session: aiohttp.ClientSession,
                                      method: str, path: str,
                                      expected: int = 200) -> AttackResult:
-        """Standard endpoint probe — verify it responds correctly."""
+        """Standard endpoint probe — verify it responds correctly.
+        
+        HARD RULE: 404 and 405 are ALWAYS failures on real endpoints.
+        A 404 means the agent didn't expose this route at all.
+        A 405 means the method is wrong — payload was never evaluated.
+        Neither constitutes a PASS.
+        """
         start = time.time()
         try:
             if method == "GET":
@@ -246,13 +252,41 @@ class SkepticRunner:
                 async with session.post(
                     f"{self.base_url}{path}",
                     headers={"Content-Type": "application/json"},
-                    data=b'{}',
+                    data=b'{"prompt": "phantom_qa_probe"}',
                     timeout=aiohttp.ClientTimeout(total=self.timeout)
                 ) as r:
                     elapsed = (time.time() - start) * 1000
                     status = r.status
 
-            # For POST with empty body, 400 is also acceptable
+            # ── HARD FAIL GATE ────────────────────────────────────
+            # 404: Route not found — endpoint was never registered.
+            # 405: Method not allowed — payload was rejected at routing layer.
+            # 422: Unprocessable entity — test payload was structurally rejected.
+            # None of these mean the audit was evaluated. All are hard FAILs.
+            ROUTING_REJECTIONS = {404, 405}
+            if status in ROUTING_REJECTIONS:
+                rejection_msg = (
+                    f"❌ ROUTING/PAYLOAD REJECTED: The agent failed to accept or process "
+                    f"the test payload (HTTP {status}). "
+                    f"{'Route not found — endpoint was never registered.' if status == 404 else 'Method not allowed — payload rejected at routing layer.'}"
+                )
+                result = AttackResult(
+                    f"Probe: {method} {path}", False,
+                    rejection_msg, elapsed,
+                    "routing_rejection", expected, status, path, method
+                )
+                result.repair_payload = self._make_repair_payload(
+                    f"ROUTING_REJECTION_{status}_{path.replace('/', '_')}",
+                    path,
+                    f"HTTP {status} routing rejection on {method} {path}",
+                    f"Register the route {method} {path} in the target application. "
+                    f"Ensure the endpoint exists and accepts {method} requests with a JSON body."
+                )
+                self._record(result)
+                return result
+
+            # For POST probes — 400 is acceptable (schema mismatch, not routing failure)
+            # 422 is also acceptable if it's schema validation (FastAPI Pydantic)
             acceptable = [expected]
             if method == "POST":
                 acceptable.extend([400, 422])
@@ -260,9 +294,17 @@ class SkepticRunner:
 
             result = AttackResult(
                 f"Probe: {method} {path}", passed,
-                f"Got {status} (expected {expected})", elapsed,
-                "probe", expected, status, path, method
+                f"Got {status} {'(accepted)' if passed else f'(FAIL — expected one of {acceptable})'}",
+                elapsed, "probe", expected, status, path, method
             )
+
+            if not passed:
+                result.repair_payload = self._make_repair_payload(
+                    f"PROBE_FAIL_{path.replace('/', '_')}",
+                    path,
+                    f"Endpoint {method} {path} returned {status}, expected {expected}",
+                    f"Review the {method} {path} route handler and ensure it returns {expected} on valid requests."
+                )
         except Exception as e:
             elapsed = (time.time() - start) * 1000
             result = AttackResult(f"Probe: {method} {path}", False,
@@ -331,6 +373,10 @@ class SkepticRunner:
         """
         Run the complete Skeptic attack suite against the target.
         Uses the Architect's test plan to target specific endpoints.
+
+        PRE-FLIGHT: Before any tests run, verify the target is reachable
+        and that the main execution route accepts payloads. If root/health
+        returns 404/405, the entire suite hard-fails with score=0.
         """
         logger.info(f"🔍 Skeptic: Attacking {self.base_url}...")
         self.results = []
@@ -340,6 +386,74 @@ class SkepticRunner:
         endpoints = discovery.get("endpoints", [])
         health = discovery.get("health_endpoint")
 
+        # ── PRE-FLIGHT REACHABILITY CHECK ─────────────────────────────
+        # Probe the root or health endpoint before running any tests.
+        # A 404/405 at this stage means the entire target is unreachable
+        # or misconfigured — no point running the full suite.
+        routing_rejection_detected = False
+        async with aiohttp.ClientSession() as preflight_session:
+            probe_path = health or "/api/health"
+            try:
+                async with preflight_session.get(
+                    f"{self.base_url}{probe_path}",
+                    timeout=aiohttp.ClientTimeout(total=8)
+                ) as r:
+                    preflight_status = r.status
+                    if preflight_status in (404, 405):
+                        routing_rejection_detected = True
+                        rejection_msg = (
+                            f"❌ ROUTING/PAYLOAD REJECTED: The agent failed to accept or process "
+                            f"the test payload (HTTP {preflight_status}). "
+                            f"Pre-flight health check on {probe_path} returned {preflight_status}. "
+                            f"The target application is either not running, not registered on this port, "
+                            f"or does not expose the expected health endpoint."
+                        )
+                        preflight_result = AttackResult(
+                            f"Pre-flight: GET {probe_path}", False,
+                            rejection_msg,
+                            0, "preflight_rejection", 200, preflight_status,
+                            probe_path, "GET"
+                        )
+                        preflight_result.repair_payload = self._make_repair_payload(
+                            f"PREFLIGHT_REJECTION_{preflight_status}",
+                            probe_path,
+                            f"HTTP {preflight_status} on pre-flight health check — target unreachable or unregistered",
+                            "Ensure the target application is running and exposes GET /api/health returning HTTP 200. "
+                            "Verify the port binding and that the service is registered in registry.json."
+                        )
+                        self._record(preflight_result)
+                        logger.warning(
+                            f"🔍 Skeptic PRE-FLIGHT FAILED: {probe_path} → {preflight_status}. "
+                            f"Hard-failing entire suite with score=0."
+                        )
+            except Exception as e:
+                routing_rejection_detected = True
+                conn_result = AttackResult(
+                    f"Pre-flight: GET {probe_path}", False,
+                    f"❌ ROUTING/PAYLOAD REJECTED: Target unreachable — connection error: {str(e)[:120]}",
+                    0, "preflight_rejection", 200, 0, probe_path, "GET"
+                )
+                self._record(conn_result)
+                logger.warning(f"🔍 Skeptic PRE-FLIGHT FAILED: Cannot connect to {self.base_url}: {e}")
+
+        # If pre-flight failed, return immediately with score=0
+        if routing_rejection_detected:
+            elapsed = time.time() - start
+            repairs = [r.repair_payload for r in self.results if r.repair_payload is not None]
+            return {
+                "agent": "skeptic",
+                "score": 0,
+                "total_tests": len(self.results),
+                "passed": 0,
+                "failed": len(self.results),
+                "results": [r.to_dict() for r in self.results],
+                "repair_payloads": repairs,
+                "duration_seconds": round(elapsed, 1),
+                "vulnerabilities_found": len(repairs),
+                "routing_rejection": True,
+            }
+
+        # ── FULL ATTACK SUITE ─────────────────────────────────────────
         async with aiohttp.ClientSession() as session:
             # 1. Probe all discovered GET endpoints
             #    Skip parameterized paths like /api/reports/{run_id} — probing
@@ -348,7 +462,6 @@ class SkepticRunner:
                 if ep["method"] == "GET":
                     path = ep["path"]
                     if "{" in path or "<" in path:
-                        # Parameterized route — skip or substitute a real value
                         logger.info(f"  ⏭️ Skipping parameterized route: {path}")
                         continue
                     await self.attack_valid_endpoint(session, "GET", path)
@@ -380,31 +493,49 @@ class SkepticRunner:
             # 7. Run edge cases from test plan
             for edge in (test_plan or {}).get("edge_cases", [])[:5]:
                 if edge.get("attack_type") == "empty_body" and edge.get("path"):
-                    # Already covered above, skip duplicates
                     continue
 
         elapsed = time.time() - start
         total = len(self.results)
-        passed = sum(1 for r in self.results if r.passed)
-        score = round(passed / total * 100) if total > 0 else 0
+        passed_count = sum(1 for r in self.results if r.passed)
+
+        # ── ROUTING REJECTION OVERRIDE ─────────────────────────────────
+        # If ANY probe returned a routing rejection (404/405), the entire
+        # suite score is forced to 0. A graceful 404 on an unknown path
+        # is expected, but a 404/405 on a REGISTERED endpoint is a hard fail.
+        routing_rejections = [
+            r for r in self.results
+            if r.attack_type == "routing_rejection"
+        ]
+        if routing_rejections:
+            score = 0
+            logger.warning(
+                f"🔍 Skeptic: {len(routing_rejections)} routing rejection(s) detected — "
+                f"score forced to 0/100 regardless of other results."
+            )
+        else:
+            score = round(passed_count / total * 100) if total > 0 else 0
 
         # Collect repair payloads
-        repairs = [r.repair_payload for r in self.results
-                   if r.repair_payload is not None]
+        repairs = [r.repair_payload for r in self.results if r.repair_payload is not None]
 
-        logger.info(f"🔍 Skeptic: {passed}/{total} passed (Score: {score}/100) | "
-                     f"{len(repairs)} repairs needed")
+        logger.info(
+            f"🔍 Skeptic: {passed_count}/{total} passed (Score: {score}/100) | "
+            f"{len(repairs)} repairs needed | "
+            f"{len(routing_rejections)} routing rejections"
+        )
 
         return {
             "agent": "skeptic",
             "score": score,
             "total_tests": total,
-            "passed": passed,
-            "failed": total - passed,
+            "passed": passed_count,
+            "failed": total - passed_count,
             "results": [r.to_dict() for r in self.results],
             "repair_payloads": repairs,
             "duration_seconds": round(elapsed, 1),
             "vulnerabilities_found": len(repairs),
+            "routing_rejection": len(routing_rejections) > 0,
         }
 
 

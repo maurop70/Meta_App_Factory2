@@ -650,11 +650,13 @@ def agent_status():
 def get_registry():
     """Return the list of registered apps."""
     try:
-        with open(REGISTRY_PATH, "r", encoding="utf-8") as f:
+        with open(REGISTRY_PATH, "r", encoding="utf-8-sig") as f:
             data = json.load(f)
 
         apps = []
         for name, info in data.get("apps", {}).items():
+            if not isinstance(info, dict):
+                continue
             apps.append({
                 "name": name,
                 "status": info.get("status", "unknown"),
@@ -665,12 +667,8 @@ def get_registry():
             })
         return {"apps": apps}
     except Exception as e:
-        logger.warning(f"Registry read failed: {e}")
-        return {"apps": [
-            {"name": "Alpha_V2_Genesis", "status": "active", "type": "Trading Dashboard", "port": 5005},
-            {"name": "MetaTestApp", "status": "inactive", "type": "Test", "port": None},
-            {"name": "News Analyzer", "status": "inactive", "type": "Data Pipeline", "port": None},
-        ]}
+        logger.error(f"Registry read failed: {e}")
+        return JSONResponse({"error": f"Registry unavailable: {e}", "apps": []}, status_code=500)
 
 # ── Pre-Deploy Gate Endpoints ─────────────────────────────────
 

@@ -58,6 +58,17 @@ from warroom_interface import warroom_respond
 # ── Ghost Stream Event Queue ─────────────────────────────
 _ghost_stream_clients: list[asyncio.Queue] = []
 
+# ── QA Telemetry Stream Queue (Phase 4 — Native Ghost Stream) ──
+# Separate channel so QA Architect + Auto-Heal events don't
+# collide with Playwright Ghost User activity events.
+_qa_stream_clients: list[asyncio.Queue] = []
+
+# ── QA Event Replay Buffer (last 100 events) ──────────────────────
+# New SSE connections replay this buffer immediately so the Ghost
+# Stream tab never starts blank even mid-run.
+_QA_BUFFER_MAX = 100
+_qa_event_buffer: list[dict] = []
+
 def ghost_event_callback(event: dict):
     """Push event to all connected Ghost Stream SSE clients."""
     for q in _ghost_stream_clients[:]:
@@ -510,6 +521,97 @@ async def ghost_stream():
 
     return StreamingResponse(event_generator(), media_type="text/event-stream",
                               headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+# ═══════════════════════════════════════════════════════════
+#  ROUTES — QA Telemetry Stream (Phase 4)
+# ═══════════════════════════════════════════════════════════
+
+def qa_event_broadcast(event: dict):
+    """Push a structured QA/Auto-Heal event to all connected /api/qa/stream clients
+    and append to the replay buffer so fresh connections catch up immediately."""
+    if "timestamp" not in event:
+        event["timestamp"] = datetime.now().isoformat()
+    # Maintain replay ring buffer
+    _qa_event_buffer.append(event)
+    if len(_qa_event_buffer) > _QA_BUFFER_MAX:
+        del _qa_event_buffer[0]
+    # Push to live clients
+    for q in _qa_stream_clients[:]:
+        try:
+            q.put_nowait(event)
+        except asyncio.QueueFull:
+            pass
+
+
+@app.get("/api/qa/stream")
+async def qa_stream():
+    """
+    SSE endpoint: live telemetry feed for Phantom QA Architect + Auto-Heal loop.
+    Connect from the Ghost Stream tab in the frontend:
+      const src = new EventSource('http://localhost:5030/api/qa/stream');
+
+    Payload schema:
+      { timestamp, agent, message, status, filename?, score?, attempt? }
+
+    status values: RUNNING | PASS | FAIL | SECURITY_BLOCK | TIMEOUT | HEAL_ATTEMPT | HEAL_PASS | HEAL_FAIL | CONNECTED | HEARTBEAT
+    """
+    async def event_generator() -> AsyncGenerator[str, None]:
+        q: asyncio.Queue = asyncio.Queue(maxsize=500)
+        _qa_stream_clients.append(q)
+        try:
+            yield f"data: {json.dumps({'type': 'CONNECTED', 'agent': 'QA_STREAM', 'message': 'Ghost Stream Telemetry online.', 'timestamp': datetime.now().isoformat()})}\n\n"
+            # ── Replay buffer: catch up new connections immediately ──
+            for buffered_event in list(_qa_event_buffer):
+                yield f"data: {json.dumps(buffered_event)}\n\n"
+            while True:
+                try:
+                    event = await asyncio.wait_for(q.get(), timeout=25.0)
+                    yield f"data: {json.dumps(event)}\n\n"
+                except asyncio.TimeoutError:
+                    yield f"data: {json.dumps({'type': 'HEARTBEAT', 'timestamp': datetime.now().isoformat()})}\n\n"
+        except asyncio.CancelledError:
+            pass
+        finally:
+            if q in _qa_stream_clients:
+                _qa_stream_clients.remove(q)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@app.post("/api/qa/ingest")
+async def qa_ingest(request: Request):
+    """
+    External push endpoint: ForgeOrchestrator / QAArchitect / Auto-Heal CTO
+    POST structured event payloads here. They are immediately forwarded to
+    all connected SSE clients on /api/qa/stream.
+
+    Expected body: { agent, message, status, filename?, score?, attempt? }
+    """
+    data = await safe_parse_body(request)
+    if not data.get("message"):
+        return JSONResponse({"error": "message field required"}, status_code=400)
+
+    event = {
+        "timestamp": datetime.now().isoformat(),
+        "agent":     data.get("agent", "UNKNOWN"),
+        "message":   data.get("message", ""),
+        "status":    data.get("status", "INFO"),
+        "filename":  data.get("filename"),
+        "score":     data.get("score"),
+        "attempt":   data.get("attempt"),
+    }
+    # Strip None values so the frontend doesn't have to guard everything
+    event = {k: v for k, v in event.items() if v is not None}
+
+    qa_event_broadcast(event)
+    logger.info(f"[QA/ingest] {event['agent']} → {event['status']}: {event['message'][:80]}")
+    return {"status": "broadcast", "clients": len(_qa_stream_clients), "event": event}
+
 
 
 # ═══════════════════════════════════════════════════════════
@@ -1082,6 +1184,48 @@ async def _run_audit(target_url: str, audit_mode: str, file_link: str = "",
     else:
         verdict = "FAIL"
 
+    cfo_analysis = None
+    if audit_mode in ("mathematical", "structural") and verdict == "FAIL":
+        try:
+            import aiohttp
+            # Forward to CFO Fragility Engine natively
+            qa_event_broadcast({
+                "timestamp": datetime.now().isoformat(),
+                "agent": "Phantom QA Elite",
+                "message": f"Mathematical failure detected on {target_url}. Forwarding exact traces to the CFO Fragility Engine for deeper forensic tear-down...",
+                "status": "RUNNING",
+                "score": score
+            })
+            
+            trace_data = "\n".join([f"- {f.get('test_name', '')}: {f.get('details', '')}" for f in findings if not f.get('passed')])
+            fail_prompt = f"Mathematical / Structural Audit Failed across test harness for {target_url}. Here are the exact trace logs. Please perform a deep structural and financial reasoning teardown on why this failed and how to reconstruct it:\n{trace_data}"
+            
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=45)) as session:
+                data_fd = aiohttp.FormData()
+                data_fd.add_field('instruction', fail_prompt)
+                
+                async with session.post("http://localhost:5041/api/consult", data=data_fd) as cfo_r:
+                    if cfo_r.status == 200:
+                        cfo_data = await cfo_r.json()
+                        raw_cfo = cfo_data.get("message", "") + "\n\n" + str(cfo_data.get("report", ""))
+                        if cfo_data.get("status") == "received":
+                            cfo_analysis = "CFO Engine response: " + raw_cfo
+                        else:
+                            cfo_analysis = raw_cfo
+                        
+                        qa_event_broadcast({
+                            "timestamp": datetime.now().isoformat(),
+                            "agent": "CFO Fragility Engine",
+                            "message": f"Forensic analysis returned ({len(cfo_analysis)} chars).",
+                            "status": "FAIL", 
+                            "score": score
+                        })
+                    else:
+                        cfo_analysis = f"CFO returned error code {cfo_r.status}: {await cfo_r.text()}"
+        except Exception as e:
+            logger.warning(f"Failed to bridge trace to CFO Engine: {e}")
+            cfo_analysis = f"CFO Fragility link disrupted. Trace could not be forwarded. Error: {e}"
+
     # Save to memory
     run_id = save_test_run(
         app_name=f"AUDIT:{audit_mode}",
@@ -1089,7 +1233,7 @@ async def _run_audit(target_url: str, audit_mode: str, file_link: str = "",
         verdict=verdict,
         score=score,
         duration=0,
-        report_data={"verdict": verdict, "score": score, "audit_mode": audit_mode},
+        report_data={"verdict": verdict, "score": score, "audit_mode": audit_mode, "cfo_analysis": cfo_analysis},
         architect_plan=None,
         ghost_summary=None,
         skeptic_summary=None,
@@ -1106,6 +1250,7 @@ async def _run_audit(target_url: str, audit_mode: str, file_link: str = "",
         "passed": passed,
         "failed": failed,
         "findings": findings,
+        "cfo_analysis": cfo_analysis,
         "timestamp": datetime.now().isoformat(),
     }
 

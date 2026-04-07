@@ -1542,15 +1542,37 @@ function App() {
     'News Analyzer': '#06b6d4',
   };
 
+  // ── Registry polling: retries every 5 s until backend responds ──
   useEffect(() => {
-    fetch(`/api/registry`)
-      .then(r => r.json())
-      .then(data => setRegistry(data.apps || []))
-      .catch(() => setRegistry([
-        { name: 'Alpha_V2_Genesis', status: 'active', type: 'Trading Dashboard', port: 5005 },
-        { name: 'MetaTestApp', status: 'inactive', type: 'Test', port: null },
-        { name: 'News Analyzer', status: 'inactive', type: 'Data Pipeline', port: null },
-      ]));
+    let cancelled = false;
+    let attempts = 0;
+    const MAX_ATTEMPTS = 60; // 5 min total
+
+    const load = () => {
+      if (cancelled) return;
+      fetch(`/api/registry`)
+        .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(data => {
+          if (cancelled) return;
+          const apps = data.apps || [];
+          if (apps.length > 0) {
+            setRegistry(apps);
+          } else if (attempts < MAX_ATTEMPTS) {
+            attempts++;
+            setTimeout(load, 5000);
+          }
+        })
+        .catch(() => {
+          if (cancelled) return;
+          if (attempts < MAX_ATTEMPTS) {
+            attempts++;
+            setTimeout(load, 5000);
+          }
+        });
+    };
+
+    load();
+    return () => { cancelled = true; };
   }, []);
 
   const handleCommand = (cmdText, isTriad) => {
@@ -1559,8 +1581,8 @@ function App() {
   };
 
   const stats = [
-    { label: 'Registered Apps', value: registry.length || 3, sub: 'In factory registry' },
-    { label: 'Active Apps', value: registry.filter(a => a.status === 'active').length || 1, sub: 'Currently running' },
+    { label: 'Registered Apps', value: registry.length > 0 ? registry.length : '…', sub: 'In factory registry' },
+    { label: 'Active Apps', value: registry.length > 0 ? registry.filter(a => a.status === 'active').length : '…', sub: 'Currently running' },
     { label: 'Vault Keys', value: 8, sub: 'Encrypted secrets' },
     { label: 'Engine Version', value: 'V3', sub: 'SSE + Memory + Telemetry' },
   ];

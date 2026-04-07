@@ -267,7 +267,7 @@ function renderFullResults(data) {
     // Also populate the individual panels
     renderArchitectPanel(p.architect, data);
     renderGhostPanel(p.ghost_user);
-    renderSkepticPanel(p.skeptic, repairs);
+    renderSkepticPanel(p.skeptic, repairs, data.cfo_analysis);
 }
 
 function renderAgentCard(title, phase, type) {
@@ -542,11 +542,23 @@ function renderGhostPanel(ghost) {
     }
 }
 
-function renderSkepticPanel(skeptic, repairs) {
+function renderSkepticPanel(skeptic, repairs, cfoAnalysis) {
     const el = document.getElementById('skepticContent');
     if (!skeptic) { el.innerHTML = '<div class="empty-state">Run a test first</div>'; return; }
-    el.innerHTML = renderAgentCard('🔍 Skeptic — Full Report', skeptic, 'skeptic');
-    el.innerHTML += renderRepairs(repairs);
+    let html = renderAgentCard('🔍 Skeptic — Full Report', skeptic, 'skeptic');
+    
+    if (cfoAnalysis || (skeptic && skeptic.cfo_analysis)) {
+        const cfoText = cfoAnalysis || skeptic.cfo_analysis;
+        html += `
+            <div class="result-card" style="margin-top:16px; border-color:rgba(99,102,241,0.3)">
+                <h3 style="color:#818cf8">💼 CFO Forensic Teardown</h3>
+                <pre style="white-space: pre-wrap; font-size: 13px; color: var(--text-secondary); background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px;">${esc(cfoText)}</pre>
+            </div>
+        `;
+    }
+    
+    html += renderRepairs(repairs);
+    el.innerHTML = html;
 }
 
 // ══════════════════════════════════════════════════════════
@@ -812,6 +824,14 @@ function renderAuditVerdict(data) {
                 </div>
             </div>
         ` : ''}
+
+        ${data.cfo_analysis ? `
+            <div class="result-card" style="margin-top:16px; border-color:rgba(99,102,241,0.3)">
+                <h3 style="color:#818cf8">💼 CFO Forensic Teardown</h3>
+                <pre style="white-space: pre-wrap; font-size: 13px; color: var(--text-secondary); background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px;">${esc(data.cfo_analysis)}</pre>
+            </div>
+        ` : ''}
+
 
         ${data.correction_request ? `
             <div class="repair-card" style="margin-top:16px">

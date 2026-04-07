@@ -571,7 +571,7 @@ def ocr_execution():
         if not api_key:
             return jsonify({"error": "Gemini API key missing"}), 500
             
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
         
         prompt = """
         You are reading a thinkorswim (TOS) trade execution screenshot.
