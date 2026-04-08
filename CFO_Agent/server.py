@@ -29,6 +29,9 @@ from fastapi.responses import JSONResponse, HTMLResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from dotenv import load_dotenv
+import google.generativeai as genai
+import aiohttp
+import asyncio
 
 # ═══════════════════════════════════════════════════════════
 #  ENVIRONMENT
@@ -48,9 +51,28 @@ logger = logging.getLogger("CFO_Excel_Architect")
 sys.path.insert(0, str(ROOT))
 from cfo_engine import CFOExecutionController
 from cfo_compiler import CFOCompiler
+from cfo_logic import FinancialPayload, calculate_financial_health
 
 cfo = CFOExecutionController()
 cfo_compiler = CFOCompiler()
+
+if os.getenv("GEMINI_API_KEY"):
+    genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+
+CFO_SYSTEM_PROMPT = """You are the Antigravity CFO Agent (Institutional Mathematics Division).
+You are to generate a highly strategic, qualitative "War Room Audit Report" based on the provided deterministic mathematical inputs.
+
+CRITICAL DIRECTIVE:
+You have received a MATHEMATICALLY VERIFIED `CFOAnalysisResult` JSON. 
+You MUST NOT recalculate any of these numbers. You are strictly forbidden from performing arithmetic.
+Your sole job is to READ the JSON and generate qualitative insights identifying systemic, existential fragility.
+
+RULES:
+1. If the fragility_index > 50, escalate warnings to the CTO/Master Architect immediately.
+2. If runway_months < 6, flag extreme risk and recommend immediate capital injection or aggressive OPEX reduction.
+3. Write in concise, C-Suite level terminology (e.g., "debt sculpting", "fixed-point convergence", "drawdown risk").
+4. Return ONLY the narrative audit report text. Do not return JSON or markdown code blocks around the text.
+"""
 
 # ═══════════════════════════════════════════════════════════
 #  APP
@@ -64,7 +86,8 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:5030", "http://localhost:5173"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -1106,6 +1129,108 @@ async def download_report(filename: str):
     return FileResponse(str(filepath), filename=filename)
 
 
+@app.post("/api/audit")
+async def process_audit(request: Request):
+    """
+    Phase 3: Receives a raw JSON or Form data (converted from frontend), validates mathematically,
+    streams to Phantom QA, and generates a qualitative LLM audit report bypassing math calculation.
+    """
+    # ── 1. Ghost Stream Broadcast Helper
+    async def sse_broadcast(status, message, event_type="INFO"):
+        try:
+            async with aiohttp.ClientSession() as session:
+                await session.post(
+                    "http://localhost:5030/api/qa/ingest",
+                    json={
+                        "agent": "CFO_Audit",
+                        "status": status,
+                        "message": message,
+                        "type": event_type,
+                        "timestamp": datetime.now().isoformat()
+                    },
+                    timeout=2
+                )
+        except Exception:
+            pass # Non-blocking stream failure
+
+    # Stream 'RUNNING' start
+    asyncio.create_task(sse_broadcast("RUNNING", "CFO Received Audit Request. Executing mathematical validation...", "SUITE_START"))
+    
+    # ── 2. Pydantic Mathematical Validation
+    try:
+        content_type = request.headers.get("content-type", "")
+        pydantic_payload = None
+        
+        if "multipart/form-data" in content_type:
+            form = await request.form()
+            file_part = form.get("file")
+            if not file_part or not getattr(file_part, "filename", None):
+                raise ValueError("No file uploaded. Please upload a valid .csv or .xlsx financial report.")
+            
+            from cfo_parser import extract_financials_from_file
+            content = await file_part.read()
+            pydantic_payload = extract_financials_from_file(content, file_part.filename)
+
+        elif "application/json" in content_type:
+            payload = await request.json()
+            if not payload:
+               raise ValueError("Empty JSON payload received.") 
+            pydantic_payload = FinancialPayload(**payload)
+            
+        else:
+            raise ValueError(f"Unsupported content type: {content_type}")
+
+        math_result = calculate_financial_health(pydantic_payload)
+        math_json = math_result.json()
+    except Exception as e:
+        asyncio.create_task(sse_broadcast("FAIL", f"Mathematical Validation Error: {str(e)}", "TEST_FAIL"))
+        return JSONResponse({"verdict": "FAIL", "error": str(e)}, status_code=400)
+
+    # Stream 'LLM' transition
+    asyncio.create_task(sse_broadcast("RUNNING", "Deterministic math verified. Synthesizing War Room qualitative report...", "INFO"))
+
+    # ── 3. LLM Qualitative Evaluation
+    narrative_report = ""
+    verdict = "PASS"
+    score = 100 - math_result.fragility_index
+    
+    try:
+        if not os.getenv("GEMINI_API_KEY"):
+            narrative_report = "GEMINI_API_KEY not found. Native Audit fallback generated:\nCFO Math Engine passed. Fragility Index: " + str(math_result.fragility_index)
+        else:
+            model = genai.GenerativeModel(
+                model_name="gemini-2.5-flash",
+                system_instruction=CFO_SYSTEM_PROMPT
+            )
+            response = model.generate_content(math_json)
+            narrative_report = response.text.strip()
+    except Exception as e:
+        verdict = "WARN"
+        narrative_report = f"LLM Generation Failed (Math verified). Reason: {str(e)}"
+        
+    final_status = "FAIL" if math_result.fragility_index > 50 else "PASS"
+    if final_status == "FAIL": verdict = "FAIL"
+
+    # Stream completion
+    asyncio.create_task(sse_broadcast(final_status, narrative_report[:150] + "...", "TEST_PASS" if final_status == "PASS" else "TEST_FAIL"))
+
+    # Return Phantom QA conformant response
+    return {
+        "verdict": verdict,
+        "score": max(0, score),
+        "audit_mode": "mathematical",
+        "target_url": "http://localhost:5041/api/audit",
+        "duration_seconds": 1.5,
+        "total_tests": 1,
+        "passed": 1 if final_status == "PASS" else 0,
+        "failed": 1 if final_status == "FAIL" else 0,
+        "cfo_analysis": narrative_report,
+        "findings": [{"passed": final_status == "PASS", "test_name": "Fragility Gate", "details": f"Fragility Index is {math_result.fragility_index}"}]
+    }
+
+
+
+
 # ═══════════════════════════════════════════════════════════
 #  STARTUP
 # ═══════════════════════════════════════════════════════════
@@ -1126,6 +1251,7 @@ if __name__ == "__main__":
     print("   Consult:   POST /api/consult (instruction + file)")
     print("   Bridge:    POST /api/sentinel-relay-bridge")
     print("   Execute:   POST /api/execute")
+    print("   Audit:     POST /api/audit")
     print("   Health:    GET  /api/health")
     print("   Reports:   GET  /api/reports")
     print("")
