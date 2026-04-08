@@ -142,7 +142,19 @@ def generate_news_report(market_snapshot=None):
 
     position_info = ""
     if portfolio_ctx:
-        position_info = f"\nActive positions:\n{portfolio_ctx}\n"
+        # Determine Watchdog Verdict
+        watchdog_verdict = "HOLD"
+        try:
+            from skills.watchdog.watchdog_v2 import WatchdogAgent
+            wd = WatchdogAgent(PORTFOLIO_PATH)
+            spx_price = market_snapshot.get('spx') if market_snapshot else None
+            if spx_price:
+                health = wd.monitor_position(current_spx=spx_price, vol_forecast_signal="NEUTRAL")
+                watchdog_verdict = health.get("verdict", "HOLD")
+        except Exception as e:
+            logger.warning(f"Failed to fetch watchdog verdict: {e}")
+            
+        position_info = f"\nActive positions:\n{portfolio_ctx}\n[REALTIME WATCHDOG VERDICT: {watchdog_verdict}]\n"
 
     system_prompt = (
         "You are the Lead Market Intelligence Analyst for Alpha V2 Genesis, "
@@ -174,11 +186,15 @@ def generate_news_report(market_snapshot=None):
         '      "severity": "HIGH" | "MEDIUM" | "LOW"\n'
         "    }\n"
         "  ],\n"
-        '  "trade_recommendation": "1-3 sentence recommendation for current positions",\n'
+        '  "market_conditions": "2-3 sentences of pure broad market context",\n'
+        '  "trade_health": "2-3 sentences analyzing the current portfolio health",\n'
+        '  "ask_list": [\n'
+        '    {"command": "command_string", "label": "UI label"}\n'
+        '  ],\n'
         '  "key_levels": {\n'
-        '    "spx_support": [level1, level2],\n'
-        '    "spx_resistance": [level1, level2],\n'
-        '    "vix_warning_threshold": number\n'
+        '    "spx_support": ["level1", "level2"],\n'
+        '    "spx_resistance": ["level1", "level2"],\n'
+        '    "vix_warning_threshold": 20\n'
         "  }\n"
         "}"
     )
@@ -191,8 +207,12 @@ def generate_news_report(market_snapshot=None):
         "1. The 3-5 most important market news stories RIGHT NOW affecting SPX\n"
         "2. Economic events in the next 5 trading days with exact dates and consensus\n"
         "3. Specific impact on my Iron Condor position(s) if any are open\n"
-        "4. Key SPX support/resistance levels to watch\n\n"
-        "Focus on ACTIONABLE intelligence. Be specific about price levels and risk scenarios."
+        "4. Key SPX support/resistance levels to watch\n"
+        "5. Ask list containing exactly 2-3 suggested follow-up actions.\n\n"
+        "Focus on ACTIONABLE intelligence. Be specific about price levels and risk scenarios.\n"
+        "IMPORTANT: If the Watchdog Verdict is 'CLOSE_STOP', you MUST include \n"
+        "  {'command': 'command(close_position)', 'label': 'Close Position (Stop Loss)'} \n"
+        "in your ask_list array."
     )
 
     payload = {
@@ -328,7 +348,9 @@ def _build_local_fallback(market_snapshot, now, reason=""):
             }
         ],
         "upcoming_events": [],
-        "trade_recommendation": "Review Analyst Memo for core strategic rationale.",
+        "market_conditions": "Review Analyst Memo for core strategic rationale.",
+        "trade_health": "See local analyst memo for position details.",
+        "ask_list": [],
         "key_levels": {
             "spx_support": ["N/A"],
             "spx_resistance": ["N/A"],
