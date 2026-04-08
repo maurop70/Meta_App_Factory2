@@ -70,78 +70,83 @@ function AgentStatusPanel() {
   const agents = ['CFO', 'CMO', 'HR', 'CRITIC', 'PITCH', 'ATOMIZER', 'ARCHITECT', 'CLO'];
   const [status, setStatus] = useState({});
 
-  const scanAgents = useCallback(async () => {
-    try {
-      // 1. Verify Local API is Reachable (Watchdog Sync)
-      const sentinelRes = await fetch(`/api/sentinel/log`);
-      if (!sentinelRes.ok) throw new Error("Backend Offline");
-      
-      // 2. Fetch Registry to confirm "MIGRATED_TO_NATIVE" truth
-      const regRes = await fetch(`/api/registry`);
-      const regData = await regRes.json();
-      
-      // 3. Ping local ports via API to build Neural Network State
-      const agentRes = await fetch(`/api/agents/status`);
-      const agentData = await agentRes.json();
-      
-      const newStatus = {};
-      let anyOnline = false;
-      agents.forEach(a => {
-        const isOnline = agentData[a] === true;
-        newStatus[a] = isOnline; // true = online/green
-        if (isOnline) anyOnline = true;
-      });
-      setStatus(newStatus);
-
-      // Force UI Telemetry state refresh
-      if (anyOnline) {
-        window.dispatchEvent(new CustomEvent('force-telemetry-active'));
-      }
-    } catch (error) {
-      // If api.py is unreachable, nodes fail safe to offline
-      const fallback = {};
-      agents.forEach(a => { fallback[a] = false; });
-      setStatus(fallback);
-    }
-  }, []);
-
   useEffect(() => {
-    // Grace period: let servers spin up before first scan
-    const initialDelay = setTimeout(() => {
-      scanAgents();
-    }, 3000);
+    // Start with all offline initially
+    const initial = {};
+    agents.forEach(a => initial[a] = 'pending');
+    setStatus(initial);
 
-    // Auto-poll every 15s so the grid self-heals without manual SCAN
-    const interval = setInterval(() => {
-      scanAgents();
-    }, 15000);
+    // Watchdog Streaming Telemetry (Native Port 5030)
+    const es = new EventSource('http://localhost:5030/api/qa/stream');
+    
+    es.onopen = () => {
+        // Connected to stream, mark active nodes online
+        const connected = {};
+        agents.forEach(a => connected[a] = true);
+        setStatus(connected);
+        window.dispatchEvent(new CustomEvent('force-telemetry-active'));
+    };
+
+    es.onerror = () => {
+        // Stream severed
+        const fallback = {};
+        agents.forEach(a => { fallback[a] = false; });
+        setStatus(fallback);
+    };
+
+    es.onmessage = (evt) => {
+        try {
+            const data = JSON.parse(evt.data);
+            if (!data.agent) return;
+            
+            setStatus(prev => {
+                const next = { ...prev };
+                const a = data.agent.toUpperCase().split('_')[0]; // Extract base agent name (e.g. CFO_Agent -> CFO)
+                if (!agents.includes(a)) return prev;
+
+                // Watchdog mapping rules
+                if (data.status === 'HEAL_PASS' || data.status === 'PASS' || data.status === 'RUNNING') {
+                    next[a] = true; // Online
+                } else if (data.status === 'DEGRADED_MANUAL_REQUIRED' || data.status === 'WARN') {
+                    next[a] = 'degraded';
+                } else if (data.status === 'HEAL_FAIL' || data.status === 'FAIL') {
+                    next[a] = false; // Offline
+                }
+                return next;
+            });
+        } catch(e) {}
+    };
 
     return () => {
-      clearTimeout(initialDelay);
-      clearInterval(interval);
+        es.close();
     };
-  }, [scanAgents]);
+  }, []);
 
   return (
     <div className="agent-panel">
       <div className="agent-panel-header">
         <h4>🧠 Neural Network</h4>
-        <button className="scan-btn" onClick={scanAgents}>↻ SCAN</button>
+        <button className="scan-btn" disabled>LIVE</button>
       </div>
       <div className="agent-grid">
         {agents.map(a => {
           const isNative = status[a] === 'native';
+          const isDegraded = status[a] === 'degraded';
           const isOnline = status[a] === true;
           const isOffline = status[a] === false;
           
           let cssClass = 'unknown';
           if (isNative) cssClass = 'native';
+          else if (isDegraded) cssClass = 'warning';
           else if (isOnline) cssClass = 'online';
           else if (isOffline) cssClass = 'offline';
 
           return (
             <div key={a} className={`agent-dot ${cssClass}`}>
-              <span className="dot" style={isNative ? { background: '#00D1FF', boxShadow: '0 0 6px rgba(0,209,255,0.5)' } : {}} />
+              <span className="dot" style={
+                isNative ? { background: '#00D1FF', boxShadow: '0 0 6px rgba(0,209,255,0.5)' } :
+                isDegraded ? { background: '#f59e0b', boxShadow: '0 0 6px rgba(245,158,11,0.5)' } : {}
+              } />
               <span>{a}</span>
             </div>
           );
@@ -179,35 +184,29 @@ function AtomizerPanel({ chunks, progress, total }) {
 
 // ── TELEMETRY BAR ──────────────────────────────────────────
 function TelemetryBar({ streaming }) {
-  const [telemetryStatus, setTelemetryStatus] = useState('INITIALIZING');
+  const [telemetryStatus, setTelemetryStatus] = useState('OFFLINE');
 
   useEffect(() => {
-    const handleForceActive = () => setTelemetryStatus('ACTIVE');
+    const handleForceActive = () => setTelemetryStatus('ONLINE');
     window.addEventListener('force-telemetry-active', handleForceActive);
 
-    const interval = setInterval(() => {
-      fetch(`/api/health`)
-        .then(r => r.json())
-        .then(d => {
-          if (d.status === 'processing') setTelemetryStatus('PROCESSING');
-          else setTelemetryStatus(d.status === 'healthy' ? 'ACTIVE' : 'WARNING');
-        })
-        .catch(() => setTelemetryStatus('OFFLINE'));
-    }, 5000);
-    
+    const es = new EventSource('http://localhost:5030/api/qa/stream');
+    es.onopen = () => setTelemetryStatus('ONLINE');
+    es.onerror = () => setTelemetryStatus('OFFLINE');
+
     return () => {
-      clearInterval(interval);
+      es.close();
       window.removeEventListener('force-telemetry-active', handleForceActive);
     };
   }, []);
 
-  const color = telemetryStatus === 'ACTIVE' ? '#10b981' : telemetryStatus === 'PROCESSING' ? '#00FFFF' : telemetryStatus === 'WARNING' ? '#f59e0b' : '#ef4444';
-  const pulseText = telemetryStatus === 'PROCESSING' ? '| PULSE PROCESSING' : '| PULSE OK';
+  const color = telemetryStatus === 'ONLINE' ? '#10b981' : telemetryStatus === 'WARNING' ? '#f59e0b' : '#ef4444';
+  const pulseText = telemetryStatus === 'ONLINE' ? '| SENSOR NET LINKED' : '| SYNC LOST';
 
   return (
     <div className="telemetry-bar">
       <div className="telemetry-progress">
-        <div className="telemetry-fill" style={{ width: streaming ? '60%' : '0%', background: streaming ? '#6366f1' : 'transparent' }} />
+        <div className="telemetry-fill" style={{ width: streaming ? '100%' : '100%', background: streaming ? '#6366f1' : 'transparent', opacity: telemetryStatus === 'ONLINE' ? 1 : 0.2 }} />
       </div>
       <span className="telemetry-label" style={{ color }}>
         TELEMETRY: {telemetryStatus} {streaming ? '| STREAMING...' : pulseText}
@@ -1542,7 +1541,7 @@ function App() {
     'News Analyzer': '#06b6d4',
   };
 
-  // ── Registry polling: retries every 5 s until backend responds ──
+  // ── Operator Manifest polling: Native Sidebar Hydration ──
   useEffect(() => {
     let cancelled = false;
     let attempts = 0;
@@ -1550,11 +1549,12 @@ function App() {
 
     const load = () => {
       if (cancelled) return;
-      fetch(`/api/registry`)
+      fetch(`http://localhost:5100/api/operator/manifest`)
         .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
         .then(data => {
           if (cancelled) return;
-          const apps = data.apps || [];
+          // Dynamically map manifest to active apps sidebar
+          const apps = data.manifest || data.active_apps || data.apps || (Array.isArray(data) ? data : []);
           if (apps.length > 0) {
             setRegistry(apps);
           } else if (attempts < MAX_ATTEMPTS) {
@@ -1613,13 +1613,6 @@ function App() {
           <span><span className="status-dot" /> Backend Online</span>
           <span>LangSmith: Active</span>
           <span>Supabase: Connected</span>
-          <span title="Running locally via skills/socratic_bridge.py | Latency: < 200ms">
-            <span className="status-dot" style={{
-              background: '#00D1FF',
-              boxShadow: '0 0 6px rgba(0,209,255,0.5)',
-            }} />
-            n8n: Native
-          </span>
         </div>
       </header>
 

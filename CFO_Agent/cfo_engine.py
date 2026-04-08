@@ -12,6 +12,8 @@ import re
 import hashlib
 from datetime import datetime
 
+from cfo_logic import FinancialPayload, calculate_financial_health
+
 try:
     import openpyxl
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -65,23 +67,17 @@ class CFOExecutionController:
         structural = architect_risk.get('structural_score', 70)
         logic = architect_risk.get('logic_score', 70)
         security = architect_risk.get('security_score', 70)
-        composite = architect_risk.get('composite_score',
+        composite = dict(architect_risk).get('composite_score',
                                        round((structural * 0.4 + logic * 0.3 + security * 0.3), 1))
 
-        # Detect volatile variables (Simulation based on 1.5x SD baseline)
-        volatile_vars = []
-        if structural < 70: volatile_vars.append("Structural Integrity (Volatility > 1.5x SD)")
-        if logic < 70: volatile_vars.append("Logic Coherence (Volatility > 1.5x SD)")
-        if security < 70: volatile_vars.append("Credit Spreads & Security (Volatility > 1.5x SD)")
-        if round(100 - composite, 1) > 30: volatile_vars.append("VIX / Tail Risk (Volatility > 1.5x SD)")
-
+        # We keep this stub purely for legacy formatting if needed outside cfo_logic,
+        # but the main logic is offloaded to cfo_logic.py
         return {
             'structural_score': structural,
             'logic_score': logic,
             'security_score': security,
             'composite': composite,
-            'fragility_index': round(100 - composite, 1),
-            'volatile_variables': volatile_vars
+            'fragility_index': round(100 - composite, 1)
         }
 
     def analyze_campaigns(self, campaign_list: list, fragility: dict) -> list:
@@ -133,19 +129,43 @@ class CFOExecutionController:
         if not valid:
             return {'error': True, 'message': error, 'status': 400}
 
-        # 2. Calculate
-        fragility = self.calculate_fragility_index(payload['architect_risk'])
-        campaigns = self.analyze_campaigns(payload['campaign_list'], fragility)
-        spend = self.reconcile_spend(payload['cmo_spend'])
+        # 2. Extract into Pure Deterministic Pydantic Model
+        try:
+            pydantic_payload = FinancialPayload(**payload)
+        except Exception as e:
+            return {'error': True, 'message': f"Pydantic validation failed: {str(e)}", 'status': 400}
+        
+        # 3. Offload all math to cfo_logic.py deterministic executor
+        result = calculate_financial_health(pydantic_payload)
 
-        total_spend = sum(c['budget'] for c in campaigns)
-        total_revenue = sum(c['projected_revenue'] for c in campaigns)
-        portfolio_roi = round(((total_revenue - total_spend) / total_spend) * 100, 2) if total_spend > 0 else 0
+        # Build legacy structs needed for formatting
+        fragility = {
+            'structural_score': payload['architect_risk'].get('structural_score', 70),
+            'logic_score': payload['architect_risk'].get('logic_score', 70),
+            'security_score': payload['architect_risk'].get('security_score', 70),
+            'composite': result.composite_score,
+            'fragility_index': result.fragility_index,
+            'volatile_variables': result.volatile_variables
+        }
+        
+        campaigns = [c.dict() for c in result.campaigns]
+        
+        spend = {
+            'total_budget': payload['cmo_spend'].get('total', 0),
+            'allocated': payload['cmo_spend'].get('allocated', 0),
+            'unallocated': result.unallocated,
+            'utilization_pct': result.spend_utilization_pct,
+            'categories': payload['cmo_spend'].get('categories', {}),
+        }
+
+        total_spend = result.total_spend
+        total_revenue = result.total_revenue
+        portfolio_roi = result.total_roi_pct
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"CFO_Fragility_Report_{timestamp}.xlsx"
 
-        # 3. Build Schema
+        # 4. Build Schema
         report = {
             'report_name': filename,
             'generated_at': datetime.now().isoformat(),

@@ -624,44 +624,180 @@ async function loadReport(runId) {
 }
 
 // ══════════════════════════════════════════════════════════
-//  PULSE (System Health)
+//  PULSE (System Health — Operator Manifest Driven)
 // ══════════════════════════════════════════════════════════
+
+// Live state cache: updated by SSE events in real-time
+let _pulseState = {};    // { serviceName: { status, port, url, ... } }
+let _qaStreamSource = null;
 
 async function runPulse() {
     const el = document.getElementById('pulseContent');
-    el.innerHTML = '<div class="empty-state">Scanning all C-Suite ports...</div>';
+    el.innerHTML = '<div class="empty-state">⏳ Fetching live manifest from Operator Agent...</div>';
 
     try {
         const r = await fetch(`${API}/pulse`);
         const data = await r.json();
         const apps = data.apps || {};
 
-        el.innerHTML = `
-            <div style="margin-bottom:16px;color:var(--text-secondary);font-size:13px">
-                <strong style="color:var(--text-primary)">${data.online}/${data.total_apps}</strong> applications online
-                · Scanned at ${formatTime(data.timestamp)}
-            </div>
-            <div class="pulse-grid">
-                ${Object.entries(apps).map(([name, info]) => `
-                    <div class="pulse-card">
-                        <div class="pulse-dot ${info.status}"></div>
-                        <div>
-                            <div class="pulse-name">${esc(name)}</div>
-                            <div class="pulse-url">${esc(info.url)} · ${info.status.toUpperCase()}</div>
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
-        `;
+        // Cache state for SSE updates
+        _pulseState = apps;
+
+        renderPulseGrid(data);
 
         if (data.online === data.total_apps) {
             showToast(`All ${data.total_apps} systems operational ✓`, 'success');
         } else {
             showToast(`${data.total_apps - data.online} system(s) offline`, 'error');
         }
+
+        // Auto-connect QA telemetry stream for live updates
+        connectQaTelemetryStream();
     } catch (e) {
         el.innerHTML = `<div class="empty-state">Pulse scan failed: ${e.message}</div>`;
     }
+}
+
+function renderPulseGrid(data) {
+    const el = document.getElementById('pulseContent');
+    const apps = data.apps || {};
+
+    el.innerHTML = `
+        <div style="margin-bottom:16px;color:var(--text-secondary);font-size:13px">
+            <strong style="color:var(--text-primary)">${data.online}/${data.total_apps}</strong> applications online
+            · Source: <strong style="color:var(--accent-light)">${data.source || 'registry'}</strong>
+            · Scanned at ${formatTime(data.timestamp)}
+        </div>
+        <div class="pulse-grid">
+            ${Object.entries(apps).map(([name, info]) => {
+                const statusClass = info.status === 'online' ? 'online'
+                    : info.status === 'degraded' ? 'degraded' : 'offline';
+                const statusIcon = info.status === 'online' ? '🟢'
+                    : info.status === 'degraded' ? '🟡' : '🔴';
+                const criticalBadge = info.critical
+                    ? ' <span class="pulse-badge critical">CRITICAL</span>' : '';
+
+                return `
+                    <div class="pulse-card" id="pulse-svc-${name}" data-service="${esc(name)}">
+                        <div class="pulse-dot ${statusClass}"></div>
+                        <div class="pulse-info">
+                            <div class="pulse-name">${esc(name)}${criticalBadge}</div>
+                            <div class="pulse-url">:${info.port || '?'} · <span class="pulse-status-tag ${statusClass}">${info.status.toUpperCase()}</span></div>
+                        </div>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `;
+}
+
+
+// ══════════════════════════════════════════════════════════
+//  QA TELEMETRY SSE — Real-Time Watchdog Events
+//  Connects to /api/qa/stream and updates Pulse status live
+// ══════════════════════════════════════════════════════════
+
+const WATCHDOG_STATUS_MAP = {
+    'HEAL_PASS':                 'online',
+    'HEAL_FAIL':                 'offline',
+    'HEAL_ATTEMPT':              'degraded',
+    'CRITICAL_ALERT':            'offline',
+    'DEGRADED_MANUAL_REQUIRED':  'degraded',
+};
+
+function connectQaTelemetryStream() {
+    if (_qaStreamSource && _qaStreamSource.readyState !== EventSource.CLOSED) return;
+
+    _qaStreamSource = new EventSource(`${API}/qa/stream`);
+
+    _qaStreamSource.onmessage = (e) => {
+        try {
+            const evt = JSON.parse(e.data);
+            if (evt.type === 'HEARTBEAT' || evt.type === 'CONNECTED') return;
+
+            const status = evt.status || '';
+
+            // ── Update Pulse panel service cards in real-time ──
+            if (WATCHDOG_STATUS_MAP[status]) {
+                const newStatus = WATCHDOG_STATUS_MAP[status];
+                // Extract service name from message (format: "ServiceName (port NNNN) ...")
+                const match = (evt.message || '').match(/^(\S+)\s+\(port\s+\d+\)/);
+                if (match) {
+                    const svcName = match[1];
+                    updatePulseCard(svcName, newStatus, status);
+                }
+            }
+
+            // ── Also append to Ghost Stream feed for unified visibility ──
+            appendToGhostStream(evt);
+
+        } catch { /* ignore parse errors */ }
+    };
+
+    _qaStreamSource.onerror = () => {
+        if (_qaStreamSource) {
+            _qaStreamSource.close();
+            _qaStreamSource = null;
+        }
+        // Reconnect after 8s
+        setTimeout(connectQaTelemetryStream, 8000);
+    };
+}
+
+function updatePulseCard(serviceName, newStatus, eventStatus) {
+    const card = document.querySelector(`[data-service="${serviceName}"]`);
+    if (!card) return;
+
+    // Update dot
+    const dot = card.querySelector('.pulse-dot');
+    if (dot) {
+        dot.classList.remove('online', 'offline', 'degraded');
+        dot.classList.add(newStatus);
+    }
+
+    // Update status tag
+    const tag = card.querySelector('.pulse-status-tag');
+    if (tag) {
+        tag.classList.remove('online', 'offline', 'degraded');
+        tag.classList.add(newStatus);
+        tag.textContent = eventStatus.replace(/_/g, ' ');
+    }
+
+    // Flash animation
+    card.classList.add('pulse-flash');
+    setTimeout(() => card.classList.remove('pulse-flash'), 1200);
+}
+
+function appendToGhostStream(evt) {
+    const feed = document.getElementById('ghostStreamFeed');
+    if (!feed) return;
+
+    const statusIcons = {
+        'HEAL_ATTEMPT': '🔄', 'HEAL_PASS': '✅', 'HEAL_FAIL': '❌',
+        'CRITICAL_ALERT': '🚨', 'DEGRADED_MANUAL_REQUIRED': '⚠️',
+        'RUNNING': '⚙️', 'PASS': '✅', 'FAIL': '❌', 'INFO': '💡',
+    };
+
+    const icon = statusIcons[evt.status] || '📡';
+    const time = new Date(evt.timestamp || Date.now()).toLocaleTimeString();
+
+    // Clear empty state
+    const emptyState = feed.querySelector('.empty-state');
+    if (emptyState) emptyState.remove();
+
+    const card = document.createElement('div');
+    card.className = `stream-event stream-${(evt.status || 'info').toLowerCase()}`;
+    card.innerHTML = `
+        <span class="stream-event-icon">${icon}</span>
+        <span class="stream-event-type">${esc(evt.agent || 'System')}</span>
+        <span class="stream-event-detail">${esc(String(evt.message || '').substring(0, 200))}</span>
+        <span class="stream-event-time">${time}</span>
+    `;
+    feed.appendChild(card);
+    feed.scrollTop = feed.scrollHeight;
+
+    // Cap at 200 events
+    while (feed.children.length > 200) feed.removeChild(feed.firstChild);
 }
 
 // ══════════════════════════════════════════════════════════
@@ -747,16 +883,35 @@ async function runAudit() {
     showProgress('🛡️ Phantom QA — Systems Audit');
 
     try {
-        const fd = new FormData();
-        fd.append('target_url', targetUrl);
-        fd.append('audit_mode', auditMode);
-        if (fileLink) fd.append('file_link', fileLink);
-        if (fileInput.files.length) fd.append('file', fileInput.files[0]);
+        let r;
+        if (targetUrl.includes('5041')) {
+            // Native CFO Agent Excel Ingestion bypassing QA Gateway
+            if (!fileInput.files.length) {
+                hideProgress(true);
+                showToast('Please attach a financial report file (.xlsx / .csv) for the CFO Agent.', 'error');
+                return;
+            }
+            const cfoFd = new FormData();
+            cfoFd.append('file', fileInput.files[0]);
 
-        const r = await fetch(`${API}/audit`, {
-            method: 'POST',
-            body: fd,
-        });
+            r = await fetch(`${targetUrl}/api/audit`, {
+                method: 'POST',
+                body: cfoFd
+                // Leaving Content-Type blank lets fetch() automatically boundary-wrap the FormData
+            });
+        } else {
+            const fd = new FormData();
+            fd.append('target_url', targetUrl);
+            fd.append('audit_mode', auditMode);
+            if (fileLink) fd.append('file_link', fileLink);
+            if (fileInput.files.length) fd.append('file', fileInput.files[0]);
+
+            r = await fetch(`${API}/audit`, {
+                method: 'POST',
+                body: fd,
+            });
+        }
+        
         const data = await r.json();
 
         hideProgress(true);
