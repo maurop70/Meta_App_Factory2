@@ -1,2212 +1,5 @@
 [
   {
-    "timestamp": "2026-04-05T00:14:48.987857",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T00:16:56.302318",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T00:19:03.706529",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T00:21:11.224257",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T00:23:18.588111",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T00:25:25.950613",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T00:27:33.328767",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T00:29:40.673798",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T00:31:47.973808",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T00:37:54.037383",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T00:40:01.432225",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T00:42:08.746449",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T00:44:16.093637",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T00:46:23.568182",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T00:48:30.766796",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T00:50:37.643480",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T00:52:44.361224",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T00:54:51.119638",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T00:56:57.917495",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T00:59:04.771308",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T01:01:11.571489",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T01:03:18.333779",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T01:05:25.122489",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T01:07:31.906970",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T01:09:38.785530",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T01:11:45.599512",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T01:13:52.424697",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T01:15:59.215808",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T01:26:59.569049",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: phantom_qa (port 5030)",
-    "outcome": {
-      "port": 5030,
-      "service": "phantom_qa",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T01:27:03.593402",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: master_architect (port 5050)",
-    "outcome": {
-      "port": 5050,
-      "service": "master_architect",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T01:27:07.618623",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T01:27:11.659943",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: clo_legal (port 5080)",
-    "outcome": {
-      "port": 5080,
-      "service": "clo_legal",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T01:29:16.447327",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T01:31:23.237644",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T01:33:30.056766",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T01:35:10.158725",
-    "project": "CFOExcelArchitect",
-    "target": "Native extraction fault",
-    "outcome": {
-      "error": "ValueError(\"could not convert string to float: ''\")"
-    },
-    "attempts": "execution_fault"
-  },
-  {
-    "timestamp": "2026-04-05T01:35:35.627639",
-    "project": "CFOExcelArchitect",
-    "target": "Native extraction fault",
-    "outcome": {
-      "error": "ValueError(\"could not convert string to float: ''\")"
-    },
-    "attempts": "execution_fault"
-  },
-  {
-    "timestamp": "2026-04-05T01:35:36.913402",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T01:37:43.939671",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T01:39:50.693231",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T01:41:57.459923",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T01:44:04.215854",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T01:46:10.987154",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T01:48:17.781878",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T01:50:24.522612",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T01:52:31.316757",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T01:54:38.129779",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T09:56:50.143736",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: phantom_qa (port 5030)",
-    "outcome": {
-      "port": 5030,
-      "service": "phantom_qa",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T09:56:54.178744",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: master_architect (port 5050)",
-    "outcome": {
-      "port": 5050,
-      "service": "master_architect",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T09:56:58.211138",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T09:57:02.248580",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: clo_legal (port 5080)",
-    "outcome": {
-      "port": 5080,
-      "service": "clo_legal",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T09:59:07.197624",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T10:01:14.149126",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T10:03:21.152251",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T10:16:02.558528",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: master_architect (port 5050)",
-    "outcome": {
-      "port": 5050,
-      "service": "master_architect",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T10:16:06.605597",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T10:16:10.647414",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: clo_legal (port 5080)",
-    "outcome": {
-      "port": 5080,
-      "service": "clo_legal",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T10:18:15.749319",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T10:20:22.831626",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T10:22:29.961520",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T10:24:37.083802",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T10:26:43.812202",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T10:28:50.512091",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T10:30:57.281077",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T10:33:03.948179",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T10:35:10.663407",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T10:37:17.332952",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T10:39:23.975743",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T10:41:30.659155",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T10:43:37.422768",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T10:45:44.111285",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T10:47:50.791089",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T10:49:57.499574",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T10:52:04.225293",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T10:54:10.936363",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T10:56:17.591421",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T10:58:24.330523",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T11:00:31.044502",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T11:02:37.720256",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T11:04:44.404263",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T11:06:51.100074",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T11:08:57.846103",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T11:11:04.552682",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T11:13:11.252547",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T11:15:17.944621",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T11:17:24.634853",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T11:19:31.322442",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T11:21:38.022486",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T11:23:44.710517",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T11:25:51.370113",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T11:27:58.074542",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T11:30:04.764714",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T11:32:11.449315",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T11:34:18.194275",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T11:36:24.869371",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T11:38:31.568008",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T11:40:38.317028",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T11:42:45.016236",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T11:44:51.702375",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T11:46:58.417219",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T11:49:05.091901",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T11:51:11.831520",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T11:53:18.532761",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T11:55:25.226463",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T11:57:31.930659",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T11:59:38.615816",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T12:01:45.286524",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T12:03:51.958251",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T12:05:58.673472",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T12:08:05.373896",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T12:10:12.069194",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T12:12:18.762976",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T12:14:25.441694",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T12:16:32.091519",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T12:18:38.757150",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T12:20:45.447111",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T12:22:52.141172",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T12:24:58.820618",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T12:27:05.551070",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T12:29:12.261443",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T12:31:18.948270",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T12:33:25.595568",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T12:35:32.266519",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T12:37:38.909632",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T12:39:45.638847",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T12:41:52.364253",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T12:43:59.115763",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T12:46:05.767929",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T12:48:12.461168",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T12:50:19.127047",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T12:52:25.828450",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T12:54:32.554442",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T12:56:39.242265",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T12:58:45.963422",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T13:00:52.659081",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T13:02:59.349917",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T13:05:06.083868",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T13:07:12.784720",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T13:09:19.424774",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T13:11:26.078302",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T13:13:32.814119",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T13:15:39.583083",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T13:17:46.233487",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T13:19:52.883310",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T13:21:59.609747",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T13:24:06.394682",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T13:26:13.096870",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T13:28:19.780427",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T13:30:26.439325",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T13:32:33.145698",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T13:34:39.821665",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T13:36:46.568201",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T13:38:53.320829",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T13:41:00.026376",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T13:43:06.741386",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T13:45:13.447139",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T13:47:20.194322",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T13:49:26.924355",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T13:51:33.642304",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T13:53:40.392473",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T13:55:47.147981",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T13:57:53.890766",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T14:00:00.615796",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T14:02:07.328810",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T14:04:14.153961",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T14:06:20.841154",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T14:08:27.609755",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T14:10:34.318763",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T14:12:41.122934",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T14:14:47.816857",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T14:16:54.603232",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T14:19:01.449624",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T14:21:08.193628",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T14:23:14.877725",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T14:25:21.613861",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T14:27:28.359567",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T14:29:35.092798",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T14:31:41.812427",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T14:33:48.527299",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T14:35:55.275179",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T14:38:01.974368",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T14:40:08.720216",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T14:42:15.475083",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T14:44:22.258962",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T14:46:29.003204",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T14:48:35.669755",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T14:50:42.380991",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T14:52:49.078021",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T14:54:55.836538",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T14:57:02.510927",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T14:59:09.186866",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T15:01:15.936927",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T15:03:22.655213",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T15:05:29.415821",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T15:07:36.139599",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T15:09:42.904752",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T15:11:49.699897",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T15:13:56.426397",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T15:16:03.130942",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T15:18:09.839282",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T15:20:16.559999",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
     "timestamp": "2026-04-05T15:22:23.336696",
     "project": "NativeWatchdog",
     "target": "Auto-Restart: c_suite (port 5070)",
@@ -5490,5 +3283,2084 @@
       "action": "ALERT_ONLY"
     },
     "attempts": "CRITICAL_ALERT"
+  },
+  {
+    "timestamp": "2026-04-08T10:22:41.812273",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-08T10:22:41.960370",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-08T10:22:42.128007",
+    "project": "child_app",
+    "target": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=%2A%2A%2AREDACTED%2A%2A%2A",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-08T10:22:46.061089",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-08T10:22:46.228501",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-08T10:22:46.384743",
+    "project": "child_app",
+    "target": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=%2A%2A%2AREDACTED%2A%2A%2A",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-08T10:26:25.016643",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-08T10:26:25.170622",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-08T10:26:25.337503",
+    "project": "child_app",
+    "target": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=%2A%2A%2AREDACTED%2A%2A%2A",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-08T10:47:06.141197",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-08T10:47:06.308588",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-08T10:47:06.479433",
+    "project": "child_app",
+    "target": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=%2A%2A%2AREDACTED%2A%2A%2A",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-08T10:47:10.380423",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-08T10:47:10.757677",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-08T10:47:10.925736",
+    "project": "child_app",
+    "target": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=%2A%2A%2AREDACTED%2A%2A%2A",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-08T10:51:50.477622",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: master_architect (port 5050)",
+    "outcome": {
+      "port": 5050,
+      "service": "master_architect",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T10:51:54.508693",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T10:51:58.551610",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: clo_legal (port 5080)",
+    "outcome": {
+      "port": 5080,
+      "service": "clo_legal",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T10:52:02.599871",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T10:54:15.617013",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T10:54:21.667724",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T10:56:34.750147",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T10:56:40.797846",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T10:58:53.765276",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T10:58:59.813085",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:01:12.838910",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:01:18.887422",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:03:32.002359",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:03:38.051985",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:05:51.117560",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:05:57.179457",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:08:10.279826",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:08:16.335958",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:10:29.456647",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:10:35.497142",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:12:48.672733",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:12:54.721768",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:15:07.828296",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:15:13.990696",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:17:26.935442",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:17:32.978868",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:19:46.015875",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:19:52.041913",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:22:05.129152",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:22:11.183531",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:24:24.217244",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:24:30.262589",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:26:43.319545",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:26:49.391226",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:29:02.460487",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:29:08.507149",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:31:21.525727",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:31:27.566702",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:33:40.654981",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:33:46.694125",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:35:59.739878",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:36:05.789247",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:38:18.915497",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:38:24.950341",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:40:38.020245",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:40:44.054926",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:42:57.145550",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:43:03.206312",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:45:16.423843",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:45:22.454234",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:47:35.525895",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:47:41.556206",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:49:54.672595",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:50:00.740811",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:52:13.825984",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:52:19.890354",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:54:33.044086",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:54:39.095454",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:56:52.277691",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:56:58.335008",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:59:11.443678",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T11:59:17.489482",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:01:30.625428",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:01:36.675871",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:03:49.839955",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:03:55.888083",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:06:08.951294",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:06:15.013502",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:08:28.235717",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:08:34.297697",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:10:47.492181",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:10:53.556827",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:13:06.641794",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:13:12.715368",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:15:25.928506",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:15:31.973345",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:17:45.095146",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:17:51.161125",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:20:04.334065",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:20:10.373164",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:22:23.522107",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:22:29.564506",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:24:42.718889",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:24:48.774673",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:27:01.901916",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:27:07.962467",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:29:21.220921",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:29:27.263477",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:31:40.463742",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:31:46.512585",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:33:59.553571",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:34:05.606069",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:36:18.613215",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:36:24.667611",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:38:37.679914",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:38:43.725122",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:40:56.750991",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:41:02.802920",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:43:15.772048",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:43:21.814112",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:45:34.903849",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:45:40.953835",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:47:54.061212",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:48:00.136830",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:50:13.152446",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:50:19.193913",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:52:32.203171",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:52:38.251829",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:54:51.243618",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:54:57.308590",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:57:10.544850",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:57:16.610898",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:59:29.650283",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T12:59:35.694188",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:01:48.673414",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:01:54.721412",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:04:07.885261",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:04:13.935524",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:06:26.997185",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:06:33.054700",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:08:46.125209",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:08:52.193227",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:11:05.360868",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:11:11.427089",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:13:24.554665",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:13:30.604921",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:15:43.694482",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:15:49.758529",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:18:02.722948",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:18:08.765160",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:20:21.811038",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:20:27.884720",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:22:41.050392",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:22:47.104535",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:25:00.269191",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:25:06.315304",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:27:19.481367",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:27:25.536776",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:29:38.584291",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:29:44.643491",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:31:57.793603",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:32:03.834638",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:34:16.944056",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:34:22.980101",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:36:36.159314",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:36:42.200605",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:38:55.338435",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:39:01.412339",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:41:14.512175",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:41:20.563801",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:43:33.668332",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:43:39.708865",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:45:52.803449",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:45:58.866396",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:48:11.981712",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:48:18.020431",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:50:31.112237",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:50:37.158141",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:52:50.287183",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:52:56.331177",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:55:09.523828",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:55:15.595505",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:57:28.635731",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:57:34.688975",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:59:47.805097",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T13:59:53.850945",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T14:02:06.914242",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T14:02:12.966207",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart: ghost_operator (port 5100)",
+    "outcome": {
+      "port": 5100,
+      "service": "ghost_operator",
+      "consecutive_fails": 3
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-08T14:03:15.369178",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-08T14:03:15.513002",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-08T14:03:15.703177",
+    "project": "child_app",
+    "target": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=%2A%2A%2AREDACTED%2A%2A%2A",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-08T14:03:16.359476",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-08T14:03:16.556495",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-08T14:03:16.738230",
+    "project": "child_app",
+    "target": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=%2A%2A%2AREDACTED%2A%2A%2A",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-08T14:03:21.324443",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-08T14:03:21.464403",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-08T14:03:21.628019",
+    "project": "child_app",
+    "target": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=%2A%2A%2AREDACTED%2A%2A%2A",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-08T14:33:17.493278",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-08T14:33:17.641256",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-08T14:33:17.817133",
+    "project": "child_app",
+    "target": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=%2A%2A%2AREDACTED%2A%2A%2A",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-08T15:03:16.923434",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-08T15:03:17.061217",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-08T15:03:17.222904",
+    "project": "child_app",
+    "target": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=%2A%2A%2AREDACTED%2A%2A%2A",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-08T15:33:17.122646",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-08T15:33:17.272866",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-08T15:33:17.441289",
+    "project": "child_app",
+    "target": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=%2A%2A%2AREDACTED%2A%2A%2A",
+    "outcome": "buffered_on_first",
+    "attempts": null
   }
 ]

@@ -1,0 +1,21 @@
+{
+    "name": "Phantom QA",
+    "role": "Autonomous Quality Gate",
+    "version": "1.0.0",
+    "project": "Aether",
+    "status": "active",
+    "permissions": {
+        "Allow": [
+            "command(git)",
+            "command(npm run build)",
+            "write_file(/path/to/phantom_qa/ui)"
+        ],
+        "Deny": [
+            "command(rm)",
+            "command(sudo)"
+        ],
+        "Ask": [
+            "mcp(*)"
+        ]
+    }
+}
