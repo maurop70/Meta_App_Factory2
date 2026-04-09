@@ -1,5 +1,5 @@
 # ALPHA V2 GENESIS - STRATEGY LEDGER
-**Generated:** 2026-03-27 16:54:44  |  **Engine:** Lead Quant Architect v2.0
+**Generated:** 2026-04-09 16:04:41  |  **Engine:** Lead Quant Architect v2.0
 
 ---
 
@@ -8,11 +8,11 @@
 | Metric | Value |
 | :--- | :--- |
 | **Portfolio Health** | GREEN |
-| **Open Positions** | 2 |
-| **SPX Spot** | 6,368.85 |
-| **VIX** | 31.05 (RISING) |
-| **IV Rank (52W)** | 37.8% |
-| **IV-HV Spread** | +17.2pp (Seller Edge) |
+| **Open Positions** | 1 |
+| **SPX Spot** | 6,824.66 |
+| **VIX** | 19.59 (FALLING) |
+| **IV Rank (52W)** | 13.9% |
+| **IV-HV Spread** | +1.8pp (Seller Edge) |
 | **N8N System Health** | UNKNOWN (0 failures in log) |
 | **Last Hot Updates** | 0 n8n pushes detected |
 
@@ -32,10 +32,10 @@
 | :--- | :--- |
 | **Strategy** | 35 DTE Iron Condor |
 | **Opened** | 2026-03-27 |
-| **Expires** | 2026-05-01 (35 DTE remaining) |
+| **Expires** | 2026-05-01 (22 DTE remaining) |
 | **Credit Received** | $10.20 |
-| **Current Mark** | $9.8 |
-| **P&L So Far** | +$0.40 (3.9% of max profit) |
+| **Current Mark** | $15.65 |
+| **P&L So Far** | +$-5.45 (-53.4% of max profit) |
 | **50% Profit Target** | $5.10 mark |
 | **21-DTE Exit Date** | 2026-04-10 |
 | **Strikes** | 5975/6000 Put · 6800/6825 Call |
@@ -44,103 +44,46 @@
 
 | Greek | Value | Meaning |
 | :--- | :---: | :--- |
-| **Theta** (θ) | `+$-17.23/day` | $17.23/day income from time decay |
-| **Vega** (ν) | `$53.66/pp` | $53.66 P&L change per 1pp VIX move (gain on vol expansion) |
-| **Delta** (δ) | `+0.80/pt` | Position is near delta-neutral ($0.80/pt) |
-| **Gamma** (γ) | `0.0000581` | Convexity risk per $1 SPX move |
+| **Theta** (θ) | `+$-7.97/day` | $7.97/day income from time decay |
+| **Vega** (ν) | `$-0.88/pp` | $0.88 P&L change per 1pp VIX move (loss on vol expansion) |
+| **Delta** (δ) | `+3.17/pt` | Position is near delta-neutral ($3.17/pt) |
+| **Gamma** (γ) | `-0.0000338` | Convexity risk per $1 SPX move |
 
-**Entry Rating at Open: [A] GOOD ENTRY** (Score: 5/9)
+**Entry Rating at Open: [D] POOR TIMING** (Score: 1/9)
 
 **Reasons FOR the trade:**
 
-- IV Rank 38%: moderate — acceptable premium for 45-DTE
-- IV-HV spread +17.2pp: market significantly over-pricing vol vs realized — strong seller edge
-- Short put 5.8% OTM — adequate buffer
-- Short call 6.8% OTM (431 pts) — upside well protected
-- 35 DTE: optimal theta/gamma ratio for Core Income strategy
+- Short put 12.1% OTM (824 pts) — requires 12 consecutive avg-size down days to breach
+- VIX trending DOWN (3-day) — IV compression benefits short-vol positions
 
 **Risks at entry:**
 
-- VIX trending UP (3-day) — short-term headwind; mark-to-market may go negative before recovering
+- IV Rank 14%: below median — premium is thin for the risk taken
+- Short call -0.4% OTM — call side needs monitoring on rallies
 
-**Daily Thesis Update: [OK] THESIS INTACT** (Drift Score: +2)
+**Daily Thesis Update: [~~] THESIS NEUTRAL** (Drift Score: +0)
 
 - STABLE: SPX has moved only +0.0% — original thesis intact
-- EDGE: IV-HV spread remains +17.2pp — seller advantage intact
+- WARNING: IV-HV spread narrowed to near zero — seller's structural edge is eroding
 
 **Challenger Scan: HOLD CURRENT**
 
 | | Current | Challenger |
 | :--- | :---: | :---: |
-| Short Put | 6000 | 5730 |
-| Short Call | 6800 | 7040 |
-| Credit | $10.20 | $6.10 |
-| Put Margin | 5.79% | 10.03% |
-| Expiry | 2026-05-01 | 2026-05-08 |
+| Short Put | 6000 | 6140 |
+| Short Call | 6800 | 7540 |
+| Credit | $10.20 | $1.35 |
+| Put Margin | 12.08% | 10.03% |
+| Expiry | 2026-05-01 | 2026-05-22 |
 
 > HOLD CURRENT: Existing position is competitive or superior. No pivot justified.
 
 ---
 
-### exec_1774626782
-
-| | |
-| :--- | :--- |
-| **Strategy** | 48 DTE Iron Condor |
-| **Opened** | 2026-03-27 |
-| **Expires** | 2026-05-15 (49 DTE remaining) |
-| **Credit Received** | $4.95 |
-| **Current Mark** | $5.95 |
-| **P&L So Far** | +$-1.00 (-20.2% of max profit) |
-| **50% Profit Target** | $2.48 mark |
-| **21-DTE Exit Date** | 2026-04-24 |
-| **Strikes** | 5875/5890 Put · 6915/6930 Call |
-
-**Position Greeks (Black-Scholes, Live)**
-
-| Greek | Value | Meaning |
-| :--- | :---: | :--- |
-| **Theta** (θ) | `+$-8.54/day` | $8.54/day income from time decay |
-| **Vega** (ν) | `$34.81/pp` | $34.81 P&L change per 1pp VIX move (gain on vol expansion) |
-| **Delta** (δ) | `+0.23/pt` | Position is near delta-neutral ($0.23/pt) |
-| **Gamma** (γ) | `0.0000271` | Convexity risk per $1 SPX move |
-
-**Entry Rating at Open: [A+] STRONG ENTRY** (Score: 6/9)
-
-**Reasons FOR the trade:**
-
-- IV Rank 38%: moderate — acceptable premium for 45-DTE
-- IV-HV spread +17.2pp: market significantly over-pricing vol vs realized — strong seller edge
-- Short put 7.5% OTM (478 pts) — requires 8 consecutive avg-size down days to breach
-- Short call 8.6% OTM (546 pts) — upside well protected
-- 49 DTE: optimal theta/gamma ratio for Core Income strategy
-
-**Risks at entry:**
-
-- VIX trending UP (3-day) — short-term headwind; mark-to-market may go negative before recovering
-
-**Daily Thesis Update: [OK] THESIS INTACT** (Drift Score: +2)
-
-- STABLE: SPX has moved only +0.0% — original thesis intact
-- EDGE: IV-HV spread remains +17.2pp — seller advantage intact
-
-**Challenger Scan: PIVOT RECOMMENDED**
-
-| | Current | Challenger |
-| :--- | :---: | :---: |
-| Short Put | 5890 | 5730 |
-| Short Call | 6915 | 7040 |
-| Credit | $4.95 | $6.10 |
-| Put Margin | 7.52% | 10.03% |
-| Expiry | 2026-05-15 | 2026-05-08 |
-
-> PIVOT RECOMMENDED: Challenger offers significantly better margin at comparable credit.
-
----
-
 ## ACTIVE RECOMMENDATIONS
 
-- **PIVOT ALERT** on position(s): exec_1774626782 — See Challenger Scan section above.
+- No pivot alerts. All active positions are within thesis tolerance.
+- Continue monitoring upcoming macro events.
 
 ---
 

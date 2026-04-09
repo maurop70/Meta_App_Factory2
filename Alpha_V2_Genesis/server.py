@@ -240,11 +240,18 @@ def get_ledger():
                     for raw_pos in ptf.get("positions", []):
                         pid = raw_pos.get("id")
                         if pid in positions_out:
+                            if raw_pos.get("status"):
+                                positions_out[pid]["status"] = raw_pos["status"]
                             if "original_thesis" not in positions_out[pid]:
                                 positions_out[pid]["original_thesis"] = {}
-                            for k in ['short_put_strike', 'long_put_strike', 'short_call_strike', 'long_call_strike', 'expiration_date', 'open_price', 'credit_received']:
+                            for k in ['short_put_strike', 'long_put_strike', 'short_call_strike', 'long_call_strike', 'expiration_date', 'open_price', 'credit_received', 'status']:
                                 if k in raw_pos:
                                     positions_out[pid]["original_thesis"][k] = raw_pos[k]
+                        elif raw_pos.get("status") == "OPEN":
+                            positions_out[pid] = {
+                                "status": "OPEN",
+                                "original_thesis": raw_pos
+                            }
                 except Exception:
                     pass
 
