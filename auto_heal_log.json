@@ -1,333 +1,5 @@
 [
   {
-    "timestamp": "2026-04-05T16:32:05.032378",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T16:34:11.654968",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T16:36:18.290238",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T16:38:24.936312",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T16:40:31.541694",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T16:42:38.186439",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T16:44:44.920447",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T16:45:13.096088",
-    "project": "CFOExcelArchitect",
-    "target": "Native extraction fault",
-    "outcome": {
-      "error": "ValueError(\"could not convert string to float: ''\")"
-    },
-    "attempts": "execution_fault"
-  },
-  {
-    "timestamp": "2026-04-05T16:46:51.759885",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T16:48:58.743073",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T16:51:05.445662",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T16:53:12.239517",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T16:55:18.932495",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T16:57:25.638916",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T16:59:32.347041",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T17:01:39.011284",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T17:03:45.713282",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T17:05:52.401039",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T17:07:59.063499",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T17:10:05.797714",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T17:12:12.558234",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T17:14:19.247833",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T17:16:26.012666",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T17:18:32.694421",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T17:20:39.453522",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T17:22:46.218301",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T17:24:52.941070",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T17:26:59.628518",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T17:29:06.346164",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T17:31:13.469811",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
     "timestamp": "2026-04-05T17:33:20.526781",
     "project": "NativeWatchdog",
     "target": "Auto-Restart: c_suite (port 5070)",
@@ -5388,5 +5060,215 @@
       "operator_status": 200
     },
     "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-09T13:02:50.365089",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-09T13:02:50.520417",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-09T13:02:50.676978",
+    "project": "child_app",
+    "target": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=%2A%2A%2AREDACTED%2A%2A%2A",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-09T13:32:51.103837",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-09T13:32:51.261207",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-09T13:32:51.412766",
+    "project": "child_app",
+    "target": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=%2A%2A%2AREDACTED%2A%2A%2A",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-09T14:02:51.203736",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-09T14:02:51.729985",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-09T14:02:51.906109",
+    "project": "child_app",
+    "target": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=%2A%2A%2AREDACTED%2A%2A%2A",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-09T14:32:50.480210",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-09T14:32:50.768268",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-09T14:32:51.038664",
+    "project": "child_app",
+    "target": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=%2A%2A%2AREDACTED%2A%2A%2A",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-09T15:03:11.263553",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-09T15:03:11.638578",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-09T15:03:12.332666",
+    "project": "child_app",
+    "target": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=%2A%2A%2AREDACTED%2A%2A%2A",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-09T15:33:11.883349",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-09T15:33:12.047834",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-09T15:33:12.212112",
+    "project": "child_app",
+    "target": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=%2A%2A%2AREDACTED%2A%2A%2A",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-09T15:50:33.317155",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-09T15:50:33.486899",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-09T15:50:33.687182",
+    "project": "child_app",
+    "target": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=%2A%2A%2AREDACTED%2A%2A%2A",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-09T15:58:05.412771",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-09T15:58:05.614101",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-09T15:58:05.762297",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-09T15:58:05.893209",
+    "project": "child_app",
+    "target": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=%2A%2A%2AREDACTED%2A%2A%2A",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-09T15:58:06.022363",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-09T15:58:06.201118",
+    "project": "child_app",
+    "target": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=%2A%2A%2AREDACTED%2A%2A%2A",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-09T15:58:25.710381",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-09T15:58:25.865528",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-09T15:58:26.021042",
+    "project": "child_app",
+    "target": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=%2A%2A%2AREDACTED%2A%2A%2A",
+    "outcome": "buffered_on_first",
+    "attempts": null
   }
 ]
