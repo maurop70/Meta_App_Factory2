@@ -348,6 +348,13 @@ function BuilderChat({ registry, onAtomizerUpdate, externalCommand, onBuildCompl
   const [lastPrompt, setLastPrompt] = useState('');
   const [audienceDetected, setAudienceDetected] = useState(null);
   const [generatingProfile, setGeneratingProfile] = useState(false);
+  const [chatMode, setChatMode] = useState(() => localStorage.getItem('chatMode') || null);
+  
+  useEffect(() => {
+    if (chatMode) localStorage.setItem('chatMode', chatMode);
+    else localStorage.removeItem('chatMode');
+  }, [chatMode]);
+
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
   const fileRef = useRef(null);
@@ -476,6 +483,7 @@ function BuilderChat({ registry, onAtomizerUpdate, externalCommand, onBuildCompl
       ctx.registered_apps = registry.map(a => ({ name: a.name, status: a.status, type: a.type }));
     }
     ctx.factory_mode = 'builder';
+    ctx.chatMode = chatMode;
     ctx.timestamp = new Date().toISOString();
     return ctx;
   };
@@ -619,6 +627,7 @@ function BuilderChat({ registry, onAtomizerUpdate, externalCommand, onBuildCompl
 
   const clearChat = async () => {
     setMessages([]);
+    setChatMode(null);
     try { await fetch(`/api/chat/clear`, { method: 'POST' }); } catch { }
   };
 
@@ -729,16 +738,98 @@ function BuilderChat({ registry, onAtomizerUpdate, externalCommand, onBuildCompl
       <ConstructionTracker messages={messages} streaming={streaming} building={building} />
 
       <div className="chat-messages">
-        {messages.length === 0 && (
+        {messages.length === 0 && !chatMode ? (
+          <div className="welcome-msg venture-selection">
+            <div className="icon-big">🧠</div>
+            <h3>Select Operating Mode</h3>
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', justifyContent: 'center' }}>
+              <button 
+                className="mode-btn standard-btn"
+                onClick={() => setChatMode('standard')}
+                style={{
+                  padding: '12px 24px', background: '#3b82f6', color: '#fff', 
+                  border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold'
+                }}
+              >
+                🛠️ Standard App Development
+              </button>
+              <button 
+                className="mode-btn venture-btn"
+                onClick={() => {
+                  setChatMode('venture');
+                  setMessages([
+                    { role: 'assistant', text: "Venture Orchestration Mode Active. Please describe your new venture idea." }
+                  ]);
+                }}
+                style={{
+                  padding: '12px 24px', background: '#8b5cf6', color: '#fff', 
+                  border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold'
+                }}
+              >
+                🚀 Launch Venture (C-Suite Orchestration)
+              </button>
+            </div>
+          </div>
+        ) : messages.length === 0 && chatMode === 'standard' && (
           <div className="welcome-msg">
             <div className="icon-big">🧠</div>
             <h3>Factory Intelligence Online</h3>
             <p>Ask me to build apps, analyze architectures, or plan new features. Use the Command Palette to launch preset actions.</p>
           </div>
         )}
-        {messages.map((msg, i) => (
+        {messages.map((msg, i) => msg.hidden ? null : (
           <div key={i} className={`msg ${msg.role}`}>
-            {maskSecrets(msg.text)}
+            {msg.role === 'assistant' ? (
+              msg.text.split('```').map((part, index) => {
+                if (index % 2 === 0) {
+                  return <span key={index} style={{ whiteSpace: 'pre-wrap' }}>{maskSecrets(part)}</span>;
+                } else {
+                  const firstLineBreak = part.indexOf('\n');
+                  const rawCode = firstLineBreak !== -1 ? part.substring(firstLineBreak + 1) : part;
+                  return (
+                    <div key={index} className="code-block-container" style={{ position: 'relative', marginTop: '8px', marginBottom: '8px' }}>
+                      <pre style={{ background: '#1e1e1e', padding: '10px', borderRadius: '4px', overflowX: 'auto', margin: 0, color: '#d4d4d4' }}>
+                        <code>{maskSecrets(rawCode)}</code>
+                      </pre>
+                      <button 
+                        className="execute-write-btn"
+                        onClick={async () => {
+                          const filePath = window.prompt("Enter destination file path (e.g., Meta_App_Factory/server.py):");
+                          if (!filePath) return;
+                          try {
+                            const res = await fetch('/api/builder/write-file', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ file_path: filePath, content: rawCode })
+                            });
+                            if (res.ok) alert(`File written successfully to ${filePath}`);
+                            else alert("Failed to write file");
+                          } catch (e) {
+                            alert("Error writing file: " + e.message);
+                          }
+                        }}
+                        style={{
+                          display: 'block',
+                          marginTop: '4px',
+                          background: '#10b981',
+                          padding: '4px 8px',
+                          border: 'none',
+                          borderRadius: '4px',
+                          color: '#fff',
+                          cursor: 'pointer',
+                          fontSize: '0.8rem',
+                          fontWeight: 'bold'
+                        }}
+                      >
+                        💾 Execute Write
+                      </button>
+                    </div>
+                  );
+                }
+              })
+            ) : (
+              <span style={{ whiteSpace: 'pre-wrap' }}>{maskSecrets(msg.text)}</span>
+            )}
             {msg.role === 'assistant' && streaming && i === messages.length - 1 && (
               <span className="cursor" />
             )}
@@ -1468,6 +1559,10 @@ function App() {
   const [streaming, setStreaming] = useState(false);
   const [selectedApp, setSelectedApp] = useState(null);
 
+  // ── UPGRADE 4: Scout Anomalies State ─────────────────────
+  const [anomalies, setAnomalies] = useState([]);
+  const [manifestTick, setManifestTick] = useState(0);
+
   // ── Lifted Refine Panel State (persists across tab switches) ──
   const [refineLog, setRefineLog] = useState([]);
   const [refining, setRefining] = useState(false);
@@ -1573,7 +1668,53 @@ function App() {
 
     load();
     return () => { cancelled = true; };
-  }, []);
+  }, [manifestTick]);
+
+  // ── Operator Scout polling: Unregistered Agent Discovery ─
+  const loadScout = () => {
+    fetch(`http://localhost:5100/api/operator/scout`)
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) setAnomalies(data);
+      })
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    loadScout();
+    const interval = setInterval(loadScout, 15000);
+    return () => clearInterval(interval);
+  }, [manifestTick]);
+
+  const promoteAgent = async (agent) => {
+    let defaultPort = "5000";
+    if (agent.name.includes('Aether')) defaultPort = "5090";
+    const port = window.prompt(`Assign an API Port for [${agent.name}]:`, defaultPort);
+    if (!port) return;
+    
+    const payload = {
+      name: agent.name,
+      port: port,
+      cwd: agent.path,
+      command: "python server.py"
+    };
+
+    try {
+      const res = await fetch(`http://localhost:5100/api/operator/promote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        setManifestTick(prev => prev + 1);
+      } else {
+        const errorData = await res.json();
+        alert(`Promotion failed: ${errorData.error}`);
+      }
+    } catch (e) {
+      alert(`Promotion connection error: ${e.message}`);
+    }
+  };
 
   const handleCommand = (cmdText, isTriad) => {
     setActiveView('builder');
@@ -1683,6 +1824,26 @@ function App() {
             );
           })}
         </div>
+
+        {anomalies.length > 0 && (
+          <div className="sidebar-section">
+            <h3 style={{ color: '#f59e0b' }}>Detected Anomalies</h3>
+            {anomalies.map(a => (
+              <div key={a.name} className="sidebar-item warning" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span className="icon">⚠️</span>
+                <span style={{ flex: 1, fontSize: '0.85rem' }}>{a.name}</span>
+                <button
+                  className="app-action-btn promote"
+                  onClick={() => promoteAgent(a)}
+                  title="Promote to Active"
+                  style={{ fontSize: '11px', padding: '2px 6px', background: '#f59e0b', border: 'none', borderRadius: '4px', cursor: 'pointer', color: '#000', fontWeight: 'bold' }}
+                >
+                  Promote
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </aside>
 
       {/* ── MAIN ── */}

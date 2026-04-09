@@ -107,7 +107,14 @@ BASE_SYSTEM_PROMPT = (
     "- Managing the factory app registry\n"
     "- Configuring CI/CD, secrets, and deployment pipelines\n\n"
     "You have real-time access to the factory registry, vault status, and build state. "
-    "Be concise, technical, and actionable. Use markdown formatting."
+    "Be concise, technical, and actionable. Use markdown formatting.\n\n"
+    "When asked to build, modify, or engineer code, you MUST NEVER just output raw code. "
+    "You must structure your response strictly in four phases:\n"
+    "Phase 1: Implementation Plan - A strategic overview of the build.\n"
+    "Phase 2: Execution - The markdown code blocks required for the build. "
+    "(If creating an app, you MUST include a block to explicitly update sync_manifest.json with the app's name, port, and status).\n"
+    "Phase 3: Architectural Walkthrough - A post-execution breakdown explaining the integration.\n"
+    "Phase 4: Deployment Protocol - The exact, copy-paste terminal commands the user needs to execute to boot the new service and verify it is listening on the correct port."
 )
 
 
@@ -146,6 +153,11 @@ def _build_system_prompt(dashboard_context=None):
     if dashboard_context:
         parts.append("\n\n--- LIVE FACTORY STATE ---")
         parts.append(json.dumps(dashboard_context, indent=2))
+        
+        if dashboard_context.get("chatMode") == "venture":
+            parts.append("\n\n--- 🚀 VENTURE MODE ACTIVE ---")
+            parts.append("ENTER VENTURE MODE. Coordinate the Architect, CMO, and CFO to build a comprehensive business breakdown.")
+            
     local_files = _load_local_files()
     if local_files:
         parts.append("\n\n--- FACTORY CONFIG FILES ---")

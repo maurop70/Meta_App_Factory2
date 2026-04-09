@@ -28,6 +28,8 @@ class AetherNativeWatchdog:
         self._memory_threshold_mb = 500  # 500 MB max for Headless worker
         self._consecutive_failures = 0
         self._port_failures = {}  # Per-port failure tracking for auto-restart
+        self._port_restarts = {}  # Exponential backoff tracking map
+        self._last_restart_time = {}
         self._start_time = time.time()
         self._sunsetting = True  # Set false once protocol completes
 
@@ -113,8 +115,9 @@ class AetherNativeWatchdog:
         for service, port in ports.items():
             try:
                 with socket.create_connection(("localhost", port), timeout=2):
-                    # Port responded — reset its failure counter
+                    # Port responded — reset counters
                     self._port_failures[port] = 0
+                    self._port_restarts[port] = 0
             except Exception:
                 gates_status[service] = "FAIL"
                 fail_detected = True
@@ -123,7 +126,25 @@ class AetherNativeWatchdog:
 
                 # Auto-restart after 3 consecutive failures
                 if self._port_failures[port] >= 3 and port in restart_commands:
-                    self._auto_restart_port(port, service, restart_commands[port])
+                    current_time = time.time()
+                    attempts = self._port_restarts.get(port, 0)
+                    last_time = self._last_restart_time.get(port, 0)
+
+                    if attempts >= 5:
+                        logger.error(f"[{service}] Failed 5 consecutive restart attempts. Quarantining app.")
+                        self._quarantine_app(service)
+                        # We do NOT reset _port_failures so it stays trapped here and stops suffocation
+                        continue
+
+                    backoff_schedule = [0, 5, 15, 30]
+                    delay = backoff_schedule[attempts] if attempts < len(backoff_schedule) else 30
+
+                    if current_time - last_time >= delay:
+                        self._auto_restart_port(port, service, restart_commands[port])
+                        self._port_restarts[port] = attempts + 1
+                        self._last_restart_time[port] = current_time
+                    else:
+                        pass # Silently wait out the backoff period
 
         self._telemetry["gates_health"] = gates_status
         
@@ -135,22 +156,43 @@ class AetherNativeWatchdog:
             self._telemetry["status"] = "healthy"
 
     def _auto_restart_port(self, port, service, cmd):
-        """Attempts a single automatic restart of a failed service."""
-        logger.info(f"AUTO-RESTART: Attempting to revive {service} on port {port}...")
+        """Attempts a single automatic restart of a failed service via the Operator Agent."""
+        logger.info(f"AUTO-RESTART: Dispatching restart for {service} via Operator Agent...")
         try:
-            factory_dir = os.path.dirname(os.path.abspath(__file__))
-            subprocess.Popen(cmd, shell=True, cwd=factory_dir)
+            import requests
+            # Delegate restart to Operator Agent
+            response = requests.post("http://localhost:5100/api/operator/restart-service", json={"service_name": service}, timeout=5)
+            
+            # Broadcast AUTO_RECOVERING event to Phantom QA Ghost Stream
+            event_payload = {
+                "agent": "Watchdog",
+                "message": f"AUTO_RECOVERING: Dispatching restart for {service} (Port {port})",
+                "status": "HEAL_ATTEMPT"
+            }
+            try:
+                requests.post("http://localhost:5030/api/qa/ingest", json=event_payload, timeout=2)
+            except Exception as e:
+                logger.warning(f"Failed to broadcast AUTO_RECOVERING to Phantom QA: {e}")
+
             _log_heal_event(
                 "NativeWatchdog",
-                f"Auto-Restart: {service} (port {port})",
-                {"port": port, "service": service, "consecutive_fails": self._port_failures[port]},
+                f"Auto-Restart Dispatch: {service} (port {port})",
+                {"port": port, "service": service, "consecutive_fails": self._port_failures.get(port, 0), "operator_status": response.status_code},
                 "AUTO_RESTART"
             )
-            # Reset counter after restart attempt to avoid rapid-fire loops
-            self._port_failures[port] = 0
-            logger.info(f"AUTO-RESTART: {service} restart command dispatched.")
+            logger.info(f"AUTO-RESTART: {service} restart command successfully delegated to Operator.")
         except Exception as e:
-            logger.error(f"AUTO-RESTART FAILED for {service}: {e}")
+            logger.error(f"AUTO-RESTART FAILED to reach Operator for {service}: {e}")
+
+    def _quarantine_app(self, service: str):
+        """Dispatches an explicit QUARANTINE action to the Operator, blocking future starts until user intervention."""
+        logger.warning(f"QUARANTINE DISPATCH: Shifting {service} to Quarantined manifest status...")
+        try:
+            import requests
+            requests.post("http://localhost:5100/api/operator/quarantine", json={"service_name": service}, timeout=5)
+            logger.warning(f"{service} successfully QUARANTINED.")
+        except Exception as e:
+            logger.error(f"Failed to quarantine {service}: {e}")
 
     def _trigger_v3_recovery(self):
         """Fires when internal components fail to respond to 3 pings."""

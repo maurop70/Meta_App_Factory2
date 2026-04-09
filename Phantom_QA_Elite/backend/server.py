@@ -191,44 +191,57 @@ def get_dynamic_ports():
         "Phantom_QA_Elite": {"url": "http://localhost:5030", "health": "/api/health"}
     }
     try:
-        registry_path = ROOT.parent / "registry.json"
-        if registry_path.exists():
-            with open(registry_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
+        import json
+        # Construct absolute path pointing straight to the Antigravity-AI Agents root
+        # ROOT = Meta_App_Factory/Phantom_QA_Elite
+        manifest_path = ROOT.parent.parent / "sync_manifest.json"
+        
+        if manifest_path.exists():
+            with open(manifest_path, "r", encoding="utf-8") as f:
+                manifest_array = json.load(f)
+                
+            if isinstance(manifest_array, list):
+                for app in manifest_array:
+                    app_name = app.get("name")
+                    port = app.get("port")
+                    if app_name and port and isinstance(port, int):
+                        ports[app_name] = {
+                            "url": f"http://localhost:{port}", 
+                            "health": "/api/health",
+                            "manifest_status": app.get("status", "ACTIVE")
+                        }
+        else:
+            logger.error(f"Manifest not found at {manifest_path}")
             
-            for app_name, app_info in data.get("apps", {}).items():
-                port = app_info.get("port")
-                if port and isinstance(port, int):
-                    ports[app_name] = {"url": f"http://localhost:{port}", "health": "/api/health"}
     except Exception as e:
-        logger.error(f"Failed to read registry.json: {e}")
+        logger.error(f"Failed parsing array manifest direct-read: {e}")
     
     return ports
 
 
 @app.get("/api/pulse")
 async def pulse_scan():
-    """Scan all dynamically discovered C-Suite ports and report health."""
-    import aiohttp
+    """Scan all dynamically discovered C-Suite ports and report health using native sockets."""
+    import socket
     results = {}
     known_ports = get_dynamic_ports()
 
-    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as session:
-        for name, info in known_ports.items():
-            try:
-                async with session.get(f"{info['url']}{info['health']}") as r:
-                    if r.status == 200:
-                        data = await r.json()
-                        results[name] = {
-                            "status": "online",
-                            "url": info["url"],
-                            "details": data,
-                        }
-                    else:
-                        results[name] = {"status": "degraded", "url": info["url"],
-                                          "http_status": r.status}
-            except Exception:
-                results[name] = {"status": "offline", "url": info["url"]}
+    for name, info in known_ports.items():
+        try:
+            port = int(info["url"].split(":")[-1])
+            with socket.create_connection(('127.0.0.1', port), timeout=1):
+                results[name] = {
+                    "status": "online",
+                    "url": info["url"],
+                    "details": {"status": "socket_connected"},
+                    "manifest_status": info.get("manifest_status", "UNKNOWN")
+                }
+        except Exception:
+            results[name] = {
+                "status": "offline", 
+                "url": info["url"], 
+                "manifest_status": info.get("manifest_status", "UNKNOWN")
+            }
 
     online = sum(1 for r in results.values() if r["status"] == "online")
     return {

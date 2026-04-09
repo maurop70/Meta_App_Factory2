@@ -1,7 +1,7 @@
 """
 server.py — CFO Ultimate Excel Architect
 ═══════════════════════════════════════════════
-Sub-Agent of CFO | Port: 5041 | Antigravity-AI
+Sub-Agent of CFO | Port: 5070 | Antigravity-AI
 
 The CFO Agent's "Mathematical Soul" — transforms instructions
 and uploaded files into high-integrity financial models.
@@ -23,6 +23,8 @@ import time
 import logging
 from pathlib import Path
 from datetime import datetime
+import traceback
+import requests
 
 from fastapi import FastAPI, Request, UploadFile, File, Form
 from fastapi.responses import JSONResponse, HTMLResponse, FileResponse
@@ -83,6 +85,54 @@ app = FastAPI(
     version="3.0.0",
     docs_url="/docs",
 )
+
+def global_exception_handler(exc_type, exc_value, exc_tb):
+    """Catches fatal start-up thread crashes and fires telemetry to the Operator."""
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_tb)
+        return
+        
+    tb_str = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
+    logger.error(f"FATAL UNHANDLED EXCEPTION: {exc_value}\n{tb_str}")
+    
+    try:
+        requests.post(
+            "http://localhost:5100/api/telemetry/error",
+            json={
+                "service_name": "c_suite",
+                "error_message": str(exc_value),
+                "traceback": tb_str
+            },
+            timeout=5
+        )
+    except Exception:
+        pass
+        
+    sys.exit(1)
+
+sys.excepthook = global_exception_handler
+
+@app.exception_handler(Exception)
+async def fastapi_exception_handler(request: Request, exc: Exception):
+    """Catches 500 runtime errors across all endpoints and reports them to central telemetry."""
+    tb_str = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+    logger.error(f"FASTAPI RUNTIME EXCEPTION: {exc}\n{tb_str}")
+    try:
+        requests.post(
+            "http://localhost:5100/api/telemetry/error",
+            json={
+                "service_name": "c_suite",
+                "error_message": f"Runtime 500: {str(exc)}",
+                "traceback": tb_str
+            },
+            timeout=2
+        )
+    except Exception:
+        pass
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal Server Error", "error": str(exc)}
+    )
 
 app.add_middleware(
     CORSMiddleware,
@@ -291,13 +341,13 @@ h1 {{
 
     <div class="status">
         <div class="dot"></div>
-        <span style="font-size:13px; font-weight:500; color:#00c896;">Online — Port 5041</span>
+        <span style="font-size:13px; font-weight:500; color:#00c896;">Online — Port 5070</span>
     </div>
 
     <div class="stat-row">
         <div class="stat"><div class="stat-val">{len(report_list)}</div><div class="stat-label">Reports</div></div>
         <div class="stat"><div class="stat-val">{upload_count}</div><div class="stat-label">Uploads</div></div>
-        <div class="stat"><div class="stat-val">5041</div><div class="stat-label">Port</div></div>
+        <div class="stat"><div class="stat-val">5070</div><div class="stat-label">Port</div></div>
     </div>
 
     <div class="card">
@@ -748,9 +798,9 @@ async def health():
         "agent": "CFO_Ultimate_Excel_Architect",
         "parent_agent": "CFO",
         "version": "3.0.0",
-        "port": 5041,
+        "port": 5070,
         "dialogue_box": "/form",
-        "native_bridge": "http://localhost:5041/api/sentinel-relay-bridge",
+        "native_bridge": "http://localhost:5070/api/sentinel-relay-bridge",
         "n8n_mirror": "Retired — Native Intelligence Active",
         "excel_available": True,
         "uploads_processed": upload_count,
@@ -788,7 +838,7 @@ async def _execute(data: dict):
             "message": error,
             "missing_fields": missing,
             "received_fields": list(data.keys()),
-            "callback_url": "http://localhost:5041/api/sentinel-relay-bridge",
+            "callback_url": "http://localhost:5070/api/sentinel-relay-bridge",
             "instruction": "Please re-submit with all required fields: cmo_spend, architect_risk, campaign_list"
         }, status_code=400)
 
@@ -847,7 +897,7 @@ async def _execute(data: dict):
 
             qa_payload = {
                 "source": "CFO_Fragility_Engine",
-                "target_url": "http://localhost:5041",
+                "target_url": "http://localhost:5070",
                 "file_link": file_path,
                 "file_name": new_name,
                 "audit_mode": "mathematical",
@@ -858,7 +908,7 @@ async def _execute(data: dict):
                     "composite_score": report.get('fragility', {}).get('composite'),
                     "portfolio_roi_pct": report.get('summary', {}).get('portfolio_roi_pct'),
                 },
-                "callback_url": "http://localhost:5041/api/audit/correction",
+                "callback_url": "http://localhost:5070/api/audit/correction",
             }
             async with aiohttp.ClientSession(
                 timeout=aiohttp.ClientTimeout(total=30)
@@ -1219,7 +1269,7 @@ async def process_audit(request: Request):
         "verdict": verdict,
         "score": max(0, score),
         "audit_mode": "mathematical",
-        "target_url": "http://localhost:5041/api/audit",
+        "target_url": "http://localhost:5070/api/audit",
         "duration_seconds": 1.5,
         "total_tests": 1,
         "passed": 1 if final_status == "PASS" else 0,
@@ -1235,7 +1285,7 @@ async def process_audit(request: Request):
 #  STARTUP
 # ═══════════════════════════════════════════════════════════
 
-PORT = 5041
+PORT = 5070
 
 if __name__ == "__main__":
     print("")
