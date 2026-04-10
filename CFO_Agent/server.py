@@ -76,6 +76,9 @@ RULES:
 4. Return ONLY the narrative audit report text. Do not return JSON or markdown code blocks around the text.
 """
 
+# Global variable for server start time
+server_start_time = datetime.now()
+
 # ═══════════════════════════════════════════════════════════
 #  APP
 # ═══════════════════════════════════════════════════════════
@@ -350,6 +353,23 @@ h1 {{
         <div class="stat"><div class="stat-val">5070</div><div class="stat-label">Port</div></div>
     </div>
 
+    <div class="card" id="liveTelemetryWidget">
+        <h3>Live Telemetry</h3>
+        <!-- Telemetry Widget -->
+        <div class="endpoint">
+            <span class="method get">STATUS</span>
+            <span class="path" id="telemetryStatus">Loading...</span>
+        </div>
+        <div class="endpoint">
+            <span class="method get">UPTIME</span>
+            <span class="path" id="telemetryUptime">Calculating...</span>
+        </div>
+        <div class="endpoint">
+            <span class="method get">LAST REPORT</span>
+            <span class="path" id="telemetryLastReport">N/A</span>
+        </div>
+    </div>
+
     <div class="card">
         <h3>Dialogue Box</h3>
         <div class="endpoint">
@@ -381,6 +401,42 @@ h1 {{
         <a href="/form" class="test-btn primary">💬 Open Dialogue Box</a>
         <a href="/docs" class="test-btn secondary">📄 API Docs</a>
     </div>
+
+    <script>
+        function formatUptime(seconds) {{
+            const d = Math.floor(seconds / (3600 * 24));
+            const h = Math.floor((seconds % (3600 * 24)) / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = Math.floor(seconds % 60);
+            let parts = [];
+            if (d > 0) parts.push(`${{d}}d`);
+            if (h > 0) parts.push(`${{h}}h`);
+            if (m > 0) parts.push(`${{m}}m`);
+            if (s > 0 || parts.length === 0) parts.push(`${{s}}s`);
+            return parts.join(' ');
+        }}
+
+        async function updateTelemetry() {{
+            try {{
+                const response = await fetch('/api/health');
+                const data = await response.json();
+
+                document.getElementById('telemetryStatus').textContent = data.status.toUpperCase();
+                document.getElementById('telemetryUptime').textContent = formatUptime(data.uptime_seconds);
+                document.getElementById('telemetryLastReport').textContent = data.last_report_timestamp === "N/A" ? "N/A" : new Date(data.last_report_timestamp).toLocaleString();
+            }} catch (error) {{
+                console.error('Failed to fetch telemetry data:', error);
+                document.getElementById('telemetryStatus').textContent = 'OFFLINE';
+                document.getElementById('telemetryUptime').textContent = 'Error';
+                document.getElementById('telemetryLastReport').textContent = 'Error';
+            }}
+        }}
+
+        // Initial update
+        updateTelemetry();
+        // Update every 5 seconds
+        setInterval(updateTelemetry, 5000);
+    </script>
 </div>
 </body>
 </html>"""
@@ -793,6 +849,20 @@ async def dialogue_box():
 async def health():
     uploads_dir = ROOT / "uploads"
     upload_count = len(list(uploads_dir.iterdir())) if uploads_dir.exists() else 0
+    
+    # Calculate uptime
+    uptime_seconds = (datetime.now() - server_start_time).total_seconds()
+
+    # Get last report timestamp
+    reports_dir = ROOT / "reports"
+    report_files = sorted(reports_dir.glob("*.xlsx"), reverse=True)[:1] # Only need the latest
+    last_report_timestamp = "N/A"
+    if report_files:
+        try:
+            last_report_timestamp = datetime.fromtimestamp(report_files[0].stat().st_ctime).isoformat()
+        except Exception:
+            pass
+
     return {
         "status": "online",
         "agent": "CFO_Ultimate_Excel_Architect",
@@ -805,6 +875,8 @@ async def health():
         "excel_available": True,
         "uploads_processed": upload_count,
         "timestamp": datetime.now().isoformat(),
+        "uptime_seconds": uptime_seconds,
+        "last_report_timestamp": last_report_timestamp,
     }
 
 
@@ -977,7 +1049,9 @@ async def _execute(data: dict):
                     "type": "text/html"
                 })
             
-            bundle_res = mgr.bundle_project_assets(payload.get('project_id', 'WarRoom_Project'), assets)
+            # Assuming 'payload' is available from the original request, if not, use a default
+            project_id = data.get('project_id', 'WarRoom_Project') 
+            bundle_res = mgr.bundle_project_assets(project_id, assets)
             response_data["cloud_bundle"] = bundle_res
             logger.info("Context-Aware Folder Anchor injected bundle to AI Ideas.")
         except Exception as e:

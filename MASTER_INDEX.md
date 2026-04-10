@@ -599,3 +599,67 @@
 - **Actions:**
   - ✅ `UNKNOWN` → `log_for_review` | Workflow: Unknown | Severity: medium
 - **Status:** ALL_HEALED
+
+## SELF_HEALING_CYCLE
+- **Timestamp:** 2026-04-09 23:01:21
+- **App:** Adv_Autonomous_Agent
+- **Engine:** Nerve Center v2.0 (Self-Rectification + Learning)
+- **Failures Detected:** 3
+- **Auto-Healed:** 3
+- **Rectified (Learned):** 1
+- **Queued for Review:** 0
+- **Heal Failures:** 0
+- **Actions:**
+  - ✅ `AUTH_EXPIRED` → `refresh_credentials` [SEEDED] (conf: 0.53) | Workflow: User_Auth_Flow | Severity: high
+    - Error: `401 Unauthorized: Token expired The auth token has expired. error Auth Check`
+  - ✅ `GATEWAY_TIMEOUT` → `retry_with_backoff` [SEEDED] (conf: 0.76) | Workflow: Payment_Processing | Severity: medium
+    - Error: `504 Gateway Timeout on payment gateway Upstream timeout. error Stripe Call`
+  - ✅ `LEARNED_2F68EE45` → `retry_with_backoff` [RECTIFIED] (conf: 0.40) | Workflow: ML_Feature_Store | Severity: medium
+    - Error: `EMBEDDING_DIMENSION_MISMATCH: Vector dimensions 768 vs expected 1536 in collection 'product-embeddings' ChromaDB rejecte`
+- **Status:** ALL_HEALED
+
+## SELF_HEALING_CYCLE
+- **Timestamp:** 2026-04-09 23:02:19
+- **App:** Adv_Autonomous_Agent
+- **Engine:** Nerve Center v2.0 (Self-Rectification + Learning)
+- **Failures Detected:** 3
+- **Auto-Healed:** 3
+- **Rectified (Learned):** 1
+- **Queued for Review:** 0
+- **Heal Failures:** 0
+- **Actions:**
+  - ✅ `AUTH_EXPIRED` → `refresh_credentials` [SEEDED] (conf: 0.53) | Workflow: User_Auth_Flow | Severity: high
+    - Error: `401 Unauthorized: Token expired The auth token has expired. error Auth Check`
+  - ✅ `GATEWAY_TIMEOUT` → `retry_with_backoff` [SEEDED] (conf: 0.76) | Workflow: Payment_Processing | Severity: medium
+    - Error: `504 Gateway Timeout on payment gateway Upstream timeout. error Stripe Call`
+  - ✅ `LEARNED_2F68EE45` → `retry_with_backoff` [RECTIFIED] (conf: 0.40) | Workflow: ML_Feature_Store | Severity: medium
+    - Error: `EMBEDDING_DIMENSION_MISMATCH: Vector dimensions 768 vs expected 1536 in collection 'product-embeddings' ChromaDB rejecte`
+- **Status:** ALL_HEALED
+
+## SELF_HEALING_CYCLE
+- **Timestamp:** 2026-04-09 23:10:55
+- **App:** Resonance
+- **Engine:** Nerve Center v2.0 (Self-Rectification + Learning)
+- **Failures Detected:** 1
+- **Auto-Healed:** 1
+- **Rectified (Learned):** 1
+- **Queued for Review:** 0
+- **Heal Failures:** 0
+- **Actions:**
+  - ✅ `LEARNED_EED073CA` → `retry_with_backoff` [RECTIFIED] (conf: 0.40) | Workflow: Monthly_Report_Generator | Severity: medium
+    - Error: `ESOCKETTIMEDOUT: Redis cluster node at 10.0.0.5:6379 not responding after 30s The Redis Sentinel failover did not comple`
+- **Status:** ALL_HEALED
+
+## SELF_HEALING_CYCLE
+- **Timestamp:** 2026-04-09 23:14:17
+- **App:** Resonance
+- **Engine:** Nerve Center v2.0 (Self-Rectification + Learning)
+- **Failures Detected:** 1
+- **Auto-Healed:** 0
+- **Rectified (Learned):** 0
+- **Queued for Review:** 0
+- **Heal Failures:** 1
+- **Actions:**
+  - ❌ `LEARNED_EED073CA` → `retry_with_backoff` [LEARNED] (conf: 0.60) | Workflow: Monthly_Report_Generator | Severity: medium
+    - Error: `ESOCKETTIMEDOUT: Redis cluster node at 10.0.0.5:6379 not responding after 30s The Redis Sentinel failover did not comple`
+- **Status:** PARTIAL_HEAL

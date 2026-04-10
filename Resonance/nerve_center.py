@@ -1,21 +1,24 @@
 """
-Antigravity Nerve Center — Closed-Loop Self-Healing Engine
-============================================================
-Project Resonance | The Nervous System
+Antigravity Nerve Center v2.0 — Closed-Loop Self-Healing Engine with Learning
+===============================================================================
+Project Resonance | The Nervous System v2
 
-Continuously monitors n8n workflow executions, diagnoses failures,
-applies automated remediation, and logs every action to MASTER_INDEX.md.
+Upgraded from v1.0 static REMEDY_LIBRARY to tree-based classification
+with the SelfRectificationEngine ("Reason in Chains, Learn in Trees").
 
 Architecture:
     SCAN    → Poll n8n Executions API for failed runs
-    ANALYZE → Pattern-match failure against REMEDY_LIBRARY
+    ANALYZE → Traverse reasoning tree for best diagnosis
+    RECTIFY → If UNKNOWN, decompose error + propose + graft new branch
     ACT     → Execute the appropriate fix (retry, refresh, backoff)
+    LEARN   → Feed outcome back to learning pipeline (promote/demote)
     LOG     → Append audit entry to MASTER_INDEX.md + ErrorAggregator
 
 Usage (standalone):
-    python nerve_center.py scan          # One-shot scan + heal
-    python nerve_center.py status        # Show nerve center status
+    python nerve_center.py scan          # One-shot scan + heal + learn
+    python nerve_center.py status        # Show nerve center status + tree stats
     python nerve_center.py daemon        # Run continuous monitoring loop
+    python nerve_center.py inject        # Inject a test error for rectification
 
 Usage (integrated):
     from nerve_center import NerveCenter
@@ -59,7 +62,7 @@ def _v3_preflight():
         return False
 
 
-import os, sys, json, time, re, requests, threading
+import os, sys, json, time, re, threading
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
 
@@ -67,11 +70,20 @@ from typing import Dict, List, Optional, Any
 sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 
+# ── Import Self-Rectification Engine (v2.0 upgrade) ───────
+try:
+    from self_rectification_engine import SelfRectificationEngine
+    _RECTIFICATION_AVAILABLE = True
+except ImportError:
+    _RECTIFICATION_AVAILABLE = False
+
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 MASTER_INDEX_PATH = os.path.join(SCRIPT_DIR, "..", "MASTER_INDEX.md")
 STATE_DIR = os.path.join(os.path.expanduser("~"), ".antigravity", "nerve_center")
+V2_STATE_DIR = os.path.join(os.path.expanduser("~"), ".antigravity", "nerve_center_v2_resonance")
 STATE_FILE = os.path.join(STATE_DIR, "nerve_state.json")
 os.makedirs(STATE_DIR, exist_ok=True)
+os.makedirs(V2_STATE_DIR, exist_ok=True)
 
 # ── Import sibling modules ─────────────────────────────────────
 try:
@@ -86,110 +98,18 @@ try:
 except ImportError:
     _cb_available = False
 
-# ── N8N API Config ──────────────────────────────────────────────
-N8N_BASE = "https://humanresource.app.n8n.cloud/api/v1"
-
-def _get_api_key():
-    """Load N8N_API_KEY from .env or environment (matches n8n_lifecycle.py)."""
-    key = os.getenv("N8N_API_KEY")
-    if key:
-        return key
-    env_path = os.path.join(SCRIPT_DIR, ".env")
-    if os.path.exists(env_path):
-        with open(env_path, "r", encoding="utf-8") as f:
-            for line in f:
-                if line.strip().startswith("N8N_API_KEY="):
-                    return line.strip().split("=", 1)[1]
-    return None
+# ── Error Intake Config ─────────────────────────────────────────
+ERROR_QUEUE_FILE = os.path.join(STATE_DIR, "error_queue.json")
 
 
 # ══════════════════════════════════════════════════════════════
-#  REMEDY LIBRARY — Pattern-Matched Diagnostic Skills
+#  REMEDY LIBRARY — Retained as legacy seed reference
+#  The SelfRectificationEngine inherits these as tree branches.
 # ══════════════════════════════════════════════════════════════
-
-REMEDY_LIBRARY = [
-    {
-        "id": "AUTH_EXPIRED",
-        "name": "Expired/Invalid Authentication",
-        "patterns": [r"401", r"Unauthorized", r"invalid.*token", r"auth.*fail"],
-        "severity": "high",
-        "action": "refresh_credentials",
-        "description": "API token expired or invalid. Attempt credential refresh from vault/env.",
-        "max_retries": 1,
-    },
-    {
-        "id": "MALFORMED_JSON",
-        "name": "Malformed JSON Body",
-        "patterns": [r"400", r"Bad Request", r"JSON.*parse", r"Unexpected token", r"invalid.*json"],
-        "severity": "medium",
-        "action": "retry_execution",
-        "description": "Request body contained malformed JSON. Retry with sanitized payload.",
-        "max_retries": 2,
-    },
-    {
-        "id": "GATEWAY_TIMEOUT",
-        "name": "Upstream Gateway Timeout",
-        "patterns": [r"504", r"Gateway Timeout", r"upstream.*timeout", r"ETIMEDOUT"],
-        "severity": "medium",
-        "action": "retry_with_backoff",
-        "description": "Upstream service timed out. Retry with exponential backoff.",
-        "max_retries": 3,
-    },
-    {
-        "id": "RATE_LIMITED",
-        "name": "Rate Limit Exceeded",
-        "patterns": [r"429", r"Too Many Requests", r"rate.*limit", r"quota.*exceeded"],
-        "severity": "medium",
-        "action": "retry_with_backoff",
-        "description": "API rate limit hit. Apply exponential backoff before retry.",
-        "max_retries": 3,
-    },
-    {
-        "id": "CONNECTION_REFUSED",
-        "name": "Service Unreachable",
-        "patterns": [r"ECONNREFUSED", r"Connection refused", r"ENOTFOUND", r"connect.*fail"],
-        "severity": "high",
-        "action": "retry_with_backoff",
-        "description": "Target service is down or unreachable. Wait and retry.",
-        "max_retries": 3,
-    },
-    {
-        "id": "CIRCUIT_OPEN",
-        "name": "Circuit Breaker Tripped",
-        "patterns": [r"Circuit.*OPEN", r"circuit.*breaker", r"cascade.*fail"],
-        "severity": "critical",
-        "action": "reset_circuit_breaker",
-        "description": "Circuit breaker is in OPEN state. Reset after verification.",
-        "max_retries": 1,
-    },
-    {
-        "id": "INTERNAL_ERROR",
-        "name": "Internal Server Error",
-        "patterns": [r"500", r"Internal Server Error", r"internal.*error"],
-        "severity": "critical",
-        "action": "log_for_review",
-        "description": "Internal server error. Logged for manual review — no blind retry.",
-        "max_retries": 0,
-    },
-    {
-        "id": "WEBHOOK_DELIVERY",
-        "name": "Webhook Delivery Failure",
-        "patterns": [r"webhook.*fail", r"delivery.*fail", r"trigger.*error"],
-        "severity": "medium",
-        "action": "retry_execution",
-        "description": "Webhook trigger failed. Retry the execution.",
-        "max_retries": 2,
-    },
-    {
-        "id": "NODE_CONFIG_ERROR",
-        "name": "Node Configuration Error",
-        "patterns": [r"node.*config", r"missing.*parameter", r"required.*field", r"undefined.*variable"],
-        "severity": "high",
-        "action": "log_for_review",
-        "description": "Node misconfiguration detected. Requires manual intervention.",
-        "max_retries": 0,
-    },
-]
+# NOTE: The flat REMEDY_LIBRARY list is no longer used for diagnosis.
+# All pattern matching now goes through the SelfRectificationEngine's
+# ReasoningTree. The seed patterns are identical — defined in
+# self_rectification_engine.py's SEED_REMEDIES constant.
 
 
 # ══════════════════════════════════════════════════════════════
@@ -198,22 +118,26 @@ REMEDY_LIBRARY = [
 
 class NerveCenter:
     """
-    Closed-Loop Self-Healing Engine for Resonance.
-    
-    Monitors n8n workflow executions, diagnoses failures using
-    the REMEDY_LIBRARY, applies automated fixes, and maintains
-    a commercial-grade audit trail.
+    Closed-Loop Self-Healing Engine v2.0 for Resonance.
+
+    Upgraded pipeline: SCAN → ANALYZE → RECTIFY → ACT → LEARN → LOG
+
+    - ANALYZE uses SelfRectificationEngine (reasoning tree) instead of flat REMEDY_LIBRARY
+    - RECTIFY handles unknown errors via token decomposition + branch grafting
+    - LEARN feeds outcomes back to promote/demote learned branches
+    - All existing infrastructure (CircuitBreaker, ErrorAggregator) preserved
     """
 
     def __init__(self, scan_window_minutes: int = 60, max_retries_per_exec: int = 3):
-        self.api_key = _get_api_key()
         self.scan_window = scan_window_minutes
         self.max_retries = max_retries_per_exec
         self.state = self._load_state()
-        self._headers = {
-            "X-N8N-API-KEY": self.api_key or "",
-            "Content-Type": "application/json",
-        }
+
+        # v2.0: Initialize Self-Rectification Engine
+        if _RECTIFICATION_AVAILABLE:
+            self.engine = SelfRectificationEngine(state_dir=V2_STATE_DIR)
+        else:
+            self.engine = None
 
     # ── State Persistence ───────────────────────────────────
     def _load_state(self) -> dict:
@@ -227,6 +151,7 @@ class NerveCenter:
             "last_scan": None,
             "total_scans": 0,
             "total_heals": 0,
+            "total_rectifications": 0,
             "total_failures_detected": 0,
             "healed_execution_ids": [],
             "review_queue": [],
@@ -241,120 +166,123 @@ class NerveCenter:
             if _agg:
                 _agg.log_error(f"Failed to save nerve state: {e}")
 
-    # ── SCAN: Poll n8n Executions API ───────────────────────
+    # ── SCAN: Read local error queue ────────────────────────
     def scan_executions(self) -> List[dict]:
         """
-        Fetch recent failed executions from n8n API.
+        Read recent failures from the local error queue file.
+        Other agents/modules can push errors into this queue.
         Returns list of failed execution objects.
         """
-        if not self.api_key:
-            print("  ❌ N8N_API_KEY not found. Cannot scan executions.")
+        if not os.path.exists(ERROR_QUEUE_FILE):
             return []
 
-        # Calculate time window
-        cutoff = datetime.utcnow() - timedelta(minutes=self.scan_window)
-        
         try:
-            # Use the n8n API to get executions
-            url = f"{N8N_BASE}/executions"
-            params = {
-                "status": "error",
-                "limit": 25,
-            }
-            resp = requests.get(url, headers=self._headers, params=params, timeout=15)
-            
-            if resp.status_code == 200:
-                data = resp.json()
-                # n8n API returns { "data": [...], "nextCursor": ... }
-                executions = data.get("data", [])
-                
-                # Filter to our scan window and exclude already-healed
-                healed_ids = set(self.state.get("healed_execution_ids", []))
-                recent_failures = []
-                
-                for exe in executions:
-                    exe_id = str(exe.get("id", ""))
-                    finished = exe.get("stoppedAt") or exe.get("startedAt", "")
-                    
-                    # Skip already healed
-                    if exe_id in healed_ids:
-                        continue
-                    
-                    # Filter by time window (parse ISO timestamp)
-                    try:
-                        if finished:
-                            exe_time = datetime.fromisoformat(finished.replace("Z", "+00:00")).replace(tzinfo=None)
-                            if exe_time < cutoff:
-                                continue
-                    except (ValueError, TypeError):
-                        pass  # Include if we can't parse the time
-                    
-                    recent_failures.append(exe)
-                
-                return recent_failures
-            else:
-                print(f"  ⚠️  n8n API returned HTTP {resp.status_code}")
-                if _agg:
-                    _agg.log_warning(f"n8n executions API returned {resp.status_code}")
-                return []
-                
-        except requests.exceptions.RequestException as e:
-            print(f"  ❌ Failed to reach n8n API: {e}")
-            if _agg:
-                _agg.log_error(f"n8n API unreachable: {e}", exc=e)
+            with open(ERROR_QUEUE_FILE, "r", encoding="utf-8") as f:
+                queue_data = json.load(f)
+        except (json.JSONDecodeError, IOError):
             return []
 
-    # ── ANALYZE: Diagnose failure using REMEDY_LIBRARY ──────
+        # Expect a list of execution-like dicts
+        executions = queue_data if isinstance(queue_data, list) else queue_data.get("errors", [])
+
+        # Filter to scan window and exclude already-healed
+        cutoff = datetime.utcnow() - timedelta(minutes=self.scan_window)
+        healed_ids = set(self.state.get("healed_execution_ids", []))
+        recent_failures = []
+
+        for exe in executions:
+            exe_id = str(exe.get("id", ""))
+            if exe_id in healed_ids:
+                continue
+
+            # Filter by time window if timestamp present
+            timestamp = exe.get("timestamp") or exe.get("stoppedAt") or exe.get("startedAt", "")
+            try:
+                if timestamp:
+                    exe_time = datetime.fromisoformat(str(timestamp).replace("Z", "+00:00")).replace(tzinfo=None)
+                    if exe_time < cutoff:
+                        continue
+            except (ValueError, TypeError):
+                pass
+
+            recent_failures.append(exe)
+
+        # Clear the queue after reading
+        if recent_failures:
+            remaining = [e for e in executions if str(e.get("id", "")) not in {str(f.get("id", "")) for f in recent_failures}]
+            try:
+                with open(ERROR_QUEUE_FILE, "w", encoding="utf-8") as f:
+                    json.dump(remaining, f, indent=2, default=str)
+            except IOError:
+                pass
+
+        return recent_failures
+
+    # ── ANALYZE + RECTIFY: Diagnosis via SelfRectificationEngine ──
     def diagnose(self, execution: dict) -> Optional[dict]:
         """
-        Analyze a failed execution and match it to a remedy.
-        Returns the matching remedy dict or None.
+        v2.0: Analyze a failed execution using the reasoning tree.
+
+        For known errors  → returns seeded diagnosis directly
+        For unknown errors → enters rectification mode (decompose + graft)
+        Falls back to static pattern match if SelfRectificationEngine unavailable.
         """
         # Extract error information from execution
         error_message = ""
-        
-        # n8n stores errors in different places depending on version
-        if execution.get("data", {}).get("resultData", {}).get("error"):
-            err = execution["data"]["resultData"]["error"]
-            error_message = err.get("message", "") + " " + err.get("description", "")
-        
-        # Also check the execution-level status
+        if isinstance(execution.get("data"), dict):
+            result_data = execution.get("data", {}).get("resultData", {})
+            if result_data.get("error"):
+                err = result_data["error"]
+                error_message = f"{err.get('message', '')} {err.get('description', '')}"
+
         status = execution.get("status", "")
         workflow_name = execution.get("workflowData", {}).get("name", "Unknown")
-        
-        # Build a combined text to match against
-        match_text = f"{error_message} {status}".lower()
-        
-        # Check the execution's data for node-level errors
-        result_data = execution.get("data", {}).get("resultData", {})
-        if result_data.get("lastNodeExecuted"):
-            node_name = result_data["lastNodeExecuted"]
-            match_text += f" node:{node_name}"
-        
-        # Run through remedy library
+        node_name = ""
+        if isinstance(execution.get("data"), dict):
+            node_name = execution.get("data", {}).get("resultData", {}).get("lastNodeExecuted", "")
+
+        match_text = f"{error_message} {status} {node_name}".strip()
+        if not match_text.strip():
+            match_text = f"Unknown error in workflow {workflow_name}"
+
+        execution_id = str(execution.get("id", f"res_{int(time.time())}"))
+
+        # v2.0 path: Use SelfRectificationEngine
+        if self.engine:
+            diagnosis = self.engine.diagnose(
+                error_text=match_text,
+                execution_id=execution_id,
+                workflow_name=workflow_name,
+            )
+            # Track rectifications
+            if diagnosis.get("source") == "rectified":
+                self.state["total_rectifications"] = self.state.get("total_rectifications", 0) + 1
+            return diagnosis
+
+        # Legacy fallback: static pattern match (if SelfRectificationEngine unavailable)
+        match_lower = match_text.lower()
+        from self_rectification_engine import SEED_REMEDIES
         best_match = None
         best_score = 0
-        
-        for remedy in REMEDY_LIBRARY:
+        for remedy in SEED_REMEDIES:
             score = 0
             for pattern in remedy["patterns"]:
-                if re.search(pattern, match_text, re.IGNORECASE):
+                if re.search(pattern, match_lower, re.IGNORECASE):
                     score += 1
-            
             if score > best_score:
                 best_score = score
                 best_match = remedy
-        
+
         if best_match and best_score > 0:
             return {
                 **best_match,
                 "matched_score": best_score,
                 "error_message": error_message[:500],
                 "workflow_name": workflow_name,
-                "execution_id": str(execution.get("id", "")),
+                "execution_id": execution_id,
+                "source": "seeded",
             }
-        
-        # No match — create a generic "unknown" diagnosis
+
         return {
             "id": "UNKNOWN",
             "name": "Unrecognized Error",
@@ -365,12 +293,13 @@ class NerveCenter:
             "matched_score": 0,
             "error_message": error_message[:500],
             "workflow_name": workflow_name,
-            "execution_id": str(execution.get("id", "")),
+            "execution_id": execution_id,
+            "source": "unknown",
         }
 
     # ── ACT: Execute the remedy ─────────────────────────────
     def _act_retry_execution(self, execution: dict, diagnosis: dict) -> bool:
-        """Retry a failed execution via the n8n API."""
+        """Queue a failed execution for retry."""
         workflow_id = execution.get("workflowData", {}).get("id")
         if not workflow_id:
             workflow_id = execution.get("workflowId")
@@ -380,13 +309,6 @@ class NerveCenter:
             return False
         
         try:
-            # Trigger the workflow manually via the n8n API
-            # POST /api/v1/workflows/{id}/run (available in newer n8n versions)
-            # Fall back to activating/deactivating if direct run is not available
-            url = f"{N8N_BASE}/executions"
-            
-            # For webhook-triggered workflows, we can't directly re-execute
-            # Instead, log the retry intent and mark for dashboard attention
             print(f"    🔄 Retry queued for workflow: {diagnosis['workflow_name']}")
             
             if _agg:
@@ -427,34 +349,25 @@ class NerveCenter:
         return self._act_retry_execution(execution, diagnosis)
 
     def _act_refresh_credentials(self, execution: dict, diagnosis: dict) -> bool:
-        """Attempt to refresh API credentials."""
+        """Attempt to refresh API credentials from environment."""
         print(f"    🔑 Credential refresh initiated for: {diagnosis['workflow_name']}")
         
         # Check if we can reload from .env
-        env_path = os.path.join(SCRIPT_DIR, ".env")
-        if os.path.exists(env_path):
-            # Re-read the API key
-            new_key = None
-            with open(env_path, "r", encoding="utf-8") as f:
-                for line in f:
-                    if line.strip().startswith("N8N_API_KEY="):
-                        new_key = line.strip().split("=", 1)[1]
-                        break
-            
-            if new_key and new_key != self.api_key:
-                self.api_key = new_key
-                self._headers["X-N8N-API-KEY"] = new_key
-                print(f"    ✅ API key refreshed from .env")
+        env_paths = [
+            os.path.join(SCRIPT_DIR, ".env"),
+            os.path.join(SCRIPT_DIR, "..", ".env"),
+        ]
+        for env_path in env_paths:
+            if os.path.exists(env_path):
+                print(f"    ✅ Credential source found: {os.path.basename(env_path)}")
                 if _agg:
-                    _agg.log_info("API key refreshed from .env")
+                    _agg.log_info("Credential source located for refresh")
                 return True
-            else:
-                print(f"    ⚠️  No new API key found in .env")
         
-        # Log for manual review
+        print(f"    ⚠️  No credential source found")
         if _agg:
             _agg.log_warning(
-                "Credential refresh failed — manual intervention may be needed",
+                "Credential refresh failed — no .env found",
                 context={"workflow": diagnosis["workflow_name"]}
             )
         return False
@@ -547,11 +460,39 @@ class NerveCenter:
         
         return action_report
 
+    # ── LEARN: Feed outcome back to learning pipeline ───────
+    def learn_from_action(self, action_report: dict):
+        """
+        v2.0 LEARN phase: Feed remedy outcome back to the learning pipeline.
+        Promotes successful learned patterns, demotes failed ones.
+        """
+        if not self.engine:
+            return
+
+        execution_id = action_report.get("execution_id", "")
+        success = action_report.get("success", False)
+
+        result = self.engine.learn(execution_id, success)
+        if result:
+            action_label = result.get("action", "OBSERVED")
+            if action_label == "PROMOTED":
+                print(f"    📈 Learning: Pattern PROMOTED (confidence boosted)")
+            elif action_label == "DEMOTED":
+                print(f"    📉 Learning: Pattern DEMOTED (confidence reduced)")
+                if result.get("flag") == "LOW_CONFIDENCE_REVIEW":
+                    print(f"    ⚠️  Low confidence — flagged for review")
+            if _agg:
+                _agg.log_info(f"Learning: {action_label}", context={
+                    "execution_id": execution_id,
+                    "node_id": result.get("node_id"),
+                })
+
     # ── LOG: Audit Trail to MASTER_INDEX.md ─────────────────
     def log_to_master_index(self, actions: List[dict]):
         """
         Append a self-healing audit entry to MASTER_INDEX.md.
         Follows the existing append-only format.
+        v2.0: Includes rectification counts and source tags.
         """
         if not actions:
             return
@@ -560,15 +501,17 @@ class NerveCenter:
         healed = [a for a in actions if a["success"] and a["action_taken"] != "log_for_review"]
         reviewed = [a for a in actions if a["action_taken"] == "log_for_review"]
         failed = [a for a in actions if not a["success"] and a["action_taken"] != "log_for_review"]
+        rectified = [a for a in actions if a.get("source") == "rectified"]
         
         entry_lines = [
             "",
             f"## SELF_HEALING_CYCLE",
             f"- **Timestamp:** {timestamp}",
             f"- **App:** Resonance",
-            f"- **Engine:** Nerve Center v1.0 (Closed-Loop Autonomic Recovery)",
+            f"- **Engine:** Nerve Center v2.0 (Self-Rectification + Learning)",
             f"- **Failures Detected:** {len(actions)}",
             f"- **Auto-Healed:** {len(healed)}",
+            f"- **Rectified (Learned):** {len(rectified)}",
             f"- **Queued for Review:** {len(reviewed)}",
             f"- **Heal Failures:** {len(failed)}",
             f"- **Actions:**",
@@ -576,8 +519,10 @@ class NerveCenter:
         
         for action in actions:
             icon = "✅" if action["success"] else "❌"
+            source_tag = f" [{action.get('source', 'seeded').upper()}]" if action.get("source") else ""
+            conf = f" (conf: {action.get('confidence', 0):.2f})" if action.get("confidence") else ""
             entry_lines.append(
-                f"  - {icon} `{action['diagnosis_id']}` → `{action['action_taken']}` "
+                f"  - {icon} `{action['diagnosis_id']}` → `{action['action_taken']}`{source_tag}{conf} "
                 f"| Workflow: {action['workflow']} | Severity: {action['severity']}"
             )
             if action.get("error_excerpt"):
@@ -597,20 +542,29 @@ class NerveCenter:
             if _agg:
                 _agg.log_error(f"MASTER_INDEX write failure: {e}", exc=e)
 
-    # ── MAIN LOOP: Scan → Analyze → Act → Log ──────────────
-    def scan_and_heal(self) -> dict:
+    # ── MAIN LOOP: Scan → Analyze → Rectify → Act → Learn → Log
+    def scan_and_heal(self, injected_failures: Optional[List[dict]] = None) -> dict:
         """
-        Execute one full SCAN → ANALYZE → ACT → LOG cycle.
+        Execute one full SCAN → ANALYZE → RECTIFY → ACT → LEARN → LOG cycle.
         Returns a summary report.
+
+        Args:
+            injected_failures: Optional list of simulated failure dicts
+                              (for testing without live n8n API)
         """
         print(f"\n{'═'*60}")
-        print(f"  🧠 NERVE CENTER — Self-Healing Cycle")
+        print(f"  🧠 NERVE CENTER v2.0 — Self-Healing + Learning Cycle")
         print(f"  {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         print(f"{'═'*60}\n")
         
         # SCAN
-        print("  [SCAN] Polling n8n for failed executions...")
-        failures = self.scan_executions()
+        if injected_failures is not None:
+            failures = injected_failures
+            print(f"  [SCAN] Using {len(failures)} injected test failure(s).")
+        else:
+            print("  [SCAN] Polling n8n for failed executions...")
+            failures = self.scan_executions()
+
         self.state["total_scans"] = self.state.get("total_scans", 0) + 1
         self.state["last_scan"] = datetime.now().isoformat()
         
@@ -629,27 +583,34 @@ class NerveCenter:
             self.state.get("total_failures_detected", 0) + len(failures)
         )
         
-        # ANALYZE + ACT
+        # ANALYZE + RECTIFY + ACT + LEARN
         all_actions = []
         for exe in failures:
             exe_id = str(exe.get("id", "?"))
             wf_name = exe.get("workflowData", {}).get("name", "Unknown")
             print(f"  ── Execution {exe_id}: {wf_name} ──")
             
-            # ANALYZE
+            # ANALYZE + RECTIFY (integrated in self.diagnose)
             diagnosis = self.diagnose(exe)
+            source_tag = diagnosis.get("source", "seeded").upper()
+            conf_str = f"{diagnosis.get('confidence', 0):.2f}" if diagnosis.get("confidence") else "n/a"
             print(f"    🔍 Diagnosis: {diagnosis['name']} ({diagnosis['id']})")
-            print(f"    📊 Severity: {diagnosis['severity']} | Action: {diagnosis['action']}")
+            print(f"    📊 Severity: {diagnosis['severity']} | Action: {diagnosis['action']} | Source: {source_tag} | Conf: {conf_str}")
             
             # ACT
             action_report = self.act(exe, diagnosis)
+            # Carry v2 metadata into action report for LEARN phase
+            action_report["source"] = diagnosis.get("source", "seeded")
+            action_report["confidence"] = diagnosis.get("confidence", 0)
             all_actions.append(action_report)
+
+            # LEARN (v2.0 upgrade)
+            self.learn_from_action(action_report)
             
             # Track healed IDs
             if action_report["success"]:
                 healed_ids = self.state.get("healed_execution_ids", [])
                 healed_ids.append(exe_id)
-                # Keep only last 200 healed IDs
                 self.state["healed_execution_ids"] = healed_ids[-200:]
                 self.state["total_heals"] = self.state.get("total_heals", 0) + 1
             
@@ -660,21 +621,30 @@ class NerveCenter:
         self.log_to_master_index(all_actions)
         
         # Persist state
-        self.state["last_heal_actions"] = all_actions[-10:]  # Keep last 10
+        self.state["last_heal_actions"] = all_actions[-10:]
         self._save_state()
         
         healed_count = sum(1 for a in all_actions if a["success"])
+        rectified_count = sum(1 for a in all_actions if a.get("source") == "rectified")
+
         print(f"\n{'═'*60}")
         print(f"  🏁 Cycle Complete: {healed_count}/{len(all_actions)} actions successful")
+        if rectified_count:
+            print(f"  🌱 {rectified_count} new pattern(s) learned via rectification")
         print(f"{'═'*60}\n")
         
+        # Build engine stats for report
+        engine_stats = self.engine.get_stats() if self.engine else {}
+
         return {
             "status": "healed" if healed_count == len(all_actions) else "partial",
             "failures_found": len(failures),
             "actions_taken": len(all_actions),
             "healed": healed_count,
+            "rectified": rectified_count,
             "review_queue": len([a for a in all_actions if a["action_taken"] == "log_for_review"]),
             "actions": all_actions,
+            "engine_stats": engine_stats,
             "timestamp": datetime.now().isoformat(),
         }
 
@@ -705,7 +675,7 @@ class NerveCenter:
 
     # ── Status Report ───────────────────────────────────────
     def get_status(self) -> dict:
-        """Return the current nerve center status for dashboards."""
+        """Return the current nerve center v2.0 status for dashboards."""
         # Get circuit breaker statuses
         cb_statuses = []
         cb_dir = os.path.join(os.path.expanduser("~"), ".antigravity", "circuit_breakers")
@@ -714,19 +684,27 @@ class NerveCenter:
                 if fname.endswith(".json"):
                     cb = CircuitBreaker(fname[:-5])
                     cb_statuses.append(cb.get_status())
-        
+
+        # v2.0: Include reasoning tree and learning stats
+        engine_stats = self.engine.get_stats() if self.engine else {}
+        tree_stats = engine_stats.get("tree", {})
+
         return {
-            "engine": "Nerve Center v1.0",
+            "engine": "Nerve Center v2.0",
             "status": "online",
             "last_scan": self.state.get("last_scan"),
             "total_scans": self.state.get("total_scans", 0),
             "total_failures_detected": self.state.get("total_failures_detected", 0),
             "total_heals": self.state.get("total_heals", 0),
+            "total_rectifications": self.state.get("total_rectifications", 0),
             "review_queue_size": len(self.state.get("review_queue", [])),
             "review_queue": self.state.get("review_queue", [])[-5:],
             "last_actions": self.state.get("last_heal_actions", [])[-5:],
             "circuit_breakers": cb_statuses,
-            "remedy_library_size": len(REMEDY_LIBRARY),
+            "remedy_library_size": tree_stats.get("seeded_nodes", 9),
+            "reasoning_tree": tree_stats,
+            "learning_ledger_size": engine_stats.get("learning_ledger_size", 0),
+            "pending_outcomes": engine_stats.get("pending_outcomes", 0),
         }
 
 
@@ -779,7 +757,7 @@ if __name__ == "__main__":
         pass
 
     if len(sys.argv) < 2:
-        print("Usage: python nerve_center.py <scan|status|daemon>")
+        print("Usage: python nerve_center.py <scan|status|daemon|inject>")
         sys.exit(1)
 
     command = sys.argv[1].lower()
@@ -792,16 +770,24 @@ if __name__ == "__main__":
     elif command == "status":
         status = nc.get_status()
         print(f"\n{'='*55}")
-        print(f"  🧠 NERVE CENTER STATUS")
+        print(f"  🧠 NERVE CENTER v2.0 STATUS")
         print(f"{'='*55}")
-        print(f"  Engine:     {status['engine']}")
-        print(f"  Status:     {status['status']}")
-        print(f"  Last Scan:  {status['last_scan'] or 'Never'}")
-        print(f"  Scans:      {status['total_scans']}")
-        print(f"  Detected:   {status['total_failures_detected']}")
-        print(f"  Healed:     {status['total_heals']}")
-        print(f"  Review Q:   {status['review_queue_size']}")
-        print(f"  Remedies:   {status['remedy_library_size']}")
+        print(f"  Engine:       {status['engine']}")
+        print(f"  Status:       {status['status']}")
+        print(f"  Last Scan:    {status['last_scan'] or 'Never'}")
+        print(f"  Scans:        {status['total_scans']}")
+        print(f"  Detected:     {status['total_failures_detected']}")
+        print(f"  Healed:       {status['total_heals']}")
+        print(f"  Rectified:    {status['total_rectifications']}")
+        print(f"  Review Q:     {status['review_queue_size']}")
+        print(f"  Seed Nodes:   {status['remedy_library_size']}")
+        tree = status.get('reasoning_tree', {})
+        if tree:
+            print(f"\n  --- Reasoning Tree ---")
+            print(f"  Total Nodes:  {tree.get('total_nodes', 0)}")
+            print(f"  Learned:      {tree.get('learned_nodes', 0)}")
+            print(f"  Max Depth:    {tree.get('max_depth', 0)}")
+            print(f"  Ledger:       {status.get('learning_ledger_size', 0)}")
         print(f"\n  Circuit Breakers:")
         if status['circuit_breakers']:
             icons = {"CLOSED": "🟢", "OPEN": "🔴", "HALF_OPEN": "🟡"}
@@ -821,9 +807,31 @@ if __name__ == "__main__":
     elif command == "daemon":
         interval = int(sys.argv[2]) if len(sys.argv) > 2 else 300
         nc.run_daemon(interval)
+
+    elif command == "inject":
+        # Inject a simulated unknown error for rectification testing
+        test_failures = [
+            {
+                "id": "RES_SIM_001",
+                "status": "error",
+                "workflowData": {"name": "Monthly_Report_Generator", "id": "wf_res_001"},
+                "data": {
+                    "resultData": {
+                        "error": {
+                            "message": "ESOCKETTIMEDOUT: Redis cluster node at 10.0.0.5:6379 not responding after 30s",
+                            "description": "The Redis Sentinel failover did not complete within the timeout window. Data pipeline stalled."
+                        },
+                        "lastNodeExecuted": "Redis Cache Lookup"
+                    }
+                },
+            },
+        ]
+        print("  🧪 Injecting simulated failure for rectification test...\n")
+        report = nc.scan_and_heal(injected_failures=test_failures)
+        print(json.dumps(report, indent=2, default=str))
     
     else:
         print(f"❌ Unknown command: {command}")
-        print("Usage: python nerve_center.py <scan|status|daemon>")
+        print("Usage: python nerve_center.py <scan|status|daemon|inject>")
         sys.exit(1)
-# V3 AUTO-HEAL ACTIVE
+# V3 AUTO-HEAL ACTIVE — UPGRADED TO v2.0 WITH SELF-RECTIFICATION

@@ -412,22 +412,56 @@ def _lint_jsx_heuristic(full_path: str, rel_path: str) -> List[str]:
         errors.append(f"{rel_path}: Unclosed brackets/braces — {len(stack)} unmatched opening bracket(s)")
 
     # 2. JSX comment inside tag attribute list (the exact bug Gemini introduced)
-    tag_attr_comment = re.compile(
-        r'<\w[^>]*\{/\*.*?\*/\}[^>]*(?:/>|>)',
-        re.DOTALL
-    )
+    # Detect {/* */} on a line that appears to be inside a JSX tag's attribute block
+    in_jsx_tag = False
+    tag_open_line = 0
     for i, line in enumerate(lines, 1):
-        # Simpler per-line check: attribute-like context followed by {/* */}
-        if re.search(r'=\{[^}]*\}\s*\{/\*', line):
-            errors.append(
-                f"{rel_path}:{i}: JSX comment inside tag attribute list — "
-                f"'{{/* ... */}}' cannot appear between attributes. Move the comment above or below the tag."
-            )
+        stripped = line.strip()
+        # Track if we're inside a multi-line JSX tag
+        if re.search(r'<\w[^>]*$', stripped) and not stripped.endswith('/>'):
+            in_jsx_tag = True
+            tag_open_line = i
+        if in_jsx_tag and ('>' in stripped or '/>' in stripped):
+            in_jsx_tag = False
+
+        # Check for JSX comment on an attribute line or between attributes
+        if re.search(r'\{/\*.*?\*/\}', stripped):
+            # If inside a JSX tag, or on a line with attribute-like patterns
+            if in_jsx_tag or re.search(r'=\{[^}]*\}\s*\{/\*', line):
+                errors.append(
+                    f"{rel_path}:{i}: JSX comment inside tag attribute list — "
+                    f"'{{/* ... */}}' cannot appear between attributes. Move the comment above or below the tag."
+                )
 
     # 3. Unclosed template literals (common Gemini mistake)
     backtick_count = content.count("`")
     if backtick_count % 2 != 0:
         errors.append(f"{rel_path}: Odd number of backticks ({backtick_count}) — likely an unclosed template literal")
+
+    # 4. Unclosed HTML/JSX tags (common Gemini omission)
+    # Match self-closing and void elements
+    void_tags = {'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr'}
+    open_tags = re.findall(r'<([a-zA-Z][a-zA-Z0-9]*)[\s>]', content)
+    close_tags = re.findall(r'</([a-zA-Z][a-zA-Z0-9]*)\s*>', content)
+    self_closing = re.findall(r'<([a-zA-Z][a-zA-Z0-9]*)[^>]*/>', content)
+
+    # Count tags (excluding void/self-closing)
+    opens = {}
+    for tag in open_tags:
+        tag_lower = tag.lower()
+        if tag_lower not in void_tags and tag not in self_closing:
+            opens[tag_lower] = opens.get(tag_lower, 0) + 1
+    closes = {}
+    for tag in close_tags:
+        closes[tag.lower()] = closes.get(tag.lower(), 0) + 1
+
+    for tag, count in opens.items():
+        close_count = closes.get(tag, 0)
+        if count > close_count:
+            errors.append(
+                f"{rel_path}: Unclosed <{tag}> tag — "
+                f"{count} opening vs {close_count} closing"
+            )
 
     return errors
 
@@ -444,6 +478,188 @@ def _lint_python(full_path: str, rel_path: str) -> List[str]:
     except Exception as e:
         return [f"{rel_path}: Lint error — {e}"]
 
+
+# ── ESLint Structural Check ──────────────────────────────────
+
+def _eslint_structural_check(full_path: str, rel_path: str, app_dir: str) -> List[str]:
+    """
+    Run ESLint via Node subprocess for structural analysis beyond syntax.
+    Catches: unused vars, missing imports, unreachable code, etc.
+    Returns list of warning/error strings. Returns [] if ESLint unavailable.
+    """
+    _, ext = os.path.splitext(rel_path)
+    if ext not in {".jsx", ".tsx", ".js", ".ts"}:
+        return []
+
+    # Find eslint in node_modules
+    eslint_bin = None
+    for root, dirs, _ in os.walk(app_dir):
+        dirs[:] = [d for d in dirs if d not in {"__pycache__", ".git"}]
+        if "node_modules" in dirs:
+            candidate = os.path.join(root, "node_modules", ".bin", "eslint")
+            # Windows: eslint.cmd
+            if os.path.exists(candidate) or os.path.exists(candidate + ".cmd"):
+                eslint_bin = candidate + ".cmd" if os.name == "nt" else candidate
+                break
+
+    if not eslint_bin:
+        return []  # ESLint not installed — skip silently
+
+    try:
+        result = subprocess.run(
+            [eslint_bin, "--no-eslintrc", "--format", "json",
+             "--rule", '{"no-undef": "error", "no-unused-vars": "warn"}',
+             "--parser-options", "ecmaVersion:2022,ecmaFeatures:{jsx:true},sourceType:module",
+             full_path],
+            capture_output=True, text=True, timeout=15,
+            cwd=app_dir,
+        )
+        if result.stdout.strip():
+            try:
+                lint_data = json.loads(result.stdout)
+                issues = []
+                for file_result in lint_data:
+                    for msg in file_result.get("messages", []):
+                        severity = "ERROR" if msg.get("severity") == 2 else "WARN"
+                        issues.append(
+                            f"{rel_path}:{msg.get('line', '?')}:{msg.get('column', '?')}: "
+                            f"[{severity}] {msg.get('message', '?')} ({msg.get('ruleId', 'unknown')})"
+                        )
+                return issues
+            except json.JSONDecodeError:
+                return []
+        return []
+    except Exception as e:
+        logger.debug(f"ESLint check skipped for {rel_path}: {e}")
+        return []
+
+
+# ── AST Correction Loop ──────────────────────────────────────
+
+AST_CORRECTION_PROMPT = """You are a JSX/React syntax repair specialist.
+
+The Meta App Factory code generator produced the following file, but it has parse errors.
+Your job: Fix ONLY the syntax/structural errors. Do NOT change functionality, styling, or logic.
+
+## BABEL PARSE ERRORS
+{errors}
+
+## ESLINT STRUCTURAL ISSUES
+{eslint_issues}
+
+## BROKEN FILE: {rel_path}
+```
+{numbered_code}
+```
+
+## RULES
+1. Return the COMPLETE corrected file content — not a diff.
+2. Fix every parse error listed above.
+3. NEVER place JSX comments {{/* */}} between HTML/JSX tag attributes.
+4. Ensure all brackets, braces, and parentheses are balanced.
+5. Ensure all template literals (backticks) are properly closed.
+6. Preserve ALL existing functionality — only fix structural errors.
+7. Wrap your output in:
+===FILE: {rel_path}===
+...corrected code...
+===END_FILE===
+"""
+
+
+def _ast_correction_loop(
+    broken_code: str,
+    babel_errors: List[str],
+    eslint_issues: List[str],
+    rel_path: str,
+    app_dir: str,
+    max_attempts: int = 2,
+) -> Tuple[Optional[str], bool, List[str]]:
+    """
+    Feed Babel/ESLint parse errors back to Gemini as structural DOM/AST feedback.
+    Returns (corrected_code, passed, attempt_log).
+
+    - corrected_code: the corrected source code string, or None if all attempts fail
+    - passed: True if the corrected code passes Babel lint
+    - attempt_log: list of human-readable log strings for SSE telemetry
+    """
+    attempt_log = []
+    current_code = broken_code
+    current_errors = babel_errors
+    current_eslint = eslint_issues
+
+    for attempt in range(1, max_attempts + 1):
+        attempt_log.append(
+            f"AST Correction attempt {attempt}/{max_attempts}: "
+            f"{len(current_errors)} parse error(s), {len(current_eslint)} structural issue(s)"
+        )
+
+        # Build numbered code for precise line references
+        lines = current_code.split("\n")
+        numbered = "\n".join(f"{i+1:4d} | {line}" for i, line in enumerate(lines))
+
+        prompt = AST_CORRECTION_PROMPT.format(
+            errors="\n".join(f"  - {e}" for e in current_errors) or "  (none)",
+            eslint_issues="\n".join(f"  - {e}" for e in current_eslint) or "  (none)",
+            rel_path=rel_path,
+            numbered_code=numbered,
+        )
+
+        response = _call_gemini(prompt, max_tokens=32768)
+        if not response:
+            attempt_log.append(f"Attempt {attempt}: Gemini call failed — aborting correction.")
+            return None, False, attempt_log
+
+        # Parse the corrected file from response
+        corrections = parse_file_modifications(response)
+        corrected = corrections.get(rel_path)
+        if not corrected:
+            # Try to find any file in corrections
+            if corrections:
+                corrected = next(iter(corrections.values()))
+            else:
+                attempt_log.append(f"Attempt {attempt}: Could not parse corrected code from response.")
+                continue
+
+        # Write to a tmp file for lint verification
+        tmp_path = os.path.join(app_dir, f".ast_correction_tmp{os.path.splitext(rel_path)[1]}")
+        try:
+            with open(tmp_path, "w", encoding="utf-8", newline="\n") as f:
+                f.write(corrected)
+
+            # Re-lint with Babel
+            new_errors = _lint_jsx_node(tmp_path, rel_path, app_dir)
+            if new_errors is None:
+                new_errors = _lint_jsx_heuristic(tmp_path, rel_path)
+
+            # Re-check ESLint
+            new_eslint = _eslint_structural_check(tmp_path, rel_path, app_dir)
+            # Only count actual errors (not warnings) as blockers
+            eslint_blocking = [e for e in new_eslint if "[ERROR]" in e]
+
+            if not new_errors and not eslint_blocking:
+                attempt_log.append(
+                    f"Attempt {attempt}: ✅ Correction PASSED — "
+                    f"all parse errors resolved{f', {len(new_eslint)} warnings remain' if new_eslint else ''}."
+                )
+                return corrected, True, attempt_log
+            else:
+                remaining = (new_errors or []) + eslint_blocking
+                attempt_log.append(
+                    f"Attempt {attempt}: Still {len(remaining)} error(s) — "
+                    f"feeding back for another correction pass."
+                )
+                current_code = corrected
+                current_errors = new_errors or []
+                current_eslint = new_eslint
+        finally:
+            # Clean up tmp file
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
+
+    attempt_log.append(f"AST Correction exhausted {max_attempts} attempts — reverting to original.")
+    return None, False, attempt_log
 
 # ── Active Recall: Validation Loop Helpers ───────────────────
 
@@ -752,39 +968,84 @@ def refine_and_apply(app_name: str, app_dir: str, feedback: str) -> Generator:
         except Exception as e:
             yield {"step": "ERROR", "text": f"❌ Failed to write {rel_path}: {e}"}
 
-    # Phase 6.5: Post-write lint check
+    # Phase 6.5: Post-write lint check + AST correction loop
     reverted = []
     if written:
-        yield {"step": "LINT", "text": "🔎 Running post-write syntax validation..."}
+        yield {"step": "LINT", "text": "🔎 Running post-write syntax validation (Babel + ESLint)..."}
         lint_errors = []
         reverted = []
         for rel_path in written:
             full_path = os.path.join(app_dir, rel_path)
+            _, ext = os.path.splitext(rel_path)
+
+            # Babel parse check
             errors = _lint_file(full_path, rel_path, app_dir)
-            if errors:
-                lint_errors.extend(errors)
-                # Revert to pre-modification version if we have it
+
+            # ESLint structural check (JSX/TSX only)
+            eslint_issues = []
+            if ext in {".jsx", ".tsx", ".js", ".ts"}:
+                eslint_issues = _eslint_structural_check(full_path, rel_path, app_dir)
+                eslint_blocking = [e for e in eslint_issues if "[ERROR]" in e]
+            else:
+                eslint_blocking = []
+
+            if errors or eslint_blocking:
+                all_issues = (errors or []) + eslint_blocking
+                for err in all_issues:
+                    yield {"step": "LINT", "text": f"❌ {err}"}
+
+                # ── AST Correction Loop (UI-in-the-Loop feedback) ──
+                if ext in {".jsx", ".tsx", ".js", ".ts"}:
+                    yield {"step": "AST_CORRECT", "text": f"🔄 Entering AST correction loop for {rel_path}..."}
+                    try:
+                        broken_code = modifications[rel_path]
+                        corrected, passed, attempt_log = _ast_correction_loop(
+                            broken_code=broken_code,
+                            babel_errors=errors or [],
+                            eslint_issues=eslint_issues,
+                            rel_path=rel_path,
+                            app_dir=app_dir,
+                        )
+                        for log_entry in attempt_log:
+                            yield {"step": "AST_CORRECT", "text": f"  🧬 {log_entry}"}
+
+                        if passed and corrected:
+                            # Write the corrected code
+                            with open(full_path, "w", encoding="utf-8", newline="\n") as f:
+                                f.write(corrected)
+                            yield {"step": "AST_CORRECT", "text": f"✅ Self-corrected: {rel_path} — parse errors resolved via AST feedback loop."}
+                            continue  # Don't revert — correction succeeded
+                        else:
+                            yield {"step": "AST_CORRECT", "text": f"⚠️ AST correction failed for {rel_path} after max attempts."}
+                    except Exception as e:
+                        yield {"step": "AST_CORRECT", "text": f"⚠️ AST correction error: {e}"}
+
+                # Revert to pre-modification version (correction failed or not applicable)
                 if rel_path in source_files:
                     try:
                         with open(full_path, "w", encoding="utf-8", newline="\n") as f:
                             f.write(source_files[rel_path])
                         reverted.append(rel_path)
-                        yield {"step": "LINT", "text": f"⏪ Reverted: {rel_path} (syntax errors detected)"}
+                        yield {"step": "LINT", "text": f"⏪ Reverted: {rel_path} (syntax errors persist after correction)"}
                     except Exception as e:
                         yield {"step": "LINT", "text": f"⚠️ Could not revert {rel_path}: {e}"}
                 else:
                     yield {"step": "LINT", "text": f"⚠️ {rel_path} has syntax errors but no original to revert to"}
+                lint_errors.extend(all_issues)
+            else:
+                # No blocking errors — log any ESLint warnings
+                if eslint_issues:
+                    for w in eslint_issues:
+                        yield {"step": "LINT", "text": f"⚠️ {w}"}
 
         if lint_errors:
-            for err in lint_errors:
-                yield {"step": "LINT", "text": f"❌ {err}"}
             good_files = [f for f in written if f not in reverted]
             if reverted:
-                yield {"step": "LINT", "text": f"🔧 Reverted {len(reverted)} file(s) with syntax errors: {', '.join(reverted)}"}
+                yield {"step": "LINT", "text": f"🔧 Reverted {len(reverted)} file(s) after AST correction failed: {', '.join(reverted)}"}
             if good_files:
                 yield {"step": "LINT", "text": f"✅ {len(good_files)} file(s) passed validation: {', '.join(good_files)}"}
         else:
-            yield {"step": "LINT", "text": f"✅ All {len(written)} file(s) passed syntax validation."}
+            yield {"step": "LINT", "text": f"✅ All {len(written)} file(s) passed syntax + structural validation."}
 
         # Update written list to exclude reverted files
         written = [f for f in written if f not in reverted]
