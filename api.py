@@ -191,6 +191,22 @@ async def get_sentinel_log():
 class ExplainRequest(BaseModel):
     app_name: str
 
+class WarRoomDispatchRequest(BaseModel):
+    commander_intent: str
+
+@app.post("/api/warroom/dispatch")
+async def warroom_dispatch(req: WarRoomDispatchRequest):
+    """Bridge to the Concurrent War Room Dispatcher."""
+    try:
+        from war_room_orchestrator import dispatch_to_csuite
+        # the dispatcher returns a dict: {"strategy": "..."} or {"error": "..."}
+        result = await dispatch_to_csuite(req.commander_intent)
+        return {"status": "success", "data": result}
+    except Exception as e:
+        logger.error(f"War Room Dispatch Error: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
 @app.post("/api/socratic/explain")
 async def socratic_explain(req: ExplainRequest):
     try:

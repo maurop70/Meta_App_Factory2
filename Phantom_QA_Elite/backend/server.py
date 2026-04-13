@@ -182,13 +182,26 @@ async def dashboard():
 
 
 # ═══════════════════════════════════════════════════════════
-#  ROUTES — Pulse (System Health Scan)
+#  ROUTES — Pulse & Auto-Healer
 # ═══════════════════════════════════════════════════════════
+
+# Track active reboots so we don't spawn 50 processes while waiting for boot
+healing_locks = {}
 
 def get_dynamic_ports():
     ports = {
-        "Meta_App_Factory": {"url": "http://localhost:5000", "health": "/api/health"},
-        "Phantom_QA_Elite": {"url": "http://localhost:5030", "health": "/api/health"}
+        "Meta_App_Factory": {
+            "url": "http://localhost:5000", 
+            "health": "/api/health",
+            "cwd": str(ROOT.parent),
+            "command": "python api.py",
+            "manifest_status": "ACTIVE"
+        },
+        "Phantom_QA_Elite": {
+            "url": "http://localhost:5030", 
+            "health": "/api/health",
+            "manifest_status": "ACTIVE"
+        }
     }
     try:
         import json
@@ -208,7 +221,9 @@ def get_dynamic_ports():
                         ports[app_name] = {
                             "url": f"http://localhost:{port}", 
                             "health": "/api/health",
-                            "manifest_status": app.get("status", "ACTIVE")
+                            "manifest_status": app.get("status", "ACTIVE"),
+                            "cwd": app.get("cwd", ""),
+                            "command": app.get("command", "")
                         }
         else:
             logger.error(f"Manifest not found at {manifest_path}")
@@ -218,6 +233,55 @@ def get_dynamic_ports():
     
     return ports
 
+
+def auto_heal_agent(name: str, info: dict):
+    """Spawns an offline agent autonomously via background subprocess."""
+    import subprocess
+    import time
+    import sys
+    
+    cwd = info.get("cwd")
+    cmd_raw = info.get("command")
+    if not cwd or not cmd_raw:
+        logger.warning(f"Cannot auto-heal {name}: missing cwd or command.")
+        return
+        
+    # 1. Virtual Environment Sync: Replace generic 'python' with sys.executable
+    if cmd_raw.startswith("python "):
+        cmd = [sys.executable] + cmd_raw.split(" ")[1:]
+    else:
+        cmd = cmd_raw.split(" ")
+        
+    last_heal = healing_locks.get(name, 0)
+    now = time.time()
+    
+    # 30-second cooldown lock to prevent overlapping popen shells
+    if now - last_heal < 30:
+        return
+        
+    healing_locks[name] = now
+    
+    logger.warning(f"🚑 AUTO-HEAL TRIGGERED: Rebooting {name}...")
+    
+    port = info.get("url", "").split(":")[-1]
+    
+    # Fire an SSE broadcast to the UI
+    qa_event_broadcast({
+        "agent": "Phantom_QA_Elite",
+        "status": "HEAL_ATTEMPT",
+        "message": f"[Auto-Healing] Dispatching restart for {name} on Port {port}"
+    })
+    
+    try:
+        # 2. Terminal Visibility: Pop open a new console for the revived agent
+        subprocess.Popen(
+            cmd,
+            cwd=cwd,
+            creationflags=subprocess.CREATE_NEW_CONSOLE if os.name == 'nt' else 0
+        )
+        logger.info(f"✅ Auto-heal subprocess spawned for {name}.")
+    except Exception as e:
+        logger.error(f"Failed to auto-heal {name}: {e}")
 
 @app.get("/api/pulse")
 async def pulse_scan():
@@ -236,12 +300,19 @@ async def pulse_scan():
                     "details": {"status": "socket_connected"},
                     "manifest_status": info.get("manifest_status", "UNKNOWN")
                 }
+                # Clear healing lock if it successfully came online
+                if name in healing_locks:
+                    del healing_locks[name]
         except Exception:
             results[name] = {
                 "status": "offline", 
                 "url": info["url"], 
                 "manifest_status": info.get("manifest_status", "UNKNOWN")
             }
+            
+            # Subsystem Auto-Healer Dispatch
+            if name != "Phantom_QA_Elite" and str(info.get("manifest_status")).lower() == "active":
+                auto_heal_agent(name, info)
 
     online = sum(1 for r in results.values() if r["status"] == "online")
     return {

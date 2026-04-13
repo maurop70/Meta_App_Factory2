@@ -5,6 +5,7 @@ import CommandCenter from './CommandCenter'
 import SupportFAB from './SupportFAB'
 import ModeSelectionScreen from './ModeSelectionScreen'
 import VentureSuite from './VentureSuite'
+import PhantomQA from './PhantomQA'
 
 // ═══════════════════════════════════════════════════════════
 //  META APP FACTORY — BUILDER DASHBOARD (Full Feature Parity)
@@ -1733,6 +1734,7 @@ function App() {
     { icon: '⚔️', label: 'War Room', view: 'warroom', badge: 'LIVE' },
     { icon: '🏗️', label: 'Builder Chat', view: 'builder' },
     { icon: '📦', label: 'App Registry', view: 'registry' },
+    { icon: '🛡️', label: 'QA Command Center', view: 'qa', badge: 'LIVE' },
     { icon: '🎮', label: 'Command Palette', view: 'commands' },
     { icon: '🧠', label: 'Agent Status', view: 'agents' },
     { icon: '🎨', label: 'Brand Studio', view: 'brand', badge: 'NEW' },
@@ -2018,6 +2020,9 @@ function App() {
         {activeView === 'atomizer' && (
           <AtomizerPanel chunks={atomizerChunks} progress={atomizerProgress} total={atomizerChunks.length} />
         )}
+
+        {/* QA Command Center */}
+        {activeView === 'qa' && <PhantomQA />}
 
         {/* Telemetry */}
         {activeView === 'telemetry' && (

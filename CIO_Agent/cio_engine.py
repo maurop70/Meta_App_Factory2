@@ -311,22 +311,16 @@ RULES:
 """
 
 
-def synthesize_memo(external_intel: dict, internal_audit: dict) -> Optional[str]:
+def synthesize_memo(external_intel: dict, internal_audit: dict) -> Tuple[Optional[str], Optional[str]]:
     """
     Phase 3: Feed both datasets to Gemini to produce the Upgrade Memo.
-    Returns the memo markdown string, or None on failure.
+    Returns (memo markdown string, llm_provider) or (None, None) on failure.
     """
     logger.info("═══ PHASE 3: Upgrade Memo Synthesis ═══")
 
     try:
-        import google.generativeai as genai
-
-        api_key = os.getenv("GEMINI_API_KEY")
-        if not api_key:
-            logger.error("GEMINI_API_KEY not set — cannot synthesize memo")
-            return None
-
-        genai.configure(api_key=api_key)
+        from cio_router import CIORouter
+        import asyncio
 
         # Build the data payload for Gemini
         data_payload = {
@@ -359,24 +353,26 @@ DATA:
 
 Generate the memo now."""
 
-        model = genai.GenerativeModel(
-            model_name="gemini-2.5-flash",
-            system_instruction=CIO_SYSTEM_PROMPT
+        router = CIORouter()
+        
+        # Run async generation in sync context
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        memo_text, provider = loop.run_until_complete(
+            router.generate(prompt=prompt, task_type="upgrade_memo", system_override=CIO_SYSTEM_PROMPT)
         )
+        loop.close()
 
-        response = model.generate_content(prompt)
-        memo_text = response.text
+        if provider == "error" or not memo_text or len(memo_text) < 100:
+            logger.error(f"Gemini returned an empty or too-short memo. Provider: {provider}")
+            return None, provider
 
-        if not memo_text or len(memo_text) < 100:
-            logger.error("Gemini returned an empty or too-short memo")
-            return None
-
-        logger.info(f"  ✅ Memo synthesized ({len(memo_text)} chars)")
-        return memo_text
+        logger.info(f"  ✅ Memo synthesized ({len(memo_text)} chars) via {provider}")
+        return memo_text, provider
 
     except Exception as e:
         logger.error(f"Memo synthesis failed: {e}")
-        return None
+        return None, "error"
 
 
 # ═══════════════════════════════════════════════════════════
@@ -445,7 +441,7 @@ def run_full_sweep(focus_areas: Optional[List[str]] = None) -> dict:
     internal_audit = audit_internal_architecture()
 
     # Phase 3: Synthesize Memo
-    memo_text = synthesize_memo(external_intel, internal_audit)
+    memo_text, provider = synthesize_memo(external_intel, internal_audit)
 
     result = {
         "sweep_start": sweep_start.isoformat(),
@@ -459,6 +455,7 @@ def run_full_sweep(focus_areas: Optional[List[str]] = None) -> dict:
         "internal_files_audited": len(internal_audit.get("file_contents", {})),
         "memo_generated": memo_text is not None,
         "memo_filename": None,
+        "llm_provider": provider,
     }
 
     if memo_text:
