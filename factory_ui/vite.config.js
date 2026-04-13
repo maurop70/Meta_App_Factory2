@@ -17,6 +17,34 @@ export default defineConfig({
         target: 'http://localhost:5100',
         changeOrigin: true,
       },
+      '/api/qa': {
+        target: 'http://localhost:5030',
+        changeOrigin: true,
+      },
+      '/api/test': {
+        target: 'http://localhost:5030',
+        changeOrigin: true,
+      },
+      '/api/pulse': {
+        target: 'http://localhost:5030',
+        changeOrigin: true,
+      },
+      '/api/reports': {
+        target: 'http://localhost:5030',
+        changeOrigin: true,
+      },
+      '/api/dashboard': {
+        target: 'http://localhost:5030',
+        changeOrigin: true,
+      },
+      '/api/repairs': {
+        target: 'http://localhost:5030',
+        changeOrigin: true,
+      },
+      '/api/ghost-stream': {
+        target: 'http://localhost:5030',
+        changeOrigin: true,
+      },
       '/api': {
         target: 'http://localhost:5000',
         changeOrigin: true,

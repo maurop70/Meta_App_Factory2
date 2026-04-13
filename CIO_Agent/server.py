@@ -41,6 +41,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
+import aiohttp
 
 # ═══════════════════════════════════════════════════════════
 #  ENVIRONMENT
@@ -83,11 +84,13 @@ def global_exception_handler(exc_type, exc_value, exc_tb):
 
     try:
         sync_requests.post(
-            "http://localhost:5100/api/telemetry/error",
+            "http://localhost:5030/api/qa/ingest",
             json={
-                "service_name": "cio_agent",
-                "error_message": str(exc_value),
-                "traceback": tb_str
+                "agent": "CIO_Agent",
+                "status": "FAIL",
+                "node": "FATAL UNHANDLED EXCEPTION",
+                "result": "TEST_FAIL",
+                "timestamp": datetime.now().isoformat()
             },
             timeout=5
         )
@@ -108,11 +111,13 @@ async def fastapi_exception_handler(request: Request, exc: Exception):
     logger.error(f"FASTAPI RUNTIME EXCEPTION: {exc}\n{tb_str}")
     try:
         sync_requests.post(
-            "http://localhost:5100/api/telemetry/error",
+            "http://localhost:5030/api/qa/ingest",
             json={
-                "service_name": "cio_agent",
-                "error_message": f"Runtime 500: {str(exc)}",
-                "traceback": tb_str
+                "agent": "CIO_Agent",
+                "status": "FAIL",
+                "node": f"FASTAPI RUNTIME EXCEPTION: {str(exc)}",
+                "result": "TEST_FAIL",
+                "timestamp": datetime.now().isoformat()
             },
             timeout=2
         )
@@ -132,6 +137,34 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+# ═══════════════════════════════════════════════════════════
+#  SSE GHOST STREAM TELEMETRY
+# ═══════════════════════════════════════════════════════════
+
+async def sse_broadcast(status: str, node: str, result: str):
+    """Broadcasts non-blocking SSE telemetry to Phantom QA Ghost Stream."""
+    payload = {
+        "agent": "CIO_Agent",
+        "status": status,
+        "node": node,
+        "result": result,
+        "timestamp": datetime.now().isoformat()
+    }
+    logger.info(f"[Ghost Stream] {status} | {node} | {result}")
+    
+    async def _post():
+        try:
+            async with aiohttp.ClientSession() as session:
+                await session.post(
+                    "http://localhost:5030/api/qa/ingest",
+                    json=payload,
+                    timeout=2
+                )
+        except Exception:
+            pass
+            
+    asyncio.create_task(_post())
 
 # ═══════════════════════════════════════════════════════════
 #  PYDANTIC MODELS
@@ -574,15 +607,24 @@ async def process_sweep(req: CIOProcessRequest = CIOProcessRequest()):
         )
 
     sweep_state["is_running"] = True
+    asyncio.create_task(sse_broadcast("RUNNING", "Initiating 3-Phase Architecture Audit", "INFO"))
+    
     try:
         loop = asyncio.get_event_loop()
         result = await loop.run_in_executor(None, run_full_sweep, req.focus_areas)
         sweep_state["last_sweep"] = datetime.now().isoformat()
         sweep_state["last_result"] = result
         sweep_state["sweep_count"] += 1
+        
+        asyncio.create_task(sse_broadcast(
+            "PASS" if result.get('memo_generated') else "FAIL", 
+            f"Sweep Complete via {result.get('llm_provider', 'unknown')}", 
+            "TEST_PASS" if result.get('memo_generated') else "TEST_FAIL"
+        ))
         return result
     except Exception as e:
         logger.error(f"Sweep failed: {e}")
+        asyncio.create_task(sse_broadcast("FAIL", f"Sweep failed: {e}", "TEST_FAIL"))
         return JSONResponse(status_code=500, content={"error": str(e)})
     finally:
         sweep_state["is_running"] = False

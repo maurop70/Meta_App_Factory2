@@ -53,10 +53,12 @@ logger = logging.getLogger("CFO_Excel_Architect")
 sys.path.insert(0, str(ROOT))
 from cfo_engine import CFOExecutionController
 from cfo_compiler import CFOCompiler
-from cfo_logic import FinancialPayload, calculate_financial_health
+from cfo_logic import FinancialPayload, CFOAnalysisResult, calculate_financial_health
+from llm_router import LLMRouter
 
 cfo = CFOExecutionController()
 cfo_compiler = CFOCompiler()
+llm_router = LLMRouter()
 
 if os.getenv("GEMINI_API_KEY"):
     genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
@@ -85,7 +87,7 @@ server_start_time = datetime.now()
 
 app = FastAPI(
     title="CFO Ultimate Excel Architect — Sub-Agent of CFO",
-    version="3.0.0",
+    version="3.1.0",
     docs_url="/docs",
 )
 
@@ -867,7 +869,7 @@ async def health():
         "status": "online",
         "agent": "CFO_Ultimate_Excel_Architect",
         "parent_agent": "CFO",
-        "version": "3.0.0",
+        "version": "3.1.0",
         "port": 5070,
         "dialogue_box": "/form",
         "native_bridge": "http://localhost:5070/api/sentinel-relay-bridge",
@@ -1280,7 +1282,8 @@ async def process_audit(request: Request):
     # Stream 'RUNNING' start
     asyncio.create_task(sse_broadcast("RUNNING", "CFO Received Audit Request. Executing mathematical validation...", "SUITE_START"))
     
-    # ── 2. Pydantic Mathematical Validation
+    # ── 2. Pydantic Mathematical Validation + Isolated Engine Routing
+    FRAGILITY_ENGINE = "http://localhost:5041"
     try:
         content_type = request.headers.get("content-type", "")
         pydantic_payload = None
@@ -1304,8 +1307,32 @@ async def process_audit(request: Request):
         else:
             raise ValueError(f"Unsupported content type: {content_type}")
 
-        math_result = calculate_financial_health(pydantic_payload)
-        math_json = math_result.json()
+        # ── Route to Isolated Fragility Engine (Port 5041) ──────────
+        # Primary: HTTP POST to the dedicated math microservice.
+        # Fallback: In-memory calculation if the engine is offline.
+        math_source = "in-memory"
+        try:
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as session:
+                async with session.post(
+                    f"{FRAGILITY_ENGINE}/api/calculate",
+                    json=json.loads(pydantic_payload.json()),
+                ) as resp:
+                    if resp.status == 200:
+                        engine_data = await resp.json()
+                        result_dict = engine_data.get("result", {})
+                        math_result = CFOAnalysisResult(**result_dict)
+                        math_json = json.dumps(result_dict)
+                        math_source = "isolated-engine:5041"
+                        logger.info(f"[AUDIT] Math routed to Fragility Engine (5041) — {engine_data.get('meta', {}).get('latency_ms', '?')}ms")
+                    else:
+                        raise ValueError(f"Engine returned {resp.status}")
+        except Exception as engine_err:
+            # Graceful fallback: calculate in-memory
+            logger.warning(f"[AUDIT] Fragility Engine (5041) unavailable ({engine_err}), falling back to in-memory math")
+            math_result = calculate_financial_health(pydantic_payload)
+            math_json = math_result.json()
+
+        asyncio.create_task(sse_broadcast("RUNNING", f"Math validated via {math_source}. Fragility={math_result.fragility_index}", "INFO"))
     except Exception as e:
         asyncio.create_task(sse_broadcast("FAIL", f"Mathematical Validation Error: {str(e)}", "TEST_FAIL"))
         return JSONResponse({"verdict": "FAIL", "error": str(e)}, status_code=400)
@@ -1313,25 +1340,23 @@ async def process_audit(request: Request):
     # Stream 'LLM' transition
     asyncio.create_task(sse_broadcast("RUNNING", "Deterministic math verified. Synthesizing War Room qualitative report...", "INFO"))
 
-    # ── 3. LLM Qualitative Evaluation
+    # ── 3. LLM Qualitative Evaluation (Hybrid Router — CIO Discovery #3)
     narrative_report = ""
     verdict = "PASS"
     score = 100 - math_result.fragility_index
-    
+    llm_provider = "unknown"
+
     try:
-        if not os.getenv("GEMINI_API_KEY"):
-            narrative_report = "GEMINI_API_KEY not found. Native Audit fallback generated:\nCFO Math Engine passed. Fragility Index: " + str(math_result.fragility_index)
-        else:
-            model = genai.GenerativeModel(
-                model_name="gemini-2.5-flash",
-                system_instruction=CFO_SYSTEM_PROMPT
-            )
-            response = model.generate_content(math_json)
-            narrative_report = response.text.strip()
+        narrative_report, llm_provider = await llm_router.generate_narrative(
+            math_json, math_result
+        )
+        if llm_provider == "error":
+            verdict = "WARN"
     except Exception as e:
         verdict = "WARN"
         narrative_report = f"LLM Generation Failed (Math verified). Reason: {str(e)}"
-        
+        llm_provider = "error"
+
     final_status = "FAIL" if math_result.fragility_index > 50 else "PASS"
     if final_status == "FAIL": verdict = "FAIL"
 
@@ -1349,10 +1374,17 @@ async def process_audit(request: Request):
         "passed": 1 if final_status == "PASS" else 0,
         "failed": 1 if final_status == "FAIL" else 0,
         "cfo_analysis": narrative_report,
+        "llm_provider": llm_provider,
         "findings": [{"passed": final_status == "PASS", "test_name": "Fragility Gate", "details": f"Fragility Index is {math_result.fragility_index}"}]
     }
 
 
+
+# ── Hybrid LLM Router Status (CIO Discovery #3) ─────────
+@app.get("/api/llm/status")
+async def llm_status():
+    """Returns hybrid LLM routing telemetry — Ollama health, Gemini status, routing stats."""
+    return await llm_router.get_status()
 
 
 # ═══════════════════════════════════════════════════════════
@@ -1375,13 +1407,15 @@ if __name__ == "__main__":
     print("   Consult:   POST /api/consult (instruction + file)")
     print("   Bridge:    POST /api/sentinel-relay-bridge")
     print("   Execute:   POST /api/execute")
-    print("   Audit:     POST /api/audit")
+    print("   Audit:     POST /api/audit (Hybrid LLM Router Active)")
     print("   Health:    GET  /api/health")
+    print("   LLM Status:GET  /api/llm/status")
     print("   Reports:   GET  /api/reports")
     print("")
+    print("   LLM Routing: LOCAL (Ollama) ↔ CLOUD (Gemini 2.5 Flash)")
     print("   N8N Cloud: RETIRED (Native Intelligence Active)")
     print("")
-    print("   Antigravity-AI | CFO Ultimate Excel Architect v3.0.0")
+    print("   Antigravity-AI | CFO Ultimate Excel Architect v3.1.0")
     print("")
     print("=" * 60)
     print("")

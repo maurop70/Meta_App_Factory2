@@ -111,14 +111,25 @@ export default function WarRoom({ ventureMode = false, onHandoff }) {
     }]);
     setOperatorCmd('');
     try {
-      const res = await axios.post('/api/war-room/dispatch', {
-        message: payload,
-        project_id: selectedProject || 'AntigravityWorkspace_Q3',
-        strategy_mode: 'operator_directive'
+      const res = await axios.post('http://localhost:5000/api/warroom/dispatch', {
+        commander_intent: payload
       });
       setOperatorLog(prev => [...prev, {
-        type: 'ack', text: `INCUBATOR GATE STARTED — status: ${res?.data?.status || 'ok'}`, ts: new Date().toLocaleTimeString()
+        type: 'ack', text: `CEO SYNTHESIS COMPLETE.`, ts: new Date().toLocaleTimeString()
       }]);
+      
+      if (res?.data?.data?.strategy) {
+        setMessages(prev => [...prev, { 
+          type: 'dialogue', 
+          agent: 'CEO', 
+          message: res.data.data.strategy, 
+          timestamp: new Date().toISOString() 
+        }]);
+      } else if (res?.data?.data?.error) {
+        setOperatorLog(prev => [...prev, {
+          type: 'error', text: `SYNTHESIS ERROR: ${res.data.data.error}`, ts: new Date().toLocaleTimeString()
+        }]);
+      }
     } catch(e) {
       console.error('Operator dispatch failed', e);
       setOperatorLog(prev => [...prev, {
