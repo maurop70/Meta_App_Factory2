@@ -8,12 +8,13 @@ import './index.css';
 
 
 const SEQUENCE_STAGES = [
-  { id: 'CMO_STRATEGY', label: '1. CMO Strategy', icon: '📈' },
-  { id: 'CTO_EVALUATION', label: '2. CTO Stack Evaluator', icon: '⚙️' },
-  { id: 'CFO_MODELING', label: '3. CFO Architect', icon: '📊' },
-  { id: 'ADVERSARIAL_GATES', label: '4. Critic & UI Phantom', icon: '🛡️' },
-  { id: 'COMMERCIALLY_READY', label: '5. Launch Ready', icon: '🚀' }
+  { id: 'CMO_STRATEGY',       label: '1. CMO Strategy',        icon: '📈' },
+  { id: 'CTO_FEASIBILITY',    label: '2. CTO Stack Evaluator', icon: '⚙️' },
+  { id: 'CFO_FINANCIAL_MODEL',label: '3. CFO Architect',       icon: '📊' },
+  { id: 'PHANTOM_STRESS_TEST',label: '4. Critic & UI Phantom', icon: '🛡️' },
+  { id: 'COMMERCIALLY_READY', label: '5. Launch Ready',        icon: '🚀' }
 ];
+
 
 export default function CommandCenter({ projectName = "Aether" }) {
   const [sequenceState, setSequenceState] = useState({});
@@ -30,7 +31,7 @@ export default function CommandCenter({ projectName = "Aether" }) {
     if (!operatorCmd.trim()) return;
     setIsSendingCmd(true);
     try {
-      await fetch('/api/warroom/dispatch', {
+      await fetch('http://localhost:5000/api/warroom/dispatch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -39,11 +40,6 @@ export default function CommandCenter({ projectName = "Aether" }) {
           strategy_mode: 'operator_directive'
         })
       });
-      setLogs(prev => [...prev, {
-        time: new Date().toLocaleTimeString(),
-        agent: 'COMMANDER',
-        message: `[OPERATOR COMMAND] ${operatorCmd.trim()}`
-      }]);
       setOperatorCmd('');
     } catch(e) {
       console.error('Operator dispatch failed', e);
@@ -58,7 +54,7 @@ export default function CommandCenter({ projectName = "Aether" }) {
 
   // Connect to the unified _broadcast stream natively
   useEffect(() => {
-    const eventSource = new EventSource(`/api/warroom/stream?project=${projectName}`);
+    const eventSource = new EventSource(`http://localhost:5000/api/war-room/stream?project=${projectName}`);
     
     eventSource.onmessage = (e) => {
       try {
@@ -115,7 +111,7 @@ export default function CommandCenter({ projectName = "Aether" }) {
       setLogs([{ time: new Date().toLocaleTimeString(), agent: 'COMMANDER', message: `Initiating Aether-Native Execution for ${projectName}...` }]);
       
       try {
-          await fetch(`/api/warroom/execute`, {
+          await fetch(`http://localhost:5000/api/warroom/execute`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ project_id: projectName })

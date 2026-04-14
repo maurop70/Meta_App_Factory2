@@ -6,6 +6,7 @@ import aiohttp
 from datetime import datetime
 from dotenv import load_dotenv
 from google import genai
+from ai_utils import generate_with_backoff_sync
 
 # Load environment variables
 dotenv_path = os.path.join(os.path.dirname(__file__), ".env")
@@ -141,7 +142,8 @@ YOUR DIRECTIVE:
 
         # New GenAI SDK instantiation
         client = genai.Client(api_key=api_key)
-        response = client.models.generate_content(
+        response = generate_with_backoff_sync(
+            client.models.generate_content,
             model='gemini-2.5-pro',
             contents=prompt
         )
