@@ -178,6 +178,22 @@ export default function WarRoom({ ventureMode = false, onHandoff }) {
     return () => clearInterval(interval);
   }, [ventureMode, projectName]);
 
+  // ── True Backend State Sync on Mount ───────────────────────
+  useEffect(() => {
+    if (!projectName) return;
+    fetch(`http://localhost:5000/api/warroom/state?project_name=${encodeURIComponent(projectName)}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.is_executing) {
+          setIsExecutingCmd(true);
+        }
+        if (data.sequence_state && Object.keys(data.sequence_state).length > 0) {
+          setSequenceState(data.sequence_state);
+        }
+      })
+      .catch((e) => console.error("Failed to sync backend state on mount:", e));
+  }, [projectName]);
+
   // ── WebSocket Connection (dedup-safe for StrictMode) ──
   useEffect(() => {
     let ws;
@@ -283,6 +299,23 @@ export default function WarRoom({ ventureMode = false, onHandoff }) {
           });
           if (data.status === 'CONSENSUS' || data.status === 'MAX_REACHED') {
             setTimeout(() => setConsensusIteration(null), 8000);
+          }
+        } else if (data.type === 'state_reset') {
+          setSequenceState({});
+          setIsReadyToDeploy(false);
+          setIsExecutingCmd(false);
+          setOutcomeProposal(null);
+          setImplementationPlan(null);
+          if (!dedup(data)) {
+            data._id = ++_msgIdCounter.current;
+            setMessages(prev => [...prev, {
+              type: 'dialogue',
+              agent: 'SYSTEM',
+              icon: '💥',
+              color: '#ef4444',
+              message: `**STATE RESET**\n${data.message || 'Commander Override: Session flushed.'}`,
+              timestamp: data.timestamp || Date.now()
+            }]);
           }
         } else if (data.type === 'state_machine') {
           setSequenceState(prev => ({ ...prev, [data.phase]: data.status }));
@@ -501,19 +534,35 @@ export default function WarRoom({ ventureMode = false, onHandoff }) {
         }),
       });
     } else {
-      // 1. Dispatch hitting C-Suite trigger
-      axios.post('http://localhost:5000/api/war-room/dispatch', {
-        message: inputText.trim(),
-        project_id: selectedProject || 'AntigravityWorkspace_Q3'
-      }, {
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Antigravity-Project-ID': selectedProject || 'AntigravityWorkspace_Q3'
-        }
-      }).catch(e => console.error('Dispatch failed:', e));
+      const intentTxt = inputText.trim();
+      const isOp = intentTxt.toLowerCase().startsWith('@operator') || intentTxt.toLowerCase().startsWith('operator ');
 
-      // 2. Transmit to active the UI session & debate feed
-      sendSafe({ type: 'intervention', message: inputText.trim() });
+      if (isOp) {
+        setMessages(prev => [...prev, { type: 'dialogue', agent: 'COMMANDER', message: intentTxt, timestamp: new Date().toISOString(), is_user: true }]);
+        
+        axios.post('http://localhost:5000/api/warroom/dispatch', {
+          commander_intent: intentTxt
+        }).then(res => {
+          if (res?.data?.data?.strategy) {
+            setMessages(prev => [...prev, { type: 'dialogue', agent: 'CEO', message: res.data.data.strategy, timestamp: new Date().toISOString() }]);
+          }
+        }).catch(e => console.error('Operator dispatch failed:', e));
+        
+      } else {
+        // 1. Dispatch hitting C-Suite trigger
+        axios.post('http://localhost:5000/api/war-room/dispatch', {
+          message: intentTxt,
+          project_id: selectedProject || 'AntigravityWorkspace_Q3'
+        }, {
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Antigravity-Project-ID': selectedProject || 'AntigravityWorkspace_Q3'
+          }
+        }).catch(e => console.error('Dispatch failed:', e));
+
+        // 2. Transmit to active the UI session & debate feed
+        sendSafe({ type: 'intervention', message: intentTxt });
+      }
     }
     setInputText('');
   }, [inputText, convinceMode, activeChallenge, sendSafe, projectName, selectedProject]);
@@ -1152,6 +1201,7 @@ export default function WarRoom({ ventureMode = false, onHandoff }) {
               value={operatorCmd}
               onChange={e => setOperatorCmd(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && sendOperatorCmd()}
+              disabled={isExecutingCmd && !operatorCmd.toLowerCase().startsWith('@operator') && !operatorCmd.toLowerCase().startsWith('operator')}
               style={{
                   flex: 1, background: '#1e293b', border: '1px solid #475569',
                   color: '#f8fafc', padding: '12px 16px', borderRadius: '8px',
@@ -1160,7 +1210,7 @@ export default function WarRoom({ ventureMode = false, onHandoff }) {
             />
             <button 
               onClick={sendOperatorCmd}
-              disabled={!operatorCmd.trim() || isSendingCmd}
+              disabled={(!operatorCmd.trim() || isSendingCmd) || (isExecutingCmd && !operatorCmd.toLowerCase().startsWith('@operator') && !operatorCmd.toLowerCase().startsWith('operator'))}
               style={{
                 background: operatorCmd.trim() ? 'linear-gradient(135deg, #10b981, #059669)' : '#334155',
                 color: 'white', border: 'none', padding: '0 24px', borderRadius: '8px',
