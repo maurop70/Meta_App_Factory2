@@ -195,9 +195,29 @@ class WarRoomDispatchRequest(BaseModel):
     commander_intent: str
 
 @app.post("/api/warroom/dispatch")
-async def warroom_dispatch(req: WarRoomDispatchRequest):
+async def warroom_dispatch(req: WarRoomDispatchRequest, request: Request):
     """Bridge to the Concurrent War Room Dispatcher."""
     try:
+        intent_lower = req.commander_intent.lower()
+        if "@operator reject" in intent_lower or "reject blueprint" in intent_lower:
+            project_id = request.headers.get("X-Antigravity-Project-ID", "Aether")
+            from eos_context import get_eos
+            eos = get_eos(project_id)
+            eos.reset()
+
+            from datetime import datetime as _dt
+            # Attempt to use local _broadcast if available
+            try:
+                await _broadcast({
+                    "type": "state_reset",
+                    "message": "COMMANDER OVERRIDE: Blueprint rejected. Session state flushed and deploy lock cleared.",
+                    "timestamp": _dt.now().isoformat()
+                }, project=project_id)
+            except NameError:
+                pass # If _broadcast is somehow inaccessible here, fail gracefully
+            
+            return {"status": "success", "data": {"strategy": "Blueprint rejected. Session state flushed and Deploy Lock cleared."}}
+
         from war_room_orchestrator import dispatch_to_csuite
         # the dispatcher returns a dict: {"strategy": "..."} or {"error": "..."}
         result = await dispatch_to_csuite(req.commander_intent)
@@ -4200,15 +4220,36 @@ async def warroom_intervene(request: Request):
 
 
 @app.get("/api/warroom/state")
-def warroom_state():
+def warroom_state(project_name: str = None):
     """Get current War Room state."""
-    return {
+    response = {
         "persuasion_score": getattr(sys.modules[__name__], '_persuasion_score', 5),
         "connected_clients": sum(len(clients) for clients in _warroom_clients.values()),
         "total_projects_active": len(_warroom_clients),
         "log_lengths": {proj: len(logs) for proj, logs in _warroom_logs.items()},
         "recent_logs": {proj: logs[-5:] for proj, logs in _warroom_logs.items()}
     }
+    
+    if project_name:
+        from eos_context import get_eos
+        eos = get_eos(project_name)
+        state_dict = eos.to_dict() if hasattr(eos, 'to_dict') else (eos.__dict__ if hasattr(eos, '__dict__') else {})
+        status_map = state_dict.get("phase_status", {})
+        
+        # execution check
+        is_executing = any(s in ['iterating', 'processing', 'active'] for s in status_map.values())
+        is_locked = any(s in ['locked', 'deadlocked'] for s in status_map.values())
+        
+        sequence_state = {}
+        STATUS_MAP = {"iterating": "PROCESSING", "locked": "PASS", "deadlocked": "FAIL", "pending": "WAITING", "waiting": "WAITING"}
+        for phase, status in status_map.items():
+            sequence_state[phase] = STATUS_MAP.get(status, status.upper())
+
+        response["is_executing"] = is_executing or is_locked
+        response["phase_status"] = status_map
+        response["sequence_state"] = sequence_state
+
+    return response
 
 
 @app.post("/api/warroom/seed")

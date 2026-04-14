@@ -30,11 +30,11 @@ export default function CommandCenter({ projectName = "Aether" }) {
     if (!operatorCmd.trim()) return;
     setIsSendingCmd(true);
     try {
-      await fetch('/api/war-room/dispatch', {
+      await fetch('/api/warroom/dispatch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: operatorCmd.trim(),
+          commander_intent: operatorCmd.trim(),
           project_id: projectName || 'AntigravityWorkspace_Q3',
           strategy_mode: 'operator_directive'
         })
@@ -58,7 +58,7 @@ export default function CommandCenter({ projectName = "Aether" }) {
 
   // Connect to the unified _broadcast stream natively
   useEffect(() => {
-    const eventSource = new EventSource(`/api/war-room/stream?project=${projectName}`);
+    const eventSource = new EventSource(`/api/warroom/stream?project=${projectName}`);
     
     eventSource.onmessage = (e) => {
       try {
