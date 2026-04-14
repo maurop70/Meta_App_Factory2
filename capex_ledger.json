@@ -1,0 +1,232 @@
+{
+  "_meta": {
+    "version": "1.0.0",
+    "description": "Antigravity CTO Infrastructure Pricing Ledger",
+    "last_updated": "2025-04",
+    "sources": [
+      "NVIDIA Enterprise Product Catalog 2024-2025",
+      "Dell PowerEdge Q1 2025 Configure-to-Order pricing",
+      "HPE ProLiant Gen11 public list pricing",
+      "AWS/GCP/Azure public pricing pages — April 2025",
+      "Gartner Infrastructure Benchmark Report 2024"
+    ],
+    "currency": "USD",
+    "note": "CapEx figures are estimated street prices (typically 10-20% below MSRP for volume). Update quarterly."
+  },
+
+  "compute": {
+    "nvidia_dgx_h100": {
+      "label": "NVIDIA DGX H100 (8× H100 80GB SXM5)",
+      "category": "GPU Cluster — Flagship",
+      "capex_usd": 250000,
+      "monthly_opex_usd": 1800,
+      "power_watts": 10200,
+      "peak_tflops_bf16": 32000,
+      "use_cases": ["Large-scale LLM training", "Foundation model inference", "Data-center-class AI"],
+      "typical_pilot_units": 1
+    },
+    "nvidia_dgx_a100": {
+      "label": "NVIDIA DGX A100 (8× A100 80GB)",
+      "category": "GPU Cluster — Previous Gen",
+      "capex_usd": 150000,
+      "monthly_opex_usd": 1200,
+      "power_watts": 6500,
+      "peak_tflops_bf16": 10000,
+      "use_cases": ["Enterprise LLM training", "High-throughput inference"],
+      "typical_pilot_units": 1
+    },
+    "nvidia_hgx_h100_4gpu": {
+      "label": "2U Server with 4× H100 80GB NVLink (OEM)",
+      "category": "GPU Server — High-End",
+      "capex_usd": 120000,
+      "monthly_opex_usd": 900,
+      "power_watts": 5600,
+      "peak_tflops_bf16": 16000,
+      "use_cases": ["Mid-scale training", "High-throughput inference", "Enterprise AI appliance"],
+      "typical_pilot_units": 2
+    },
+    "nvidia_l40s_server_2gpu": {
+      "label": "1U Server with 2× NVIDIA L40S 48GB PCIe",
+      "category": "GPU Server — Mid-Range Inference",
+      "capex_usd": 38000,
+      "monthly_opex_usd": 285,
+      "power_watts": 1200,
+      "peak_tflops_bf16": 1456,
+      "use_cases": ["Enterprise inference appliance", "On-premise AI serving", "Edge data-center"],
+      "typical_pilot_units": 3
+    },
+    "nvidia_a100_server_4gpu": {
+      "label": "2U Server with 4× NVIDIA A100 80GB PCIe",
+      "category": "GPU Server — Training",
+      "capex_usd": 78000,
+      "monthly_opex_usd": 520,
+      "power_watts": 2800,
+      "peak_tflops_bf16": 4976,
+      "use_cases": ["Enterprise LLM fine-tuning", "AI research cluster"],
+      "typical_pilot_units": 2
+    },
+    "nvidia_jetson_agx_orin": {
+      "label": "NVIDIA Jetson AGX Orin Developer Kit 64GB",
+      "category": "Edge AI Appliance",
+      "capex_usd": 8500,
+      "monthly_opex_usd": 65,
+      "power_watts": 60,
+      "peak_tflops_bf16": 275,
+      "use_cases": ["Edge AI inference", "On-premise compact appliance", "IoT AI"],
+      "typical_pilot_units": 5
+    },
+    "dell_poweredge_r760xa": {
+      "label": "Dell PowerEdge R760xa (2U, 2× Xeon w9, 4× PCIe GPU slots)",
+      "category": "Enterprise GPU Server",
+      "capex_usd": 28000,
+      "monthly_opex_usd": 220,
+      "power_watts": 2400,
+      "peak_tflops_bf16": null,
+      "use_cases": ["Flexible GPU server", "Mixed CPU/GPU workloads", "Enterprise on-premise"],
+      "typical_pilot_units": 3
+    },
+    "dell_poweredge_r760": {
+      "label": "Dell PowerEdge R760 (2U, 2× Xeon Gold 6430, 32 cores, 1TB RAM)",
+      "category": "CPU-Only Enterprise Server",
+      "capex_usd": 14000,
+      "monthly_opex_usd": 160,
+      "power_watts": 800,
+      "peak_tflops_bf16": null,
+      "use_cases": ["CPU inference", "General enterprise workloads", "Ollama / small model hosting"],
+      "typical_pilot_units": 4
+    },
+    "hpe_proliant_dl380_gen11": {
+      "label": "HPE ProLiant DL380 Gen11 (2U, 2× Xeon Scalable, up to 8TB RAM)",
+      "category": "CPU-Only Enterprise Server",
+      "capex_usd": 12000,
+      "monthly_opex_usd": 140,
+      "power_watts": 750,
+      "peak_tflops_bf16": null,
+      "use_cases": ["Traditional enterprise server", "CPU-based AI inference", "Database / storage"],
+      "typical_pilot_units": 4
+    }
+  },
+
+  "networking": {
+    "top_of_rack_100gbe": {
+      "label": "100GbE Top-of-Rack Switch (e.g., Arista 7050X3) + cabling per rack",
+      "capex_usd": 9500,
+      "monthly_opex_usd": 60,
+      "use_cases": ["Standard data-center networking per rack"]
+    },
+    "infiniband_hdr": {
+      "label": "Mellanox HDR InfiniBand 200Gbps switch + cabling (for GPU cluster interconnect)",
+      "capex_usd": 22000,
+      "monthly_opex_usd": 90,
+      "use_cases": ["High-speed GPU cluster interconnect (DGX-class)"]
+    }
+  },
+
+  "software_licensing": {
+    "enterprise_linux_per_server_annual": {
+      "label": "RHEL Enterprise Linux + Ansible Automation (per server/year)",
+      "capex_usd": 0,
+      "monthly_opex_usd": 175,
+      "use_cases": ["OS, management, security patch support"]
+    },
+    "nvidia_ai_enterprise_per_gpu_annual": {
+      "label": "NVIDIA AI Enterprise (per GPU/year) — includes RAPIDS, NIM, Triton",
+      "capex_usd": 0,
+      "monthly_opex_usd": 250,
+      "use_cases": ["Enterprise AI runtime, support, model serving"]
+    }
+  },
+
+  "cloud_equivalents": {
+    "aws_p4d_24xlarge": {
+      "label": "AWS p4d.24xlarge On-Demand (8× A100 40GB)",
+      "provider": "AWS",
+      "hourly_usd": 32.77,
+      "monthly_usd": 23594,
+      "on_demand_vs_reserved_discount_pct": 40,
+      "notes": "Comparable to DGX A100 class"
+    },
+    "aws_p4de_24xlarge": {
+      "label": "AWS p4de.24xlarge On-Demand (8× A100 80GB)",
+      "provider": "AWS",
+      "hourly_usd": 40.97,
+      "monthly_usd": 29498,
+      "on_demand_vs_reserved_discount_pct": 40,
+      "notes": "Closest cloud equiv to DGX A100 80GB"
+    },
+    "aws_p5_48xlarge": {
+      "label": "AWS p5.48xlarge On-Demand (8× H100 80GB)",
+      "provider": "AWS",
+      "hourly_usd": 98.32,
+      "monthly_usd": 70790,
+      "on_demand_vs_reserved_discount_pct": 36,
+      "notes": "Closest cloud equiv to DGX H100"
+    },
+    "aws_g5_2xlarge": {
+      "label": "AWS g5.2xlarge On-Demand (1× A10G 24GB)",
+      "provider": "AWS",
+      "hourly_usd": 1.212,
+      "monthly_usd": 873,
+      "on_demand_vs_reserved_discount_pct": 38,
+      "notes": "Closest cloud equiv to edge AI appliance"
+    },
+    "aws_g6_4xlarge": {
+      "label": "AWS g6.4xlarge On-Demand (1× L4 24GB)",
+      "provider": "AWS",
+      "hourly_usd": 1.323,
+      "monthly_usd": 952,
+      "on_demand_vs_reserved_discount_pct": 35,
+      "notes": "Inference-optimized, close to NVIDIA L40S class"
+    },
+    "gcp_a3_highgpu_8g": {
+      "label": "GCP a3-highgpu-8g On-Demand (8× H100 80GB)",
+      "provider": "GCP",
+      "hourly_usd": 29.39,
+      "monthly_usd": 21161,
+      "on_demand_vs_reserved_discount_pct": 45,
+      "notes": "GCP H100 equivalent"
+    },
+    "azure_nd_h100_v5": {
+      "label": "Azure ND H100 v5 (8× H100 80GB)",
+      "provider": "Azure",
+      "hourly_usd": 35.22,
+      "monthly_usd": 25358,
+      "on_demand_vs_reserved_discount_pct": 42,
+      "notes": "Azure H100 equivalent"
+    }
+  },
+
+  "architecture_profiles": {
+    "_comment": "Predefined component bundles for common architecture types. Gemini selects the best match.",
+    "enterprise_ai_appliance": {
+      "description": "On-premise AI inference appliance for enterprise customers",
+      "components": ["nvidia_l40s_server_2gpu", "top_of_rack_100gbe", "enterprise_linux_per_server_annual"],
+      "cloud_equivalent_key": "aws_g6_4xlarge",
+      "typical_pilot_units": 3
+    },
+    "edge_ai": {
+      "description": "Compact edge AI inference, low power, distributed deployment",
+      "components": ["nvidia_jetson_agx_orin", "top_of_rack_100gbe", "enterprise_linux_per_server_annual"],
+      "cloud_equivalent_key": "aws_g5_2xlarge",
+      "typical_pilot_units": 5
+    },
+    "gpu_training_cluster": {
+      "description": "Serious GPU training cluster for LLM fine-tuning or foundation model work",
+      "components": ["nvidia_dgx_h100", "infiniband_hdr", "enterprise_linux_per_server_annual", "nvidia_ai_enterprise_per_gpu_annual"],
+      "cloud_equivalent_key": "aws_p5_48xlarge",
+      "typical_pilot_units": 1
+    },
+    "mid_range_gpu_server": {
+      "description": "Mid-range on-premise GPU server for inference and light training",
+      "components": ["nvidia_a100_server_4gpu", "top_of_rack_100gbe", "enterprise_linux_per_server_annual"],
+      "cloud_equivalent_key": "aws_g6_4xlarge",
+      "typical_pilot_units": 2
+    },
+    "cpu_general_purpose": {
+      "description": "CPU-only enterprise server for general AI workloads, small models, orchestration",
+      "components": ["dell_poweredge_r760", "top_of_rack_100gbe", "enterprise_linux_per_server_annual"],
+      "cloud_equivalent_key": "aws_g5_2xlarge",
+      "typical_pilot_units": 4
+    }
+  }
+}

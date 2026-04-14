@@ -354,7 +354,7 @@ class CIORouter:
         health = await self.ollama.health_status()
         return {
             **health,
-            "cloud_provider": "gemini-2.5-flash",
+            "cloud_provider": "gemini-2.5-pro",
             "circuit_breaker": self.circuit_breaker.to_dict(),
             "telemetry_persistent": True,
             "local_task_types": sorted(LOCAL_TASK_TYPES),
