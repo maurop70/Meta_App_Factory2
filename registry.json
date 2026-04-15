@@ -1,5 +1,30 @@
 {
-  "status": "purged",
-  "redirect": "http://localhost:5100/api/operator/manifest",
-  "message": "N8N Data Purged. Replaced by Operator Manifest."
+    "status": "purged",
+    "redirect": "http://localhost:5100/api/operator/manifest",
+    "message": "N8N Data Purged. Replaced by Operator Manifest.",
+    "apps": {
+        "timeout_test": {
+            "status": "active",
+            "type": "Autonomous Forge Deployment \u2014 QA-validated and deployed 2026-04-13 21:27",
+            "port": null,
+            "blueprint": "autonomous_forge",
+            "capabilities": [],
+            "last_build": "2026-04-14T01:27:34.079956+00:00",
+            "deployed_by": "Autonomous_Forge_Phase11",
+            "staging_source": "timeout_test.py"
+        },
+        "Maintenance_Work_Order": {
+            "status": "active",
+            "type": "Core PWA Application",
+            "port": 8000,
+            "blueprint": "FastAPI/HTML",
+            "capabilities": [
+                "Work Order Management"
+            ],
+            "last_build": "2026-04-15T15:41:08.291141",
+            "deployed_by": "Master Architect",
+            "staging_source": "Maintenance_Work_Order/maintenance_backend.py"
+        }
+    },
+    "last_updated": "2026-04-14T01:27:34.079956+00:00"
 }
