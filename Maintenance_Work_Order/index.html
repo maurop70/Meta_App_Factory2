@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Maintenance Work Order</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f4f9; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #333; }
+        label { font-weight: bold; margin-top: 10px; display: block; color: #555; }
+        select, input, textarea { width: 100%; padding: 12px; margin-top: 5px; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box; font-size: 16px; }
+        button { width: 100%; padding: 15px; background-color: #007bff; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; margin-top: 20px; cursor: pointer; }
+        button:active { background-color: #0056b3; }
+        .tab-bar { display: flex; justify-content: space-between; margin-bottom: 20px; }
+        .tab { flex: 1; text-align: center; padding: 10px; background: #eee; cursor: pointer; font-weight: bold; border-radius: 8px 8px 0 0; }
+        .tab.active { background: #007bff; color: white; }
+        .hidden { display: none; }
+        /* HM Feed Styles */
+        .card { background: #fff; padding: 15px; margin-bottom: 10px; border-radius: 8px; border-left: 6px solid #ccc; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .urgency-Critical { border-left-color: #dc3545; }
+        .urgency-Urgent { border-left-color: #fd7e14; }
+        .urgency-Moderate { border-left-color: #ffc107; }
+        .status-badge { font-size: 12px; padding: 4px 8px; border-radius: 4px; background: #eee; font-weight: bold; float: right; }
+        .status-Review { background: #6f42c1; color: white; } /* Purple Alert for HM */
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="tab-bar">
+        <div class="tab active" id="tab-pm" onclick="switchTab('pm')">PM Submit</div>
+        <div class="tab" id="tab-hm" onclick="switchTab('hm')">Prod. Maint.</div>
+        <div class="tab" id="tab-fm" onclick="switchTab('fm')">Facility Maint.</div>
+        <div class="tab hidden" id="tab-admin" onclick="switchTab('admin')">Admin Console</div>
+    </div>
+
+    <div id="view-pm">
+        <h2>Submit Work Order</h2>
+        <div id="success-toast" style="display:none; background-color:#28a745; color:white; padding:10px; border-radius:8px; text-align:center; margin-bottom:15px; font-weight:bold; box-shadow:0 2px 4px rgba(0,0,0,0.1);">Work Order Dispatched Successfully!</div>
+        <form id="wo-form">
+            <label>Department</label>
+            <select id="dept-select" onchange="filterSubDepts()">
+                <option value="">Select Department...</option>
+            </select>
+
+            <label>Production Line / Zone</label>
+            <select id="sub-dept-select" onchange="filterEquipment()" disabled>
+                <option value="">Select Line/Zone...</option>
+            </select>
+
+            <label>Equipment</label>
+            <select id="equipment-select" disabled>
+                <option value="">Select Equipment...</option>
+            </select>
+
+            <label>Urgency Level</label>
+            <select id="urgency">
+                <option value="Critical">Critical (Stop Production)</option>
+                <option value="Urgent">Urgent (Fix ASAP)</option>
+                <option value="Moderate" selected>Moderate (Next 24h)</option>
+                <option value="Not Urgent">Not Urgent (Preventive)</option>
+            </select>
+
+            <label>Risk Level</label>
+            <select id="risk">
+                <option value="Food Safety Risk">Food Safety Risk</option>
+                <option value="Safety Risk">Safety Risk</option>
+                <option value="Operational Risk" selected>Operational Risk</option>
+                <option value="Low Risk">Low Risk</option>
+            </select>
+
+            <label>Problem Description</label>
+            <textarea id="description" rows="4" placeholder="Describe the symptoms..."></textarea>
+
+            <button type="button" onclick="submitOrder()">SUBMIT TO MAINTENANCE</button>
+        </form>
+
+        <div id="history-container" class="hidden" style="margin-top:30px; padding:15px; background:#fff; border-radius:8px; border:1px solid #ccc;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h3 style="margin:0;">Session History</h3>
+                <span id="history-counter" style="font-size:14px; color:#666;"></span>
+            </div>
+            <div id="history-display" style="background:#f4f4f9; padding:10px; border-radius:5px; margin-bottom:10px; font-size:14px;">
+            </div>
+            <div style="display:flex; justify-content:space-between;">
+                <button type="button" onclick="prevHistory()" style="width:48%; margin-top:0; padding:10px; background:#6c757d;">&laquo; Previous</button>
+                <button type="button" onclick="nextHistory()" style="width:48%; margin-top:0; padding:10px; background:#6c757d;">Next &raquo;</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-hm" class="hidden">
+        <h2 id="feed-title">Active Feed</h2>
+        <div id="feed-container">
+            <p style="text-align:center; color:#888;">Loading floor data...</p>
+        </div>
+    </div>
+
+    <div id="view-admin" class="hidden">
+        <h2>Admin Console</h2>
+        <div style="padding:20px;">
+            <h3>Add Department</h3>
+            <input type="text" id="admin-dept-name" placeholder="Department Name">
+            <button type="button" onclick="submitAdminDepartment()" style="margin-top:10px;">Add Department</button>
+
+            <hr style="margin:20px 0;">
+
+            <h3>Add Personnel</h3>
+            <input type="text" id="admin-user-name" placeholder="Full Name">
+            <input type="text" id="admin-user-phone" placeholder="Phone Number" style="margin-top:5px;">
+            <select id="admin-user-role" style="margin-top:5px;">
+                <option value="Manager">Manager</option>
+                <option value="Tech">Tech</option>
+                <option value="PM">PM</option>
+            </select>
+            <select id="admin-user-dept" style="margin-top:5px;">
+                <option value="">Select Department...</option>
+            </select>
+            <button type="button" onclick="submitAdminUser()" style="margin-top:10px;">Add Personnel</button>
+
+            <hr style="margin:20px 0;">
+
+            <h3>Add Equipment</h3>
+            <input type="text" id="admin-equip-name" placeholder="Equipment Name">
+            <select id="admin-equip-dept" style="margin-top:5px;">
+                <option value="">Select Department...</option>
+            </select>
+            <button type="button" onclick="submitAdminEquipment()" style="margin-top:10px;">Add Equipment</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let hierarchyData = { departments: [], sub_departments: [], equipment: [] };
+    let sessionHistory = [];
+    let historyIndex = 0;
+
+    window.onload = async function() {
+        refreshHierarchy();
+    };
+
+    async function refreshHierarchy() {
+        const res = await fetch('/api/hierarchy');
+        hierarchyData = await res.json();
+        
+        const deptSelect = document.getElementById('dept-select');
+        const adminUserDept = document.getElementById('admin-user-dept');
+        const adminEquipDept = document.getElementById('admin-equip-dept');
+        
+        let deptOptions = '<option value="">Select Department...</option>';
+        hierarchyData.departments.forEach(d => {
+            deptOptions += `<option value="${d.department_id}">${d.department_name}</option>`;
+        });
+        
+        if (deptSelect) deptSelect.innerHTML = deptOptions;
+        if (adminUserDept) adminUserDept.innerHTML = deptOptions;
+        if (adminEquipDept) adminEquipDept.innerHTML = deptOptions;
+    }
+
+    async function submitAdminDepartment() {
+        const name = document.getElementById('admin-dept-name').value;
+        if(!name) return alert('Enter name');
+        await fetch('/api/admin/department', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({department_name: name}) });
+        document.getElementById('admin-dept-name').value = '';
+        await refreshHierarchy();
+        alert('Department Added');
+    }
+
+    async function submitAdminUser() {
+        const payload = {
+            full_name: document.getElementById('admin-user-name').value,
+            phone_number: document.getElementById('admin-user-phone').value,
+            role: document.getElementById('admin-user-role').value,
+            department_ref_id: document.getElementById('admin-user-dept').value
+        };
+        if(!payload.full_name || !payload.department_ref_id) return alert('Missing info');
+        await fetch('/api/admin/user', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        document.getElementById('admin-user-name').value = '';
+        document.getElementById('admin-user-phone').value = '';
+        alert('Personnel Added');
+    }
+
+    async function submitAdminEquipment() {
+        const payload = {
+            equipment_name: document.getElementById('admin-equip-name').value,
+            department_ref_id: document.getElementById('admin-equip-dept').value
+        };
+        if(!payload.equipment_name || !payload.department_ref_id) return alert('Missing info');
+        await fetch('/api/admin/equipment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        document.getElementById('admin-equip-name').value = '';
+        alert('Equipment Added');
+    }
+
+    function switchTab(tab) {
+        document.getElementById('view-pm').classList.add('hidden');
+        document.getElementById('view-hm').classList.add('hidden');
+        document.getElementById('view-admin').classList.add('hidden');
+        document.getElementById('tab-pm').classList.remove('active');
+        document.getElementById('tab-hm').classList.remove('active');
+        document.getElementById('tab-fm').classList.remove('active');
+        document.getElementById('tab-admin').classList.remove('active');
+        
+        if (tab === 'pm') {
+            document.getElementById('view-pm').classList.remove('hidden');
+        } else if (tab === 'admin') {
+            document.getElementById('view-admin').classList.remove('hidden');
+        } else {
+            document.getElementById('view-hm').classList.remove('hidden');
+            document.getElementById('feed-title').innerText = tab === 'hm' ? 'Production Feed' : 'Facility Feed';
+            loadFeed(tab === 'hm' ? 'Production' : 'Facilities');
+        }
+        document.getElementById('tab-' + tab).classList.add('active');
+    }
+
+    function filterSubDepts() {
+        const deptId = document.getElementById('dept-select').value;
+        const subDeptSelect = document.getElementById('sub-dept-select');
+        const equipSelect = document.getElementById('equipment-select');
+        
+        subDeptSelect.innerHTML = '<option value="">Select Line/Zone...</option>';
+        equipSelect.innerHTML = '<option value="">Select Equipment...</option>';
+        equipSelect.disabled = true;
+
+        if (!deptId) {
+            subDeptSelect.disabled = true;
+            return;
+        }
+
+        subDeptSelect.disabled = false;
+        const filteredSubs = hierarchyData.sub_departments.filter(s => s.department_id === deptId);
+        filteredSubs.forEach(s => {
+            subDeptSelect.innerHTML += `<option value="${s.sub_dept_id}">${s.sub_dept_name}</option>`;
+        });
+    }
+
+    function filterEquipment() {
+        const subDeptId = document.getElementById('sub-dept-select').value;
+        const equipSelect = document.getElementById('equipment-select');
+        
+        equipSelect.innerHTML = '<option value="">Select Equipment...</option>';
+
+        if (!subDeptId) {
+            equipSelect.disabled = true;
+            return;
+        }
+
+        equipSelect.disabled = false;
+        const filteredEq = hierarchyData.equipment.filter(e => e.sub_dept_ref_id === subDeptId);
+        filteredEq.forEach(e => {
+            equipSelect.innerHTML += `<option value="${e.equipment_id}">${e.equipment_name}</option>`;
+        });
+    }
+
+    async function submitOrder() {
+        const payload = {
+            pm_user_id: "44444444-4444-4444-4444-444444444444", // Test PM
+            department_ref_id: document.getElementById('dept-select').value,
+            equipment_id: document.getElementById('equipment-select').value,
+            pm_urgency_level: document.getElementById('urgency').value,
+            risk_level: document.getElementById('risk').value,
+            maintenance_type: "Corrective",
+            problem_description: document.getElementById('description').value
+        };
+
+        if (!payload.department_ref_id) return alert("Please select a department.");
+        if (!payload.equipment_id) return alert("Please select equipment.");
+
+        const equipSelect = document.getElementById('equipment-select');
+        const equipName = equipSelect.options[equipSelect.selectedIndex].text;
+
+        try {
+            const response = await fetch('/api/orders/submit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            if (response.ok) {
+                sessionHistory.push({
+                    timestamp: new Date().toLocaleTimeString(),
+                    equipment: equipName,
+                    description: payload.problem_description,
+                    urgency: payload.pm_urgency_level
+                });
+                historyIndex = sessionHistory.length - 1;
+
+                const toast = document.getElementById('success-toast');
+                toast.style.display = 'block';
+                setTimeout(() => { toast.style.display = 'none'; }, 3000);
+
+                document.getElementById('wo-form').reset();
+                const subDeptDropdown = document.getElementById('sub-dept-select');
+                subDeptDropdown.innerHTML = '<option value="">Select Line/Zone...</option>';
+                subDeptDropdown.disabled = true;
+
+                const equipDropdown = document.getElementById('equipment-select');
+                equipDropdown.innerHTML = '<option value="">Select Equipment...</option>';
+                equipDropdown.disabled = true;
+
+                updateHistoryUI();
+            } else {
+                alert("Failed to dispatch order.");
+            }
+        } catch (err) {
+            alert("Network error.");
+        }
+    }
+
+    function updateHistoryUI() {
+        const container = document.getElementById('history-container');
+        if (sessionHistory.length === 0) {
+            container.classList.add('hidden');
+            return;
+        }
+        container.classList.remove('hidden');
+
+        const item = sessionHistory[historyIndex];
+        document.getElementById('history-counter').innerText = `${historyIndex + 1} of ${sessionHistory.length}`;
+        
+        document.getElementById('history-display').innerHTML = `
+            <strong>${item.timestamp}</strong><br>
+            <span style="color:#007bff; font-weight:bold;">${item.equipment}</span> - ${item.urgency}<br>
+            <p style="margin:5px 0 0 0; color:#333;">${item.description}</p>
+        `;
+    }
+
+    function prevHistory() {
+        if (historyIndex > 0) {
+            historyIndex--;
+            updateHistoryUI();
+        }
+    }
+
+    function nextHistory() {
+        if (historyIndex < sessionHistory.length - 1) {
+            historyIndex++;
+            updateHistoryUI();
+        }
+    }
+
+    async function loadFeed(target) {
+        try {
+            const response = await fetch('/api/orders/active');
+            const data = await response.json();
+            const container = document.getElementById('feed-container');
+            container.innerHTML = '';
+            
+            const filteredData = target === 'Production' 
+                ? data.filter(o => o.departments?.department_name === 'Production')
+                : data.filter(o => o.departments?.department_name !== 'Production');
+
+            if (filteredData.length === 0) {
+                container.innerHTML = `<p style="text-align:center;">No active orders for ${target}.</p>`;
+                return;
+            }
+
+            // Fetch tech roster per department
+            let techMap = {};
+            for (let order of filteredData) {
+                let deptId = order.department_ref_id;
+                if (!techMap[deptId]) {
+                    const techRes = await fetch(`/api/department/${deptId}/technicians`);
+                    techMap[deptId] = await techRes.json();
+                }
+            }
+
+            filteredData.forEach(order => {
+                let alertClass = order.status === "Pending Review" ? "status-Review" : "";
+                
+                // Build dropdown
+                let deptId = order.department_ref_id;
+                let techOptions = '<option value="">Unassigned...</option>';
+                if (techMap[deptId]) {
+                    techMap[deptId].forEach(t => {
+                        let selected = (order.technician_id === t.user_id) ? "selected" : "";
+                        techOptions += `<option value="${t.user_id}" ${selected}>${t.full_name} (${t.role})</option>`;
+                    });
+                }
+                
+                let dropdownHtml = `
+                    <div style="margin-top:10px;">
+                        <label style="font-size:12px; display:inline-block; margin-right:10px;">Assign To:</label>
+                        <select onchange="assignOrder('${order.order_id}', this.value)" style="padding:6px; font-size:14px; width:60%; border-radius:4px;">
+                            ${techOptions}
+                        </select>
+                    </div>
+                `;
+
+                let userName = order.app_users?.full_name || 'Unknown PM';
+                let equipName = order.equipment_registry?.equipment_name || 'Unknown Equipment';
+                let deptName = order.departments?.department_name || 'Unknown Dept';
+                let urgencyClass = order.pm_urgency_level?.split(' ')[0] || 'Unknown';
+
+                let cardHTML = `
+                    <div class="card urgency-${urgencyClass}">
+                        <span class="status-badge ${alertClass}">${order.status}</span>
+                        <strong>${order.pm_urgency_level}</strong>
+                        <p style="margin: 5px 0; font-size:14px; font-weight:bold;">${deptName} &bull; ${equipName}</p>
+                        <p style="margin: 0 0 10px 0; font-size:12px; color:#555;">Reported by: ${userName}</p>
+                        <p style="margin: 5px 0; color:#333;">${order.problem_description}</p>
+                        ${dropdownHtml}
+                    </div>
+                `;
+                container.innerHTML += cardHTML;
+            });
+        } catch (err) {
+            console.error(err);
+            document.getElementById('feed-container').innerHTML = '<p>Error loading feed.</p>';
+        }
+    }
+
+    async function assignOrder(orderId, technicianId) {
+        if (!technicianId) return;
+
+        const payload = {
+            order_id: orderId,
+            technician_id: technicianId
+        };
+
+        try {
+            const response = await fetch('/api/orders/assign', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                console.log("Delegation successfully synced.");
+            } else {
+                alert("Error delegating order.");
+            }
+        } catch (err) {
+            alert("Network error on delegation.");
+        }
+    }
+</script>
+</body>
+</html>
