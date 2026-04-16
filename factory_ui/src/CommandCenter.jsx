@@ -24,6 +24,7 @@ export default function CommandCenter({ projectName = "Aether" }) {
   const [isReady, setIsReady] = useState(false);
   const [operatorCmd, setOperatorCmd] = useState('');
   const [isSendingCmd, setIsSendingCmd] = useState(false);
+  const [isFeedExpanded, setIsFeedExpanded] = useState(false);
   
   const bottomRef = useRef(null);
 
@@ -51,6 +52,15 @@ export default function CommandCenter({ projectName = "Aether" }) {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [logs]);
+
+  // Escape key collapses feed
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') setIsFeedExpanded(false);
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, []);
 
   // Connect to the unified _broadcast stream natively
   useEffect(() => {
@@ -202,12 +212,45 @@ export default function CommandCenter({ projectName = "Aether" }) {
         </div>
 
         {/* Live Terminal Feed */}
-        <div style={{ flex: 1, background: '#020617', borderRadius: '8px', border: '1px solid #334155', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div style={{ padding: '10px 15px', background: '#0f172a', borderBottom: '1px solid #334155', fontSize: '12px', fontWeight: 'bold', color: '#94a3b8', display: 'flex', gap: '6px', alignItems: 'center' }}>
-                <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: isExecuting ? '#22c55e' : '#64748b' }}></span>
-                LIVE COMMAND CORE FEED
+        <div style={{ 
+          flex: 1, 
+          background: '#020617', 
+          borderRadius: '8px', 
+          border: '1px solid #334155', 
+          display: 'flex', 
+          flexDirection: 'column', 
+          overflow: 'hidden',
+          ...(isFeedExpanded ? {
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            padding: '32px',
+            background: '#0b0f19'
+          } : {})
+        }}>
+            <div style={{ padding: '10px 15px', background: '#0f172a', borderBottom: '1px solid #334155', fontSize: '12px', fontWeight: 'bold', color: '#94a3b8', display: 'flex', gap: '6px', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: isExecuting ? '#22c55e' : '#64748b' }}></span>
+                  LIVE COMMAND CORE FEED
+                </div>
+                <button
+                  onClick={() => setIsFeedExpanded(!isFeedExpanded)}
+                  style={{
+                    background: 'rgba(56, 189, 248, 0.1)',
+                    border: '1px solid rgba(56, 189, 248, 0.3)',
+                    color: '#38bdf8',
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    fontSize: '10px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  {isFeedExpanded ? '↙ COLLAPSE' : '↗ EXPAND'}
+                </button>
             </div>
-            <div style={{ padding: '15px', overflowY: 'auto', flex: 1, fontFamily: '"Fira Code", monospace', fontSize: '13px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ padding: '15px', overflowY: 'auto', flex: 1, fontFamily: '"Fira Code", monospace', fontSize: isFeedExpanded ? '16px' : '13px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {logs.length === 0 ? (
                     <div style={{ color: '#475569', textAlign: 'center', marginTop: '40px' }}>No active telemetry. Initialize protocol to begin.</div>
                 ) : (

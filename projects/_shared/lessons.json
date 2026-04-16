@@ -680,5 +680,16 @@
     "tags": [],
     "project": "_global",
     "created_at": "2026-04-14T20:39:53.113417+00:00"
+  },
+  {
+    "id": "L-20260416010903-0796",
+    "category": "App launch FAILED: CIO_Agent on port 5010. timed out",
+    "summary": "launch_failure",
+    "details": "CIO_Agent",
+    "source_agent": "SYSTEM",
+    "severity": "normal",
+    "tags": [],
+    "project": "_global",
+    "created_at": "2026-04-16T01:09:03.289764+00:00"
   }
 ]

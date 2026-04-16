@@ -876,7 +876,17 @@ export default function WarRoom({ ventureMode = false, onHandoff }) {
           </div>
         )}
         {/* ── Left: LIVE COMMAND CORE FEED ── */}
-        <div style={styles.feedPanel}>
+        <div style={{
+          ...styles.feedPanel,
+          ...(isFeedExpanded ? {
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            background: '#0b0f19',
+            padding: '32px',
+            border: 'none',
+          } : {})
+        }}>
           {/* Topic Seeder + Challenge Trigger */}
           <div style={styles.topicBar}>
             {/* ── Feed Expand Toggle ── */}
@@ -885,12 +895,15 @@ export default function WarRoom({ ventureMode = false, onHandoff }) {
               onClick={() => setIsFeedExpanded(v => !v)}
               title={isFeedExpanded ? 'Collapse feed (Esc)' : 'Expand feed to full-screen'}
               style={{
-                padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(139,92,246,0.4)',
-                background: isFeedExpanded ? 'rgba(139,92,246,0.25)' : 'rgba(139,92,246,0.08)',
-                color: '#a78bfa', fontSize: '14px', cursor: 'pointer',
-                flexShrink: 0, transition: 'all 0.2s ease',
+                padding: '6px 12px', borderRadius: '6px', border: '1px solid rgba(139,92,246,0.5)',
+                background: isFeedExpanded ? 'rgba(139,92,246,0.3)' : 'rgba(139,92,246,0.1)',
+                color: '#a78bfa', fontSize: '11px', cursor: 'pointer',
+                flexShrink: 0, transition: 'all 0.2s ease', fontWeight: 700,
+                letterSpacing: '0.5px'
               }}
-            >{isFeedExpanded ? '⊡' : '⛶'}</button>
+            >
+              {isFeedExpanded ? '↙ COLLAPSE' : '↗ EXPAND'}
+            </button>
             {/* ── Pop Out Button ── */}
             <button
               id="war-room-popout-btn"
@@ -1060,60 +1073,7 @@ export default function WarRoom({ ventureMode = false, onHandoff }) {
             </div>
           )}
 
-          {/* Message Feed — normal or full-screen overlay */}
-          {isFeedExpanded && (
-            <div style={{
-              position: 'fixed', inset: 0, zIndex: 10000,
-              background: 'rgba(2,6,15,0.97)',
-              display: 'flex', flexDirection: 'column',
-              fontFamily: 'Inter, sans-serif',
-            }}>
-              {/* Expanded header */}
-              <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '12px 20px', borderBottom: '1px solid rgba(139,92,246,0.3)',
-                background: 'rgba(15,10,30,0.95)',
-              }}>
-                <span style={{ color: '#a78bfa', fontWeight: 700, fontSize: '14px', letterSpacing: '0.5px' }}>
-                  ⛶ WAR ROOM — FULL-SCREEN FEED
-                </span>
-                <button
-                  onClick={() => setIsFeedExpanded(false)}
-                  style={{
-                    background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)',
-                    color: '#ef4444', borderRadius: '6px', padding: '4px 14px',
-                    cursor: 'pointer', fontSize: '12px', fontWeight: 700,
-                  }}
-                >✕ Close (Esc)</button>
-              </div>
-              {/* Expanded feed body */}
-              <div ref={feedScrollRef} style={{
-                flex: 1, overflowY: 'auto', padding: '20px 24px',
-                display: 'flex', flexDirection: 'column', gap: '10px',
-              }}>
-                {messages.filter(m => m.type === 'dialogue').map((msg, i) => {
-                  const agentStyle = AGENT_STYLES[msg.agent] || AGENT_STYLES.SYSTEM;
-                  const isUser = msg.is_user || msg.agent === 'COMMANDER';
-                  return (
-                    <div key={i} style={{
-                      padding: '14px 18px', borderRadius: '10px',
-                      background: isUser ? 'rgba(249,115,22,0.1)' : agentStyle.bg,
-                      borderLeft: `3px solid ${isUser ? '#f97316' : agentStyle.color}`,
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                        <span style={{ fontSize: '16px' }}>{agentStyle.icon}</span>
-                        <span style={{ fontWeight: 700, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', color: agentStyle.color }}>{msg.agent}</span>
-                        <span style={{ fontSize: '10px', color: '#475569', marginLeft: 'auto' }}>{formatTime(msg.timestamp)}</span>
-                        {isUser && <span style={{ padding: '1px 6px', borderRadius: '4px', fontSize: '9px', fontWeight: 700, background: 'rgba(249,115,22,0.2)', color: '#f97316' }}>YOU</span>}
-                      </div>
-                      <div style={{ fontSize: '14px', lineHeight: 1.7, color: '#e2e8f0', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{msg.message}</div>
-                    </div>
-                  );
-                })}
-                <div ref={feedEndRef} />
-              </div>
-            </div>
-          )}
+
           <div ref={feedScrollRef} style={styles.feed}>
             {messages.length === 0 && (
               <div style={styles.emptyState}>
@@ -1157,6 +1117,7 @@ export default function WarRoom({ ventureMode = false, onHandoff }) {
                   </div>
                   <div style={{
                     ...styles.msgText,
+                    fontSize: isFeedExpanded ? '1rem' : '0.75rem',
                     // Phase 11 Executive Fork briefs are long — let them breathe
                     ...(isLong ? { maxHeight: '70vh', overflowY: 'auto', paddingRight: '8px' } : {}),
                   }}>{msg.message}</div>
