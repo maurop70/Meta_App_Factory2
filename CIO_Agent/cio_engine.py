@@ -194,12 +194,24 @@ def _scan_codebase_metadata() -> dict:
             continue
 
     agent_dirs = []
+    
+    # 1. Scan internal system agents
     for item in FACTORY_ROOT.iterdir():
         if item.is_dir() and ("Agent" in item.name or "agent" in item.name):
             agent_dirs.append({
-                "name": item.name,
+                "name": f"Core Agent: {item.name}",
                 "has_server": (item / "server.py").exists() or (item / "main.py").exists(),
             })
+
+    # 2. Scan registered child apps
+    projects_dir = FACTORY_ROOT / "projects"
+    if projects_dir.exists():
+        for item in projects_dir.iterdir():
+            if item.is_dir() and not item.name.startswith("_"):
+                agent_dirs.append({
+                    "name": f"Child App: {item.name}",
+                    "has_server": (item / "server.py").exists() or (item / "main.py").exists(),
+                })
 
     top_imports = sorted(import_counter.items(), key=lambda x: x[1], reverse=True)[:15]
     return {
@@ -229,42 +241,40 @@ def _gather_internal_audit() -> dict:
 # CIO AGENT (UDPP-enforced)
 # ─────────────────────────────────────────────────────────────────────────────
 
-CIO_SYSTEM_PROMPT = """You are the Antigravity CIO Agent — Chief Innovation Officer.
-You are an aggressive, read-only strategic advisor with unrestricted web access.
-
-Your mission: execute a deep-dive intelligence sweep on the AI/LLM frontier and deliver an actionable Frontier Intelligence Report.
+CIO_SYSTEM_PROMPT = """You are the Chief Intelligence Officer of the Meta App Factory. 
+Your sole directive is to analyze the provided list of our active apps, search the web for ways to improve them, and return highly specific, actionable upgrade recommendations.
 
 TOOLS AVAILABLE:
 - search_duckduckgo: broad discovery of market trends, competitor moves, new models
 - read_url: deep-read specific articles, papers, or competitor pages
 
 REQUIRED SWEEP SEQUENCE:
-1. Search for the latest frontier LLM model releases and breakthroughs
-2. Search for competitor AI product announcements (OpenAI, Anthropic, Google, Mistral, Meta)
-3. Search for new AI infrastructure / MLOps tooling trends
+1. Search for competitor features related to our active apps
+2. Search for UX improvements for these types of agents
+3. Search for framework upgrades and MLOps tooling trends
 4. Use read_url to deep-read the 2-3 most important articles you found
 
 FRONTIER INTELLIGENCE REPORT FORMAT (strict Markdown):
 
-# CIO Frontier Intelligence Report — {date}
+# CIO Actionable Upgrade Memo — {date}
 
 ## Executive Summary
-Single paragraph: the most important breakthrough and its Antigravity impact.
+Single paragraph: the most important breakthrough and its direct impact on our active apps.
 
 ## Discovery #1: [Title]
 - **Source**: [URL or domain — REQUIRED]
 - **What It Is**: concise description
-- **Why It Matters for Antigravity**: specific impact
+- **Why It Matters for Our Apps**: specific impact on our stack
 - **Priority**: Critical / High / Medium / Low
 
 ## Discovery #2: [Title]
 (same structure — 3-5 total discoveries)
 
 ## Competitive Landscape
-What key competitors shipped this cycle and what it means.
+What key competitors shipped this cycle and what it means for our active projects.
 
-## Recommended Actions
-Numbered list, ordered by impact. Be specific (library names, versions).
+## Recommended Upgrades
+Numbered list, ordered by impact. Be specific (library names, versions, architecture changes).
 
 RULES:
 1. Every claim must cite the exact URL where you found it.
@@ -288,11 +298,11 @@ class CIOAgent(AgentBase):
         sweep_start = datetime.now()
         logger.info(f"[CIO] Intel sweep started — intent: {intent!r}")
 
-        # Phase 1: Gemini 2.5 Pro Function Calling web sweep
-        web_intel, web_provenance, searched_urls = self._phase1_web_sweep(intent)
-
-        # Phase 2: Internal system audit
+        # Phase 1: Internal system audit (Moved to front for context injection)
         internal_audit = _gather_internal_audit()
+
+        # Phase 2: Gemini 2.5 Pro Function Calling web sweep (Context-Aware)
+        web_intel, web_provenance, searched_urls = self._phase1_web_sweep(intent, internal_audit)
 
         # Phase 3: Synthesize Frontier Intelligence Report
         report_text, report_provenance = self._phase3_synthesize(web_intel, internal_audit, searched_urls)
@@ -324,19 +334,19 @@ class CIOAgent(AgentBase):
             "memo_filename": memo_filename,
             "hallucination_gate": gate_status,
             "gate_errors": gate_errors,
-            "llm_provider": "gemini-2.5-pro",
+            "llm_provider": "gemini-2.5-flash",
         }
 
         return self.merge_into_output(result, all_provenance)
 
     # ── Phase 1: Gemini 2.5 Pro Function Calling web sweep ──────────────────
 
-    def _phase1_web_sweep(self, intent: str) -> tuple[dict, dict, list[str]]:
+    def _phase1_web_sweep(self, intent: str, internal_audit: dict) -> tuple[dict, dict, list[str]]:
         """
-        Runs the Gemini 2.5 Pro function-calling web sweep.
+        Runs the Context-Aware Gemini 2.5 Pro function-calling web sweep.
         Returns (intel_summary, provenance_block, searched_urls).
         """
-        logger.info("[CIO Phase 1] Gemini 2.5 Pro web intel sweep")
+        logger.info("[CIO Phase 1] Gemini 2.5 Pro context-aware web intel sweep")
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
             logger.error("[CIO] GEMINI_API_KEY missing")
@@ -344,16 +354,24 @@ class CIOAgent(AgentBase):
 
         client = genai.Client(api_key=api_key)
         tools = [search_duckduckgo, read_url]
+        
+        # Extract active apps for context injection
+        active_apps_list = "\n".join([f"- {d['name']}" for d in internal_audit.get("codebase_metadata", {}).get("agent_directories", [])])
+        if not active_apps_list:
+            active_apps_list = "No specific active apps detected."
 
-        prompt = f"""You are executing a 24-hour AI/LLM frontier intelligence sweep for the Antigravity platform.
+        prompt = f"""You are executing a deeply targeted intelligence sweep for the Antigravity platform.
 
 Primary intent: {intent}
 
+INTERNAL SYSTEM STATE (Our Active/Registered Apps):
+{active_apps_list}
+
 Execute the following sweep NOW using your tools:
-1. Call search_duckduckgo for latest LLM model releases and breakthroughs (2025)
-2. Call search_duckduckgo for competitor AI product launches (OpenAI, Anthropic, Mistral, Meta, Google)
-3. Call search_duckduckgo for AI infrastructure and MLOps tooling trends
-4. Pick the 2 most important article URLs from your search results and call read_url on each
+1. Call search_duckduckgo for 'competitor features' and recent launches specifically related to the apps listed above.
+2. Call search_duckduckgo for 'UX improvements' and interface patterns for these types of AI agents.
+3. Call search_duckduckgo for 'framework upgrades' or new python libraries that could improve our specific stack.
+4. Pick the 2 most important article URLs from your search results and call read_url on them to extract actionable details.
 
 After using all tools, return a JSON summary of your findings:
 {{
@@ -372,7 +390,7 @@ Return ONLY valid JSON.
         try:
             response = generate_with_backoff_sync(
                 client.models.generate_content,
-                model="gemini-2.5-pro",
+                model="gemini-2.5-flash",
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     tools=tools,
@@ -424,15 +442,17 @@ Return ONLY valid JSON.
         today = datetime.now().strftime("%Y-%m-%d")
 
         codebase_meta = internal_audit.get("codebase_metadata", {})
+        active_apps_list = "\n".join([f"- {d['name']}" for d in codebase_meta.get("agent_directories", [])])
+        
         internal_summary = (
             f"Factory has {codebase_meta.get('python_files', '?')} Python files, "
-            f"{codebase_meta.get('total_loc', '?')} LOC, "
-            f"{len(codebase_meta.get('agent_directories', []))} agent directories."
+            f"{codebase_meta.get('total_loc', '?')} LOC.\n"
+            f"Active Apps/Agents:\n{active_apps_list}"
         )
 
-        prompt = f"""Generate the Frontier Intelligence Report for {today}.
+        prompt = f"""Generate the actionable Upgrade Memo for {today}.
 
-WEB INTELLIGENCE GATHERED:
+WEB INTELLIGENCE GATHERED (Targeted to our stack):
 {json.dumps(web_intel, indent=2, default=str)[:15000]}
 
 INTERNAL SYSTEM STATE:
@@ -447,7 +467,7 @@ Replace {{date}} in the template with {today}.
         try:
             response = generate_with_backoff_sync(
                 client.models.generate_content,
-                model="gemini-2.5-pro",
+                model="gemini-2.5-flash",
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     system_instruction=CIO_SYSTEM_PROMPT.replace("{date}", today),

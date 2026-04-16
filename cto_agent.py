@@ -308,7 +308,7 @@ Return only valid JSON, no markdown fences.
     try:
         response = generate_with_backoff_sync(
             client.models.generate_content,
-            model="gemini-2.5-pro",
+            model="gemini-2.5-flash",
             contents=prompt,
             config=types.GenerateContentConfig(
                 tools=tools,
