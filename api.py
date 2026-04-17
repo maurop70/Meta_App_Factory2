@@ -9,6 +9,7 @@ import sys
 import json
 import logging
 import subprocess
+import threading
 import coo_agent
 from persona_manager import get_persona_manager
 if sys.platform == "win32":
@@ -28,7 +29,7 @@ from warroom_protocol import (
 )
 from wisdom_vault import get_wisdom_vault
 
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, UploadFile, File, Form
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse, FileResponse
 from pydantic import BaseModel
@@ -2933,14 +2934,14 @@ def _do_launch(app_name: str, port_override: int = None) -> dict:
         server_script = bat_path
     
     if not server_script:
-        for candidate_name in ["server.py", "app.py", "main.py"]:
+        for candidate_name in ["server.py", "app.py", "main.py", "api.py"]:
             candidate_path = os.path.join(app_dir, candidate_name)
             if os.path.isfile(candidate_path):
                 server_script = candidate_path
                 break
 
     if not server_script:
-        return JSONResponse({"error": f"No server.py/app.py/main.py or launch_{app_name}.bat found in {app_dir}"}, status_code=404)
+        return JSONResponse({"error": f"No server.py/app.py/main.py/api.py or launch_{app_name}.bat found in {app_dir}"}, status_code=404)
 
     # Determine port
     if port_override:
@@ -5809,6 +5810,42 @@ async def reset_coo_budget(project_id: str):
     return {"status": "success", "message": f"Budget reset for {project_id}"}
 
 
+# ── Venture Scout Endpoints ──────────────────────────────
+@app.get("/api/scout/pitches")
+async def get_scout_pitches():
+    try:
+        from venture_scout import VentureScoutService
+        scout = VentureScoutService()
+        return {"pitches": scout.load_pitches()}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/scout/run")
+async def run_scout_loop():
+    try:
+        from venture_scout import VentureScoutService
+        scout = VentureScoutService()
+        # Run in background to avoid timeout
+        threading.Thread(target=scout.run_loop, daemon=True).start()
+        return {"status": "success", "message": "Venture Scout hunting loop started in background."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/scout/approve")
+async def approve_pitch(pitch_id: str):
+    try:
+        from venture_scout import VentureScoutService
+        scout = VentureScoutService()
+        pitches = scout.load_pitches()
+        for p in pitches:
+            if p["id"] == pitch_id:
+                p["status"] = "APPROVED"
+                scout.save_pitches(pitches)
+                return {"status": "success", "message": f"Pitch {pitch_id} approved.", "pitch": p}
+        return {"status": "error", "message": "Pitch not found."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ── Startup: Auto-start incoming watcher + Ghost Operator ──
 @app.on_event("startup")
 async def _startup_watcher():
@@ -5817,6 +5854,15 @@ async def _startup_watcher():
         _watcher_thread = threading.Thread(target=watch_incoming, args=(60,), daemon=True)
         _watcher_thread.start()
         logger.info("Incoming Watcher auto-started (60s poll)")
+    
+    # ── Auto-start Venture Scout ──
+    try:
+        from venture_scout import VentureScoutService
+        scout = VentureScoutService()
+        threading.Thread(target=scout.run_loop, daemon=True).start()
+        logger.info("Venture Scout Phase 1 auto-started in background.")
+    except Exception as e:
+        logger.warning(f"Venture Scout auto-start failed: {e}")
 
     # ── Auto-boot Ghost Operator on port 5100 ──
     import socket as _sock
@@ -5839,6 +5885,27 @@ async def _startup_watcher():
             logger.info("Ghost Operator auto-started on port 5100.")
         except Exception as _e:
             logger.error(f"Ghost Operator auto-start FAILED: {_e}")
+    
+    # ── Auto-boot CIO Agent on port 5090 ──
+    _cio_alive = False
+    try:
+        with _sock.create_connection(("localhost", 5090), timeout=1):
+            _cio_alive = True
+    except Exception:
+        pass
+
+    if not _cio_alive:
+        try:
+            _cio_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "CIO_Agent")
+            subprocess.Popen(
+                ["python", "server.py"],
+                cwd=_cio_dir,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )
+            logger.info("CIO Agent auto-started on port 5090.")
+        except Exception as _e:
+            logger.error(f"CIO Agent auto-start FAILED: {_e}")
     else:
         logger.info("Ghost Operator already running on port 5100 — skipping launch.")
 
