@@ -5,61 +5,195 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Maintenance Work Order</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f4f9; margin: 0; padding: 20px; }
-        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        h2 { text-align: center; color: #333; }
-        label { font-weight: bold; margin-top: 10px; display: block; color: #555; }
-        select, input, textarea { width: 100%; padding: 12px; margin-top: 5px; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box; font-size: 16px; }
-        button { width: 100%; padding: 15px; background-color: #007bff; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; margin-top: 20px; cursor: pointer; }
-        button:active { background-color: #0056b3; }
-        .tab-bar { display: flex; justify-content: space-between; margin-bottom: 20px; }
-        .tab { flex: 1; text-align: center; padding: 10px; background: #eee; cursor: pointer; font-weight: bold; border-radius: 8px 8px 0 0; }
+        * { box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f0f2f5; margin: 0; padding: 16px; }
+        .container { max-width: 640px; margin: auto; background: white; padding: 22px; border-radius: 14px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #222; margin-top: 4px; }
+        h3 { color: #333; margin-bottom: 6px; }
+        label { font-weight: 600; margin-top: 12px; display: block; color: #555; font-size: 14px; }
+        select, input, textarea { width: 100%; padding: 12px; margin-top: 4px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; }
+        select:focus, input:focus, textarea:focus { outline: none; border-color: #007bff; box-shadow: 0 0 0 3px rgba(0,123,255,0.15); }
+        button { width: 100%; padding: 14px; background: #007bff; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 700; margin-top: 16px; cursor: pointer; transition: opacity 0.15s; }
+        button:active { opacity: 0.82; }
+        .hidden { display: none !important; }
+        hr { border: none; border-top: 1px solid #e9ecef; margin: 22px 0; }
+
+        /* ── Identification Overlay ── */
+        #id-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: linear-gradient(145deg, #0f2027 0%, #203a43 50%, #2c5364 100%); z-index:9999; display:flex; align-items:center; justify-content:center; padding: 16px; }
+        .id-card { background: white; border-radius: 24px; padding: 38px 28px 32px; max-width: 380px; width: 100%; text-align: center; box-shadow: 0 28px 60px rgba(0,0,0,0.5); }
+        .id-logo { font-size: 44px; margin-bottom: 8px; }
+        .id-card h1 { color: #1a1a2e; font-size: 20px; margin: 0 0 6px; }
+        .id-card p { color: #777; font-size: 14px; margin: 0 0 20px; line-height: 1.5; }
+        .id-card input { font-size: 18px; text-align: center; border: 2px solid #007bff; border-radius: 10px; padding: 13px; }
+        .id-card button { border-radius: 10px; font-size: 17px; margin-top: 12px; }
+        .id-error { color: #dc3545; font-size: 13px; margin-top: 10px; min-height: 18px; }
+
+        /* Desktop login specifics */
+        .search-results { background: white; border: 1px solid #dee2e6; border-radius: 8px; margin-top: 4px; max-height: 180px; overflow-y: auto; text-align: left; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .search-result-item { padding: 10px 14px; cursor: pointer; font-size: 15px; color: #333; border-bottom: 1px solid #f0f0f0; }
+        .search-result-item:last-child { border-bottom: none; }
+        .search-result-item:hover { background: #e8f4fd; }
+        .pin-row { display: flex; gap: 10px; justify-content: center; margin-top: 12px; }
+        .pin-digit { width: 54px; height: 62px; font-size: 26px; font-weight: 700; text-align: center; border: 2px solid #ccc; border-radius: 10px; letter-spacing: 0; padding: 0; }
+        .pin-digit:focus { border-color: #007bff; box-shadow: 0 0 0 3px rgba(0,123,255,0.2); }
+        .timeout-banner { background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 8px 12px; font-size: 13px; color: #856404; margin-bottom: 12px; display: none; text-align: center; }
+
+        /* ── User Banner ── */
+        .user-banner { background: linear-gradient(90deg, #e8f0fe, #f0f4ff); border: 1px solid #c5d5f7; border-radius: 10px; padding: 10px 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+        .banner-info strong { color: #1a3a6e; font-size: 15px; }
+        .role-badge { display: inline-block; border-radius: 20px; padding: 3px 12px; font-size: 11px; font-weight: 700; margin-left: 8px; vertical-align: middle; color: white; background: #6c757d; }
+        .role-badge.PM { background: #007bff; }
+        .role-badge.Manager { background: #28a745; }
+        .role-badge.Tech, .role-badge.Worker, .role-badge.Supervisor { background: #fd7e14; }
+        .role-badge.Admin { background: #6f42c1; }
+        .switch-btn { background: none; border: 1px solid #dc3545; color: #dc3545; font-size: 12px; font-weight: 600; cursor: pointer; width: auto; margin: 0; padding: 5px 10px; border-radius: 6px; }
+
+        /* ── Tab Bar ── */
+        .tab-bar { display: flex; gap: 4px; margin-bottom: 18px; }
+        .tab { flex: 1; text-align: center; padding: 11px 6px; background: #e9ecef; cursor: pointer; font-weight: 700; border-radius: 8px 8px 0 0; font-size: 13px; color: #495057; transition: background 0.15s, color 0.15s; }
         .tab.active { background: #007bff; color: white; }
-        .hidden { display: none; }
-        /* HM Feed Styles */
-        .card { background: #fff; padding: 15px; margin-bottom: 10px; border-radius: 8px; border-left: 6px solid #ccc; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .tab:hover:not(.active) { background: #dee2e6; }
+
+        /* ── Cards ── */
+        .card { background: #fff; padding: 16px; margin-bottom: 12px; border-radius: 10px; border-left: 6px solid #ced4da; box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
         .urgency-Critical { border-left-color: #dc3545; }
         .urgency-Urgent { border-left-color: #fd7e14; }
         .urgency-Moderate { border-left-color: #ffc107; }
-        .status-badge { font-size: 12px; padding: 4px 8px; border-radius: 4px; background: #eee; font-weight: bold; float: right; }
-        .status-Review { background: #6f42c1; color: white; } /* Purple Alert for HM */
+        .urgency-Not { border-left-color: #28a745; }
+        .status-badge { font-size: 11px; padding: 3px 9px; border-radius: 5px; background: #e9ecef; font-weight: 700; float: right; }
+        .status-Submitted { background: #6c757d; color: white; }
+        .status-Process { background: #17a2b8; color: white; }
+        .status-Review { background: #6f42c1; color: white; }
+
+        /* ── Action Buttons ── */
+        .btn-sm { padding: 11px !important; font-size: 14px !important; border-radius: 7px !important; margin-top: 8px !important; }
+        .btn-start { background: #28a745 !important; }
+        .btn-work { background: #fd7e14 !important; }
+        .btn-complete { background: #28a745 !important; }
+        .btn-reject { background: #dc3545 !important; }
+        .btn-two-col { display: flex; gap: 8px; margin-top: 10px; }
+        .btn-two-col button { flex: 1; margin: 0; padding: 11px; font-size: 14px; border-radius: 7px; }
+
+        /* ── Empty / Loading State ── */
+        .empty-state { text-align: center; padding: 36px 20px; color: #888; }
+        .empty-state .e-icon { font-size: 46px; display: block; margin-bottom: 10px; }
+
+        /* ── Archive Zone ── */
+        .archive-zone { background: #fff5f5; border: 2px solid #dc3545; border-radius: 10px; padding: 18px; margin-top: 4px; }
+        .archive-zone h3 { color: #dc3545; margin-top: 0; }
+        .archive-zone h4 { color: #c82333; margin: 14px 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; }
+        .btn-archive { background: #dc3545 !important; margin-top: 8px !important; padding: 10px !important; font-size: 14px !important; }
+
+        /* ── Misc ── */
+        .work-note { font-size: 13px; color: #6f42c1; background: #f3eeff; padding: 8px 12px; border-radius: 7px; margin: 8px 0 0; }
+        .section-hint { font-size: 13px; color: #777; margin: 0 0 6px; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div class="tab-bar">
-        <div class="tab active" id="tab-pm" onclick="switchTab('pm')">PM Submit</div>
-        <div class="tab" id="tab-hm" onclick="switchTab('hm')">Prod. Maint.</div>
-        <div class="tab" id="tab-fm" onclick="switchTab('fm')">Facility Maint.</div>
-        <div class="tab hidden" id="tab-admin" onclick="switchTab('admin')">Admin Console</div>
+<!-- ═══════════════════════════════════════════════════
+     IDENTIFICATION OVERLAY
+═══════════════════════════════════════════════════ -->
+<div id="id-overlay">
+
+    <!-- MOBILE: Phone Number Login -->
+    <div id="login-mobile" class="id-card hidden">
+        <div class="id-logo">📱</div>
+        <h1>Maintenance<br>Work Order</h1>
+        <p>Enter your registered phone number to access your workspace</p>
+        <input type="tel" id="id-phone" placeholder="e.g. 555-123-4567" autocomplete="tel">
+        <button onclick="identifyMobile()">Identify Me ›</button>
+        <div class="id-error" id="id-error-mobile"></div>
     </div>
 
-    <div id="view-pm">
+    <!-- DESKTOP: Name Search + PIN Login -->
+    <div id="login-desktop" class="id-card hidden">
+        <div class="id-logo">🖥️</div>
+        <h1>Maintenance<br>Work Order</h1>
+        <p>Shared terminal — Search your name, then enter your PIN</p>
+
+        <input type="text" id="desktop-search" placeholder="Start typing your name..." autocomplete="off" oninput="onDesktopSearch()">
+        <div class="search-results" id="desktop-results"></div>
+
+        <div id="desktop-pin-section" class="hidden" style="margin-top:18px;">
+            <p style="font-size:14px; color:#555; text-align:center; margin:0 0 8px;"><strong id="selected-name-label"></strong><br><span style="font-size:12px; color:#888;">Enter your 4-digit PIN</span></p>
+            <div class="pin-row">
+                <input type="tel" class="pin-digit" id="pin-0" maxlength="1" oninput="onPinDigit(0,this)" onkeydown="onPinKeydown(event,0)">
+                <input type="tel" class="pin-digit" id="pin-1" maxlength="1" oninput="onPinDigit(1,this)" onkeydown="onPinKeydown(event,1)">
+                <input type="tel" class="pin-digit" id="pin-2" maxlength="1" oninput="onPinDigit(2,this)" onkeydown="onPinKeydown(event,2)">
+                <input type="tel" class="pin-digit" id="pin-3" maxlength="1" oninput="onPinDigit(3,this)" onkeydown="onPinKeydown(event,3)">
+            </div>
+            <button onclick="verifyDesktopPin()" style="margin-top:14px;">Login ›</button>
+        </div>
+
+        <!-- No PIN set yet — bootstrap login -->
+        <div id="no-pin-section" class="hidden" style="margin-top:18px;">
+            <p style="font-size:14px; color:#555; text-align:center; margin:0 0 4px;"><strong id="no-pin-name-label"></strong></p>
+            <div style="background:#fff3cd; border:1px solid #ffc107; border-radius:8px; padding:10px 14px; font-size:13px; color:#856404; margin-bottom:12px; text-align:left;">
+                ⚠️ No PIN has been set for this account yet.<br>You can log in now, but please ask your <strong>Admin</strong> to assign a PIN for future security.
+            </div>
+            <button onclick="loginWithoutPin()" style="background:#28a745;">Login without PIN ›</button>
+        </div>
+        <div class="id-error" id="desktop-error"></div>
+    </div>
+
+</div><!-- /#id-overlay -->
+
+<!-- ═══════════════════════════════════════════════════
+     MAIN APPLICATION
+═══════════════════════════════════════════════════ -->
+<div class="container" id="main-app" style="display:none;">
+
+    <!-- Inactivity warning banner (desktop only) -->
+    <div class="timeout-banner" id="timeout-banner">⏳ Session expiring soon — click anywhere to stay logged in</div>
+
+    <!-- User Banner -->
+    <div class="user-banner">
+        <div class="banner-info">
+            <div style="display:flex; align-items:center;">
+                <strong id="banner-name">—</strong>
+                <span id="banner-role" class="role-badge">—</span>
+            </div>
+            <div id="notification-bell" onclick="toggleNotifications()" style="cursor:pointer; position:relative; margin-top:4px; font-size:18px; display:none;">
+                🔔 <span id="notification-count" style="position:absolute; top:-5px; right:-5px; background:red; color:white; font-size:10px; padding:2px 5px; border-radius:10px; font-weight:700;">0</span>
+            </div>
+        </div>
+        <button class="switch-btn" onclick="switchUser()">⇄ Switch</button>
+    </div>
+
+    <!-- Notification Panel -->
+    <div id="notification-panel" class="hidden" style="background:#fff; border:1px solid #ddd; border-radius:10px; padding:12px; margin-bottom:16px; box-shadow:0 4px 12px rgba(0,0,0,0.1);">
+        <h4 style="margin:0 0 10px; font-size:14px; color:#333;">📢 Urgent Alerts</h4>
+        <div id="notification-list" style="max-height:150px; overflow-y:auto;"></div>
+    </div>
+
+    <!-- Dynamic Tab Bar (populated by JS, never pre-rendered) -->
+    <div class="tab-bar" id="tab-bar"></div>
+
+    <!-- PM Submit View -->
+    <div id="view-pm" class="hidden">
         <h2>Submit Work Order</h2>
-        <div id="success-toast" style="display:none; background-color:#28a745; color:white; padding:10px; border-radius:8px; text-align:center; margin-bottom:15px; font-weight:bold; box-shadow:0 2px 4px rgba(0,0,0,0.1);">Work Order Dispatched Successfully!</div>
+        <div id="pm-toast" class="hidden" style="background:#28a745; color:white; padding:13px; border-radius:9px; text-align:center; font-weight:700; margin-bottom:14px;">✅ Work Order Dispatched!</div>
         <form id="wo-form">
             <label>Department</label>
-            <select id="dept-select" onchange="filterSubDepts()">
-                <option value="">Select Department...</option>
-            </select>
+            <select id="dept-select" disabled style="background:#f8f9fa; color:#495057; cursor:not-allowed;"></select>
 
             <label>Production Line / Zone</label>
             <select id="sub-dept-select" onchange="filterEquipment()" disabled>
                 <option value="">Select Line/Zone...</option>
             </select>
 
-            <label>Equipment</label>
+            <label>Equipment / Asset</label>
             <select id="equipment-select" disabled>
                 <option value="">Select Equipment...</option>
             </select>
 
             <label>Urgency Level</label>
             <select id="urgency">
-                <option value="Critical">Critical (Stop Production)</option>
-                <option value="Urgent">Urgent (Fix ASAP)</option>
-                <option value="Moderate" selected>Moderate (Next 24h)</option>
-                <option value="Not Urgent">Not Urgent (Preventive)</option>
+                <option value="Critical">🔴 Critical — Stop Production</option>
+                <option value="Urgent">🟠 Urgent — Fix ASAP</option>
+                <option value="Moderate" selected>🟡 Moderate — Next 24h</option>
+                <option value="Not Urgent">🟢 Not Urgent — Preventive</option>
             </select>
 
             <label>Risk Level</label>
@@ -71,369 +205,1546 @@
             </select>
 
             <label>Problem Description</label>
-            <textarea id="description" rows="4" placeholder="Describe the symptoms..."></textarea>
+            <textarea id="description" rows="4" placeholder="Describe symptoms clearly: what, where, when..."></textarea>
 
-            <button type="button" onclick="submitOrder()">SUBMIT TO MAINTENANCE</button>
+            <label>Evidence (Optional)</label>
+            <div style="display:flex; gap:10px; margin-top:4px;">
+                <input type="file" id="media-input" accept="image/*" capture="environment" style="display:none;" onchange="onPhotoSelected()">
+                <button type="button" onclick="document.getElementById('media-input').click()" style="margin-top:0; background:#6c757d; font-size:14px; padding:10px;">📸 Take Photo</button>
+                <div id="photo-preview" style="font-size:12px; color:#28a745; display:flex; align-items:center;"></div>
+            </div>
+
+            <button type="button" onclick="submitOrder()">🚨 SUBMIT TO MAINTENANCE</button>
         </form>
 
-        <div id="history-container" class="hidden" style="margin-top:30px; padding:15px; background:#fff; border-radius:8px; border:1px solid #ccc;">
+        <div id="history-container" class="hidden" style="margin-top:24px; background:#f8f9fa; border-radius:10px; padding:16px; border:1px solid #dee2e6;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <h3 style="margin:0;">Session History</h3>
-                <span id="history-counter" style="font-size:14px; color:#666;"></span>
+                <strong style="font-size:15px;">Session History</strong>
+                <span id="history-counter" style="font-size:13px; color:#888;"></span>
             </div>
-            <div id="history-display" style="background:#f4f4f9; padding:10px; border-radius:5px; margin-bottom:10px; font-size:14px;">
-            </div>
-            <div style="display:flex; justify-content:space-between;">
-                <button type="button" onclick="prevHistory()" style="width:48%; margin-top:0; padding:10px; background:#6c757d;">&laquo; Previous</button>
-                <button type="button" onclick="nextHistory()" style="width:48%; margin-top:0; padding:10px; background:#6c757d;">Next &raquo;</button>
+            <div id="history-display" style="background:white; padding:11px; border-radius:7px; font-size:14px; margin-bottom:10px;"></div>
+            <div style="display:flex; gap:8px;">
+                <button onclick="prevHistory()" style="flex:1; margin:0; padding:9px; background:#6c757d; font-size:13px;">« Prev</button>
+                <button onclick="nextHistory()" style="flex:1; margin:0; padding:9px; background:#6c757d; font-size:13px;">Next »</button>
             </div>
         </div>
     </div>
 
-    <div id="view-hm" class="hidden">
-        <h2 id="feed-title">Active Feed</h2>
+    <!-- Manager Department Feed View -->
+    <div id="view-feed" class="hidden">
+        <h2 id="feed-title">My Department Feed</h2>
+        <button onclick="loadManagerFeed()" style="margin:0 0 14px; padding:9px; background:#6c757d; font-size:13px;">🔄 Refresh Feed</button>
         <div id="feed-container">
-            <p style="text-align:center; color:#888;">Loading floor data...</p>
+            <div class="empty-state"><span class="e-icon">⏳</span>Loading...</div>
         </div>
     </div>
 
-    <div id="view-admin" class="hidden">
-        <h2>Admin Console</h2>
-        <div style="padding:20px;">
-            <h3>Add Department</h3>
-            <input type="text" id="admin-dept-name" placeholder="Department Name">
-            <button type="button" onclick="submitAdminDepartment()" style="margin-top:10px;">Add Department</button>
-
-            <hr style="margin:20px 0;">
-
-            <h3>Add Personnel</h3>
-            <input type="text" id="admin-user-name" placeholder="Full Name">
-            <input type="text" id="admin-user-phone" placeholder="Phone Number" style="margin-top:5px;">
-            <select id="admin-user-role" style="margin-top:5px;">
-                <option value="Manager">Manager</option>
-                <option value="Tech">Tech</option>
-                <option value="PM">PM</option>
-            </select>
-            <select id="admin-user-dept" style="margin-top:5px;">
-                <option value="">Select Department...</option>
-            </select>
-            <button type="button" onclick="submitAdminUser()" style="margin-top:10px;">Add Personnel</button>
-
-            <hr style="margin:20px 0;">
-
-            <h3>Add Equipment</h3>
-            <input type="text" id="admin-equip-name" placeholder="Equipment Name">
-            <select id="admin-equip-dept" style="margin-top:5px;">
-                <option value="">Select Department...</option>
-            </select>
-            <button type="button" onclick="submitAdminEquipment()" style="margin-top:10px;">Add Equipment</button>
+    <!-- My Orders View (Tech / Worker / other roles) -->
+    <div id="view-myorders" class="hidden">
+        <h2>My Assigned Orders</h2>
+        <button onclick="loadMyOrders()" style="margin:0 0 14px; padding:9px; background:#6c757d; font-size:13px;">🔄 Refresh</button>
+        <div id="myorders-container">
+            <div class="empty-state"><span class="e-icon">⏳</span>Loading your orders...</div>
         </div>
     </div>
-</div>
+
+    <!-- Admin Console Host — EMPTY for all non-Admin users. Never pre-rendered. -->
+    <div id="view-admin-host"></div>
+
+</div><!-- /#main-app -->
 
 <script>
-    let hierarchyData = { departments: [], sub_departments: [], equipment: [] };
-    let sessionHistory = [];
-    let historyIndex = 0;
+// ═══════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════
+let currentUser       = null;
+let hierarchyData     = { departments: [], sub_departments: [], equipment: [] };
+let sessionHistory    = [];
+let historyIndex      = 0;
+let inactivityTimer   = null;
+let warningTimer      = null;
+let selectedDesktopUserId = null;
+let desktopSearchTimeout  = null;
 
-    window.onload = async function() {
-        refreshHierarchy();
-    };
+const INACTIVITY_MS = 15 * 60 * 1000;  // 15 minutes
+const WARNING_MS    = 14 * 60 * 1000;  // show warning at 14 min
 
-    async function refreshHierarchy() {
-        const res = await fetch('/api/hierarchy');
-        hierarchyData = await res.json();
-        
-        const deptSelect = document.getElementById('dept-select');
-        const adminUserDept = document.getElementById('admin-user-dept');
-        const adminEquipDept = document.getElementById('admin-equip-dept');
-        
-        let deptOptions = '<option value="">Select Department...</option>';
-        hierarchyData.departments.forEach(d => {
-            deptOptions += `<option value="${d.department_id}">${d.department_name}</option>`;
-        });
-        
-        if (deptSelect) deptSelect.innerHTML = deptOptions;
-        if (adminUserDept) adminUserDept.innerHTML = deptOptions;
-        if (adminEquipDept) adminEquipDept.innerHTML = deptOptions;
+// ═══════════════════════════════════════════════
+// DEVICE DETECTION
+// ═══════════════════════════════════════════════
+function isMobile() {
+    return /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
+// ═══════════════════════════════════════════════
+// SESSION MANAGEMENT
+// ═══════════════════════════════════════════════
+function saveSession(user) {
+    const payload = JSON.stringify(user);
+    if (isMobile()) {
+        localStorage.setItem('mwo_user', payload);
+    } else {
+        sessionStorage.setItem('mwo_user', payload);   // clears on tab/browser close
     }
+}
 
-    async function submitAdminDepartment() {
-        const name = document.getElementById('admin-dept-name').value;
-        if(!name) return alert('Enter name');
-        await fetch('/api/admin/department', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({department_name: name}) });
-        document.getElementById('admin-dept-name').value = '';
-        await refreshHierarchy();
-        alert('Department Added');
+function loadSavedSession() {
+    const raw = isMobile()
+        ? localStorage.getItem('mwo_user')
+        : sessionStorage.getItem('mwo_user');
+    try { return raw ? JSON.parse(raw) : null; } catch(e) { return null; }
+}
+
+function clearSession() {
+    localStorage.removeItem('mwo_user');
+    sessionStorage.removeItem('mwo_user');
+}
+
+// ═══════════════════════════════════════════════
+// INACTIVITY TIMER (Desktop only)
+// ═══════════════════════════════════════════════
+function startInactivityTimers() {
+    if (isMobile()) return;
+    stopInactivityTimers();
+    warningTimer = setTimeout(() => {
+        document.getElementById('timeout-banner').style.display = 'block';
+    }, WARNING_MS);
+    inactivityTimer = setTimeout(() => {
+        document.getElementById('timeout-banner').style.display = 'none';
+        alert('Your session has expired due to 15 minutes of inactivity.\nPlease log in again.');
+        switchUser();
+    }, INACTIVITY_MS);
+}
+
+function stopInactivityTimers() {
+    clearTimeout(inactivityTimer);
+    clearTimeout(warningTimer);
+    document.getElementById('timeout-banner').style.display = 'none';
+}
+
+function resetInactivityTimers() {
+    if (isMobile() || !currentUser) return;
+    startInactivityTimers();
+}
+
+['click', 'keydown', 'scroll', 'touchstart', 'mousemove'].forEach(evt => {
+    window.addEventListener(evt, resetInactivityTimers, { passive: true });
+});
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+window.onload = async function() {
+    const saved = loadSavedSession();
+    if (saved) {
+        if (isMobile() && saved.phone_number) {
+            // Mobile: re-validate against DB (localStorage persists indefinitely)
+            try {
+                const res = await fetch(`/api/user/by-phone/${encodeURIComponent(saved.phone_number)}`);
+                if (res.ok) {
+                    currentUser = await res.json();
+                    saveSession(currentUser);
+                    hideOverlay();
+                    return;
+                }
+            } catch(e) { /* network issue — fall through to login */ }
+        } else if (!isMobile()) {
+            // Desktop: trust sessionStorage (browser guarantees tab-scoped lifetime)
+            currentUser = saved;
+            hideOverlay();
+            return;
+        }
+        clearSession();
     }
+    showOverlay();
+};
 
-    async function submitAdminUser() {
-        const payload = {
-            full_name: document.getElementById('admin-user-name').value,
-            phone_number: document.getElementById('admin-user-phone').value,
-            role: document.getElementById('admin-user-role').value,
-            department_ref_id: document.getElementById('admin-user-dept').value
-        };
-        if(!payload.full_name || !payload.department_ref_id) return alert('Missing info');
-        await fetch('/api/admin/user', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-        document.getElementById('admin-user-name').value = '';
-        document.getElementById('admin-user-phone').value = '';
-        alert('Personnel Added');
+// ═══════════════════════════════════════════════
+// OVERLAY CONTROL
+// ═══════════════════════════════════════════════
+function showOverlay() {
+    document.getElementById('id-overlay').style.display = 'flex';
+    document.getElementById('main-app').style.display = 'none';
+    if (isMobile()) {
+        document.getElementById('login-mobile').classList.remove('hidden');
+        document.getElementById('login-desktop').classList.add('hidden');
+        setTimeout(() => document.getElementById('id-phone').focus(), 80);
+    } else {
+        document.getElementById('login-mobile').classList.add('hidden');
+        document.getElementById('login-desktop').classList.remove('hidden');
+        setTimeout(() => document.getElementById('desktop-search').focus(), 80);
     }
+}
 
-    async function submitAdminEquipment() {
-        const payload = {
-            equipment_name: document.getElementById('admin-equip-name').value,
-            department_ref_id: document.getElementById('admin-equip-dept').value
-        };
-        if(!payload.equipment_name || !payload.department_ref_id) return alert('Missing info');
-        await fetch('/api/admin/equipment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-        document.getElementById('admin-equip-name').value = '';
-        alert('Equipment Added');
-    }
+function hideOverlay() {
+    document.getElementById('id-overlay').style.display = 'none';
+    launchApp();
+}
 
-    function switchTab(tab) {
-        document.getElementById('view-pm').classList.add('hidden');
-        document.getElementById('view-hm').classList.add('hidden');
-        document.getElementById('view-admin').classList.add('hidden');
-        document.getElementById('tab-pm').classList.remove('active');
-        document.getElementById('tab-hm').classList.remove('active');
-        document.getElementById('tab-fm').classList.remove('active');
-        document.getElementById('tab-admin').classList.remove('active');
-        
-        if (tab === 'pm') {
-            document.getElementById('view-pm').classList.remove('hidden');
-        } else if (tab === 'admin') {
-            document.getElementById('view-admin').classList.remove('hidden');
+// ═══════════════════════════════════════════════
+// MOBILE LOGIN
+// ═══════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+    const ph = document.getElementById('id-phone');
+    if (ph) ph.addEventListener('keydown', e => { if (e.key === 'Enter') identifyMobile(); });
+});
+
+async function identifyMobile() {
+    const phone = document.getElementById('id-phone').value.trim();
+    const errEl = document.getElementById('id-error-mobile');
+    errEl.innerText = '';
+    if (!phone) { errEl.innerText = 'Please enter your phone number.'; return; }
+    try {
+        const res = await fetch(`/api/user/by-phone/${encodeURIComponent(phone)}`);
+        if (res.ok) {
+            currentUser = await res.json();
+            saveSession(currentUser);
+            hideOverlay();
         } else {
-            document.getElementById('view-hm').classList.remove('hidden');
-            document.getElementById('feed-title').innerText = tab === 'hm' ? 'Production Feed' : 'Facility Feed';
-            loadFeed(tab === 'hm' ? 'Production' : 'Facilities');
+            errEl.innerText = '❌ Phone not found. Contact your administrator.';
         }
-        document.getElementById('tab-' + tab).classList.add('active');
+    } catch(e) {
+        errEl.innerText = '⚠ Network error. Check your connection.';
     }
+}
 
-    function filterSubDepts() {
-        const deptId = document.getElementById('dept-select').value;
-        const subDeptSelect = document.getElementById('sub-dept-select');
-        const equipSelect = document.getElementById('equipment-select');
-        
-        subDeptSelect.innerHTML = '<option value="">Select Line/Zone...</option>';
-        equipSelect.innerHTML = '<option value="">Select Equipment...</option>';
-        equipSelect.disabled = true;
+// ═══════════════════════════════════════════════
+// DESKTOP LOGIN — Name Search + PIN
+// ═══════════════════════════════════════════════
+async function onDesktopSearch() {
+    const query     = document.getElementById('desktop-search').value.trim();
+    const resultsEl = document.getElementById('desktop-results');
+    const pinSec    = document.getElementById('desktop-pin-section');
 
-        if (!deptId) {
-            subDeptSelect.disabled = true;
-            return;
-        }
+    selectedDesktopUserId = null;
+    pinSec.classList.add('hidden');
+    document.getElementById('desktop-error').innerText = '';
 
-        subDeptSelect.disabled = false;
-        const filteredSubs = hierarchyData.sub_departments.filter(s => s.department_id === deptId);
-        filteredSubs.forEach(s => {
-            subDeptSelect.innerHTML += `<option value="${s.sub_dept_id}">${s.sub_dept_name}</option>`;
-        });
-    }
+    if (query.length < 2) { resultsEl.innerHTML = ''; return; }
 
-    function filterEquipment() {
-        const subDeptId = document.getElementById('sub-dept-select').value;
-        const equipSelect = document.getElementById('equipment-select');
-        
-        equipSelect.innerHTML = '<option value="">Select Equipment...</option>';
-
-        if (!subDeptId) {
-            equipSelect.disabled = true;
-            return;
-        }
-
-        equipSelect.disabled = false;
-        const filteredEq = hierarchyData.equipment.filter(e => e.sub_dept_ref_id === subDeptId);
-        filteredEq.forEach(e => {
-            equipSelect.innerHTML += `<option value="${e.equipment_id}">${e.equipment_name}</option>`;
-        });
-    }
-
-    async function submitOrder() {
-        const payload = {
-            pm_user_id: "44444444-4444-4444-4444-444444444444", // Test PM
-            department_ref_id: document.getElementById('dept-select').value,
-            equipment_id: document.getElementById('equipment-select').value,
-            pm_urgency_level: document.getElementById('urgency').value,
-            risk_level: document.getElementById('risk').value,
-            maintenance_type: "Corrective",
-            problem_description: document.getElementById('description').value
-        };
-
-        if (!payload.department_ref_id) return alert("Please select a department.");
-        if (!payload.equipment_id) return alert("Please select equipment.");
-
-        const equipSelect = document.getElementById('equipment-select');
-        const equipName = equipSelect.options[equipSelect.selectedIndex].text;
-
+    clearTimeout(desktopSearchTimeout);
+    desktopSearchTimeout = setTimeout(async () => {
         try {
-            const response = await fetch('/api/orders/submit', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            
-            if (response.ok) {
-                sessionHistory.push({
-                    timestamp: new Date().toLocaleTimeString(),
-                    equipment: equipName,
-                    description: payload.problem_description,
-                    urgency: payload.pm_urgency_level
-                });
-                historyIndex = sessionHistory.length - 1;
-
-                const toast = document.getElementById('success-toast');
-                toast.style.display = 'block';
-                setTimeout(() => { toast.style.display = 'none'; }, 3000);
-
-                document.getElementById('wo-form').reset();
-                const subDeptDropdown = document.getElementById('sub-dept-select');
-                subDeptDropdown.innerHTML = '<option value="">Select Line/Zone...</option>';
-                subDeptDropdown.disabled = true;
-
-                const equipDropdown = document.getElementById('equipment-select');
-                equipDropdown.innerHTML = '<option value="">Select Equipment...</option>';
-                equipDropdown.disabled = true;
-
-                updateHistoryUI();
-            } else {
-                alert("Failed to dispatch order.");
-            }
-        } catch (err) {
-            alert("Network error.");
-        }
-    }
-
-    function updateHistoryUI() {
-        const container = document.getElementById('history-container');
-        if (sessionHistory.length === 0) {
-            container.classList.add('hidden');
-            return;
-        }
-        container.classList.remove('hidden');
-
-        const item = sessionHistory[historyIndex];
-        document.getElementById('history-counter').innerText = `${historyIndex + 1} of ${sessionHistory.length}`;
-        
-        document.getElementById('history-display').innerHTML = `
-            <strong>${item.timestamp}</strong><br>
-            <span style="color:#007bff; font-weight:bold;">${item.equipment}</span> - ${item.urgency}<br>
-            <p style="margin:5px 0 0 0; color:#333;">${item.description}</p>
-        `;
-    }
-
-    function prevHistory() {
-        if (historyIndex > 0) {
-            historyIndex--;
-            updateHistoryUI();
-        }
-    }
-
-    function nextHistory() {
-        if (historyIndex < sessionHistory.length - 1) {
-            historyIndex++;
-            updateHistoryUI();
-        }
-    }
-
-    async function loadFeed(target) {
-        try {
-            const response = await fetch('/api/orders/active');
-            const data = await response.json();
-            const container = document.getElementById('feed-container');
-            container.innerHTML = '';
-            
-            const filteredData = target === 'Production' 
-                ? data.filter(o => o.departments?.department_name === 'Production')
-                : data.filter(o => o.departments?.department_name !== 'Production');
-
-            if (filteredData.length === 0) {
-                container.innerHTML = `<p style="text-align:center;">No active orders for ${target}.</p>`;
+            const res   = await fetch(`/api/users/search?name=${encodeURIComponent(query)}`);
+            const users = await res.json();
+            resultsEl.innerHTML = '';
+            if (!users.length) {
+                resultsEl.innerHTML = '<div style="padding:10px; color:#888; font-size:14px;">No results</div>';
                 return;
             }
+            users.forEach(u => {
+                const div = document.createElement('div');
+                div.className = 'search-result-item';
+                div.innerText = `${u.full_name} (${u.role})`;
+                div.onclick   = () => selectDesktopUser(u);
+                resultsEl.appendChild(div);
+            });
+        } catch(e) { console.error('Search failed', e); }
+    }, 280);
+}
 
-            // Fetch tech roster per department
-            let techMap = {};
-            for (let order of filteredData) {
-                let deptId = order.department_ref_id;
-                if (!techMap[deptId]) {
-                    const techRes = await fetch(`/api/department/${deptId}/technicians`);
-                    techMap[deptId] = await techRes.json();
-                }
+function selectDesktopUser(user) {
+    selectedDesktopUserId = user.user_id;
+    document.getElementById('desktop-search').value = user.full_name;
+    document.getElementById('desktop-results').innerHTML = '';
+    document.getElementById('desktop-error').innerText = '';
+    clearPinDigits();
+
+    if (user.has_pin) {
+        // PIN is set — show PIN pad
+        document.getElementById('selected-name-label').innerText = user.full_name;
+        document.getElementById('desktop-pin-section').classList.remove('hidden');
+        document.getElementById('no-pin-section').classList.add('hidden');
+        document.getElementById('pin-0').focus();
+    } else {
+        // No PIN set yet — bootstrap bypass
+        document.getElementById('no-pin-name-label').innerText = user.full_name;
+        document.getElementById('no-pin-section').classList.remove('hidden');
+        document.getElementById('desktop-pin-section').classList.add('hidden');
+    }
+}
+
+async function loginWithoutPin() {
+    const errEl = document.getElementById('desktop-error');
+    errEl.innerText = '';
+    if (!selectedDesktopUserId) { errEl.innerText = 'Please select your name first.'; return; }
+    try {
+        const res = await fetch('/api/user/verify-pin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: selectedDesktopUserId, pin: '' })
+        });
+        if (res.ok) {
+            currentUser = await res.json();
+            saveSession(currentUser);
+            hideOverlay();
+        } else {
+            errEl.innerText = '❌ Login failed. Contact your administrator.';
+        }
+    } catch(e) {
+        errEl.innerText = '⚠ Network error.';
+    }
+}
+
+function onPinDigit(index, el) {
+    el.value = el.value.replace(/\D/g, '').slice(-1);
+    if (el.value && index < 3) document.getElementById(`pin-${index + 1}`).focus();
+}
+
+function onPinKeydown(e, index) {
+    if (e.key === 'Backspace' && !document.getElementById(`pin-${index}`).value && index > 0) {
+        document.getElementById(`pin-${index - 1}`).focus();
+    }
+    if (e.key === 'Enter') verifyDesktopPin();
+}
+
+function clearPinDigits() {
+    [0,1,2,3].forEach(i => { document.getElementById(`pin-${i}`).value = ''; });
+}
+
+async function verifyDesktopPin() {
+    const errEl = document.getElementById('desktop-error');
+    errEl.innerText = '';
+    if (!selectedDesktopUserId) { errEl.innerText = 'Please select your name first.'; return; }
+    const pin = [0,1,2,3].map(i => document.getElementById(`pin-${i}`).value).join('');
+    if (pin.length !== 4) { errEl.innerText = 'Please enter all 4 PIN digits.'; return; }
+    try {
+        const res = await fetch('/api/user/verify-pin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: selectedDesktopUserId, pin })
+        });
+        if (res.ok) {
+            currentUser = await res.json();
+            saveSession(currentUser);   // saves to sessionStorage on desktop
+            hideOverlay();
+        } else {
+            errEl.innerText = '❌ Incorrect PIN. Please try again.';
+            clearPinDigits();
+            document.getElementById('pin-0').focus();
+        }
+    } catch(e) {
+        errEl.innerText = '⚠ Network error.';
+    }
+}
+
+// ═══════════════════════════════════════════════
+// SWITCH USER
+// ═══════════════════════════════════════════════
+function switchUser() {
+    stopInactivityTimers();
+    stopNotificationPolling();
+    clearSession();
+    currentUser = null;
+    selectedDesktopUserId = null;
+    // Clear overlay inputs
+    const ph = document.getElementById('id-phone'); if (ph) ph.value = '';
+    const ds = document.getElementById('desktop-search'); if (ds) ds.value = '';
+    clearPinDigits();
+    document.getElementById('desktop-results').innerHTML = '';
+    document.getElementById('desktop-pin-section').classList.add('hidden');
+    // Clear main app DOM
+    document.getElementById('tab-bar').innerHTML = '';
+    document.getElementById('view-admin-host').innerHTML = '';
+    ['view-pm','view-feed','view-myorders'].forEach(id => {
+        document.getElementById(id)?.classList.add('hidden');
+    });
+    showOverlay();
+}
+
+// ═══════════════════════════════════════════════
+// APP LAUNCH
+// ═══════════════════════════════════════════════
+async function launchApp() {
+    document.getElementById('main-app').style.display = 'block';
+
+    // Banner
+    document.getElementById('banner-name').innerText = currentUser.full_name;
+    const badge = document.getElementById('banner-role');
+    badge.innerText = currentUser.role;
+    badge.className = `role-badge ${currentUser.role}`;
+
+    // Strict DOM-injected tabs
+    renderTabs();
+
+    // Load hierarchy (always needed)
+    await refreshHierarchy();
+
+    const role = currentUser.role;
+    if (role === 'PM') {
+        switchTab('pm');
+    } else if (role === 'Manager') {
+        switchTab('feed');
+        loadManagerFeed();
+    } else if (role === 'Admin') {
+        // MANDATE 3: inject Admin HTML only here, never for other roles
+        injectAdminConsole();
+        await refreshHierarchy();
+        await refreshUserList();
+        await refreshRoles();
+        switchTab('admin');
+    } else {
+        switchTab('myorders');
+        loadMyOrders();
+    }
+
+    // Desktop inactivity timer
+    if (!isMobile()) startInactivityTimers();
+
+    // Start Notification Polling for Managers/Admins
+    if (currentUser.can_manage || currentUser.role === 'Admin') {
+        document.getElementById('notification-bell').style.display = 'block';
+        startNotificationPolling();
+    }
+}
+
+// ═══════════════════════════════════════════════
+// NATIVE NOTIFICATIONS
+// ═══════════════════════════════════════════════
+let notificationPollTimer = null;
+
+function startNotificationPolling() {
+    stopNotificationPolling();
+    fetchNotifications();
+    notificationPollTimer = setInterval(fetchNotifications, 30000); // every 30s
+}
+
+function stopNotificationPolling() {
+    clearInterval(notificationPollTimer);
+}
+
+let lastNotificationCount = 0;
+
+async function fetchNotifications() {
+    if (!currentUser) return;
+    const deptId = currentUser.department_ref_id;
+    if (!deptId) return;
+    try {
+        const res = await fetch(`/api/notifications/unread/${currentUser.user_id}/${deptId}`);
+        const notes = await res.json();
+        const count = notes.length;
+        const bell = document.getElementById('notification-bell');
+        const countEl = document.getElementById('notification-count');
+        
+        countEl.innerText = count;
+        countEl.style.display = count > 0 ? 'block' : 'none';
+
+        // Trigger pulse and sound if new notifications arrived
+        if (count > lastNotificationCount) {
+            bell.classList.add('pulse');
+            playNotificationSound(notes);
+        } else if (count === 0) {
+            bell.classList.remove('pulse');
+        }
+        lastNotificationCount = count;
+        
+        const list = document.getElementById('notification-list');
+        list.innerHTML = count ? '' : '<p style="font-size:12px; color:#888; margin:0;">No active alerts.</p>';
+        notes.forEach(n => {
+            list.innerHTML += `
+                <div style="border-bottom:1px solid #eee; padding:8px 0; display:flex; justify-content:space-between; align-items:center;">
+                    <div style="font-size:12px; color:#333;">${n.message}</div>
+                    <button onclick="markRead('${n.notification_id}')" style="width:auto; margin:0; padding:4px 8px; font-size:10px; background:#6c757d;">Clear</button>
+                </div>`;
+        });
+    } catch(e) { console.error('Notification error', e); }
+}
+
+function playNotificationSound(notes) {
+    // Audio alert should ONLY be received by the people who "receive" the ticket
+    // 1. If it's a personal assignment (target_user_id matches me)
+    // 2. If it's a department-wide ticket and I am the Primary Manager
+    const newNotes = notes.slice(0, notes.length - lastNotificationCount);
+    
+    const shouldHear = newNotes.some(n => {
+        if (n.target_user_id === currentUser.user_id) return true;
+        
+        if (n.target_dept_id === currentUser.department_ref_id) {
+            const myDept = (hierarchyData.departments || []).find(d => d.department_id === currentUser.department_ref_id);
+            if (myDept && myDept.manager_id === currentUser.user_id) return true;
+        }
+        return false;
+    });
+
+    if (shouldHear || currentUser.role === 'Admin') {
+        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+        audio.play().catch(e => console.log('Audio autoplay blocked.'));
+    }
+}
+
+function toggleNotifications() {
+    const panel = document.getElementById('notification-panel');
+    panel.classList.toggle('hidden');
+}
+
+async function markRead(id) {
+    try {
+        await fetch('/api/notifications/mark-read', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ notification_id: id })
+        });
+        fetchNotifications();
+    } catch(e) { console.error('Mark read failed', e); }
+}
+
+// ═══════════════════════════════════════════════
+// TAB RENDERING — STRICT DOM INJECTION
+// MANDATE 3: Never pre-render. Admin tab only if Admin role.
+// ═══════════════════════════════════════════════
+function renderTabs() {
+    const bar  = document.getElementById('tab-bar');
+    bar.innerHTML = '';   // always start empty — no hidden tabs
+    const role = currentUser.role;
+
+    // Permissions-based Tab Injection
+    if (currentUser.can_submit || role === 'Admin') {
+        bar.innerHTML += `<div class="tab" id="tab-pm"       onclick="switchTab('pm')">📋 Submit Order</div>`;
+    }
+    if (currentUser.can_manage || role === 'Admin') {
+        bar.innerHTML += `<div class="tab" id="tab-feed"     onclick="switchTab('feed')">📡 Dept Feed</div>`;
+    }
+    if (currentUser.can_execute || role === 'Admin') {
+        bar.innerHTML += `<div class="tab" id="tab-myorders" onclick="switchTab('myorders')">🔧 My Orders</div>`;
+    }
+    // ADMIN TAB — explicitly for Admin role
+    if (role === 'Admin') {
+        bar.innerHTML += `<div class="tab" id="tab-admin"    onclick="switchTab('admin')">⚙ Admin</div>`;
+    }
+}
+
+function switchTab(tab) {
+    // Hide all regular views
+    ['view-pm','view-feed','view-myorders'].forEach(id => {
+        document.getElementById(id)?.classList.add('hidden');
+    });
+    // Hide admin host
+    document.getElementById('view-admin-host').classList.add('hidden');
+    // Deactivate all tabs
+    ['tab-pm','tab-feed','tab-myorders','tab-admin'].forEach(id => {
+        document.getElementById(id)?.classList.remove('active');
+    });
+    // Show target
+    if (tab === 'admin') {
+        document.getElementById('view-admin-host').classList.remove('hidden');
+    } else {
+        document.getElementById('view-' + tab)?.classList.remove('hidden');
+        // Global Data Refresh
+        if (tab === 'feed') loadManagerFeed();
+        if (tab === 'myorders') loadMyOrders();
+    }
+    document.getElementById('tab-' + tab)?.classList.add('active');
+}
+
+// ═══════════════════════════════════════════════
+// ADMIN CONSOLE INJECTION
+// MANDATE 3: Full HTML only ever written here.
+// ═══════════════════════════════════════════════
+function injectAdminConsole() {
+    document.getElementById('view-admin-host').innerHTML = `
+    <div>
+      <h2>Admin Console</h2>
+      <div>
+        <h3>Add Department</h3>
+        <input type="text" id="admin-dept-name" placeholder="Department Name">
+        <button onclick="submitAdminDepartment()" style="margin-top:10px;">Add Department</button>
+        <hr>
+
+        <h3>Add Production Line / Zone</h3>
+        <p class="section-hint">Lines/Zones appear in PM Submit under their parent Department.</p>
+        <input type="text" id="admin-subdept-name" placeholder="Line/Zone Name (e.g. Line 3, Packaging Zone)">
+        <select id="admin-subdept-dept" style="margin-top:5px;"><option value="">Select Parent Department...</option></select>
+        <button onclick="submitAdminSubDept()" style="margin-top:10px; background:#17a2b8;">Add Production Line / Zone</button>
+        <hr>
+
+        <h3>Add Role</h3>
+        <p class="section-hint">Define role-based capabilities natively.</p>
+        <input type="text" id="admin-role-name" placeholder="Role Name (e.g. Welder, Operator)">
+        <div style="display:flex; gap:15px; margin-top:10px; justify-content:center; background:#f8f9fa; padding:10px; border-radius:8px;">
+            <label style="margin:0; font-size:12px;"><input type="checkbox" id="perm-submit" style="width:auto; margin-right:5px;">Can Submit</label>
+            <label style="margin:0; font-size:12px;"><input type="checkbox" id="perm-manage" style="width:auto; margin-right:5px;">Can Manage</label>
+            <label style="margin:0; font-size:12px;"><input type="checkbox" id="perm-execute" style="width:auto; margin-right:5px;">Can Execute</label>
+        </div>
+        <button onclick="submitAdminRole()" style="margin-top:10px; background:#6f42c1;">Add Role with Permissions</button>
+        <hr>
+
+        <h3>Update Role Permissions</h3>
+        <p class="section-hint">Modify what an existing role is allowed to do.</p>
+        <select id="admin-update-role-select" onchange="onUpdateRoleSelect()" style="margin-top:5px;"><option value="">Select Role...</option></select>
+        <div id="admin-update-role-perms" style="display:none; gap:15px; margin-top:10px; justify-content:center; background:#f8f9fa; padding:10px; border-radius:8px;">
+            <label style="margin:0; font-size:12px;"><input type="checkbox" id="update-perm-submit" style="width:auto; margin-right:5px;">Can Submit</label>
+            <label style="margin:0; font-size:12px;"><input type="checkbox" id="update-perm-manage" style="width:auto; margin-right:5px;">Can Manage</label>
+            <label style="margin:0; font-size:12px;"><input type="checkbox" id="update-perm-execute" style="width:auto; margin-right:5px;">Can Execute</label>
+        </div>
+        <button id="admin-update-role-btn" onclick="submitRoleUpdate()" style="display:none; margin-top:10px; background:#6f42c1;">Save Permissions</button>
+        <hr>
+
+        <h3>Universal Routing Matrix</h3>
+        <p class="section-hint">Define the "Source → Service" relationship (e.g. Production tickets go to Maintenance).</p>
+        <div style="background:#fff3e0; padding:10px; border-radius:8px; border:1px solid #ffe0b2;">
+            <label style="font-size:11px; color:#666; display:block; margin-bottom:4px;">1. The Department SENDING the Ticket (Source)</label>
+            <select id="routing-origin-dept" style="margin-top:0;"><option value="">Select Origin Department...</option></select>
+            
+            <div style="text-align:center; padding:5px; color:#fd7e14;">↓ sends tickets to ↓</div>
+            
+            <label style="font-size:11px; color:#666; display:block; margin-bottom:4px;">2. The Department RECEIVING/EXECUTING (Service)</label>
+            <select id="routing-target-dept" style="margin-top:0;"><option value="">Select Servicing Department...</option></select>
+        </div>
+        <button onclick="submitRoutingUpdate()" style="margin-top:10px; background:#fd7e14; width:100%;">Establish Routing Link</button>
+        
+        <div id="routing-list-container" style="background:#fff; border:1px solid #eee; border-radius:8px; padding:10px; margin-top:10px;">
+            <p style="font-size:12px; color:#888; text-align:center; margin:0;">Loading active routes...</p>
+        </div>
+        <hr>
+
+        <h3>Sub-Department Routing Override</h3>
+        <p class="section-hint">Override the default Department routing for a specific Production Line/Zone.</p>
+        <div style="background:#e8f4fd; padding:10px; border-radius:8px; border:1px solid #b8daff;">
+            <label style="font-size:11px; color:#666; display:block; margin-bottom:4px;">1. The Production Line/Zone (Origin)</label>
+            <select id="admin-sub-routing-origin" style="margin-top:0;"><option value="">Select Line/Zone...</option></select>
+            
+            <div style="text-align:center; padding:5px; color:#007bff;">↓ overrides default and sends tickets to ↓</div>
+            
+            <label style="font-size:11px; color:#666; display:block; margin-bottom:4px;">2. The Department RECEIVING/EXECUTING (Service)</label>
+            <select id="admin-sub-routing-target" style="margin-top:0;"><option value="">Select Servicing Department...</option></select>
+        </div>
+        <button onclick="submitSubRoutingUpdate()" style="margin-top:10px; background:#007bff; width:100%;">Set Routing Override</button>
+        
+        <div id="sub-routing-list-container" style="background:#fff; border:1px solid #eee; border-radius:8px; padding:10px; margin-top:10px;">
+            <p style="font-size:12px; color:#888; text-align:center; margin:0;">Loading active overrides...</p>
+        </div>
+        <hr>
+
+        <h3>Department Manager</h3>
+        <p class="section-hint">Assign a person as the Head/Manager of a department.</p>
+        <select id="manager-dept-select" style="margin-top:5px;"><option value="">Select Department...</option></select>
+        <select id="manager-user-select" style="margin-top:5px;"><option value="">Select Person...</option></select>
+        <button onclick="submitManagerUpdate()" style="margin-top:10px; background:#007bff;">Set Department Manager</button>
+        <hr>
+
+        <h3>Add Personnel</h3>
+        <p class="section-hint">📱 Phone = mobile login credential&nbsp;&nbsp;|&nbsp;&nbsp;🖥️ PIN = desktop login credential</p>
+        <input type="text"  id="admin-user-name"  placeholder="Full Name">
+        <input type="tel"   id="admin-user-phone" placeholder="Phone Number (mobile login)" style="margin-top:6px; border-color:#007bff;">
+        <input type="text"  id="admin-user-pin"   placeholder="4-Digit PIN (desktop login)" maxlength="4" style="margin-top:6px; border-color:#6f42c1; letter-spacing:5px;" oninput="this.value=this.value.replace(/\\D/g,'')">
+        <select id="admin-user-role" style="margin-top:6px;"><option value="">Loading roles...</option></select>
+        <select id="admin-user-dept" style="margin-top:6px;"><option value="">Select Department...</option></select>
+        <button onclick="submitAdminUser()" style="margin-top:10px;">Add Personnel</button>
+        <hr>
+
+        <h3>Add Equipment</h3>
+        <input type="text" id="admin-equip-name" list="equip-suggestions" placeholder="Equipment Name" autocomplete="off">
+        <datalist id="equip-suggestions"></datalist>
+        <select id="admin-equip-dept" onchange="onAdminEquipDeptChange()" style="margin-top:5px;"><option value="">Select Department...</option></select>
+        <select id="admin-equip-subdept" style="margin-top:5px;"><option value="">Select Line/Zone (Optional)...</option></select>
+        <button onclick="submitAdminEquipment()" style="margin-top:10px;">Add Equipment</button>
+        <hr>
+
+        <h3>Edit Personnel Details</h3>
+        <p class="section-hint">Update a person's Name, Role, or Department assignment.</p>
+        <select id="admin-edit-user" onchange="onEditUserSelect()" style="margin-top:5px;"><option value="">Select Person...</option></select>
+        <div id="admin-edit-form" style="display:none; margin-top:8px; padding:10px; background:#f8f9fa; border:1px solid #dee2e6; border-radius:6px;">
+            <input type="text" id="admin-edit-name" placeholder="Full Name" style="margin-bottom:6px;">
+            <select id="admin-edit-role" style="margin-bottom:6px;"><option value="">Select Role...</option></select>
+            <select id="admin-edit-dept" style="margin-bottom:6px;"><option value="">Select Department...</option></select>
+            <button onclick="submitEditUser()" style="margin-top:4px; background:#17a2b8; width:100%;">Save Changes</button>
+        </div>
+        <hr>
+
+        <h3>Update Phone Number</h3>
+        <p class="section-hint">Phone is the mobile login credential — keep it accurate.</p>
+        <select id="admin-update-user" onchange="onUpdateUserSelect()" style="margin-top:5px;"><option value="">Select Person...</option></select>
+        <div id="admin-update-phone-row" style="display:none; margin-top:8px;">
+            <input type="tel" id="admin-update-phone" placeholder="New Phone Number">
+            <p id="admin-update-current" style="font-size:12px; color:#888; margin:4px 0 0;"></p>
+        </div>
+        <button id="admin-update-btn" onclick="submitPhoneUpdate()" style="display:none; margin-top:10px; background:#28a745;">Save Phone Number</button>
+        <hr>
+
+        <h3>Update PIN</h3>
+        <p class="section-hint">PIN is the desktop/shared PC login credential (4 digits, numbers only).</p>
+        <select id="admin-pin-user" style="margin-top:5px;"><option value="">Select Person...</option></select>
+        <input type="text" id="admin-pin-value" placeholder="New 4-Digit PIN" maxlength="4" style="margin-top:6px; letter-spacing:5px; border-color:#6f42c1;" oninput="this.value=this.value.replace(/\\D/g,'')">
+        <button onclick="submitPinUpdate()" style="margin-top:10px; background:#6f42c1;">Save PIN</button>
+
+        <hr style="border-color:#dc3545;">
+
+        <div class="archive-zone">
+            <h3>🔒 Archive Records</h3>
+            <p class="section-hint"><strong>Soft-delete only</strong> — stays in DB for historical reporting, vanishes from dropdowns and login.</p>
+
+            <h4>Archive Personnel (Termination)</h4>
+            <select id="archive-user-select" style="margin-top:4px;"><option value="">Select Person to Archive...</option></select>
+            <button class="btn-archive" onclick="archivePersonnel()">Archive / Terminate Personnel</button>
+
+            <h4>Archive Department</h4>
+            <select id="archive-dept-select" style="margin-top:4px;"><option value="">Select Department to Archive...</option></select>
+            <button class="btn-archive" onclick="archiveDepartment()">Archive Department</button>
+
+            <h4>Archive Role</h4>
+            <select id="archive-role-select" style="margin-top:4px;"><option value="">Select Role to Archive...</option></select>
+            <button class="btn-archive" onclick="archiveRole()">Archive Role</button>
+
+            <h4>Archive Production Line / Zone</h4>
+            <select id="archive-subdept-select" style="margin-top:4px;"><option value="">Select Line/Zone to Archive...</option></select>
+            <button class="btn-archive" onclick="archiveSubDept()">Archive Production Line / Zone</button>
+        </div>
+      </div>
+    </div>`;
+
+    // Populate dept dropdowns immediately from cached hierarchyData
+    let deptOpts = '<option value="">Select Department...</option>';
+    hierarchyData.departments.forEach(d => {
+        deptOpts += `<option value="${d.department_id}">${d.department_name}</option>`;
+    });
+    ['admin-user-dept','admin-equip-dept'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = deptOpts;
+    });
+    const subEl = document.getElementById('admin-subdept-dept');
+    if (subEl) subEl.innerHTML = deptOpts.replace('Select Department...', 'Select Parent Department...');
+
+    const archiveDept = document.getElementById('archive-dept-select');
+    if (archiveDept) {
+        archiveDept.innerHTML = '<option value="">Select Department to Archive...</option>';
+        hierarchyData.departments.forEach(d => {
+            archiveDept.innerHTML += `<option value="${d.department_id}">${d.department_name}</option>`;
+        });
+    }
+    const archiveSub = document.getElementById('archive-subdept-select');
+    if (archiveSub) {
+        archiveSub.innerHTML = '<option value="">Select Line/Zone to Archive...</option>';
+        hierarchyData.sub_departments.forEach(s => {
+            const parent = hierarchyData.departments.find(d => d.department_id === s.department_id);
+            archiveSub.innerHTML += `<option value="${s.sub_dept_id}">${s.sub_dept_name}${parent ? ` (${parent.department_name})` : ''}</option>`;
+        });
+    }
+}
+
+// ═══════════════════════════════════════════════
+// HIERARCHY & DATA
+// ═══════════════════════════════════════════════
+async function refreshHierarchy() {
+    const res = await fetch('/api/hierarchy');
+    hierarchyData = await res.json();
+
+    // PM / Admin dept selection
+    const deptSel = document.getElementById('dept-select');
+    if (deptSel) {
+        if (currentUser?.role === 'Admin') {
+            // Admin can see all departments
+            deptSel.disabled = false;
+            deptSel.style.background = 'white';
+            deptSel.style.cursor = 'default';
+            let html = '<option value="">Select Department...</option>';
+            hierarchyData.departments.forEach(d => {
+                html += `<option value="${d.department_id}">${d.department_name}</option>`;
+            });
+            deptSel.innerHTML = html;
+            deptSel.onchange = populatePMSubDepts; // Re-populate lines when dept changes
+        } else if (currentUser?.role === 'PM') {
+            // PM locked to their own
+            const myDept = hierarchyData.departments.find(d => d.department_id === currentUser.department_ref_id);
+            deptSel.innerHTML = myDept
+                ? `<option value="${myDept.department_id}">${myDept.department_name}</option>`
+                : '<option value="">No department assigned — contact Admin</option>';
+            deptSel.value = currentUser.department_ref_id || '';
+            populatePMSubDepts();
+        }
+    }
+
+    // Admin Console dropdowns — if console is already injected (e.g., after addDept)
+    let deptOpts = '<option value="">Select Department...</option>';
+    hierarchyData.departments.forEach(d => {
+        deptOpts += `<option value="${d.department_id}">${d.department_name}</option>`;
+    });
+    ['admin-user-dept','admin-equip-dept','manager-dept-select','routing-origin-dept','routing-target-dept','admin-sub-routing-target'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.innerHTML = deptOpts;
+    });
+    const subEl = document.getElementById('admin-subdept-dept');
+    if (subEl) subEl.innerHTML = deptOpts.replace('Select Department...', 'Select Parent Department...');
+
+    const archiveDept = document.getElementById('archive-dept-select');
+    if (archiveDept) {
+        archiveDept.innerHTML = '<option value="">Select Department to Archive...</option>';
+        hierarchyData.departments.forEach(d => {
+            archiveDept.innerHTML += `<option value="${d.department_id}">${d.department_name}</option>`;
+        });
+    }
+    const archiveSub = document.getElementById('archive-subdept-select');
+    if (archiveSub) {
+        archiveSub.innerHTML = '<option value="">Select Line/Zone to Archive...</option>';
+        hierarchyData.sub_departments.forEach(s => {
+            const parent = hierarchyData.departments.find(d => d.department_id === s.department_id);
+            archiveSub.innerHTML += `<option value="${s.sub_dept_id}">${s.sub_dept_name}${parent ? ` (${parent.department_name})` : ''}</option>`;
+        });
+    }
+
+    const subRouteOrig = document.getElementById('admin-sub-routing-origin');
+    if (subRouteOrig) {
+        subRouteOrig.innerHTML = '<option value="">Select Line/Zone...</option>';
+        hierarchyData.sub_departments.forEach(s => {
+            const parent = hierarchyData.departments.find(d => d.department_id === s.department_id);
+            subRouteOrig.innerHTML += `<option value="${s.sub_dept_id}">${s.sub_dept_name}${parent ? ` (${parent.department_name})` : ''}</option>`;
+        });
+    }
+
+    // Render One-to-Many Routing Visualization
+    const routingContainer = document.getElementById('routing-list-container');
+    if (routingContainer) {
+        let html = '<p style="font-size:11px; font-weight:bold; margin:0 0 8px; color:#333; text-transform:uppercase; letter-spacing:0.5px;">Active Routing Map</p>';
+        let routesFound = false;
+        hierarchyData.departments.forEach(d => {
+            if (d.servicing_department_id) {
+                routesFound = true;
+                const target = hierarchyData.departments.find(t => t.department_id === d.servicing_department_id);
+                const targetName = target ? target.department_name : 'Unknown';
+                html += `<div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #f0f0f0; font-size:12px;">
+                            <span style="flex:1;">${d.department_name}</span>
+                            <span style="margin:0 10px; color:#fd7e14; font-weight:bold;">➔</span>
+                            <span style="flex:1; text-align:right; font-weight:600;">${targetName}</span>
+                            <button onclick="deleteRoute('${d.department_id}')" style="width:auto; margin-left:10px; margin-top:0; background:#dc3545; padding:2px 8px; font-size:10px; border-radius:4px;">Delete</button>
+                         </div>`;
             }
+        });
+        if (!routesFound) html += '<p style="color:#999; font-size:11px; text-align:center; margin:10px 0;">No routing links established yet.</p>';
+        routingContainer.innerHTML = html;
+    }
 
-            filteredData.forEach(order => {
-                let alertClass = order.status === "Pending Review" ? "status-Review" : "";
-                
-                // Build dropdown
-                let deptId = order.department_ref_id;
-                let techOptions = '<option value="">Unassigned...</option>';
-                if (techMap[deptId]) {
-                    techMap[deptId].forEach(t => {
-                        let selected = (order.technician_id === t.user_id) ? "selected" : "";
-                        techOptions += `<option value="${t.user_id}" ${selected}>${t.full_name} (${t.role})</option>`;
-                    });
-                }
-                
-                let dropdownHtml = `
-                    <div style="margin-top:10px;">
-                        <label style="font-size:12px; display:inline-block; margin-right:10px;">Assign To:</label>
-                        <select onchange="assignOrder('${order.order_id}', this.value)" style="padding:6px; font-size:14px; width:60%; border-radius:4px;">
+    // Render Sub-Department Routing Visualization
+    const subRoutingContainer = document.getElementById('sub-routing-list-container');
+    if (subRoutingContainer) {
+        let html = '<p style="font-size:11px; font-weight:bold; margin:0 0 8px; color:#333; text-transform:uppercase; letter-spacing:0.5px;">Active Line Overrides</p>';
+        let routesFound = false;
+        hierarchyData.sub_departments.forEach(s => {
+            if (s.servicing_department_id) {
+                routesFound = true;
+                const parent = hierarchyData.departments.find(d => d.department_id === s.department_id);
+                const parentName = parent ? parent.department_name : 'Unknown Dept';
+                const target = hierarchyData.departments.find(t => t.department_id === s.servicing_department_id);
+                const targetName = target ? target.department_name : 'Unknown';
+                html += `<div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #f0f0f0; font-size:12px;">
+                            <span style="flex:1;">${parentName} - ${s.sub_dept_name}</span>
+                            <span style="margin:0 10px; color:#007bff; font-weight:bold;">➔</span>
+                            <span style="flex:1; text-align:right; font-weight:600;">${targetName}</span>
+                            <button onclick="deleteSubRoute('${s.sub_dept_id}')" style="width:auto; margin-left:10px; margin-top:0; background:#dc3545; padding:2px 8px; font-size:10px; border-radius:4px;">Delete</button>
+                         </div>`;
+            }
+        });
+        if (!routesFound) html += '<p style="color:#999; font-size:11px; text-align:center; margin:10px 0;">No routing overrides established.</p>';
+        subRoutingContainer.innerHTML = html;
+    }
+
+    // Populate Equipment Suggestions Datalist
+    const equipList = document.getElementById('equip-suggestions');
+    if (equipList && hierarchyData.equipment) {
+        const uniqueEquip = [...new Set(hierarchyData.equipment.map(e => e.equipment_name))].sort();
+        equipList.innerHTML = uniqueEquip.map(n => `<option value="${n}">`).join('');
+    }
+}
+
+async function refreshUserList() {
+    try {
+        const res = await fetch('/api/admin/users');
+        adminUsers = await res.json();
+        
+        const updatePhoneSel = document.getElementById('admin-update-user');
+        const updatePinSel   = document.getElementById('admin-pin-user');
+        const archiveUserSel = document.getElementById('archive-user-select');
+        const managerUserSel = document.getElementById('manager-user-select');
+        const editUserSel    = document.getElementById('admin-edit-user');
+
+        let opts = '<option value="">Select Person...</option>';
+        adminUsers.forEach(u => {
+            const roleStr = u.role ? ` (${u.role})` : '';
+            opts += `<option value="${u.user_id}">${u.full_name}${roleStr}</option>`;
+        });
+
+        if(updatePhoneSel) updatePhoneSel.innerHTML = opts;
+        if(updatePinSel)   updatePinSel.innerHTML   = opts;
+        if(archiveUserSel) archiveUserSel.innerHTML = opts;
+        if(managerUserSel) managerUserSel.innerHTML = opts;
+        if(editUserSel)    editUserSel.innerHTML    = opts;
+        
+    } catch(e) { console.error('Failed to load users for admin dropdowns'); }
+}
+
+async function refreshRoles() {
+    try {
+        const res   = await fetch('/api/admin/roles');
+        if (!res.ok) return;
+        const roles = await res.json();
+
+        const roleSel    = document.getElementById('admin-user-role');
+        const archiveSel = document.getElementById('archive-role-select');
+        const updateRoleSel = document.getElementById('admin-update-role-select');
+
+        window.activeRolesData = roles;
+        adminRoles = roles; // Ensure global scope if referenced by edit form
+
+        if (roleSel) {
+            roleSel.innerHTML = roles.length ? '' : '<option value="">No roles defined yet</option>';
+            roles.forEach(r => { roleSel.innerHTML += `<option value="${r.role_id}">${r.role_name}</option>`; });
+        }
+        if (updateRoleSel) {
+            updateRoleSel.innerHTML = '<option value="">Select Role...</option>';
+            roles.forEach(r => { updateRoleSel.innerHTML += `<option value="${r.role_id}">${r.role_name}</option>`; });
+        }
+        if (archiveSel) {
+            archiveSel.innerHTML = '<option value="">Select Role to Archive...</option>';
+            roles.forEach(r => { archiveSel.innerHTML += `<option value="${r.role_id}">${r.role_name}</option>`; });
+        }
+    } catch(e) { console.error('Roles error', e); }
+}
+
+// ═══════════════════════════════════════════════
+// PM SUBMIT VIEW
+// ═══════════════════════════════════════════════
+function populatePMSubDepts() {
+    const subSel  = document.getElementById('sub-dept-select');
+    const equipSel = document.getElementById('equipment-select');
+    if (!subSel) return;
+    subSel.innerHTML  = '<option value="">Select Line/Zone...</option>';
+    equipSel.innerHTML = '<option value="">Select Equipment...</option>';
+    equipSel.disabled  = true;
+
+    const deptId = (currentUser?.role === 'Admin') 
+        ? document.getElementById('dept-select').value 
+        : currentUser?.department_ref_id;
+    
+    if (!deptId) return;
+    
+    const filtered = hierarchyData.sub_departments.filter(s => s.department_id === deptId);
+
+    if (!filtered.length) {
+        subSel.innerHTML = '<option value="">No lines/zones for your dept</option>';
+        subSel.disabled  = true;
+        // Since there are no lines, automatically load all department equipment
+        loadEquipmentForDept(deptId, null);
+    } else {
+        subSel.disabled = false;
+        filtered.forEach(s => { subSel.innerHTML += `<option value="${s.sub_dept_id}">${s.sub_dept_name}</option>`; });
+    }
+}
+
+function filterEquipment() {
+    const subId  = document.getElementById('sub-dept-select').value;
+    const deptId = (currentUser?.role === 'Admin') ? document.getElementById('dept-select').value : currentUser?.department_ref_id;
+    loadEquipmentForDept(deptId, subId);
+}
+
+function loadEquipmentForDept(deptId, subId) {
+    const equipSel = document.getElementById('equipment-select');
+    equipSel.innerHTML = '<option value="">Select Equipment...</option>';
+    
+    // If there are lines to choose from, but user hasn't selected one, keep disabled
+    if (!subId && !document.getElementById('sub-dept-select').disabled) { 
+        equipSel.disabled = true; 
+        return; 
+    }
+
+    const filtered = hierarchyData.equipment.filter(e => {
+        if (e.department_ref_id !== deptId) return false;
+        // Show equipment specific to the line, OR generic equipment (no line assigned)
+        if (subId) return e.sub_dept_ref_id === subId || !e.sub_dept_ref_id;
+        // If no subId (because the dept has no lines), show all dept equipment
+        return true;
+    });
+
+    if (!filtered.length) {
+        equipSel.innerHTML = '<option value="">No equipment found</option>';
+        equipSel.disabled  = true;
+    } else {
+        equipSel.disabled = false;
+        filtered.forEach(e => { equipSel.innerHTML += `<option value="${e.equipment_id}">${e.equipment_name}</option>`; });
+    }
+}
+
+async function onPhotoSelected() {
+    const file = document.getElementById('media-input').files[0];
+    if (file) {
+        document.getElementById('photo-preview').innerText = `✅ ${file.name} ready`;
+    }
+}
+
+async function submitOrder() {
+    const equipEl = document.getElementById('equipment-select');
+    if (!equipEl.value) return alert('Please select the equipment with the issue.');
+    
+    const deptId = (currentUser?.role === 'Admin') ? document.getElementById('dept-select').value : currentUser?.department_ref_id;
+    if (!deptId) return alert('No department selected.');
+
+    // Note: In a production environment, we would upload the file to Supabase Storage first.
+    // For this prototype, we'll log the intention and proceed.
+    const file = document.getElementById('media-input').files[0];
+    
+    const payload = {
+        pm_user_id:          currentUser.user_id,
+        department_ref_id:   deptId,
+        sub_dept_id:         document.getElementById('sub-dept-select').value || null,
+        equipment_id:        equipEl.value,
+        pm_urgency_level:    document.getElementById('urgency').value,
+        risk_level:          document.getElementById('risk').value,
+        maintenance_type:    'Corrective',
+        problem_description: document.getElementById('description').value
+    };
+    const equipName = equipEl.options[equipEl.selectedIndex].text;
+    try {
+        const res = await fetch('/api/orders/submit', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+        if (res.ok) {
+            sessionHistory.push({ ts: new Date().toLocaleTimeString(), equip: equipName, desc: payload.problem_description, urg: payload.pm_urgency_level });
+            historyIndex = sessionHistory.length - 1;
+            const toast = document.getElementById('pm-toast');
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 3500);
+            document.getElementById('wo-form').reset();
+            document.getElementById('photo-preview').innerText = '';
+            populatePMSubDepts();
+            updateHistoryUI();
+        } else { 
+            const err = await res.text();
+            alert('Failed to submit. Try again.\n\nBackend says: ' + err); 
+        }
+    } catch(e) { alert('Network error: ' + e); }
+}
+
+function updateHistoryUI() {
+    const container = document.getElementById('history-container');
+    if (!sessionHistory.length) { container.classList.add('hidden'); return; }
+    container.classList.remove('hidden');
+    const item = sessionHistory[historyIndex];
+    document.getElementById('history-counter').innerText = `${historyIndex + 1} of ${sessionHistory.length}`;
+    document.getElementById('history-display').innerHTML = `
+        <strong>${item.ts}</strong><br>
+        <span style="color:#007bff; font-weight:700;">${item.equip}</span> — ${item.urg}<br>
+        <p style="margin:5px 0 0; color:#333;">${item.desc || '(no description)'}</p>`;
+}
+function prevHistory() { if (historyIndex > 0)                     { historyIndex--; updateHistoryUI(); } }
+function nextHistory() { if (historyIndex < sessionHistory.length-1){ historyIndex++; updateHistoryUI(); } }
+
+// ═══════════════════════════════════════════════
+// MANAGER DEPARTMENT FEED
+// ═══════════════════════════════════════════════
+async function loadManagerFeed() {
+    const container = document.getElementById('feed-container');
+    container.innerHTML = '<div class="empty-state"><span class="e-icon">⏳</span>Loading...</div>';
+    try {
+        const deptId = (currentUser.role === 'Admin') ? '' : currentUser.department_ref_id;
+        const feedUrl = `/api/orders/active?department_id=${deptId}`;
+        const techUrl = (currentUser.role === 'Admin') ? '/api/admin/users' : `/api/department/${currentUser.department_ref_id}/technicians`;
+
+        const [feedRes, techRes] = await Promise.all([
+            fetch(feedUrl),
+            fetch(techUrl)
+        ]);
+        const orders = await feedRes.json();
+        const techs  = await techRes.json();
+
+        container.innerHTML = '';
+        if (!orders.length) {
+            container.innerHTML = '<div class="empty-state"><span class="e-icon">✅</span>No active orders. All clear!</div>';
+            return;
+        }
+
+        orders.forEach(order => {
+            const urgClass   = order.pm_urgency_level?.split(' ')[0] || 'Unknown';
+            const statClass  = order.status === 'Pending Review' ? 'status-Review'
+                             : order.status === 'In Process'     ? 'status-Process'
+                             : 'status-Submitted';
+            const equip      = order.equipment_registry?.equipment_name || 'Unknown Equipment';
+            const reporter   = order.app_users?.full_name || 'Unknown';
+
+            let techOptions = '<option value="">Unassigned...</option>';
+            techs.forEach(t => {
+                techOptions += `<option value="${t.user_id}" ${order.technician_id === t.user_id ? 'selected':''}>${t.full_name} (${t.role})</option>`;
+            });
+
+            const workNote = order.work_performed
+                ? `<div class="work-note"><strong>Work reported:</strong> ${order.work_performed}</div>`
+                : '';
+
+            // MANDATE 2: Two-button review panel on Pending Review
+            const reviewBtns = order.status === 'Pending Review' ? `
+                <div class="btn-two-col">
+                    <button class="btn-complete" onclick="managerComplete('${order.order_id}')">✅ Complete &amp; Archive</button>
+                    <button class="btn-reject"   onclick="managerReject('${order.order_id}')">❌ Reject — Rework</button>
+                </div>` : '';
+
+            container.innerHTML += `
+                <div class="card urgency-${urgClass}">
+                    <span class="status-badge ${statClass}">${order.status}</span>
+                    <strong>${order.pm_urgency_level}</strong>
+                    <p style="margin:5px 0; font-size:15px; font-weight:700;">${equip}</p>
+                    <p style="margin:0 0 5px; font-size:12px; color:#777;">Reported by: ${reporter}</p>
+                    <p style="margin:4px 0; color:#333;">${order.problem_description}</p>
+                    ${workNote}
+                    <div style="margin-top:10px; display:flex; align-items:center; gap:8px;">
+                        <label style="font-size:12px; white-space:nowrap; font-weight:700;">Assign To:</label>
+                        <select id="assign-select-${order.order_id}" style="flex:1; padding:7px; font-size:14px; border-radius:6px;">
                             ${techOptions}
                         </select>
+                        <button onclick="dispatchOrder('${order.order_id}')" style="margin:0; padding:8px 12px; background:#007bff; font-size:13px;">Dispatch</button>
                     </div>
-                `;
-
-                let userName = order.app_users?.full_name || 'Unknown PM';
-                let equipName = order.equipment_registry?.equipment_name || 'Unknown Equipment';
-                let deptName = order.departments?.department_name || 'Unknown Dept';
-                let urgencyClass = order.pm_urgency_level?.split(' ')[0] || 'Unknown';
-
-                let cardHTML = `
-                    <div class="card urgency-${urgencyClass}">
-                        <span class="status-badge ${alertClass}">${order.status}</span>
-                        <strong>${order.pm_urgency_level}</strong>
-                        <p style="margin: 5px 0; font-size:14px; font-weight:bold;">${deptName} &bull; ${equipName}</p>
-                        <p style="margin: 0 0 10px 0; font-size:12px; color:#555;">Reported by: ${userName}</p>
-                        <p style="margin: 5px 0; color:#333;">${order.problem_description}</p>
-                        ${dropdownHtml}
-                    </div>
-                `;
-                container.innerHTML += cardHTML;
-            });
-        } catch (err) {
-            console.error(err);
-            document.getElementById('feed-container').innerHTML = '<p>Error loading feed.</p>';
-        }
+                    ${reviewBtns}
+                </div>`;
+        });
+    } catch(e) {
+        console.error('Feed loading error:', e);
+        container.innerHTML = `<p style="color:red; text-align:center;">Error loading feed. Refresh to retry.<br><small style="color:#999;">${e.message}</small></p>`;
     }
+}
 
-    async function assignOrder(orderId, technicianId) {
-        if (!technicianId) return;
+async function managerComplete(orderId) {
+    const cost = prompt('Enter total material cost ($). Enter 0 if none:', '0');
+    if (cost === null) return;
+    try {
+        const res = await fetch('/api/orders/update-status', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ order_id: orderId, new_status: 'Complete', user_id: currentUser.user_id, cost: parseFloat(cost)||0 })
+        });
+        if (res.ok) { alert('✅ Order archived successfully.'); loadManagerFeed(); }
+        else { alert('Error archiving order.'); }
+    } catch(e) { alert('Network error.'); }
+}
 
-        const payload = {
-            order_id: orderId,
-            technician_id: technicianId
-        };
+// MANDATE 2: Reject sends ticket back to In Process (backend also clears work_performed)
+async function managerReject(orderId) {
+    const reason = prompt('Reason for rejection (optional — will be logged):') ?? '';
+    if (!confirm('Reject this work and return it to the technician?')) return;
+    try {
+        const res = await fetch('/api/orders/update-status', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ order_id: orderId, new_status: 'In Process', user_id: currentUser.user_id, work_performed: '' })
+        });
+        if (res.ok) { loadManagerFeed(); }
+        else { alert('Error rejecting order.'); }
+    } catch(e) { alert('Network error.'); }
+}
 
-        try {
-            const response = await fetch('/api/orders/assign', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
+async function dispatchOrder(orderId) {
+    const techId = document.getElementById(`assign-select-${orderId}`).value;
+    if (!techId) { alert('Please select a technician first.'); return; }
+    try {
+        const res = await fetch('/api/orders/assign', { 
+            method:'POST', 
+            headers:{'Content-Type':'application/json'}, 
+            body: JSON.stringify({ order_id: orderId, technician_id: techId }) 
+        });
+        if (res.ok) {
+            alert('✅ Order formally dispatched to technician.');
+            loadManagerFeed(); // refresh feed
+        } else {
+            alert('Error dispatching order.');
+        }
+    } catch(e) { alert('Network error on delegation.'); }
+}
 
-            if (response.ok) {
-                console.log("Delegation successfully synced.");
-            } else {
-                alert("Error delegating order.");
+// ═══════════════════════════════════════════════
+// MY ORDERS VIEW — Tech / Worker / etc.
+// ═══════════════════════════════════════════════
+async function loadMyOrders() {
+    const container = document.getElementById('myorders-container');
+    container.innerHTML = '<div class="empty-state"><span class="e-icon">⏳</span>Loading your orders...</div>';
+    try {
+        const res    = await fetch(`/api/orders/assigned-to/${currentUser.user_id}`);
+        const orders = await res.json();
+        container.innerHTML = '';
+        if (!orders.length) {
+            container.innerHTML = '<div class="empty-state"><span class="e-icon">✅</span>No orders assigned to you right now.</div>';
+            return;
+        }
+        orders.forEach(order => {
+            const urgClass  = order.pm_urgency_level?.split(' ')[0] || 'Unknown';
+            const statClass = order.status === 'Pending Review' ? 'status-Review'
+                            : order.status === 'In Process'     ? 'status-Process'
+                            : 'status-Submitted';
+            const equip     = order.equipment_registry?.equipment_name || 'Unknown Equipment';
+            const dept      = order.departments?.department_name || '';
+
+            let actionHtml = '';
+            if (order.status === 'Submitted') {
+                actionHtml = `<button class="btn-start btn-sm" onclick="techStart('${order.order_id}')">▶ Start Working</button>`;
+            } else if (order.status === 'In Process') {
+                actionHtml = `
+                    <textarea id="work-${order.order_id}" rows="2" placeholder="Describe work performed..." style="margin-top:10px; width:100%; padding:9px; border-radius:7px; border:1px solid #ccc; font-size:14px;"></textarea>
+                    <button class="btn-work btn-sm" onclick="techSubmitWork('${order.order_id}')">🔧 Submit for Manager Review</button>`;
+            } else if (order.status === 'Pending Review') {
+                actionHtml = `<p style="text-align:center; color:#6f42c1; font-weight:700; margin-top:10px; padding:9px; background:#f3eeff; border-radius:7px;">⏳ Awaiting Manager Review</p>`;
             }
-        } catch (err) {
-            alert("Network error on delegation.");
-        }
+
+            container.innerHTML += `
+                <div class="card urgency-${urgClass}">
+                    <span class="status-badge ${statClass}">${order.status}</span>
+                    <strong>${order.pm_urgency_level}</strong>
+                    <p style="margin:5px 0; font-size:15px; font-weight:700;">${dept ? dept + ' · ' : ''}${equip}</p>
+                    <p style="margin:4px 0; color:#333;">${order.problem_description}</p>
+                    ${actionHtml}
+                </div>`;
+        });
+    } catch(e) {
+        container.innerHTML = '<p style="color:red; text-align:center;">Error loading orders. Refresh to retry.</p>';
     }
+}
+
+async function techStart(orderId) {
+    try {
+        const res = await fetch('/api/orders/update-status', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ order_id: orderId, new_status: 'In Process', user_id: currentUser.user_id })
+        });
+        if (res.ok) loadMyOrders(); else alert('Error updating status.');
+    } catch(e) { alert('Network error.'); }
+}
+
+async function techSubmitWork(orderId) {
+    const work = document.getElementById(`work-${orderId}`)?.value.trim();
+    if (!work) return alert('Please describe the work performed before submitting.');
+    try {
+        const res = await fetch('/api/orders/update-status', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ order_id: orderId, new_status: 'Pending Review', user_id: currentUser.user_id, work_performed: work })
+        });
+        if (res.ok) loadMyOrders(); else alert('Error submitting work.');
+    } catch(e) { alert('Network error.'); }
+}
+
+// ═══════════════════════════════════════════════
+// ADMIN CONSOLE FUNCTIONS
+// ═══════════════════════════════════════════════
+function onUpdateUserSelect() {
+    const sel = document.getElementById('admin-update-user');
+    const row = document.getElementById('admin-update-phone-row');
+    const btn = document.getElementById('admin-update-btn');
+    const lbl = document.getElementById('admin-update-current');
+    const inp = document.getElementById('admin-update-phone');
+    if (!sel?.value) { row.style.display='none'; btn.style.display='none'; return; }
+    const phone = sel.options[sel.selectedIndex].getAttribute('data-phone');
+    lbl.innerText = phone ? `Current: ${phone}` : 'Current: (none set)';
+    inp.value = phone || '';
+    row.style.display = 'block';
+    btn.style.display = 'block';
+}
+
+async function submitPhoneUpdate() {
+    const sel   = document.getElementById('admin-update-user');
+    const phone = document.getElementById('admin-update-phone').value.trim();
+    if (!sel?.value) return alert('Select a person.');
+    if (!phone)      return alert('Enter a phone number.');
+    try {
+        const res = await fetch('/api/admin/user/phone', { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ user_id: sel.value, phone_number: phone }) });
+        if (res.ok) { alert('Phone updated!'); sel.value=''; document.getElementById('admin-update-phone-row').style.display='none'; document.getElementById('admin-update-btn').style.display='none'; await refreshUserList(); }
+        else { const e=await res.json(); alert('Error: '+(e.detail||'Unknown')); }
+    } catch(e) { alert('Network error.'); }
+}
+
+async function submitPinUpdate() {
+    const sel = document.getElementById('admin-pin-user');
+    const pin = document.getElementById('admin-pin-value').value.trim();
+    if (!sel?.value) return alert('Select a person.');
+    if (!/^\d{4}$/.test(pin)) return alert('PIN must be exactly 4 digits.');
+    try {
+        const res = await fetch('/api/admin/user/pin', { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ user_id: sel.value, pin_code: pin }) });
+        if (res.ok) { alert('PIN updated!'); document.getElementById('admin-pin-value').value=''; }
+        else { const e=await res.json(); alert('Error: '+(e.detail||'Unknown')); }
+    } catch(e) { alert('Network error.'); }
+}
+
+async function submitAdminDepartment() {
+    const name = document.getElementById('admin-dept-name').value.trim();
+    if (!name) return alert('Enter a department name.');
+    await fetch('/api/admin/department', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ department_name: name }) });
+    document.getElementById('admin-dept-name').value = '';
+    await refreshHierarchy();
+    alert('Department added!');
+}
+
+async function submitAdminSubDept() {
+    const name   = document.getElementById('admin-subdept-name').value.trim();
+    const deptId = document.getElementById('admin-subdept-dept').value;
+    if (!name)   return alert('Enter a Line/Zone name.');
+    if (!deptId) return alert('Select a parent Department.');
+    try {
+        const res = await fetch('/api/admin/sub-department', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ sub_dept_name: name, department_id: deptId }) });
+        if (res.ok) { document.getElementById('admin-subdept-name').value=''; await refreshHierarchy(); alert(`"${name}" added!`); }
+        else { const e=await res.json(); alert('Error: '+(e.detail||'Unknown')); }
+    } catch(e) { alert('Network error.'); }
+}
+
+async function submitAdminRole() {
+    const name = document.getElementById('admin-role-name').value.trim();
+    if (!name) return alert('Enter a role name.');
+    const payload = {
+        role_name: name,
+        can_submit:  document.getElementById('perm-submit').checked,
+        can_manage:  document.getElementById('perm-manage').checked,
+        can_execute: document.getElementById('perm-execute').checked
+    };
+    try {
+        const res = await fetch('/api/admin/role', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        if (res.ok) { 
+            document.getElementById('admin-role-name').value=''; 
+            ['perm-submit','perm-manage','perm-execute'].forEach(id => document.getElementById(id).checked = false);
+            await refreshRoles(); 
+            alert(`Role "${name}" added with permissions!`); 
+        }
+        else { const e=await res.json(); alert('Error: '+(e.detail||'Unknown')); }
+    } catch(e) { alert('Network error.'); }
+}
+
+async function submitRoutingUpdate() {
+    const origin = document.getElementById('routing-origin-dept').value;
+    const target = document.getElementById('routing-target-dept').value;
+    if (!origin) return alert('Select an Origin Department.');
+    if (!target) return alert('Select a Servicing Department.');
+    if (origin === target) return alert('Origin and Target cannot be the same department.');
+    try {
+        const res = await fetch('/api/admin/department/routing', { 
+            method:'PATCH', 
+            headers:{'Content-Type':'application/json'}, 
+            body: JSON.stringify({ department_id: origin, servicing_department_id: target }) 
+        });
+        if (res.ok) { alert('Routing Matrix updated!'); await refreshHierarchy(); }
+        else { const e=await res.json(); alert('Error updating routing.'); }
+    } catch(e) { alert('Network error.'); }
+}
+
+async function deleteRoute(deptId) {
+    if (!confirm('Clear this routing link? Tickets from this department will no longer be auto-routed.')) return;
+    try {
+        const res = await fetch('/api/admin/department/routing/clear', { 
+            method:'PATCH', 
+            headers:{'Content-Type':'application/json'}, 
+            body: JSON.stringify({ department_id: deptId }) 
+        });
+        if (res.ok) { await refreshHierarchy(); }
+        else { alert('Error clearing route.'); }
+    } catch(e) { alert('Network error.'); }
+}
+
+async function submitSubRoutingUpdate() {
+    const origin = document.getElementById('admin-sub-routing-origin').value;
+    const target = document.getElementById('admin-sub-routing-target').value;
+    if (!origin) return alert('Select a Line/Zone.');
+    if (!target) return alert('Select a Servicing Department.');
+    try {
+        const res = await fetch('/api/admin/sub-department/routing', { 
+            method:'PATCH', 
+            headers:{'Content-Type':'application/json'}, 
+            body: JSON.stringify({ sub_dept_id: origin, servicing_department_id: target }) 
+        });
+        if (res.ok) { alert('Routing Override updated!'); await refreshHierarchy(); }
+        else { const e=await res.json(); alert('Error updating routing.'); }
+    } catch(e) { alert('Network error.'); }
+}
+
+async function deleteSubRoute(subDeptId) {
+    if (!confirm('Clear this routing override? Tickets will fall back to the default Department route.')) return;
+    try {
+        const res = await fetch('/api/admin/sub-department/routing/clear', { 
+            method:'PATCH', 
+            headers:{'Content-Type':'application/json'}, 
+            body: JSON.stringify({ sub_dept_id: subDeptId }) 
+        });
+        if (res.ok) { await refreshHierarchy(); }
+        else { alert('Error clearing override.'); }
+    } catch(e) { alert('Network error.'); }
+}
+
+async function submitManagerUpdate() {
+    const deptId = document.getElementById('manager-dept-select').value;
+    const userId = document.getElementById('manager-user-select').value;
+    if (!deptId || !userId) return alert('Select both department and person.');
+    try {
+        const res = await fetch('/api/admin/department/manager', { 
+            method:'PATCH', 
+            headers:{'Content-Type':'application/json'}, 
+            body: JSON.stringify({ department_id: deptId, manager_id: userId }) 
+        });
+        if (res.ok) { alert('Department Manager assigned!'); await refreshHierarchy(); }
+        else { const e=await res.json(); alert('Error updating manager.'); }
+    } catch(e) { alert('Network error.'); }
+}
+
+function onUpdateRoleSelect() {
+    const sel = document.getElementById('admin-update-role-select');
+    const permsDiv = document.getElementById('admin-update-role-perms');
+    const btn = document.getElementById('admin-update-role-btn');
+    if (!sel || !sel.value) {
+        if(permsDiv) permsDiv.style.display = 'none';
+        if(btn) btn.style.display = 'none';
+        return;
+    }
+    const role = window.activeRolesData?.find(r => r.role_id === sel.value);
+    if (role) {
+        document.getElementById('update-perm-submit').checked = !!role.can_submit;
+        document.getElementById('update-perm-manage').checked = !!role.can_manage;
+        document.getElementById('update-perm-execute').checked = !!role.can_execute;
+        permsDiv.style.display = 'flex';
+        btn.style.display = 'block';
+    }
+}
+
+async function submitRoleUpdate() {
+    const sel = document.getElementById('admin-update-role-select');
+    if (!sel || !sel.value) return alert('Select a role to update.');
+    
+    const payload = {
+        role_id: sel.value,
+        can_submit: document.getElementById('update-perm-submit').checked,
+        can_manage: document.getElementById('update-perm-manage').checked,
+        can_execute: document.getElementById('update-perm-execute').checked
+    };
+    
+    try {
+        const res = await fetch('/api/admin/role/permissions', { 
+            method:'PATCH', 
+            headers:{'Content-Type':'application/json'}, 
+            body: JSON.stringify(payload) 
+        });
+        if (res.ok) { 
+            alert('Permissions updated successfully!'); 
+            await refreshRoles(); 
+            sel.value = '';
+            onUpdateRoleSelect();
+        }
+        else { const e=await res.json(); alert('Error: '+(e.detail||'Unknown')); }
+    } catch(e) { alert('Network error.'); }
+}
+
+async function submitAdminUser() {
+    const name   = document.getElementById('admin-user-name').value.trim();
+    const phone  = document.getElementById('admin-user-phone').value.trim();
+    const pin    = document.getElementById('admin-user-pin').value.trim();
+    const roleId = document.getElementById('admin-user-role').value;
+    const deptId = document.getElementById('admin-user-dept').value;
+    if (!name)   return alert('Enter the full name.');
+    if (!phone)  return alert('Phone number is required (mobile login credential).');
+    if (!deptId) return alert('Select a department.');
+    if (pin && !/^\d{4}$/.test(pin)) return alert('PIN must be exactly 4 digits, or leave blank.');
+    const payload = { full_name: name, phone_number: phone, role_id: roleId, department_ref_id: deptId, pin_code: pin };
+    await fetch('/api/admin/user', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    document.getElementById('admin-user-name').value  = '';
+    document.getElementById('admin-user-phone').value = '';
+    document.getElementById('admin-user-pin').value   = '';
+    await refreshUserList();
+    alert('Personnel added!');
+}
+
+async function submitAdminEquipment() {
+    const name   = document.getElementById('admin-equip-name').value.trim();
+    const deptId = document.getElementById('admin-equip-dept').value;
+    const subId  = document.getElementById('admin-equip-subdept').value || null;
+    if (!name || !deptId) return alert('Name and department are required.');
+    await fetch('/api/admin/equipment', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ equipment_name: name, department_ref_id: deptId, sub_dept_ref_id: subId }) });
+    document.getElementById('admin-equip-name').value = '';
+    document.getElementById('admin-equip-subdept').value = '';
+    alert('Equipment added!');
+}
+
+function onAdminEquipDeptChange() {
+    const deptId = document.getElementById('admin-equip-dept').value;
+    const subSel = document.getElementById('admin-equip-subdept');
+    subSel.innerHTML = '<option value="">Select Line/Zone (Optional)...</option>';
+    if (!deptId) return;
+    const filtered = hierarchyData.sub_departments.filter(s => s.department_id === deptId);
+    filtered.forEach(s => { subSel.innerHTML += `<option value="${s.sub_dept_id}">${s.sub_dept_name}</option>`; });
+}
+
+function onEditUserSelect() {
+    const sel = document.getElementById('admin-edit-user');
+    const form = document.getElementById('admin-edit-form');
+    if(!sel.value) {
+        form.style.display = 'none';
+        return;
+    }
+    const user = adminUsers.find(u => u.user_id === sel.value);
+    
+    // Populate dropdowns with current hierarchy data
+    let roleOpts = '<option value="">Select Role...</option>';
+    adminRoles.forEach(r => { roleOpts += `<option value="${r.role_id}">${r.role_name}</option>`; });
+    document.getElementById('admin-edit-role').innerHTML = roleOpts;
+
+    let deptOpts = '<option value="">Select Department...</option>';
+    hierarchyData.departments.forEach(d => { deptOpts += `<option value="${d.department_id}">${d.department_name}</option>`; });
+    document.getElementById('admin-edit-dept').innerHTML = deptOpts;
+
+    // Set values
+    document.getElementById('admin-edit-name').value = user.full_name || '';
+    if (user.role_id) document.getElementById('admin-edit-role').value = user.role_id;
+    if (user.department_ref_id) document.getElementById('admin-edit-dept').value = user.department_ref_id;
+
+    form.style.display = 'block';
+}
+
+async function submitEditUser() {
+    const userId = document.getElementById('admin-edit-user').value;
+    const name   = document.getElementById('admin-edit-name').value.trim();
+    const roleId = document.getElementById('admin-edit-role').value;
+    const deptId = document.getElementById('admin-edit-dept').value;
+
+    if (!userId || !name || !roleId || !deptId) return alert('All fields are required.');
+    
+    try {
+        const res = await fetch('/api/admin/user/info', {
+            method: 'PATCH', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ user_id: userId, full_name: name, role_id: roleId, department_ref_id: deptId })
+        });
+        if (res.ok) {
+            alert('✅ Personnel info updated successfully.');
+            document.getElementById('admin-edit-user').value = '';
+            document.getElementById('admin-edit-form').style.display = 'none';
+            refreshUserList();
+        } else { alert('Error updating personnel info.'); }
+    } catch(e) { alert('Network error.'); }
+}
+
+async function archivePersonnel() {
+    const sel = document.getElementById('archive-user-select');
+    if (!sel?.value) return alert('Select a person.');
+    const name = sel.options[sel.selectedIndex].text;
+    if (!confirm(`Archive "${name}"?\n\nThey will be removed from all dropdowns and cannot log in.`)) return;
+    try {
+        const res = await fetch(`/api/admin/user/${sel.value}/archive`, { method:'PATCH' });
+        if (res.ok) { await refreshUserList(); alert(`"${name}" archived.`); }
+        else { const e=await res.json(); alert('Error: '+(e.detail||'Unknown')); }
+    } catch(e) { alert('Network error.'); }
+}
+
+async function archiveDepartment() {
+    const sel = document.getElementById('archive-dept-select');
+    if (!sel?.value) return alert('Select a department.');
+    const name = sel.options[sel.selectedIndex].text;
+    if (!confirm(`Archive "${name}"?\n\nAdd a replacement first if renaming.`)) return;
+    try {
+        const res = await fetch(`/api/admin/department/${sel.value}/archive`, { method:'PATCH' });
+        if (res.ok) { await refreshHierarchy(); alert(`"${name}" archived.`); }
+        else { const e=await res.json(); alert('Error: '+(e.detail||'Unknown')); }
+    } catch(e) { alert('Network error.'); }
+}
+
+async function archiveRole() {
+    const sel = document.getElementById('archive-role-select');
+    if (!sel?.value) return alert('Select a role.');
+    const name = sel.options[sel.selectedIndex].text;
+    if (!confirm(`Archive role "${name}"?`)) return;
+    try {
+        const res = await fetch(`/api/admin/role/${sel.value}/archive`, { method:'PATCH' });
+        if (res.ok) { await refreshRoles(); alert(`"${name}" archived.`); }
+        else { const e=await res.json(); alert('Error: '+(e.detail||'Unknown')); }
+    } catch(e) { alert('Network error.'); }
+}
+
+async function archiveSubDept() {
+    const sel = document.getElementById('archive-subdept-select');
+    if (!sel?.value) return alert('Select a Line/Zone.');
+    const name = sel.options[sel.selectedIndex].text;
+    if (!confirm(`Archive "${name}"?\n\nAdd a replacement first if renaming.`)) return;
+    try {
+        const res = await fetch(`/api/admin/sub-department/${sel.value}/archive`, { method:'PATCH' });
+        if (res.ok) { await refreshHierarchy(); alert(`"${name}" archived.`); }
+        else { const e=await res.json(); alert('Error: '+(e.detail||'Unknown')); }
+    } catch(e) { alert('Network error.'); }
+}
 </script>
 </body>
 </html>

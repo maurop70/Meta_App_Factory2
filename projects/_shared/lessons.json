@@ -691,5 +691,38 @@
     "tags": [],
     "project": "_global",
     "created_at": "2026-04-16T01:09:03.289764+00:00"
+  },
+  {
+    "id": "L-20260417003047-0216",
+    "category": "App launch FAILED: Adv_Autonomous_Agent on port 5010. timed out",
+    "summary": "launch_failure",
+    "details": "Adv_Autonomous_Agent",
+    "source_agent": "SYSTEM",
+    "severity": "normal",
+    "tags": [],
+    "project": "_global",
+    "created_at": "2026-04-17T00:30:47.447558+00:00"
+  },
+  {
+    "id": "L-20260417003136-0216",
+    "category": "App launch FAILED: Adv_Autonomous_Agent on port 5010. Not Found",
+    "summary": "launch_failure",
+    "details": "Adv_Autonomous_Agent",
+    "source_agent": "SYSTEM",
+    "severity": "normal",
+    "tags": [],
+    "project": "_global",
+    "created_at": "2026-04-17T00:31:36.129357+00:00"
+  },
+  {
+    "id": "L-20260417012436-0216",
+    "category": "App launch FAILED: Adv_Autonomous_Agent on port 5010. Not Found",
+    "summary": "launch_failure",
+    "details": "Adv_Autonomous_Agent",
+    "source_agent": "SYSTEM",
+    "severity": "normal",
+    "tags": [],
+    "project": "_global",
+    "created_at": "2026-04-17T01:24:36.950127+00:00"
   }
 ]

@@ -140,6 +140,24 @@ SEED_REMEDIES = [
         "description": "Node misconfiguration detected. Requires manual intervention.",
         "max_retries": 0,
     },
+    {
+        "id": "INFINITE_LOOP",
+        "name": "Infinite Deliberation Loop",
+        "patterns": [r"INFINITE_LOOP", r"repeated.*error", r"loop.*detected", r"recursive.*fail"],
+        "severity": "critical",
+        "action": "sentinel_snap_back",
+        "description": "Infinite loop detected in agent deliberation. Triggering snap-back injection.",
+        "max_retries": 1,
+    },
+    {
+        "id": "HALLUCINATION_DETECTED",
+        "name": "Hallucination / Reliability Anomaly",
+        "patterns": [r"hallucination", r"fake.*data", r"deceiving.*data", r"hardcoded.*fallback"],
+        "severity": "high",
+        "action": "sentinel_snap_back",
+        "description": "Detected hallucination marker or deceiving data fallback. Snap-back required.",
+        "max_retries": 1,
+    },
 ]
 
 
@@ -408,6 +426,7 @@ class LearningPipeline:
         remedy_action: str,
         error_text: str,
         is_learned: bool,
+        workflow_name: str = "Unknown",
     ):
         """Register a pending remedy attempt for outcome tracking."""
         self.pending[execution_id] = {
@@ -416,6 +435,7 @@ class LearningPipeline:
             "remedy_action": remedy_action,
             "error_text": error_text[:500],
             "is_learned": is_learned,
+            "workflow_name": workflow_name,
             "timestamp": datetime.now().isoformat(),
         }
 
@@ -459,6 +479,9 @@ class LearningPipeline:
                     entry["action"] = "DEMOTED"
                     if node.confidence < 0.3:
                         entry["flag"] = "LOW_CONFIDENCE_REVIEW"
+            
+            # Include confidence in the report for the Sentinel's hardening trigger
+            entry["confidence"] = node.confidence
 
         self.ledger.append(entry)
         self.ledger = self.ledger[-500:]  # Cap at 500 entries
@@ -526,6 +549,7 @@ class SelfRectificationEngine:
                 remedy_action=node.remedy.get("action", "log_for_review"),
                 error_text=error_text,
                 is_learned=node.learned,
+                workflow_name=workflow_name,
             )
 
             return {
@@ -549,6 +573,10 @@ class SelfRectificationEngine:
     def learn(self, execution_id: str, success: bool) -> Optional[dict]:
         """Feed back the outcome of a remedy to the learning pipeline."""
         return self.pipeline.record_outcome(execution_id, success, self.tree)
+
+    def register_attempt(self, **kwargs):
+        """Proxy to LearningPipeline.register_attempt."""
+        self.pipeline.register_attempt(**kwargs)
 
     # ── Rectification (private) ─────────────────────────────
     def _rectify(
@@ -612,16 +640,17 @@ class SelfRectificationEngine:
             learned=True,
         )
 
+        # Step 5: Graft onto tree and register for outcome tracking
         self.tree.graft(parent_id, new_node)
         self.tree.save()
 
-        # Register for outcome tracking
         self.pipeline.register_attempt(
             execution_id=execution_id,
-            node_id=node_id,
-            remedy_action=proposed_action,
+            node_id=new_node.id,
+            remedy_action=new_node.remedy["action"],
             error_text=error_text,
             is_learned=True,
+            workflow_name=workflow_name,
         )
 
         return {
@@ -695,6 +724,12 @@ class SelfRectificationEngine:
     def _infer_action(self, error_text: str, tokens: List[str]) -> str:
         """Infer the best remedy action from error characteristics (no LLM)."""
         text = error_text.lower()
+
+        # Sentinel: Loops and Hallucinations
+        if any(kw in text for kw in ["infinite_loop", "loop detected", "repeated error", "recursive"]):
+            return "sentinel_snap_back"
+        if any(kw in text for kw in ["hallucination", "fake data", "deceiving", "hardcoded"]):
+            return "sentinel_snap_back"
 
         # Timeout / connectivity → retry with backoff
         if any(kw in text for kw in [
