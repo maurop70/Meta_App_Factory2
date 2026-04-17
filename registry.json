@@ -2,7 +2,33 @@
     "status": "purged",
     "redirect": "http://localhost:5100/api/operator/manifest",
     "message": "N8N Data Purged. Replaced by Operator Manifest.",
+    "services": {
+        "Venture_Scout": {
+            "status": "online",
+            "type": "Autonomous Ideation Engine",
+            "capabilities": ["Market Hunting", "Pitch Generation", "Signal Filtration"],
+            "version": "1.0.0"
+        },
+        "CIO_Agent": {
+            "status": "online",
+            "type": "Technical Strategy & Capability Upgrades",
+            "capabilities": ["Library Research", "Integration Blueprinting", "Security Auditing"],
+            "version": "1.0.0"
+        }
+    },
     "apps": {
+        "Venture_Scout": {
+            "status": "active",
+            "type": "Autonomous Ideation Engine",
+            "port": 5000,
+            "blueprint": "scout_v1",
+            "capabilities": [
+                "Market Hunting",
+                "Pitch Generation",
+                "Signal Filtration"
+            ],
+            "last_build": "2026-04-17T03:00:00"
+        },
         "timeout_test": {
             "status": "active",
             "type": "Autonomous Forge Deployment \u2014 QA-validated and deployed 2026-04-13 21:27",

@@ -349,12 +349,18 @@ function BuilderChat({ registry, onAtomizerUpdate, externalCommand, onBuildCompl
   const [lastPrompt, setLastPrompt] = useState('');
   const [audienceDetected, setAudienceDetected] = useState(null);
   const [generatingProfile, setGeneratingProfile] = useState(false);
+  const [interactionMode, setInteractionMode] = useState(() => localStorage.getItem('interactionMode') || 'socratic');
+  const [confidence, setConfidence] = useState(null);
   const [chatMode, setChatMode] = useState(() => localStorage.getItem('chatMode') || null);
   
   useEffect(() => {
     if (chatMode) localStorage.setItem('chatMode', chatMode);
     else localStorage.removeItem('chatMode');
   }, [chatMode]);
+
+  useEffect(() => {
+    localStorage.setItem('interactionMode', interactionMode);
+  }, [interactionMode]);
 
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
@@ -420,10 +426,11 @@ function BuilderChat({ registry, onAtomizerUpdate, externalCommand, onBuildCompl
     setMessages(prev => [...prev, { role: 'assistant', text: '' }]);
 
     try {
+      const dashboard_context = getContext();
       const res = await fetch(`/api/build/stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ app_name: appName, blueprint, description, system_prompt: systemPrompt, mode: mode, user_profile: profile }),
+        body: JSON.stringify({ app_name: appName, blueprint, description, system_prompt: systemPrompt, dashboard_context }),
       });
 
       const reader = res.body.getReader();
@@ -483,8 +490,10 @@ function BuilderChat({ registry, onAtomizerUpdate, externalCommand, onBuildCompl
     if (registry?.length) {
       ctx.registered_apps = registry.map(a => ({ name: a.name, status: a.status, type: a.type }));
     }
-    ctx.factory_mode = 'builder';
+    ctx.factory_mode = mode;
+    ctx.userProfile = profile;
     ctx.chatMode = chatMode;
+    ctx.interactionMode = interactionMode;
     ctx.timestamp = new Date().toISOString();
     return ctx;
   };
@@ -550,6 +559,7 @@ function BuilderChat({ registry, onAtomizerUpdate, externalCommand, onBuildCompl
 
     setLastPrompt(prompt);
     setInput('');
+    setConfidence(null);
     setMessages(prev => [...prev, { role: 'user', text: prompt }]);
     setStreaming(true);
 
@@ -591,6 +601,9 @@ function BuilderChat({ registry, onAtomizerUpdate, externalCommand, onBuildCompl
           if (!line.startsWith('data: ')) continue;
           try {
             const event = JSON.parse(line.slice(6));
+            if (event.confidence) {
+              setConfidence(event.confidence);
+            }
             if (event.error) {
               setMessages(prev => {
                 const copy = [...prev];
@@ -693,8 +706,29 @@ function BuilderChat({ registry, onAtomizerUpdate, externalCommand, onBuildCompl
         <h2>
           🏗️ Builder Chat
           <span className="stream-badge">SSE STREAM</span>
+          {confidence !== null && (
+            <span className={`confidence-badge ${confidence < 70 ? 'critical' : confidence < 90 ? 'low' : ''}`} title="Prompt Confidence Score">
+              🎯 {confidence}% CONFIDENCE
+            </span>
+          )}
         </h2>
         <div className="chat-header-actions">
+          <div className="interaction-toggle">
+            <button 
+              className={`interaction-btn ${interactionMode === 'socratic' ? 'active' : ''}`}
+              onClick={() => setInteractionMode('socratic')}
+              title="Socratic Mode: AI asks questions to build blueprint"
+            >
+              🗣️ Socratic
+            </button>
+            <button 
+              className={`interaction-btn ${interactionMode === 'solution' ? 'active' : ''}`}
+              onClick={() => setInteractionMode('solution')}
+              title="Solution Mode: AI instantly proposes a solution"
+            >
+              ⚡ Solution
+            </button>
+          </div>
           <button className="action-btn recover" onClick={recoverSession} title="Recover session from Supabase" disabled={recovering}>
             {recovering ? '⏳ Loading...' : '⏪ Recover'}
           </button>
@@ -1535,6 +1569,160 @@ function BrandStudioPanel({ registry }) {
   );
 }
 
+// ── VENTURE SCOUT DASHBOARD ───────────────────────────────
+function VentureScoutDashboard({ setActiveView }) {
+  const [pitches, setPitches] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchPitches = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/scout/pitches');
+      const data = await res.json();
+      setPitches(data.pitches || []);
+    } catch (e) { console.error(e); }
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchPitches(); }, []);
+
+  const approve = async (id) => {
+    await fetch(`/api/scout/approve?pitch_id=${id}`, { method: 'POST' });
+    fetchPitches();
+  };
+
+  return (
+    <div className="scout-dashboard" style={{ padding: '20px', background: 'rgba(0,0,0,0.2)', borderRadius: '16px' }}>
+      <div className="dashboard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <h2 style={{ color: '#00FFFF', margin: 0 }}>🚀 Venture Scout Hunting Loop</h2>
+        <button onClick={fetchPitches} className="refresh-btn" style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #00FFFF', background: 'transparent', color: '#00FFFF', cursor: 'pointer' }}>🔄 Refresh Signals</button>
+      </div>
+      
+      {loading ? <div className="loading" style={{ textAlign: 'center', padding: '100px', fontSize: '1.2rem', color: 'rgba(255,255,255,0.4)', letterSpacing: '2px' }}>HUNTING IN PROGRESS...</div> : (
+        <div className="pitch-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '20px' }}>
+          {pitches.length === 0 ? <p style={{ opacity: 0.5 }}>No high-signal pitches found yet. The loop is currently hunting...</p> : pitches.map(p => (
+            <div key={p.id} className={`pitch-card ${p.status}`} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', padding: '20px', position: 'relative' }}>
+              <div className="pitch-score" style={{ position: 'absolute', top: '15px', right: '15px', background: 'linear-gradient(135deg, #00FFFF, #8A2BE2)', color: '#000', padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' }}>🎯 {p.score}</div>
+              <h3 style={{ margin: '0 0 10px 0', fontSize: '1.1rem', paddingRight: '60px' }}>{p.original_title}</h3>
+              <p className="source" style={{ fontSize: '0.8rem', opacity: 0.5, marginBottom: '15px' }}>Source: {p.source}</p>
+              
+              <div className="pitch-content" style={{ fontSize: '0.9rem', lineHeight: '1.5', marginBottom: '20px' }}>
+                <p style={{ marginBottom: '10px' }}><strong style={{ color: '#00D1FF' }}>Problem:</strong> {p.pitch.problem}</p>
+                <p><strong style={{ color: '#00D1FF' }}>Solution:</strong> {p.pitch.proposed_solution}</p>
+              </div>
+
+              {p.tags?.includes('REQUIRES_UPGRADE') && (
+                <div className="cio-blueprint" style={{ background: 'rgba(138,43,226,0.1)', border: '1px solid rgba(138,43,226,0.3)', borderRadius: '8px', padding: '15px', marginBottom: '20px' }}>
+                  <h4 style={{ color: '#A855F7', margin: '0 0 8px 0', fontSize: '0.9rem' }}>🔬 CIO Integration Blueprint</h4>
+                  <p style={{ fontSize: '0.8rem', opacity: 0.8, marginBottom: '8px' }}><strong>Gap:</strong> {p.capability_gap}</p>
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    {p.cio_blueprint?.recommended_libraries?.map(l => <span key={l} style={{ background: 'rgba(168,85,247,0.2)', color: '#A855F7', fontSize: '10px', padding: '2px 8px', borderRadius: '4px' }}>{l}</span>)}
+                  </div>
+                </div>
+              )}
+
+              <div className="card-actions" style={{ display: 'flex', gap: '10px' }}>
+                <a href={p.original_url} target="_blank" className="view-btn" style={{ flex: 1, textAlign: 'center', padding: '10px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', color: '#fff', textDecoration: 'none', fontSize: '0.85rem' }}>View Original</a>
+                {p.status !== 'APPROVED' && (
+                  <button onClick={() => approve(p.id)} className="approve-btn" style={{ flex: 1, padding: '10px', borderRadius: '8px', background: 'linear-gradient(135deg, #00FFFF, #0ea5e9)', color: '#000', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem' }}>Approve Idea</button>
+                )}
+                {p.status === 'APPROVED' && (
+                  <div style={{ flex: 1, textAlign: 'center', padding: '10px', color: '#00FF00', fontWeight: 'bold', fontSize: '0.85rem' }}>✅ APPROVED</div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── CIO INTELLIGENCE DASHBOARD ───────────────────────────
+function CIOIntelligenceDashboard({ setActiveView }) {
+  const [memos, setMemos] = useState([]);
+  const [selectedMemo, setSelectedMemo] = useState(null);
+  const CIO_BASE = "http://localhost:5090";
+
+  useEffect(() => {
+    fetch(`${CIO_BASE}/api/cio/memos`)
+      .then(r => r.json())
+      .then(data => setMemos(data))
+      .catch(() => {});
+  }, []);
+
+  const viewMemo = async (filename) => {
+    const res = await fetch(`${CIO_BASE}/api/cio/memos/${filename}`);
+    const text = await res.text();
+    setSelectedMemo({ filename, text });
+  };
+
+  const authorizeMemo = async () => {
+    if (!selectedMemo) return;
+    const directive = window.prompt("Enter specific implementation instructions for the Master Architect:", "Implement the technical upgrades outlined in this memo.");
+    if (!directive) return;
+
+    try {
+      const res = await fetch(`${CIO_BASE}/api/cio/authorize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          memo_filename: selectedMemo.filename,
+          directive: directive
+        })
+      });
+      const data = await res.json();
+      if (data.status === 'dispatched') {
+        alert("✅ Upgrade Memo authorized and sent to the War Room!");
+        setActiveView('warroom');
+      } else {
+        alert(`❌ Dispatch failed: ${data.error || 'Unknown error'}`);
+      }
+    } catch (e) {
+      alert(`❌ Connection error: ${e.message}`);
+    }
+  };
+
+  return (
+    <div className="cio-dashboard" style={{ padding: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <h2 style={{ color: '#A855F7', margin: 0 }}>🔬 CIO Strategic Intelligence</h2>
+        {selectedMemo && (
+          <button onClick={authorizeMemo} className="authorize-btn" style={{ 
+            padding: '10px 24px', borderRadius: '12px', background: 'linear-gradient(135deg, #A855F7, #7c3aed)', 
+            color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 'bold', boxShadow: '0 4px 15px rgba(168,85,247,0.3)' 
+          }}>
+            ⚡ Authorize Implementation
+          </button>
+        )}
+      </div>
+      <div className="cio-layout" style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '30px' }}>
+        <aside className="memo-list" style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '12px', padding: '15px', height: 'calc(100vh - 240px)', overflowY: 'auto' }}>
+          <h3 style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', marginBottom: '15px' }}>Upgrade Memos (24h)</h3>
+          {memos.length === 0 ? <p style={{ opacity: 0.3, fontSize: '0.9rem' }}>No memos generated yet.</p> : memos.map(m => (
+            <div key={m.filename} className={`memo-item ${selectedMemo?.filename === m.filename ? 'active' : ''}`} onClick={() => viewMemo(m.filename)} style={{ 
+              padding: '12px', borderRadius: '8px', cursor: 'pointer', marginBottom: '8px', border: '1px solid rgba(255,255,255,0.05)', background: selectedMemo?.filename === m.filename ? 'rgba(168,85,247,0.2)' : 'transparent' 
+            }}>
+              <div style={{ fontSize: '0.9rem', marginBottom: '4px' }}>📋 {m.filename}</div>
+              <span className="date" style={{ fontSize: '0.75rem', opacity: 0.4 }}>{m.created.slice(0,16).replace('T', ' ')}</span>
+            </div>
+          ))}
+        </aside>
+        <main className="memo-view" style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '12px', padding: '30px', height: 'calc(100vh - 240px)', overflowY: 'auto' }}>
+          {selectedMemo ? (
+            <div className="memo-content">
+              <h3 style={{ color: '#A855F7', marginBottom: '20px', borderBottom: '1px solid rgba(168,85,247,0.2)', paddingBottom: '10px' }}>{selectedMemo.filename}</h3>
+              <pre className="markdown-pre" style={{ whiteSpace: 'pre-wrap', fontFamily: '"Inter", sans-serif', fontSize: '0.95rem', lineHeight: '1.6', opacity: 0.9 }}>{selectedMemo.text}</pre>
+            </div>
+          ) : (
+            <div className="empty-memo" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', opacity: 0.2, fontSize: '1.2rem' }}>Select an upgrade memo to view intelligence.</div>
+          )}
+        </main>
+      </div>
+    </div>
+  );
+}
+
 // ── MAIN APP ────────────────────────────────────────────────
 function App() {
   // ── Iframe Recursion Guard ──────────────────────────────
@@ -1733,6 +1921,8 @@ function App() {
     { icon: '🗺️', label: 'System Map', view: 'systemmap', badge: 'V3' },
     { icon: '⚔️', label: 'War Room', view: 'warroom', badge: 'LIVE' },
     { icon: '🏗️', label: 'Builder Chat', view: 'builder' },
+    { icon: '🚀', label: 'Venture Scout', view: 'scout', badge: 'HUNT' },
+    { icon: '🔬', label: 'CIO Intel', view: 'cio', badge: '24H' },
     { icon: '📦', label: 'App Registry', view: 'registry' },
     { icon: '🛡️', label: 'QA Command Center', view: 'qa', badge: 'LIVE' },
     { icon: '🎮', label: 'Command Palette', view: 'commands' },
@@ -1995,7 +2185,18 @@ function App() {
                 })}
               </tbody>
             </table>
+            <AppRegistry apps={registry} />
           </div>
+        )}
+
+        {/* ── VENTURE SCOUT DASHBOARD (Phase 1) ── */}
+        {activeView === 'scout' && (
+          <VentureScoutDashboard setActiveView={setActiveView} />
+        )}
+
+        {/* ── CIO INTELLIGENCE DASHBOARD (Phase 1) ── */}
+        {activeView === 'cio' && (
+          <CIOIntelligenceDashboard setActiveView={setActiveView} />
         )}
 
         {/* Command Palette */}

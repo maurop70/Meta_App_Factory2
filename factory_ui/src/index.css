@@ -295,6 +295,58 @@ body {
   font-weight: 500;
 }
 
+/* Confidence Badge */
+.confidence-badge {
+  font-size: 0.65rem;
+  background: rgba(99, 102, 241, 0.15);
+  color: var(--accent-hover);
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+  margin-left: 0.5rem;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.confidence-badge.low {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--warning);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.confidence-badge.critical {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--danger);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+/* Interaction Style Toggle */
+.interaction-toggle {
+  display: flex;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 2px;
+}
+
+.interaction-btn {
+  font-size: 0.65rem;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+  font-family: var(--font);
+}
+
+.interaction-btn.active {
+  background: rgba(99, 102, 241, 0.2);
+  color: var(--accent-hover);
+}
+
 .chat-header-actions {
   display: flex;
   gap: 0.5rem;
