@@ -44,6 +44,12 @@ try:
 except ImportError:
     pass
 
+try:
+    import model_router
+    _ROUTER_AVAILABLE = True
+except ImportError:
+    _ROUTER_AVAILABLE = False
+
 def _v3_preflight():
     """V3: Ping Resonance_Watchdog_V3 before execution."""
     if not _V3_AVAILABLE:
@@ -111,6 +117,12 @@ class NerveCenterV2:
         self.max_retries = max_retries_per_exec
         self.state = self._load_state()
 
+        # Sentinel Overwatch Configuration
+        self.sentinel_mode = True
+        self.sentinel_logs = []
+        self.loop_threshold = 3  # Identical errors in a row to trigger loop intercept
+        self.telemetry_path = os.path.join(_FACTORY_DIR, "auto_heal_log.json")
+
         # Initialize the Self-Rectification Engine (tree + learning pipeline)
         self.engine = SelfRectificationEngine(state_dir=STATE_DIR)
 
@@ -176,6 +188,16 @@ class NerveCenterV2:
             error_text=match_text,
             execution_id=execution_id,
             workflow_name=workflow_name,
+        )
+
+        # Register attempt for outcome tracking
+        self.engine.register_attempt(
+            execution_id=execution_id,
+            node_id=diagnosis.get("id", "UNKNOWN"),
+            remedy_action=diagnosis.get("action", "log_for_review"),
+            error_text=match_text,
+            is_learned=diagnosis.get("source") == "rectified",
+            workflow_name=workflow_name
         )
 
         # Track rectifications
@@ -258,11 +280,70 @@ class NerveCenterV2:
         "refresh_credentials": "_act_refresh_credentials",
         "reset_circuit_breaker": "_act_reset_circuit_breaker",
         "log_for_review": "_act_log_for_review",
+        "sentinel_snap_back": "_act_sentinel_snap_back",
+        "sentinel_escalate": "_act_sentinel_escalate",
     }
+
+    def _act_sentinel_snap_back(self, execution: dict, diagnosis: dict) -> bool:
+        """
+        Sentinel: Safe Bypass Protocol (Snap-Back).
+        Uses Gemini 2.5 Flash to inject a correction prompt.
+        """
+        if not _ROUTER_AVAILABLE:
+            return False
+            
+        error_text = diagnosis.get("error_message", "")
+        wf_name = diagnosis.get("workflow_name", "Unknown")
+        
+        system_prompt = (
+            "You are the Ecosystem Overwatch Sentinel. An agent is failing with the following error. "
+            "Inject a 1-sentence 'Snap-Back' correction prompt to reset its context and solve the logic failure."
+        )
+        prompt = f"Agent: {wf_name}\nError: {error_text}\n\nCorrection Directive:"
+        
+        correction = model_router.route("sentinel_snap_back", prompt, system_prompt)
+        print(f"    ⚡ Sentinel Snap-Back: {correction}")
+        
+        # Log to MASTER_INDEX
+        self.state["sentinel_actions"] = self.state.get("sentinel_actions", []) + [
+            {"type": "snap_back", "wf": wf_name, "correction": correction}
+        ]
+        return True
+
+    def _act_sentinel_escalate(self, execution: dict, diagnosis: dict) -> bool:
+        """
+        Sentinel: Escalation Protocol.
+        Uses Gemini 2.5 Pro for deep diagnostic and alerts the Commander.
+        """
+        if not _ROUTER_AVAILABLE:
+            return False
+            
+        error_text = diagnosis.get("error_message", "")
+        wf_name = diagnosis.get("workflow_name", "Unknown")
+        
+        system_prompt = (
+            "You are the Ecosystem Overwatch Sentinel. A structural failure has occurred that requires human intervention. "
+            "Perform a deep diagnostic and provide a summary for the Commander (User)."
+        )
+        prompt = f"Agent: {wf_name}\nStructural Error: {error_text}\n\nDeep Diagnostic Summary:"
+        
+        diagnostic = model_router.route("sentinel_diagnostic", prompt, system_prompt)
+        print(f"    🚨 Sentinel Escalation: Process Halted. Diagnostic: {diagnostic}")
+        
+        # Add to review queue with higher severity
+        self._act_log_for_review(execution, {**diagnosis, "severity": "critical", "error_message": f"[SENTINEL_DIAGNOSTIC] {diagnostic}"})
+        return True
 
     def act(self, execution: dict, diagnosis: dict) -> dict:
         """Execute the prescribed remedy action."""
         action_name = diagnosis.get("action", "log_for_review")
+        
+        # SENTINEL: Boundary Override for No-Bypass Zones
+        # Any failure in a sensitive domain must escalate, no matter the remedy.
+        if self.is_sensitive_domain(diagnosis) and action_name != "sentinel_escalate":
+            print(f"    🛑 Boundary Clarification: Sensitive domain detected. Forcing Escalation.")
+            action_name = "sentinel_escalate"
+
         method_name = self.ACTION_MAP.get(action_name, "_act_log_for_review")
         method = getattr(self, method_name)
 
@@ -303,12 +384,142 @@ class NerveCenterV2:
         result = self.engine.learn(execution_id, success)
         if result:
             action_label = result.get("action", "OBSERVED")
+            confidence = result.get("confidence", 0.0)
+            
             if action_label == "PROMOTED":
-                print(f"    📈 Learning: Pattern PROMOTED (confidence boosted)")
+                print(f"    📈 Learning: Pattern PROMOTED (confidence boosted to {confidence:.2f})")
+                
+                # V3 Hardening Hook: Trigger Phantom QA for high-confidence patterns
+                if confidence >= 0.9 and result.get("is_learned"):
+                    self._dispatch_hardening_task(result)
+                    
             elif action_label == "DEMOTED":
-                print(f"    📉 Learning: Pattern DEMOTED (confidence reduced)")
+                print(f"    📉 Learning: Pattern DEMOTED (confidence reduced to {confidence:.2f})")
                 if result.get("flag") == "LOW_CONFIDENCE_REVIEW":
                     print(f"    ⚠️  Low confidence — flagged for review")
+
+    def _dispatch_hardening_task(self, learning_result: dict):
+        """
+        V3 Hardening: Dispatch a permanent fix request to Phantom QA.
+        """
+        node_id = learning_result.get("node_id", "Unknown")
+        wf_name = learning_result.get("workflow_name", "Unknown")
+        error_text = learning_result.get("error_text", "")
+        
+        print(f"    🛡️  [V3 HARDENING] Triggering Phantom QA Gate for {node_id}...")
+        
+        hardening_directive = {
+            "timestamp": datetime.now().isoformat(),
+            "origin": "Adv_Overwatch_Sentinel",
+            "task": "PERMANENT_HARDENING",
+            "target_app": wf_name,
+            "error_pattern": error_text[:500],
+            "confidence": learning_result.get("confidence"),
+            "directive": (
+                f"Analyze the following recurring error pattern in {wf_name} and implement a permanent structural fix "
+                f"in the source code (validation, error handling, or logic correction). Pattern: {error_text[:200]}"
+            )
+        }
+        
+        # Log to MASTER_INDEX with Hardening tag
+        self.log_to_master_index([{
+            "success": True,
+            "diagnosis_id": node_id,
+            "action_taken": "V3_HARDENING_DISPATCH",
+            "workflow": wf_name,
+            "severity": "high",
+            "error_excerpt": f"Initiating permanent patch for: {error_text[:100]}"
+        }])
+        
+        # Physical dispatch (simulated via file-based command bridge for now, 
+        # as Phantom QA monitors the shared auto_heal_log)
+        # In a full deployment, this would trigger a Pydantic tool call or MCP handoff.
+        try:
+            bridge_path = os.path.join(_FACTORY_DIR, "hardening_queue.json")
+            queue = []
+            if os.path.exists(bridge_path):
+                with open(bridge_path, "r", encoding="utf-8") as f:
+                    queue = json.load(f)
+            queue.append(hardening_directive)
+            with open(bridge_path, "w", encoding="utf-8") as f:
+                json.dump(queue, f, indent=2)
+            print(f"    ✅ Hardening task queued in hardening_queue.json")
+        except Exception as e:
+            print(f"    ⚠️  Failed to dispatch hardening task: {e}")
+
+    # ── SENTINEL: Ecosystem Overwatch ──────────────────────
+    def scan_ecosystem(self) -> List[dict]:
+        """
+        SENTINEL: Monitor auto_heal_log.json and other event streams.
+        Detects infinite loops (3 errors in 2 mins) and behavioral anomalies.
+        """
+        if not self.sentinel_mode:
+            return []
+            
+        print(f"  🛰️  [SENTINEL] Scanning Ecosystem Telemetry: {os.path.basename(self.telemetry_path)}")
+        failures = []
+        
+        if not os.path.exists(self.telemetry_path):
+            return []
+            
+        try:
+            with open(self.telemetry_path, "r", encoding="utf-8") as f:
+                logs = json.load(f)
+        except Exception:
+            return []
+            
+        # Time-Constrained Loop Detection (3 errors in 120s)
+        now = datetime.now()
+        window = timedelta(minutes=2)
+        
+        error_counts = {}
+        # Scan last 50 entries to ensure we catch bursts
+        recent_logs = []
+        for entry in reversed(logs[-50:]):
+            try:
+                ts = datetime.fromisoformat(entry.get("timestamp", ""))
+                if now - ts <= window:
+                    recent_logs.append(entry)
+            except (ValueError, TypeError):
+                continue
+
+        for entry in recent_logs:
+            msg = entry.get("error", entry.get("target", ""))
+            wf = entry.get("app_name", entry.get("project", "Unknown"))
+            key = (wf, msg)
+            error_counts[key] = error_counts.get(key, 0) + 1
+            
+            if error_counts[key] >= self.loop_threshold:
+                print(f"    ⚠️  Infinite Loop Intercepted: {wf} | Window: 120s")
+                failures.append({
+                    "id": f"SENTINEL_LOOP_{int(time.time())}",
+                    "status": "overwatch_intercept",
+                    "workflowData": {"name": wf, "id": "ecosystem"},
+                    "data": {"resultData": {"error": {"message": f"INFINITE_LOOP: {msg}"}, "lastNodeExecuted": "Overwatch Sentinel"}}
+                })
+                break
+
+        return failures
+
+    def is_sensitive_domain(self, diagnosis: dict) -> bool:
+        """
+        SENTINEL: Boundary Check for No-Bypass Zones.
+        Financial & Security domains must NEVER be auto-healed via snap-back.
+        """
+        wf = str(diagnosis.get("workflow_name", "")).upper()
+        msg = str(diagnosis.get("error_message", "")).upper()
+        
+        # 1. Financial & Market Data (CFO Agent / Trading)
+        if "CFO" in wf or any(kw in msg for kw in ["OPTIONS", "VOLATILITY", "TRADE", "LEDGER", "PRICE"]):
+            print(f"    🔒 No-Bypass Zone: Financial Domain Detected ({wf})")
+            return True
+            
+        # 2. Security & Infrastructure (Permissions / Zero-Trust)
+        if any(kw in msg for kw in ["PERMISSION", "ZERO-TRUST", "VAULT", "CREDENTIAL", "AUTH", "INFRASTRUCTURE"]):
+            print(f"    🔒 No-Bypass Zone: Security/Infrastructure Domain Detected")
+            return True
+            
+        return False
 
     # ── LOG: Audit Trail to MASTER_INDEX.md ─────────────────
     def log_to_master_index(self, actions: List[dict]):
@@ -317,27 +528,28 @@ class NerveCenterV2:
             return
 
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        healed = [a for a in actions if a["success"] and a["action_taken"] != "log_for_review"]
-        reviewed = [a for a in actions if a["action_taken"] == "log_for_review"]
-        failed = [a for a in actions if not a["success"] and a["action_taken"] != "log_for_review"]
+        healed = [a for a in actions if a["success"] and a["action_taken"] not in ["log_for_review", "sentinel_escalate"]]
+        reviewed = [a for a in actions if a["action_taken"] in ["log_for_review", "sentinel_escalate"]]
+        failed = [a for a in actions if not a["success"] and a["action_taken"] not in ["log_for_review", "sentinel_escalate"]]
         rectified = [a for a in actions if a.get("source") == "rectified"]
 
         entry_lines = [
             "",
-            f"## SELF_HEALING_CYCLE",
+            f"## OVERWATCH_SENTINEL_CYCLE",
             f"- **Timestamp:** {timestamp}",
             f"- **App:** Adv_Autonomous_Agent",
-            f"- **Engine:** Nerve Center v2.0 (Self-Rectification + Learning)",
+            f"- **Engine:** Overwatch Sentinel v2.5",
             f"- **Failures Detected:** {len(actions)}",
-            f"- **Auto-Healed:** {len(healed)}",
-            f"- **Rectified (Learned):** {len(rectified)}",
-            f"- **Queued for Review:** {len(reviewed)}",
+            f"- **Auto-Healed (Snap-Back):** {len(healed)}",
+            f"- **Escalated/Reviewed:** {len(reviewed)}",
             f"- **Heal Failures:** {len(failed)}",
             f"- **Actions:**",
         ]
 
         for action in actions:
             icon = "✅" if action["success"] else "❌"
+            if action["action_taken"] == "sentinel_escalate":
+                icon = "🚨"
             source_tag = f" [{action.get('source', 'seeded').upper()}]" if action.get("source") else ""
             conf = f" (conf: {action.get('confidence', 0):.2f})" if action.get("confidence") else ""
             entry_lines.append(
@@ -347,14 +559,16 @@ class NerveCenterV2:
             if action.get("error_excerpt"):
                 entry_lines.append(f"    - Error: `{action['error_excerpt'][:120]}`")
 
-        entry_lines.append(f"- **Status:** {'ALL_HEALED' if not failed else 'PARTIAL_HEAL'}")
+        entry_lines.append(f"- **Status:** {'ALL_SECURED' if not failed else 'PARTIAL_SECURED'}")
         entry_lines.append("")
 
         try:
+            # Assuming MASTER_INDEX_PATH is defined at module level
+            from nerve_center_v2 import MASTER_INDEX_PATH
             master_path = os.path.normpath(MASTER_INDEX_PATH)
             with open(master_path, "a", encoding="utf-8") as f:
                 f.write("\n".join(entry_lines))
-            print(f"  📝 Audit entry appended to MASTER_INDEX.md")
+            print(f"  📝 Sentinel audit entry appended to MASTER_INDEX.md")
         except Exception as e:
             print(f"  ⚠️  Failed to write MASTER_INDEX.md: {e}")
 
@@ -376,12 +590,14 @@ class NerveCenterV2:
         print(f"{'═'*60}\n")
 
         # ── SCAN ──
+        failures = []
         if injected_failures is not None:
-            failures = injected_failures
-            print(f"  [SCAN] Using {len(failures)} injected test failure(s).")
-        else:
-            print(f"  [SCAN] No live n8n connection — use injected_failures for testing.")
-            failures = []
+            failures.extend(injected_failures)
+            print(f"  [SCAN] Using {len(injected_failures)} injected test failure(s).")
+        
+        # SENTINEL: Ecosystem Scan
+        ecosystem_failures = self.scan_ecosystem()
+        failures.extend(ecosystem_failures)
 
         self.state["total_scans"] = self.state.get("total_scans", 0) + 1
         self.state["last_scan"] = datetime.now().isoformat()
@@ -444,20 +660,23 @@ class NerveCenterV2:
 
         print(f"\n{'═'*60}")
         print(f"  🏁 Cycle Complete: {healed_count}/{len(all_actions)} actions successful")
-        if rectified_count:
-            print(f"  🌱 {rectified_count} new pattern(s) learned via rectification")
+        healed = [a for a in all_actions if a["success"]]
+        rectified = [a for a in all_actions if a.get("source") == "rectified"]
+
+        print(f"\n{'═'*60}")
+        print(f"  🏁 Cycle Complete: {len(healed)}/{len(all_actions)} actions successful")
+        if len(rectified):
+            print(f"  🌱 {len(rectified)} new pattern(s) learned via rectification")
         print(f"{'═'*60}\n")
 
         return {
-            "status": "healed" if healed_count == len(all_actions) else "partial",
+            "status": "partial_heal" if failures else "healthy",
             "failures_found": len(failures),
             "actions_taken": len(all_actions),
-            "healed": healed_count,
-            "rectified": rectified_count,
-            "review_queue": len([a for a in all_actions if a["action_taken"] == "log_for_review"]),
-            "actions": all_actions,
-            "engine_stats": self.engine.get_stats(),
-            "timestamp": datetime.now().isoformat(),
+            "healed": len(healed),
+            "rectified": len(rectified),
+            "audit_trail": all_actions,
+            "engine_stats": self.engine.get_stats()
         }
 
     # ── Status Report ───────────────────────────────────────

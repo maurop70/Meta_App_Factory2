@@ -14,6 +14,7 @@ logger = logging.getLogger("ModelRouter")
 
 # ── Model Definitions ────────────────────────────────────────────────
 GEMINI_FLASH = "gemini-2.5-flash"
+GEMINI_PRO = "gemini-2.5-pro"
 CLAUDE_SONNET = "claude-3-7-sonnet-20250219"
 
 # ── Task → Model Mapping ────────────────────────────────────────────
@@ -35,6 +36,10 @@ TASK_ROUTING = {
     "business_plan":     CLAUDE_SONNET,    # Cross-doc reconciliation
     "funding_strategy":  CLAUDE_SONNET,    # Financial gap analysis
     "pitch_deck":        GEMINI_FLASH,     # Presentation copy, creative
+
+    # Sentinel / Overwatch (Adv_Autonomous_Agent)
+    "sentinel_snap_back": GEMINI_FLASH,   # Fast injection
+    "sentinel_diagnostic": GEMINI_PRO,     # Deep reasoning
 
     # Special Tasks
     "document_upload":   GEMINI_FLASH,     # Multimodal (image + text)
@@ -68,14 +73,14 @@ def _get_anthropic_key():
     return os.getenv("ANTHROPIC_API_KEY", "")
 
 
-def _call_gemini(prompt: str, system_prompt: str = "", api_key: str = "") -> str:
-    """Call Gemini 2.5 Flash via REST API."""
+def _call_gemini(prompt: str, system_prompt: str = "", api_key: str = "", model_name: str = GEMINI_FLASH) -> str:
+    """Call Gemini models via REST API."""
     if not api_key:
         api_key = _get_gemini_key()
     if not api_key:
         return ""
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_FLASH}:generateContent"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent"
     headers = {"Content-Type": "application/json", "x-goog-api-key": api_key}
 
     parts = []
@@ -148,12 +153,12 @@ def route(task_type: str, prompt: str, system_prompt: str = "") -> str:
         if response:
             return f"🧠 [Claude] {response[:2000]}"
         logger.info(f"[ModelRouter] Claude unavailable for '{task_type}', falling back to Gemini")
-        response = _call_gemini(prompt, system_prompt)
+        response = _call_gemini(prompt, system_prompt, model_name=GEMINI_FLASH)
         if response:
             return f"🤖 [Gemini] {response[:2000]}"
     else:
-        # Try Gemini first, fallback to Claude
-        response = _call_gemini(prompt, system_prompt)
+        # Try Gemini (Pro or Flash) first, fallback to Claude
+        response = _call_gemini(prompt, system_prompt, model_name=preferred)
         if response:
             return f"🤖 [Gemini] {response[:2000]}"
         logger.info(f"[ModelRouter] Gemini unavailable for '{task_type}', falling back to Claude")

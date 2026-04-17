@@ -222,6 +222,17 @@
                     "LEDGER.md"
                 ],
                 "status": "ACTIVE"
+            },
+            "overwatch_sentinel": {
+                "service": "Ecosystem Overwatch Sentinel",
+                "file": "Adv_Autonomous_Agent/nerve_center_v2.py",
+                "access": [
+                    "LangSmith Telemetry",
+                    "MASTER_INDEX.md",
+                    "hardening_queue.json"
+                ],
+                "status": "ACTIVE",
+                "role": "Absolute Data Integrity Sentinel & Ecosystem Overwatch"
             }
         }
     },
