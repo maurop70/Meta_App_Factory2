@@ -105,13 +105,17 @@ export default function ModeSelectionScreen({ onSelectMode }) {
 
   const resetEosAndSelect = (mode) => {
     const profile = mode === 'technical' ? userProfile : 'executive';
-    fetch("/api/eos/reset", { method: "POST" })
+    fetch("/api/eos/reset", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ project_name: "Aether" })
+    })
       .finally(() => {
         if (mode === 'venture') {
           fetch("/api/eos/state", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ mode: "venture" })
+            body: JSON.stringify({ mode: "venture", project_name: "Aether" })
           }).finally(() => onSelectMode(mode, profile));
         } else {
           onSelectMode(mode, profile);

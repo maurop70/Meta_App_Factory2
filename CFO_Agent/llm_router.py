@@ -524,7 +524,7 @@ class LLMRouter:
             client = genai.Client(api_key=gemini_key)
 
             response = client.models.generate_content(
-                model="gemini-2.5-flash",
+                model="gemini-2.5-pro",
                 contents=math_json,
                 config=genai.types.GenerateContentConfig(
                     system_instruction=CLOUD_SYSTEM_PROMPT
@@ -552,7 +552,7 @@ class LLMRouter:
         ollama_health = await self.ollama.health_status()
         return {
             **ollama_health,
-            "cloud_provider": "gemini-2.5-flash",
+            "cloud_provider": "gemini-2.5-pro",
             "routing_threshold": self.threshold,
             "circuit_breaker": self.circuit_breaker.to_dict(),
             "telemetry_persistent": True,

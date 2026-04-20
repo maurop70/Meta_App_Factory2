@@ -1638,6 +1638,17 @@ function VentureScoutDashboard({ setActiveView }) {
   );
 }
 
+// ── SHARED UTILITY ──────────────────────────────────────
+const safeJson = async (res) => {
+  try {
+    const text = await res.text();
+    if (!text) return { error: "Empty response" };
+    return JSON.parse(text);
+  } catch (e) {
+    return { error: `JSON Parse Error: ${e.message}` };
+  }
+};
+
 // ── CIO INTELLIGENCE DASHBOARD ───────────────────────────
 function CIOIntelligenceDashboard({ setActiveView }) {
   const [memos, setMemos] = useState([]);
@@ -1671,7 +1682,7 @@ function CIOIntelligenceDashboard({ setActiveView }) {
           directive: directive
         })
       });
-      const data = await res.json();
+      const data = await safeJson(res);
       if (data.status === 'dispatched') {
         alert("✅ Upgrade Memo authorized and sent to the War Room!");
         setActiveView('warroom');
@@ -1774,12 +1785,14 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
+  // safeJson is now a module-level utility (defined above CIOIntelligenceDashboard)
+
   const launchApp = async (appName) => {
     setLaunchingApp(appName);
     try {
       const res = await fetch(`/api/apps/${encodeURIComponent(appName)}/launch`, { method: 'POST' });
-      const data = await res.json();
-      if (data.port) {
+      const data = await safeJson(res);
+      if (data.port || data.status === 'already_running') {
         let targetUrl = data.url;
         if (appName === 'Alpha_V2_Genesis') targetUrl = 'http://localhost:5175';
         else if (appName === 'Resonance') targetUrl = 'http://localhost:5174';

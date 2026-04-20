@@ -79,43 +79,32 @@ _BROWSER_HEADERS = {
 
 def search_duckduckgo(query: str) -> dict:
     """
-    Broad market discovery via DuckDuckGo HTML scraper.
-    Returns real search results for AI/LLM frontier news, competitor analysis,
-    and technology trends. No API key required.
-
+    Broad market discovery via DuckDuckGo Search (DDGS).
+    Restored with high-resilience library to bypass CAPTCHA blocks.
+    
     Args:
-        query: Search query (e.g. 'frontier LLM models released 2025 GPT Claude Gemini')
-
+        query: Search query (e.g. 'frontier LLM models released 2025')
+        
     Returns:
         dict with query, results [{title, snippet, url}], source, count
     """
-    def _fetch():
-        resp = requests.post(
-            _DDG_URL,
-            data={"q": query, "b": ""},
-            headers=_BROWSER_HEADERS,
-            timeout=15,
-        )
-        resp.raise_for_status()
-        return resp
-
+    from duckduckgo_search import DDGS
+    
     try:
-        resp = generate_with_backoff_sync(_fetch, max_api_retries=3, base_delay=2.0, backoff_factor=2.0)
-        soup = BeautifulSoup(resp.text, "html.parser")
         results = []
-        for block in soup.select(".result__body")[:8]:
-            title   = block.select_one(".result__title")
-            snippet = block.select_one(".result__snippet")
-            url_el  = block.select_one(".result__url")
-            t = title.get_text(strip=True) if title else ""
-            s = snippet.get_text(strip=True) if snippet else ""
-            u = url_el.get_text(strip=True) if url_el else ""
-            if t:
-                results.append({"title": t, "snippet": s, "url": u})
-        logger.info(f"[CIO DDG] {len(results)} results for: {query!r}")
-        return {"query": query, "results": results, "source": "DuckDuckGo", "count": len(results)}
+        with DDGS() as ddgs:
+            # text search returns a generator of dicts: {'title', 'href', 'body'}
+            for r in ddgs.text(query, max_results=8):
+                results.append({
+                    "title": r.get("title", ""),
+                    "snippet": r.get("body", ""),
+                    "url": r.get("href", "")
+                })
+        
+        logger.info(f"[CIO DDGS] {len(results)} results for: {query!r}")
+        return {"query": query, "results": results, "source": "DuckDuckGo (DDGS)", "count": len(results)}
     except Exception as e:
-        logger.warning(f"[CIO DDG] search failed: {e}")
+        logger.warning(f"[CIO DDGS] search failed: {e}")
         return {"query": query, "error": str(e), "results": [], "source": "DuckDuckGo", "count": 0}
 
 
@@ -289,6 +278,9 @@ class CIOAgent(AgentBase):
     Inherits AgentBase and enforces UDPP provenance on all intelligence claims.
     """
     AGENT_ID = "cio"
+    
+    def __init__(self):
+        super().__init__()
 
     def run(self, intent: str = "AI/LLM frontier intelligence sweep 2025") -> dict:
         """
@@ -297,9 +289,12 @@ class CIOAgent(AgentBase):
         """
         sweep_start = datetime.now()
         logger.info(f"[CIO] Intel sweep started — intent: {intent!r}")
+        self.add_trace(f"Intel sweep initiated with intent: {intent}", node="ORCHESTRATOR")
 
         # Phase 1: Internal system audit (Moved to front for context injection)
+        self.add_trace("Scanning internal codebase for context injection...", node="AUDIT")
         internal_audit = _gather_internal_audit()
+        self.add_trace(f"Internal audit complete. Detected {len(internal_audit.get('codebase_metadata', {}).get('agent_directories', []))} active agents.", node="AUDIT", status="SUCCESS")
 
         # Phase 2: Gemini 2.5 Pro Function Calling web sweep (Context-Aware)
         web_intel, web_provenance, searched_urls = self._phase1_web_sweep(intent, internal_audit)
@@ -347,6 +342,7 @@ class CIOAgent(AgentBase):
         Returns (intel_summary, provenance_block, searched_urls).
         """
         logger.info("[CIO Phase 1] Gemini 2.5 Pro context-aware web intel sweep")
+        self.add_trace("Initiating context-aware web sweep via DuckDuckGo...", node="WEB_SWEEP")
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
             logger.error("[CIO] GEMINI_API_KEY missing")
@@ -399,8 +395,10 @@ Return ONLY valid JSON.
                 ),
             )
 
+            self.add_trace("Gemini tool-use cycle complete. Parsing intelligence payloads...", node="WEB_SWEEP")
             raw = response.text.strip().replace("```json", "").replace("```", "").strip()
             intel = json.loads(raw)
+            self.add_trace(f"Discovered {len(intel.get('top_discoveries', []))} critical market events.", node="WEB_SWEEP", status="SUCCESS")
 
             # Build provenance from discovered URLs
             searched_urls = intel.get("urls_deep_read", []) + intel.get("search_queries_used", [])
@@ -434,6 +432,7 @@ Return ONLY valid JSON.
         Returns (report_markdown, provenance_block).
         """
         logger.info("[CIO Phase 3] Synthesizing Frontier Intelligence Report")
+        self.add_trace("Synthesizing actionable Frontier Intelligence Report...", node="SYNTHESIS")
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
             return None, {}
@@ -475,6 +474,7 @@ Replace {{date}} in the template with {today}.
             )
             report = response.text.strip()
             logger.info(f"[CIO Phase 3] Report synthesized: {len(report)} chars")
+            self.add_trace("Report synthesis complete. Finalizing provenance claims.", node="SYNTHESIS", status="SUCCESS")
 
             # Build report provenance
             report_citation = (

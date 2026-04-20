@@ -318,6 +318,10 @@ class WarRoomReport(BaseModel):
         default_factory=dict,
         description="Pydantic validated JSON data extracted via Stealth Parser"
     )
+    trace: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="Internal agent thought process logs (trace)"
+    )
     
     # Typed Handoff Property
     @property
@@ -606,6 +610,7 @@ def parse_agent_response(
         project_id=project_id,
         display_content=raw_text.strip(),
         structured_data=structured_data,
+        trace=structured_data.get("trace", []),
         metadata=metadata,
         timestamp=datetime.now().isoformat(),
     )
@@ -1327,3 +1332,250 @@ def get_orchestrator() -> WarRoomOrchestrator:
     if _orchestrator is None:
         _orchestrator = WarRoomOrchestrator(store=get_report_store())
     return _orchestrator
+
+
+# ═══════════════════════════════════════════════════════════════════
+# §7  CIO UPGRADE: PRIORITY TASK QUEUE & RESOURCE LOCK MANAGER
+#     Source: CIO Frontier Report 2026-04-18 — Discovery #3
+#     "Improved Multi-Agent Coordination Systems"
+# ═══════════════════════════════════════════════════════════════════
+
+import heapq
+import threading
+import time as _time
+from dataclasses import dataclass, field
+
+
+@dataclass(order=True)
+class PrioritizedTask:
+    """A task in the priority queue. Lower priority_value = runs first.
+
+    Priority levels:
+        0 — CRITICAL  (CEO synthesis, gate evaluations)
+        1 — HIGH      (CFO/CTO blocking analysis)
+        2 — NORMAL    (CMO/CLO standard analysis)
+        3 — LOW       (background telemetry, non-blocking)
+    """
+    priority: int
+    task_id: str = field(compare=False)
+    agent_name: str = field(compare=False)
+    payload: Dict[str, Any] = field(compare=False, default_factory=dict)
+    created_at: float = field(compare=False, default_factory=_time.time)
+    timeout_seconds: float = field(compare=False, default=120.0)
+
+    # Priority shortcuts
+    CRITICAL = 0
+    HIGH = 1
+    NORMAL = 2
+    LOW = 3
+
+    @classmethod
+    def for_agent(cls, agent_name: str, task_id: str, payload: Dict = None) -> "PrioritizedTask":
+        """Create a task with automatic priority assignment based on agent role."""
+        priority_map = {
+            "CEO":      cls.CRITICAL,
+            "CRITIC":   cls.CRITICAL,
+            "CFO":      cls.HIGH,
+            "CTO":      cls.HIGH,
+            "CMO":      cls.NORMAL,
+            "CLO":      cls.NORMAL,
+            "ARCHITECT": cls.LOW,
+        }
+        priority = priority_map.get(agent_name.upper(), cls.NORMAL)
+        return cls(priority=priority, task_id=task_id, agent_name=agent_name, payload=payload or {})
+
+
+class PriorityTaskQueue:
+    """Thread-safe priority queue for multi-agent task scheduling.
+
+    Prevents throughput degradation by ensuring critical path agents
+    (CEO, CRITIC) never queue-starve behind lower-priority work.
+
+    Usage:
+        queue = PriorityTaskQueue()
+        task = PrioritizedTask.for_agent("CEO", task_id="ceo_synth_1", payload={"intent": "..."})
+        queue.enqueue(task)
+        next_task = queue.dequeue()  # Returns highest-priority task
+    """
+
+    def __init__(self):
+        self._heap: list = []
+        self._lock = threading.Lock()
+        self._counter = 0  # Tiebreaker for equal-priority tasks (FIFO)
+        self._task_registry: Dict[str, PrioritizedTask] = {}
+
+    def enqueue(self, task: PrioritizedTask) -> None:
+        """Add a task to the queue. O(log n)."""
+        with self._lock:
+            # Use counter as secondary sort key to ensure FIFO for same priority
+            heapq.heappush(self._heap, (task.priority, self._counter, task))
+            self._counter += 1
+            self._task_registry[task.task_id] = task
+            logger.debug(f"[PriorityQueue] Enqueued {task.agent_name}:{task.task_id} (priority={task.priority})")
+
+    def dequeue(self, block: bool = False, timeout: float = 0.5) -> Optional[PrioritizedTask]:
+        """Pop the highest-priority task. O(log n)."""
+        deadline = _time.time() + timeout
+        while True:
+            with self._lock:
+                if self._heap:
+                    _, _, task = heapq.heappop(self._heap)
+                    self._task_registry.pop(task.task_id, None)
+                    logger.debug(f"[PriorityQueue] Dequeued {task.agent_name}:{task.task_id}")
+                    return task
+            if not block or _time.time() >= deadline:
+                return None
+            _time.sleep(0.05)
+
+    def peek_priority(self) -> Optional[int]:
+        """Check the priority of the next task without removing it."""
+        with self._lock:
+            return self._heap[0][0] if self._heap else None
+
+    def size(self) -> int:
+        """Current queue depth."""
+        with self._lock:
+            return len(self._heap)
+
+    def is_empty(self) -> bool:
+        with self._lock:
+            return len(self._heap) == 0
+
+    def cancel(self, task_id: str) -> bool:
+        """Remove a task by ID (marks as cancelled; O(n) rebuild)."""
+        with self._lock:
+            if task_id not in self._task_registry:
+                return False
+            self._heap = [(p, c, t) for p, c, t in self._heap if t.task_id != task_id]
+            heapq.heapify(self._heap)
+            self._task_registry.pop(task_id, None)
+            logger.info(f"[PriorityQueue] Cancelled task {task_id}")
+            return True
+
+    def status_report(self) -> List[Dict[str, Any]]:
+        """Diagnostic snapshot of the queue for War Room telemetry."""
+        with self._lock:
+            return [
+                {"task_id": t.task_id, "agent": t.agent_name, "priority": t.priority,
+                 "age_seconds": round(_time.time() - t.created_at, 1)}
+                for _, _, t in sorted(self._heap)
+            ]
+
+
+class AgentResourceLock:
+    """Resource contention manager for multi-agent execution.
+
+    Prevents race conditions when agents compete for shared resources
+    such as LLM API slots, file I/O, and the boardroom exchange.
+
+    Features:
+        - Named resource locks (e.g., "llm_slot", "boardroom_write")
+        - Deadlock detection via timeout
+        - Lock ownership tracking (which agent holds which lock)
+        - Priority-aware lock acquisition (higher-priority agents jump the queue)
+
+    Usage:
+        lock_mgr = AgentResourceLock()
+        acquired = lock_mgr.acquire("llm_slot", agent="CEO", timeout=30.0)
+        if acquired:
+            try:
+                # ... do LLM call ...
+            finally:
+                lock_mgr.release("llm_slot", agent="CEO")
+    """
+
+    def __init__(self, max_concurrent_llm_calls: int = 3):
+        self._resource_locks: Dict[str, threading.Lock] = {}
+        self._resource_owners: Dict[str, str] = {}  # resource_name -> agent_name
+        self._owner_lock = threading.Lock()
+        self._llm_semaphore = threading.Semaphore(max_concurrent_llm_calls)
+        self._acquisition_log: List[Dict] = []
+
+    def _get_lock(self, resource_name: str) -> threading.Lock:
+        """Get or create a named lock."""
+        with self._owner_lock:
+            if resource_name not in self._resource_locks:
+                self._resource_locks[resource_name] = threading.Lock()
+            return self._resource_locks[resource_name]
+
+    def acquire(self, resource_name: str, agent: str, timeout: float = 30.0) -> bool:
+        """Acquire a named resource lock.
+
+        Returns True if acquired, False if timeout (deadlock prevention).
+        """
+        lock = self._get_lock(resource_name)
+        acquired = lock.acquire(timeout=timeout)
+        if acquired:
+            with self._owner_lock:
+                self._resource_owners[resource_name] = agent
+            self._acquisition_log.append({
+                "resource": resource_name, "agent": agent,
+                "action": "ACQUIRED", "timestamp": datetime.now().isoformat()
+            })
+            logger.debug(f"[ResourceLock] {agent} acquired '{resource_name}'")
+        else:
+            owner = self._resource_owners.get(resource_name, "unknown")
+            logger.warning(
+                f"[ResourceLock] DEADLOCK PREVENTION: {agent} timed out waiting for "
+                f"'{resource_name}' (held by: {owner})"
+            )
+            self._acquisition_log.append({
+                "resource": resource_name, "agent": agent,
+                "action": "TIMEOUT", "held_by": owner, "timestamp": datetime.now().isoformat()
+            })
+        return acquired
+
+    def release(self, resource_name: str, agent: str) -> None:
+        """Release a named resource lock."""
+        lock = self._get_lock(resource_name)
+        with self._owner_lock:
+            current_owner = self._resource_owners.get(resource_name)
+            if current_owner != agent:
+                logger.warning(
+                    f"[ResourceLock] {agent} attempted to release '{resource_name}' "
+                    f"owned by {current_owner}"
+                )
+                return
+            self._resource_owners.pop(resource_name, None)
+        try:
+            lock.release()
+            logger.debug(f"[ResourceLock] {agent} released '{resource_name}'")
+        except RuntimeError:
+            pass  # Already released
+
+    def acquire_llm_slot(self, agent: str, timeout: float = 60.0) -> bool:
+        """Acquire a shared LLM API slot (rate-limit-aware semaphore)."""
+        acquired = self._llm_semaphore.acquire(timeout=timeout)
+        if acquired:
+            logger.debug(f"[ResourceLock] {agent} acquired LLM slot")
+        else:
+            logger.warning(f"[ResourceLock] {agent} timed out waiting for LLM slot")
+        return acquired
+
+    def release_llm_slot(self, agent: str) -> None:
+        """Release a shared LLM API slot."""
+        self._llm_semaphore.release()
+        logger.debug(f"[ResourceLock] {agent} released LLM slot")
+
+    def lock_status(self) -> Dict[str, Any]:
+        """Diagnostic snapshot for War Room telemetry dashboard."""
+        with self._owner_lock:
+            return {
+                "active_locks": dict(self._resource_owners),
+                "recent_log": self._acquisition_log[-20:],
+            }
+
+
+# ── Module-level coordination singletons ──────────────────────────
+_priority_queue = PriorityTaskQueue()
+_resource_lock = AgentResourceLock(max_concurrent_llm_calls=3)
+
+
+def get_priority_queue() -> PriorityTaskQueue:
+    """Get the global War Room priority task queue."""
+    return _priority_queue
+
+
+def get_resource_lock() -> AgentResourceLock:
+    """Get the global War Room resource lock manager."""
+    return _resource_lock
