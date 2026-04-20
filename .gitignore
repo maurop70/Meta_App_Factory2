@@ -66,3 +66,8 @@ desktop.ini
 # ── Gemini State (session cache, not secrets) ────────
 .Gemini_state/
 
+# ── Agent Generated Data & Chaos Environments ────────
+CFO_Agent/reports/*.xlsx
+projects/*_chaos*/
+projects/*_chaos/
+Venture_Data/scout_pitches.json
