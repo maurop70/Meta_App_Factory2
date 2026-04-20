@@ -1,1474 +1,5 @@
 [
   {
-    "timestamp": "2026-04-05T23:24:36.818914",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T23:26:50.051979",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T23:29:03.211379",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T23:31:16.455150",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T23:33:29.644904",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-05T23:35:42.832429",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-07T19:43:52.151910",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-07T19:46:04.884688",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-07T19:48:17.634353",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-07T19:50:30.322786",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-07T19:52:43.215476",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-07T19:54:55.950652",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-07T19:57:08.677593",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-07T19:59:21.454513",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-07T20:01:34.196782",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-07T20:03:46.895553",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-07T20:15:50.989618",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: master_architect (port 5050)",
-    "outcome": {
-      "port": 5050,
-      "service": "master_architect",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-07T20:15:59.042661",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: clo_legal (port 5080)",
-    "outcome": {
-      "port": 5080,
-      "service": "clo_legal",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-07T20:44:06.789915",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: Resonance (port 5006)",
-    "outcome": {
-      "port": 5006,
-      "service": "Resonance",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T20:44:26.971390",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: Delegate_AI (port 5007)",
-    "outcome": {
-      "port": 5007,
-      "service": "Delegate_AI",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T20:44:47.187151",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: Alpha_V2_Genesis (port 5008)",
-    "outcome": {
-      "port": 5008,
-      "service": "Alpha_V2_Genesis",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T20:45:07.371020",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: Sentinel_Bridge (port 5009)",
-    "outcome": {
-      "port": 5009,
-      "service": "Sentinel_Bridge",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T20:45:27.517408",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: schema_sage (port 5010)",
-    "outcome": {
-      "port": 5010,
-      "service": "schema_sage",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T20:45:47.650379",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: CMO_Agent (port 5020)",
-    "outcome": {
-      "port": 5020,
-      "service": "CMO_Agent",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T20:46:09.863433",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: CFO_UEA (port 5041)",
-    "outcome": {
-      "port": 5041,
-      "service": "CFO_UEA",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T20:46:30.025849",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: Master_Architect (port 5050)",
-    "outcome": {
-      "port": 5050,
-      "service": "Master_Architect",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T20:46:50.201547",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: CLO (port 5080)",
-    "outcome": {
-      "port": 5080,
-      "service": "CLO",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T21:20:58.871202",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: Resonance (port 5006)",
-    "outcome": {
-      "port": 5006,
-      "service": "Resonance",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T21:21:19.071586",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: Delegate_AI (port 5007)",
-    "outcome": {
-      "port": 5007,
-      "service": "Delegate_AI",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T21:21:39.268956",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: Alpha_V2_Genesis (port 5008)",
-    "outcome": {
-      "port": 5008,
-      "service": "Alpha_V2_Genesis",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T21:21:59.455738",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: Sentinel_Bridge (port 5009)",
-    "outcome": {
-      "port": 5009,
-      "service": "Sentinel_Bridge",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T21:22:19.654695",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: schema_sage (port 5010)",
-    "outcome": {
-      "port": 5010,
-      "service": "schema_sage",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T21:22:39.809898",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: CMO_Agent (port 5020)",
-    "outcome": {
-      "port": 5020,
-      "service": "CMO_Agent",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T21:23:01.990429",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: CFO_UEA (port 5041)",
-    "outcome": {
-      "port": 5041,
-      "service": "CFO_UEA",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T21:23:22.209797",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: Master_Architect (port 5050)",
-    "outcome": {
-      "port": 5050,
-      "service": "Master_Architect",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T21:23:42.411978",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: CLO (port 5080)",
-    "outcome": {
-      "port": 5080,
-      "service": "CLO",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T21:57:16.869305",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: CFO_UEA (port 5041)",
-    "outcome": {
-      "port": 5041,
-      "service": "CFO_UEA",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T22:10:36.290417",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: Resonance (port 5006)",
-    "outcome": {
-      "port": 5006,
-      "service": "Resonance",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T22:10:56.446253",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: Delegate_AI (port 5007)",
-    "outcome": {
-      "port": 5007,
-      "service": "Delegate_AI",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T22:11:16.626748",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: Alpha_V2_Genesis (port 5008)",
-    "outcome": {
-      "port": 5008,
-      "service": "Alpha_V2_Genesis",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T22:11:36.804824",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: Sentinel_Bridge (port 5009)",
-    "outcome": {
-      "port": 5009,
-      "service": "Sentinel_Bridge",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T22:11:56.965762",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: schema_sage (port 5010)",
-    "outcome": {
-      "port": 5010,
-      "service": "schema_sage",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T22:12:17.115310",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: CMO_Agent (port 5020)",
-    "outcome": {
-      "port": 5020,
-      "service": "CMO_Agent",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T22:12:39.329073",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: CFO_UEA (port 5041)",
-    "outcome": {
-      "port": 5041,
-      "service": "CFO_UEA",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T22:12:59.521765",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: Master_Architect (port 5050)",
-    "outcome": {
-      "port": 5050,
-      "service": "Master_Architect",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T22:13:19.653892",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: CLO (port 5080)",
-    "outcome": {
-      "port": 5080,
-      "service": "CLO",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T22:26:22.228048",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: Resonance (port 5006)",
-    "outcome": {
-      "port": 5006,
-      "service": "Resonance",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T22:26:42.436581",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: Delegate_AI (port 5007)",
-    "outcome": {
-      "port": 5007,
-      "service": "Delegate_AI",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T22:27:02.601525",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: Alpha_V2_Genesis (port 5008)",
-    "outcome": {
-      "port": 5008,
-      "service": "Alpha_V2_Genesis",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T22:27:22.789077",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: Sentinel_Bridge (port 5009)",
-    "outcome": {
-      "port": 5009,
-      "service": "Sentinel_Bridge",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T22:27:43.000395",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: schema_sage (port 5010)",
-    "outcome": {
-      "port": 5010,
-      "service": "schema_sage",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T22:28:03.172915",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: CMO_Agent (port 5020)",
-    "outcome": {
-      "port": 5020,
-      "service": "CMO_Agent",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T22:28:25.334800",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: CFO_UEA (port 5041)",
-    "outcome": {
-      "port": 5041,
-      "service": "CFO_UEA",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T22:28:45.502441",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: Master_Architect (port 5050)",
-    "outcome": {
-      "port": 5050,
-      "service": "Master_Architect",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T22:29:05.688897",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: CLO (port 5080)",
-    "outcome": {
-      "port": 5080,
-      "service": "CLO",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T22:58:18.113986",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: Resonance (port 5006)",
-    "outcome": {
-      "port": 5006,
-      "service": "Resonance",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T22:58:38.290877",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: Delegate_AI (port 5007)",
-    "outcome": {
-      "port": 5007,
-      "service": "Delegate_AI",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T22:58:58.551711",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: Alpha_V2_Genesis (port 5008)",
-    "outcome": {
-      "port": 5008,
-      "service": "Alpha_V2_Genesis",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T22:59:18.741013",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: Sentinel_Bridge (port 5009)",
-    "outcome": {
-      "port": 5009,
-      "service": "Sentinel_Bridge",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T22:59:38.876452",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: schema_sage (port 5010)",
-    "outcome": {
-      "port": 5010,
-      "service": "schema_sage",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T22:59:59.101755",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: CMO_Agent (port 5020)",
-    "outcome": {
-      "port": 5020,
-      "service": "CMO_Agent",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T23:00:21.271963",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: CFO_UEA (port 5041)",
-    "outcome": {
-      "port": 5041,
-      "service": "CFO_UEA",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T23:00:41.492043",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: Master_Architect (port 5050)",
-    "outcome": {
-      "port": 5050,
-      "service": "Master_Architect",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T23:01:01.711188",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: CLO (port 5080)",
-    "outcome": {
-      "port": 5080,
-      "service": "CLO",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T23:39:15.527525",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: Resonance (port 5006)",
-    "outcome": {
-      "port": 5006,
-      "service": "Resonance",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T23:39:35.723152",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: Delegate_AI (port 5007)",
-    "outcome": {
-      "port": 5007,
-      "service": "Delegate_AI",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T23:39:55.916375",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: Alpha_V2_Genesis (port 5008)",
-    "outcome": {
-      "port": 5008,
-      "service": "Alpha_V2_Genesis",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T23:40:16.167143",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: Sentinel_Bridge (port 5009)",
-    "outcome": {
-      "port": 5009,
-      "service": "Sentinel_Bridge",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T23:40:36.277361",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: schema_sage (port 5010)",
-    "outcome": {
-      "port": 5010,
-      "service": "schema_sage",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T23:40:56.469114",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: CMO_Agent (port 5020)",
-    "outcome": {
-      "port": 5020,
-      "service": "CMO_Agent",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T23:41:18.622769",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: CFO_UEA (port 5041)",
-    "outcome": {
-      "port": 5041,
-      "service": "CFO_UEA",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T23:41:38.805232",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: Master_Architect (port 5050)",
-    "outcome": {
-      "port": 5050,
-      "service": "Master_Architect",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T23:41:58.966706",
-    "project": "NativeWatchdog",
-    "target": "Restart verified: CLO (port 5080)",
-    "outcome": {
-      "port": 5080,
-      "service": "CLO",
-      "action": "OPERATOR_RESTART_VERIFIED"
-    },
-    "attempts": "HEAL_PASS"
-  },
-  {
-    "timestamp": "2026-04-07T23:42:53.576264",
-    "project": "NativeWatchdog",
-    "target": "CRITICAL_MANUAL alert: Meta_App_Factory (port 5000)",
-    "outcome": {
-      "port": 5000,
-      "service": "Meta_App_Factory",
-      "action": "ALERT_ONLY"
-    },
-    "attempts": "CRITICAL_ALERT"
-  },
-  {
-    "timestamp": "2026-04-07T23:44:44.720967",
-    "project": "NativeWatchdog",
-    "target": "CRITICAL_MANUAL alert: Meta_App_Factory (port 5000)",
-    "outcome": {
-      "port": 5000,
-      "service": "Meta_App_Factory",
-      "action": "ALERT_ONLY"
-    },
-    "attempts": "CRITICAL_ALERT"
-  },
-  {
-    "timestamp": "2026-04-07T23:46:35.729493",
-    "project": "NativeWatchdog",
-    "target": "CRITICAL_MANUAL alert: Meta_App_Factory (port 5000)",
-    "outcome": {
-      "port": 5000,
-      "service": "Meta_App_Factory",
-      "action": "ALERT_ONLY"
-    },
-    "attempts": "CRITICAL_ALERT"
-  },
-  {
-    "timestamp": "2026-04-07T23:48:26.837412",
-    "project": "NativeWatchdog",
-    "target": "CRITICAL_MANUAL alert: Meta_App_Factory (port 5000)",
-    "outcome": {
-      "port": 5000,
-      "service": "Meta_App_Factory",
-      "action": "ALERT_ONLY"
-    },
-    "attempts": "CRITICAL_ALERT"
-  },
-  {
-    "timestamp": "2026-04-07T23:50:17.735722",
-    "project": "NativeWatchdog",
-    "target": "CRITICAL_MANUAL alert: Meta_App_Factory (port 5000)",
-    "outcome": {
-      "port": 5000,
-      "service": "Meta_App_Factory",
-      "action": "ALERT_ONLY"
-    },
-    "attempts": "CRITICAL_ALERT"
-  },
-  {
-    "timestamp": "2026-04-07T23:52:08.719324",
-    "project": "NativeWatchdog",
-    "target": "CRITICAL_MANUAL alert: Meta_App_Factory (port 5000)",
-    "outcome": {
-      "port": 5000,
-      "service": "Meta_App_Factory",
-      "action": "ALERT_ONLY"
-    },
-    "attempts": "CRITICAL_ALERT"
-  },
-  {
-    "timestamp": "2026-04-07T23:53:59.845552",
-    "project": "NativeWatchdog",
-    "target": "CRITICAL_MANUAL alert: Meta_App_Factory (port 5000)",
-    "outcome": {
-      "port": 5000,
-      "service": "Meta_App_Factory",
-      "action": "ALERT_ONLY"
-    },
-    "attempts": "CRITICAL_ALERT"
-  },
-  {
-    "timestamp": "2026-04-07T23:55:50.943588",
-    "project": "NativeWatchdog",
-    "target": "CRITICAL_MANUAL alert: Meta_App_Factory (port 5000)",
-    "outcome": {
-      "port": 5000,
-      "service": "Meta_App_Factory",
-      "action": "ALERT_ONLY"
-    },
-    "attempts": "CRITICAL_ALERT"
-  },
-  {
-    "timestamp": "2026-04-07T23:57:42.071532",
-    "project": "NativeWatchdog",
-    "target": "CRITICAL_MANUAL alert: Meta_App_Factory (port 5000)",
-    "outcome": {
-      "port": 5000,
-      "service": "Meta_App_Factory",
-      "action": "ALERT_ONLY"
-    },
-    "attempts": "CRITICAL_ALERT"
-  },
-  {
-    "timestamp": "2026-04-07T23:59:33.353416",
-    "project": "NativeWatchdog",
-    "target": "CRITICAL_MANUAL alert: Meta_App_Factory (port 5000)",
-    "outcome": {
-      "port": 5000,
-      "service": "Meta_App_Factory",
-      "action": "ALERT_ONLY"
-    },
-    "attempts": "CRITICAL_ALERT"
-  },
-  {
-    "timestamp": "2026-04-08T00:01:24.617686",
-    "project": "NativeWatchdog",
-    "target": "CRITICAL_MANUAL alert: Meta_App_Factory (port 5000)",
-    "outcome": {
-      "port": 5000,
-      "service": "Meta_App_Factory",
-      "action": "ALERT_ONLY"
-    },
-    "attempts": "CRITICAL_ALERT"
-  },
-  {
-    "timestamp": "2026-04-08T00:03:15.698679",
-    "project": "NativeWatchdog",
-    "target": "CRITICAL_MANUAL alert: Meta_App_Factory (port 5000)",
-    "outcome": {
-      "port": 5000,
-      "service": "Meta_App_Factory",
-      "action": "ALERT_ONLY"
-    },
-    "attempts": "CRITICAL_ALERT"
-  },
-  {
-    "timestamp": "2026-04-08T00:05:06.789722",
-    "project": "NativeWatchdog",
-    "target": "CRITICAL_MANUAL alert: Meta_App_Factory (port 5000)",
-    "outcome": {
-      "port": 5000,
-      "service": "Meta_App_Factory",
-      "action": "ALERT_ONLY"
-    },
-    "attempts": "CRITICAL_ALERT"
-  },
-  {
-    "timestamp": "2026-04-08T00:06:57.852643",
-    "project": "NativeWatchdog",
-    "target": "CRITICAL_MANUAL alert: Meta_App_Factory (port 5000)",
-    "outcome": {
-      "port": 5000,
-      "service": "Meta_App_Factory",
-      "action": "ALERT_ONLY"
-    },
-    "attempts": "CRITICAL_ALERT"
-  },
-  {
-    "timestamp": "2026-04-08T10:22:41.812273",
-    "project": "child_app",
-    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
-    "outcome": "buffered_on_first",
-    "attempts": null
-  },
-  {
-    "timestamp": "2026-04-08T10:22:41.960370",
-    "project": "child_app",
-    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
-    "outcome": "buffered_on_first",
-    "attempts": null
-  },
-  {
-    "timestamp": "2026-04-08T10:22:42.128007",
-    "project": "child_app",
-    "target": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=%2A%2A%2AREDACTED%2A%2A%2A",
-    "outcome": "buffered_on_first",
-    "attempts": null
-  },
-  {
-    "timestamp": "2026-04-08T10:22:46.061089",
-    "project": "child_app",
-    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
-    "outcome": "buffered_on_first",
-    "attempts": null
-  },
-  {
-    "timestamp": "2026-04-08T10:22:46.228501",
-    "project": "child_app",
-    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
-    "outcome": "buffered_on_first",
-    "attempts": null
-  },
-  {
-    "timestamp": "2026-04-08T10:22:46.384743",
-    "project": "child_app",
-    "target": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=%2A%2A%2AREDACTED%2A%2A%2A",
-    "outcome": "buffered_on_first",
-    "attempts": null
-  },
-  {
-    "timestamp": "2026-04-08T10:26:25.016643",
-    "project": "child_app",
-    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
-    "outcome": "buffered_on_first",
-    "attempts": null
-  },
-  {
-    "timestamp": "2026-04-08T10:26:25.170622",
-    "project": "child_app",
-    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
-    "outcome": "buffered_on_first",
-    "attempts": null
-  },
-  {
-    "timestamp": "2026-04-08T10:26:25.337503",
-    "project": "child_app",
-    "target": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=%2A%2A%2AREDACTED%2A%2A%2A",
-    "outcome": "buffered_on_first",
-    "attempts": null
-  },
-  {
-    "timestamp": "2026-04-08T10:47:06.141197",
-    "project": "child_app",
-    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
-    "outcome": "buffered_on_first",
-    "attempts": null
-  },
-  {
-    "timestamp": "2026-04-08T10:47:06.308588",
-    "project": "child_app",
-    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
-    "outcome": "buffered_on_first",
-    "attempts": null
-  },
-  {
-    "timestamp": "2026-04-08T10:47:06.479433",
-    "project": "child_app",
-    "target": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=%2A%2A%2AREDACTED%2A%2A%2A",
-    "outcome": "buffered_on_first",
-    "attempts": null
-  },
-  {
-    "timestamp": "2026-04-08T10:47:10.380423",
-    "project": "child_app",
-    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v3",
-    "outcome": "buffered_on_first",
-    "attempts": null
-  },
-  {
-    "timestamp": "2026-04-08T10:47:10.757677",
-    "project": "child_app",
-    "target": "https://humanresource.app.n8n.cloud/webhook/alpha-research-v2",
-    "outcome": "buffered_on_first",
-    "attempts": null
-  },
-  {
-    "timestamp": "2026-04-08T10:47:10.925736",
-    "project": "child_app",
-    "target": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=%2A%2A%2AREDACTED%2A%2A%2A",
-    "outcome": "buffered_on_first",
-    "attempts": null
-  },
-  {
-    "timestamp": "2026-04-08T10:51:50.477622",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: master_architect (port 5050)",
-    "outcome": {
-      "port": 5050,
-      "service": "master_architect",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T10:51:54.508693",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T10:51:58.551610",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: clo_legal (port 5080)",
-    "outcome": {
-      "port": 5080,
-      "service": "clo_legal",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T10:52:02.599871",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: ghost_operator (port 5100)",
-    "outcome": {
-      "port": 5100,
-      "service": "ghost_operator",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T10:54:15.617013",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T10:54:21.667724",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: ghost_operator (port 5100)",
-    "outcome": {
-      "port": 5100,
-      "service": "ghost_operator",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T10:56:34.750147",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T10:56:40.797846",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: ghost_operator (port 5100)",
-    "outcome": {
-      "port": 5100,
-      "service": "ghost_operator",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T10:58:53.765276",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T10:58:59.813085",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: ghost_operator (port 5100)",
-    "outcome": {
-      "port": 5100,
-      "service": "ghost_operator",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T11:01:12.838910",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T11:01:18.887422",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: ghost_operator (port 5100)",
-    "outcome": {
-      "port": 5100,
-      "service": "ghost_operator",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T11:03:32.002359",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T11:03:38.051985",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: ghost_operator (port 5100)",
-    "outcome": {
-      "port": 5100,
-      "service": "ghost_operator",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T11:05:51.117560",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T11:05:57.179457",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: ghost_operator (port 5100)",
-    "outcome": {
-      "port": 5100,
-      "service": "ghost_operator",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T11:08:10.279826",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T11:08:16.335958",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: ghost_operator (port 5100)",
-    "outcome": {
-      "port": 5100,
-      "service": "ghost_operator",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T11:10:29.456647",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T11:10:35.497142",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: ghost_operator (port 5100)",
-    "outcome": {
-      "port": 5100,
-      "service": "ghost_operator",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T11:12:48.672733",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T11:12:54.721768",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: ghost_operator (port 5100)",
-    "outcome": {
-      "port": 5100,
-      "service": "ghost_operator",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T11:15:07.828296",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T11:15:13.990696",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: ghost_operator (port 5100)",
-    "outcome": {
-      "port": 5100,
-      "service": "ghost_operator",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T11:17:26.935442",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T11:17:32.978868",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: ghost_operator (port 5100)",
-    "outcome": {
-      "port": 5100,
-      "service": "ghost_operator",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T11:19:46.015875",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T11:19:52.041913",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: ghost_operator (port 5100)",
-    "outcome": {
-      "port": 5100,
-      "service": "ghost_operator",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T11:22:05.129152",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T11:22:11.183531",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: ghost_operator (port 5100)",
-    "outcome": {
-      "port": 5100,
-      "service": "ghost_operator",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T11:24:24.217244",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T11:24:30.262589",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: ghost_operator (port 5100)",
-    "outcome": {
-      "port": 5100,
-      "service": "ghost_operator",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T11:26:43.319545",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T11:26:49.391226",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: ghost_operator (port 5100)",
-    "outcome": {
-      "port": 5100,
-      "service": "ghost_operator",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T11:29:02.460487",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T11:29:08.507149",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: ghost_operator (port 5100)",
-    "outcome": {
-      "port": 5100,
-      "service": "ghost_operator",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T11:31:21.525727",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
     "timestamp": "2026-04-08T11:31:27.566702",
     "project": "NativeWatchdog",
     "target": "Auto-Restart: ghost_operator (port 5100)",
@@ -5134,5 +3665,1286 @@
     "target": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=%2A%2A%2AREDACTED%2A%2A%2A",
     "outcome": "buffered_on_first",
     "attempts": null
+  },
+  {
+    "timestamp": "2026-04-17T22:29:55.868658",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart Dispatch: master_architect (port 5050)",
+    "outcome": {
+      "port": 5050,
+      "service": "master_architect",
+      "consecutive_fails": 3,
+      "operator_status": 200
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-17T22:30:05.975429",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart Dispatch: clo_legal (port 5080)",
+    "outcome": {
+      "port": 5080,
+      "service": "clo_legal",
+      "consecutive_fails": 3,
+      "operator_status": 200
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-17T22:38:16.299168",
+    "project": "system",
+    "target": "cleanup",
+    "outcome": "success",
+    "attempts": 70,
+    "error": "Archived to volatile_cleanup_20260417_223816.zip"
+  },
+  {
+    "timestamp": "2026-04-17T23:14:03.109109",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-17T23:15:20.531836",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-17T23:16:59.448834",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-17T23:21:45.690149",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-17T23:23:29.646358",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-17T23:24:56.590106",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-17T23:26:51.199470",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-17T23:28:42.622616",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-17T23:30:16.116253",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-17T23:33:31.175022",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-17T23:34:58.556492",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-17T23:35:58.649506",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-17T23:38:56.948194",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-17T23:40:12.319771",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-17T23:41:59.704631",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-17T23:48:35.273909",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-17T23:50:20.834931",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-17T23:51:42.610850",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-17T23:51:42.843150",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-17T23:53:32.305130",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-17T23:54:49.147987",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-17T23:58:12.261289",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-17T23:58:12.450032",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-17T23:58:23.223961",
+    "project": "UI_SIMULATOR_FAILURE",
+    "target": "Deep Audit Failed",
+    "outcome": {
+      "error": "Navigation/Click Failure: Timeout 3000ms exceeded."
+    },
+    "attempts": "qa_gate_failure"
+  },
+  {
+    "timestamp": "2026-04-17T23:59:09.210458",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-17T23:59:19.327690",
+    "project": "UI_SIMULATOR_FAILURE",
+    "target": "Deep Audit Failed",
+    "outcome": {
+      "error": "Navigation/Click Failure: Timeout 3000ms exceeded."
+    },
+    "attempts": "qa_gate_failure"
+  },
+  {
+    "timestamp": "2026-04-17T23:59:48.698691",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T00:00:59.932059",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T00:01:30.874282",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T00:01:31.106666",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T00:01:41.283391",
+    "project": "UI_SIMULATOR_FAILURE",
+    "target": "Deep Audit Failed",
+    "outcome": {
+      "error": "Navigation/Click Failure: Timeout 3000ms exceeded."
+    },
+    "attempts": "qa_gate_failure"
+  },
+  {
+    "timestamp": "2026-04-18T00:03:02.817387",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T00:04:19.018864",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T00:04:48.316733",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T00:04:48.526996",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T00:05:43.216718",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T00:06:56.014129",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T00:06:56.246709",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T00:08:17.962910",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T00:10:23.178247",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T00:11:50.866030",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T00:13:37.864437",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T01:09:49.125409",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T01:10:51.357565",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T01:11:37.462377",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T01:12:13.377585",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T01:12:56.585502",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T01:13:51.408746",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T01:14:23.898411",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T01:15:26.295781",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T01:16:03.975845",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T01:16:59.359544",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T01:17:23.941321",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T01:17:55.686827",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T01:18:41.872918",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T01:19:12.660704",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T01:19:46.506596",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T01:20:50.545001",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T01:20:50.806567",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T01:21:44.199362",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T01:22:18.730910",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T01:23:18.530582",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T01:23:18.800818",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T01:24:02.094897",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T01:24:44.200869",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T01:28:51.369109",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T01:29:23.650609",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T01:30:13.062618",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T21:35:38.875206",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T21:36:04.245326",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T21:36:28.501940",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T21:40:02.281970",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T21:40:27.039921",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T21:40:55.555165",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T21:42:31.981756",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T21:43:02.472335",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T21:43:30.713102",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T22:00:52.471267",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T22:00:52.534282",
+    "project": "UI_SIMULATOR_FAILURE",
+    "target": "Deep Audit Failed",
+    "outcome": {
+      "error": "'PlaywrightContextManager' object has no attribute '_playwright'"
+    },
+    "attempts": "qa_gate_failure"
+  },
+  {
+    "timestamp": "2026-04-18T22:01:09.931395",
+    "project": "UI_SIMULATOR_FAILURE",
+    "target": "Deep Audit Failed",
+    "outcome": {
+      "error": "'PlaywrightContextManager' object has no attribute '_playwright'"
+    },
+    "attempts": "qa_gate_failure"
+  },
+  {
+    "timestamp": "2026-04-18T22:01:09.973177",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T22:01:36.806771",
+    "project": "UI_SIMULATOR_FAILURE",
+    "target": "Deep Audit Failed",
+    "outcome": {
+      "error": "'PlaywrightContextManager' object has no attribute '_playwright'"
+    },
+    "attempts": "qa_gate_failure"
+  },
+  {
+    "timestamp": "2026-04-18T22:01:36.839808",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T22:04:14.385669",
+    "project": "UI_SIMULATOR_FAILURE",
+    "target": "Deep Audit Failed",
+    "outcome": {
+      "error": "'PlaywrightContextManager' object has no attribute '_playwright'"
+    },
+    "attempts": "qa_gate_failure"
+  },
+  {
+    "timestamp": "2026-04-18T22:04:14.419662",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T22:04:41.414878",
+    "project": "UI_SIMULATOR_FAILURE",
+    "target": "Deep Audit Failed",
+    "outcome": {
+      "error": "'PlaywrightContextManager' object has no attribute '_playwright'"
+    },
+    "attempts": "qa_gate_failure"
+  },
+  {
+    "timestamp": "2026-04-18T22:04:41.445099",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T22:05:07.326754",
+    "project": "UI_SIMULATOR_FAILURE",
+    "target": "Deep Audit Failed",
+    "outcome": {
+      "error": "'PlaywrightContextManager' object has no attribute '_playwright'"
+    },
+    "attempts": "qa_gate_failure"
+  },
+  {
+    "timestamp": "2026-04-18T22:05:07.347696",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T22:08:10.017439",
+    "project": "UI_SIMULATOR_FAILURE",
+    "target": "Deep Audit Failed",
+    "outcome": {
+      "error": "'PlaywrightContextManager' object has no attribute '_playwright'"
+    },
+    "attempts": "qa_gate_failure"
+  },
+  {
+    "timestamp": "2026-04-18T22:08:10.203836",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T22:08:37.220541",
+    "project": "UI_SIMULATOR_FAILURE",
+    "target": "Deep Audit Failed",
+    "outcome": {
+      "error": "'PlaywrightContextManager' object has no attribute '_playwright'"
+    },
+    "attempts": "qa_gate_failure"
+  },
+  {
+    "timestamp": "2026-04-18T22:08:37.242100",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T22:09:07.276281",
+    "project": "UI_SIMULATOR_FAILURE",
+    "target": "Deep Audit Failed",
+    "outcome": {
+      "error": "'PlaywrightContextManager' object has no attribute '_playwright'"
+    },
+    "attempts": "qa_gate_failure"
+  },
+  {
+    "timestamp": "2026-04-18T22:09:07.303967",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T22:25:20.844566",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T22:25:47.017981",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T22:30:18.387850",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T22:30:48.277454",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T22:31:17.110469",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T22:41:01.853748",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T22:41:33.497020",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T22:42:01.903203",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T22:45:18.785994",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T22:45:52.291294",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T22:46:24.259209",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T22:47:06.992040",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T22:47:35.551980",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T22:48:04.950387",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T22:52:37.582033",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T22:53:10.814897",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T22:53:43.443368",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T23:11:41.762177",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T23:12:43.167294",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T23:13:44.321976",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T23:32:39.542071",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T23:33:43.604848",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T23:34:42.475085",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T23:34:53.373000",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-18T23:35:37.211422",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-19T00:01:05.344933",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-19T00:01:34.770153",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-19T00:02:07.388507",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-19T00:02:21.805969",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-19T00:03:09.826929",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-19T00:03:33.825517",
+    "project": "CFOExcelArchitect",
+    "target": "Native extraction fault",
+    "outcome": {
+      "error": "ValueError(\"could not convert string to float: ''\")"
+    },
+    "attempts": "execution_fault"
+  },
+  {
+    "timestamp": "2026-04-19T01:44:21.201698",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart Dispatch: master_architect (port 5050)",
+    "outcome": {
+      "port": 5050,
+      "service": "master_architect",
+      "consecutive_fails": 3,
+      "operator_status": 200
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-19T01:44:29.288385",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart Dispatch: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3,
+      "operator_status": 200
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-19T01:44:37.376233",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart Dispatch: clo_legal (port 5080)",
+    "outcome": {
+      "port": 5080,
+      "service": "clo_legal",
+      "consecutive_fails": 3,
+      "operator_status": 200
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-19T20:25:26.355285",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart Dispatch: master_architect (port 5050)",
+    "outcome": {
+      "port": 5050,
+      "service": "master_architect",
+      "consecutive_fails": 3,
+      "operator_status": 200
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-19T20:25:36.429213",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart Dispatch: clo_legal (port 5080)",
+    "outcome": {
+      "port": 5080,
+      "service": "clo_legal",
+      "consecutive_fails": 3,
+      "operator_status": 200
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-19T20:28:43.263368",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/critic-v2",
+    "outcome": "buffered_on_first",
+    "attempts": null
+  },
+  {
+    "timestamp": "2026-04-19T20:54:05.807102",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart Dispatch: phantom_qa (port 5030)",
+    "outcome": {
+      "port": 5030,
+      "service": "phantom_qa",
+      "consecutive_fails": 3,
+      "operator_status": 200
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-19T20:54:13.889831",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart Dispatch: master_architect (port 5050)",
+    "outcome": {
+      "port": 5050,
+      "service": "master_architect",
+      "consecutive_fails": 3,
+      "operator_status": 200
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-19T20:54:22.004533",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart Dispatch: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3,
+      "operator_status": 200
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-19T20:54:30.161044",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart Dispatch: clo_legal (port 5080)",
+    "outcome": {
+      "port": 5080,
+      "service": "clo_legal",
+      "consecutive_fails": 3,
+      "operator_status": 200
+    },
+    "attempts": "AUTO_RESTART"
   }
 ]
