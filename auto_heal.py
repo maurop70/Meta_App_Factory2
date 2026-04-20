@@ -23,6 +23,7 @@ import json
 import time
 import logging
 from datetime import datetime
+import zipfile
 from functools import wraps
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -138,7 +139,110 @@ def diagnose() -> dict:
     else:
         report["verdict"] = "HEALTHY"
 
+    # 5. Maintenance check (New in V3.1)
+    try:
+        maintenance = _check_maintenance_need()
+        report["maintenance"] = maintenance
+    except Exception:
+        report["maintenance"] = {"status": "error"}
+
     return report
+
+
+def _check_maintenance_need(max_age_days: int = 7) -> dict:
+    """Check how many files are pending cleanup without performing it."""
+    factory_dir = os.path.dirname(os.path.abspath(__file__))
+    volatile_dirs = [
+        "CFO_Agent/reports",
+        "Phantom_QA_Elite/audit_uploads",
+        "Project_Aether/C-Suite_Active_Logic/Phantom_QA/reports",
+        "Alpha_V2_Genesis/Alpha_Data/executions",
+        "Resonance/uploads"
+    ]
+    
+    count = 0
+    now = time.time()
+    max_age_sec = max_age_days * 24 * 60 * 60
+    
+    for rel_path in volatile_dirs:
+        abs_path = os.path.join(factory_dir, rel_path)
+        if os.path.isdir(abs_path):
+            for root, _, files in os.walk(abs_path):
+                for f in files:
+                    if f.startswith("."): continue
+                    try:
+                        if (now - os.path.getmtime(os.path.join(root, f))) > max_age_sec:
+                            count += 1
+                    except Exception: continue
+    
+    return {
+        "status": "needed" if count > 0 else "clear",
+        "pending_cleanup_count": count,
+        "policy": f">{max_age_days}d"
+    }
+
+
+def cleanup_volatile_reports(max_age_days: int = 7) -> dict:
+    """
+    Archives untracked volatile reports into forge_backups/ and removes originals.
+    Ensures repository hygiene and prevents sync bloat.
+    """
+    factory_dir = os.path.dirname(os.path.abspath(__file__))
+    backup_dir = os.path.join(factory_dir, "forge_backups")
+    os.makedirs(backup_dir, exist_ok=True)
+
+    volatile_dirs = [
+        "CFO_Agent/reports",
+        "Phantom_QA_Elite/audit_uploads",
+        "Project_Aether/C-Suite_Active_Logic/Phantom_QA/reports",
+        "Alpha_V2_Genesis/Alpha_Data/executions",
+        "Resonance/uploads"
+    ]
+
+    now = time.time()
+    max_age_sec = max_age_days * 24 * 60 * 60
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    archive_name = f"volatile_cleanup_{timestamp}.zip"
+    archive_path = os.path.join(backup_dir, archive_name)
+    
+    files_to_archive = []
+
+    for rel_path in volatile_dirs:
+        abs_path = os.path.join(factory_dir, rel_path)
+        if not os.path.isdir(abs_path): continue
+            
+        for root, _, files in os.walk(abs_path):
+            for f in files:
+                if f.startswith("."): continue
+                file_path = os.path.join(root, f)
+                try:
+                    if (now - os.path.getmtime(file_path)) > max_age_sec:
+                        files_to_archive.append((file_path, os.path.relpath(file_path, factory_dir)))
+                except Exception: continue
+
+    if not files_to_archive:
+        return {"status": "no_files_to_cleanup"}
+
+    try:
+        with zipfile.ZipFile(archive_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            for abs_f, rel_f in files_to_archive:
+                zipf.write(abs_f, rel_f)
+        
+        for abs_f, _ in files_to_archive:
+            try:
+                os.remove(abs_f)
+            except Exception: pass
+
+        _log_heal_event("system", "cleanup", "success", len(files_to_archive), 
+                        error=f"Archived to {archive_name}")
+        return {
+            "status": "success",
+            "files_archived": len(files_to_archive),
+            "archive": archive_path
+        }
+    except Exception as e:
+        logger.error(f"[Cleanup] Failed: {e}")
+        return {"status": "error", "error": str(e)}
 
 
 # ═══════════════════════════════════════════════════════════
@@ -396,21 +500,34 @@ def _log_heal_event(project: str, target: str, outcome: str,
 # ═══════════════════════════════════════════════════════════
 
 if __name__ == "__main__":
+    if "--cleanup" in sys.argv:
+        print(f"  Starting volatile report cleanup...")
+        res = cleanup_volatile_reports()
+        if res["status"] == "success":
+            print(f"  [SUCCESS] Archived {res['files_archived']} files.")
+            print(f"  Archive: {res['archive']}")
+        elif res["status"] == "no_files_to_cleanup":
+            print(f"  [SKIP] No files older than 7 days found.")
+        else:
+            print(f"  [ERROR] {res.get('error')}")
+        sys.exit(0)
+
     print(f"\n{'='*60}")
     print(f"  V3.0 Auto-Heal — System Diagnosis")
     print(f"{'='*60}\n")
 
     report = diagnose()
 
-    icons = {"green": "🟢", "yellow": "🟡", "red": "🔴",
-             "valid": "🟢", "expired": "🔴", "missing": "🔴",
-             "operational": "🟢", "clear": "🟢", "has_items": "🟡",
-             "error": "🔴", "unknown": "⚪"}
+    icons = {"green": "OK", "yellow": "WARN", "red": "FAIL",
+             "valid": "OK", "expired": "FAIL", "missing": "FAIL",
+             "operational": "OK", "clear": "OK", "has_items": "WARN",
+             "needed": "WARN", "error": "FAIL", "unknown": "???"}
 
     wd = report["watchdog"]
     cr = report["credentials"]
     sm = report["state_manager"]
     bf = report["buffer"]
+    mn = report.get("maintenance", {"status": "unknown"})
 
     print(f"  Watchdog:     {icons.get(wd['status'], '⚪')} {wd['status'].upper()}"
           f" ({wd.get('latency_ms', '?')}ms)" if 'latency_ms' in wd else f"  Watchdog:     {icons.get(wd['status'], '⚪')} {wd['status'].upper()}")
@@ -418,6 +535,8 @@ if __name__ == "__main__":
     print(f"  StateManager: {icons.get(sm['status'], '⚪')} {sm['status'].upper()}"
           f" (buffer={'ON' if sm.get('safe_buffer_mode') else 'OFF'}, pending={sm.get('pending', '?')})")
     print(f"  Buffer:       {icons.get(bf['status'], '⚪')} {bf.get('pending_files', 0)} files")
+    print(f"  Maintenance:  {icons.get(mn['status'], '⚪')} {mn['status'].upper()}"
+          f" ({mn.get('pending_cleanup_count', 0)} files pending)")
 
     print(f"\n  VERDICT: {report['verdict']}")
 
@@ -430,4 +549,5 @@ if __name__ == "__main__":
             for e in events[-5:]:
                 print(f"    {e['timestamp'][:19]} | {e['project']} | {e['outcome']} | attempts={e.get('attempts', '?')}")
 
-    print(f"\n{'='*60}\n")
+    print(f"\n  Usage: python auto_heal.py [--cleanup]")
+    print(f"{'='*60}\n")

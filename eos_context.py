@@ -133,15 +133,6 @@ class EOSContext:
             except Exception as e:
                 logger.warning(f"EOS state save failed for '{self.project_name}': {e}")
 
-_instances = {}
-_instances_lock = Lock()
-
-def get_eos(project_name: str = "Aether") -> EOSContext:
-    with _instances_lock:
-        if project_name not in _instances:
-            _instances[project_name] = EOSContext(project_name)
-        return _instances[project_name]
-
     # ── Access ────────────────────────────────────────────
 
     def get(self, key: str, default: Any = None) -> Any:
@@ -213,8 +204,8 @@ def get_eos(project_name: str = "Aether") -> EOSContext:
         with self._state_lock:
             st = self._state["phase_status"]
             return (
-                st.get("market") == "locked" and 
-                st.get("brand") == "locked" and 
+                st.get("market") == "locked" and
+                st.get("brand") == "locked" and
                 st.get("legal") == "locked" and
                 st.get("financials") == "locked"
             )
@@ -259,9 +250,10 @@ def get_eos(project_name: str = "Aether") -> EOSContext:
         return "\n".join(parts)
 
 
-# Per-project factory — thread-safe, lazy instantiation
+# ── Module-level singleton factory ───────────────────────────────
 _instances: dict[str, EOSContext] = {}
 _factory_lock = Lock()
+
 
 def get_eos(project_name: str = "Aether") -> EOSContext:
     """Return the EOS context for a specific project, creating it if needed."""

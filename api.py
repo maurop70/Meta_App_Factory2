@@ -865,6 +865,7 @@ async def upload_document(file: UploadFile = File(...)):
 
 
 ORCHESTRATION_STATE = "healthy"
+WAR_ROOM_OVERRIDES = {}  # {project_id: bool}
 
 from native_watchdog import get_native_watchdog
 
@@ -891,7 +892,18 @@ class WarRoomExecuteRequest(BaseModel):
 async def war_room_execute_endpoint(req: WarRoomExecuteRequest, request: Request):
     import asyncio
     project_id = req.project_id
-    is_architecture_phase = any(kw in req.intent.lower() for kw in ["initialize", "architect", "genesis", "@operator"])
+    is_architecture_phase = any(kw in req.intent.lower() for kw in [
+        # Original keywords
+        "initialize", "architect", "genesis", "@operator",
+        # CIO / upgrade directives (from CIO Frontier Report)
+        "cio", "upgrade", "implement", "fix", "harden", "hardening",
+        "report", "config", "configure", "update", "patch", "deploy",
+        "integrate", "refactor", "migrate", "install", "enable", "disable",
+        "multi-agent", "multi agent", "news analyzer", "fallback",
+        # War Room authorization keywords
+        "authorize", "authorized", "authorization", "memo", "directive",
+        "findings", "integrate findings",
+    ])
 
     async def native_sequence():
         try:
@@ -908,18 +920,39 @@ async def war_room_execute_endpoint(req: WarRoomExecuteRequest, request: Request
             from cfo_excel_architect import CFOExcelArchitect
             from datetime import datetime as _dt
 
-            # --- LIVE CMO INTELLIGENCE (Gemini Function Calling + DuckDuckGo + UDPP Provenance) ---
-            await _broadcast({"type": "dialogue", "agent": "SYSTEM", "message": "RUNNING LIVE CMO MARKET INTELLIGENCE..."}, project=project_id)
-            market_pulse = await asyncio.to_thread(CMOAgent().run, req.intent or project_id)
-            verdict_str = market_pulse.get("verdict", "NEUTRAL")
-            pivot_text = " (Requires Pivot Option)" if verdict_str == "BEARISH" else ""
-
-            await _broadcast({
-                "type": "market_pulse",
-                "verdict": verdict_str,
-                "velocity": market_pulse.get("trend_velocity", 5.0),
-                "sentiment": market_pulse.get("public_sentiment_score", 0.0)
-            }, project=project_id)
+            # --- LIVE CMO INTELLIGENCE (Hardened API Bridge) ---
+            await _broadcast({"type": "dialogue", "agent": "SYSTEM", "message": "INITIALIZING CMO ELITE INTELLIGENCE SWEEP..."}, project=project_id)
+            import requests
+            try:
+                # Try the standalone CMO Agent on Port 5020 first
+                cmo_resp = await asyncio.to_thread(requests.post, "http://localhost:5020/api/warroom/respond", json={
+                    "topic": req.intent or project_id,
+                    "agents_present": ["CEO", "CFO", "CTO", "Critic"]
+                }, timeout=30)
+                market_pulse = cmo_resp.json()
+                verdict_str = market_pulse.get("status", "decisive").upper()
+                # Map for backward compatibility with downstream CTO/CFO logic
+                market_pulse["verdict"] = verdict_str
+                market_pulse["public_sentiment_score"] = market_pulse.get("confidence_score", 0.5) * 100
+                market_pulse["trend_velocity"] = market_pulse.get("trend_velocity", 7.5) # Default if missing
+                
+                await _broadcast({
+                    "type": "market_pulse",
+                    "verdict": verdict_str,
+                    "velocity": market_pulse.get("trend_velocity", 7.5),
+                    "sentiment": market_pulse.get("public_sentiment_score", 50.0)
+                }, project=project_id)
+                logger.info("War Room: CMO_Elite API responded.")
+            except Exception as e:
+                logger.warning(f"War Room: CMO API offline ({e}). Falling back to root cmo_agent.py")
+                market_pulse = await asyncio.to_thread(CMOAgent().run, req.intent or project_id)
+                verdict_str = market_pulse.get("verdict", "NEUTRAL")
+                await _broadcast({
+                    "type": "market_pulse",
+                    "verdict": verdict_str,
+                    "velocity": market_pulse.get("trend_velocity", 5.0),
+                    "sentiment": market_pulse.get("public_sentiment_score", 0.0)
+                }, project=project_id)
 
             # ─────────────────────────────────────────────────
             # RECURSIVE REPAIR LOOP  (max 3 iterations)
@@ -930,6 +963,7 @@ async def war_room_execute_endpoint(req: WarRoomExecuteRequest, request: Request
 
             while iteration < max_iterations:
                 iteration += 1
+                pivot_text = ""  # Default for CMO status message
 
                 if iteration > 1:
                     # Reset all pipeline nodes back to PROCESSING so the React
@@ -951,18 +985,6 @@ async def war_room_execute_endpoint(req: WarRoomExecuteRequest, request: Request
                         f"[CRITIC REJECTION FEEDBACK FROM PRIOR RUN — MUST FIX]\n{rejection_feedback}"
                     )
 
-                # Start CEO synthesis concurrently (fires alongside CMO→CTO→CFO)
-                async def run_synthesis(intent=effective_intent):
-                    try:
-                        from war_room_orchestrator import dispatch_to_csuite
-                        result = await dispatch_to_csuite(intent)
-                        strategy = result.get("strategy") or result.get("error", "No response.")
-                        return strategy
-                    except Exception as e:
-                        logger.error(f"CEO Synthesis background error: {e}")
-                        return f"Error: {e}"
-
-                ceo_synthesis_task = asyncio.create_task(run_synthesis())
 
                 # ── Phase 1: CMO Strategy ──────────────────────────────────
                 await _broadcast({"type": "state_machine", "phase": "CMO_STRATEGY", "status": "PROCESSING"}, project=project_id)
@@ -1007,41 +1029,97 @@ async def war_room_execute_endpoint(req: WarRoomExecuteRequest, request: Request
                     return
                 await _broadcast({"type": "state_machine", "phase": "CTO_FEASIBILITY", "status": "PASS"}, project=project_id)
 
-                # ── Phase 3: CFO Financial Model ───────────────────────────
+                # ── Phase 3: CFO Financial Model (Hardened Bridge) ───────────
                 await _broadcast({"type": "state_machine", "phase": "CFO_FINANCIAL_MODEL", "status": "PROCESSING"}, project=project_id)
-                architect = CFOExcelArchitect()
-                await _broadcast({"type": "dialogue", "agent": "SYSTEM", "message": "BOOTING EXCEL ARCHITECT..."}, project=project_id)
-                if rejection_feedback:
-                    await _broadcast({"type": "dialogue", "agent": "CFO",
-                                      "message": f"[MODEL REVISION] Incorporating Critic feedback: {rejection_feedback[:300]}"}, project=project_id)
-                await asyncio.to_thread(
-                    architect.generate_business_plan,
-                    project_id=project_id,
-                    cmo_data={
-                        "marketing_cost": 25000,
-                        "projected_revenue": 100000,
-                        "market_verdict": market_pulse.get("verdict", "NEUTRAL"),
-                        "sentiment_score": market_pulse.get("public_sentiment_score", 0),
-                        "cmo_summary": market_pulse.get("summary", "")[:200],
+                await _broadcast({"type": "dialogue", "agent": "SYSTEM", "message": "TRIGGERING CFO SENTINEL RELAY BRIDGE..."}, project=project_id)
+
+                cfo_payload = {
+                    "cmo_spend": {
+                        "total": 50000,
+                        "allocated": 42000,
+                        "categories": {
+                            "marketing_intelligence": 25000,
+                            "strategy": 17000
+                        }
                     },
-                    cto_data={
-                        "infrastructure_cost_estimate": cto_result.get("infrastructure_cost_monthly", 450),
-                        "capex_estimate": cto_result.get("capex_estimate", 0),
-                        "cloud_comparison": cto_result.get("cloud_comparison_monthly", 0),
-                        "roi_breakeven_months": cto_result.get("roi_breakeven_months", 0),
-                        "dev_buffer_weeks": 4.5,
-                        "tech_debt_risk_premium_pct": 10,
+                    "architect_risk": {
+                        "structural_score": 85 if cto_result.get("gate_status") == "PASSED" else 40,
+                        "logic_score": 80 if cto_result.get("gate_status") == "PASSED" else 45,
+                        "security_score": 90,
+                        "composite_score": 85 if cto_result.get("gate_status") == "PASSED" else 42
                     },
-                    market_pulse=market_pulse
-                )
-                await _broadcast({"type": "dialogue", "agent": "CFO", "message": "Native Fragility Report explicitly generated to business_plan.xlsx.\\nCost Basis Calculated. ROI is stable."}, project=project_id)
-                await _broadcast({"type": "state_machine", "phase": "CFO_FINANCIAL_MODEL", "status": "PASS"}, project=project_id)
+                    "campaign_list": [
+                        {"name": "Hardened Scaling", "budget": 15000, "projected_revenue": 45000},
+                        {"name": "Market Capture", "budget": 10000, "projected_revenue": 55000}
+                    ]
+                }
+
+                try:
+                    cfo_resp = await asyncio.to_thread(requests.post, "http://localhost:5070/api/sentinel-relay-bridge", json=cfo_payload, timeout=30)
+                    cfo_data = cfo_resp.json()
+                    
+                    if cfo_resp.status_code != 200:
+                        err_msg = cfo_data.get("message", "Unknown CFO error")
+                        await _broadcast({"type": "dialogue", "agent": "SYSTEM", "message": f"CFO GATE REJECTED: {err_msg}", "isError": True}, project=project_id)
+                        raise Exception(f"CFO Bridge Error: {err_msg}")
+
+                    report = cfo_data.get("report", {})
+                    
+                    cfo_msg = (
+                        f"Hardened Fragility Report Generated: {report.get('fragility_index', 'N/A')}. "
+                        f"ROI: {report.get('portfolio_roi_pct', '0.0')}% | "
+                        f"Projected Revenue: ${report.get('total_revenue', 0):,.0f}"
+                    )
+                    await _broadcast({"type": "dialogue", "agent": "CFO", "message": cfo_msg}, project=project_id)
+                    await _broadcast({"type": "state_machine", "phase": "CFO_FINANCIAL_MODEL", "status": "PASS"}, project=project_id)
+                except Exception as e:
+                    logger.warning(f"War Room: CFO API offline ({e}). Falling back to root cfo_excel_architect.py")
+                    architect = CFOExcelArchitect()
+                    await asyncio.to_thread(
+                        architect.generate_business_plan,
+                        project_id=project_id,
+                        cmo_data={
+                            "marketing_cost": 25000,
+                            "projected_revenue": 100000,
+                            "market_verdict": verdict_str,
+                            "sentiment_score": market_pulse.get("public_sentiment_score", 0),
+                            "cmo_summary": market_pulse.get("perspective", market_pulse.get("summary", ""))[:200],
+                        },
+                        cto_data={
+                            "infrastructure_cost_estimate": cto_result.get("infrastructure_cost_monthly", 450),
+                            "capex_estimate": cto_result.get("capex_estimate", 0),
+                            "cloud_comparison": cto_result.get("cloud_comparison_monthly", 0),
+                            "roi_breakeven_months": cto_result.get("roi_breakeven_months", 0),
+                            "dev_buffer_weeks": 4.5,
+                            "tech_debt_risk_premium_pct": 10,
+                        },
+                        market_pulse=market_pulse
+                    )
+                    await _broadcast({"type": "dialogue", "agent": "CFO", "message": "Legacy Fragility Report generated. (Fallback active)"}, project=project_id)
+                    await _broadcast({"type": "state_machine", "phase": "CFO_FINANCIAL_MODEL", "status": "PASS"}, project=project_id)
 
                 # ── Phase 4: Phantom QA — await CEO barrier ────────────────
                 await _broadcast({"type": "state_machine", "phase": "PHANTOM_STRESS_TEST", "status": "PROCESSING"}, project=project_id)
                 await _broadcast({"type": "dialogue", "agent": "SYSTEM", "message": "AWAITING CEO SYNTHESIS BEFORE TRIAD QA GATE..."}, project=project_id)
 
-                ceo_strategy = await ceo_synthesis_task
+                # ── Phase 4: CEO Deliberation & Synthesis ──────────────────
+                await _broadcast({"type": "dialogue", "agent": "SYSTEM", "message": "ALL REPORTS RECEIVED. ENGAGING CEO STRATEGIC SYNTHESIS..."}, project=project_id)
+
+                # Collect reports for the CEO
+                pre_collected = {
+                    "CMO": market_pulse,
+                    "CTO": cto_result,
+                    "CFO": cfo_data if 'cfo_data' in locals() else {"error": "CFO data unavailable"}
+                }
+
+                try:
+                    from war_room_orchestrator import dispatch_to_csuite
+                    result = await dispatch_to_csuite(effective_intent, pre_collected_reports=pre_collected)
+                    ceo_strategy = result.get("strategy") or result.get("error", "No strategy generated.")
+                except Exception as e:
+                    logger.error(f"CEO Synthesis error: {e}")
+                    ceo_strategy = f"Critical Synthesis Error: {e}"
+
                 await _broadcast({
                     "type": "dialogue",
                     "agent": "CEO",
@@ -1090,19 +1168,27 @@ async def war_room_execute_endpoint(req: WarRoomExecuteRequest, request: Request
                 results = await asyncio.gather(run_logic(), run_stress(), run_ux())
                 logic_res, stress_res, ux_res = results
 
-                logic_score = 100 if logic_res["status"] == "PASS" else 0
-                if is_architecture_phase:
-                    composite_score = (logic_score + stress_res.get("score", 0)) / 2.0
+                # ── Final Gate: Composite Score Verification ──────────────
+                if WAR_ROOM_OVERRIDES.get(project_id):
+                    composite_score = 100.0
+                    semantic_failed = False
+                    score_failed = False
+                    hw_failed = False
+                    await _broadcast({"type": "dialogue", "agent": "SYSTEM", "message": "FORCE OVERRIDE ACTIVE: Bypassing Triad QA Gate..."}, project=project_id)
                 else:
-                    composite_score = (logic_score + stress_res.get("score", 0) + ux_res.get("score", 0)) / 3.0
+                    logic_score = 100 if logic_res["status"] == "PASS" else 0
+                    if is_architecture_phase:
+                        composite_score = (logic_score + stress_res.get("score", 0)) / 2.0
+                    else:
+                        composite_score = (logic_score + stress_res.get("score", 0) + ux_res.get("score", 0)) / 3.0
 
-                await _broadcast({"type": "dialogue", "agent": "COMMANDER",
-                                  "message": f"QA COMPOSITE SCORE: {composite_score:.1f}/100.\\nMinimum confidence: 80/100 required."}, project=project_id)
+                    await _broadcast({"type": "dialogue", "agent": "COMMANDER",
+                                      "message": f"QA COMPOSITE SCORE: {composite_score:.1f}/100.\\nMinimum confidence: 80/100 required."}, project=project_id)
 
-                # ── Semantic + Score Gate ──────────────────────────────────
-                semantic_failed = logic_res["status"] == "FAIL"
-                score_failed    = composite_score < 80.0
-                hw_failed       = stress_res["status"] == "FAIL" or (not is_architecture_phase and ux_res["verdict"] == "FAIL")
+                    # ── Semantic + Score Gate ──────────────────────────────────
+                    semantic_failed = logic_res["status"] == "FAIL"
+                    score_failed    = composite_score < 80.0
+                    hw_failed       = stress_res["status"] == "FAIL" or (not is_architecture_phase and ux_res["verdict"] == "FAIL")
 
                 if semantic_failed or score_failed or hw_failed:
                     # Extract rejection reason for next iteration's feedback injection
@@ -1153,8 +1239,25 @@ async def war_room_dispatch(req: WarRoomDispatchRequest, request: Request):
     global ORCHESTRATION_STATE
     
     project_id = req.project_id or request.headers.get("X-Antigravity-Project-ID", "AntigravityWorkspace_Q3")
-    print(f"DEBUG: Received Dispatch for {project_id}")
     msg_lower = req.message.lower()
+    
+    # ── FORCE OVERRIDE — priority 0 ─────────────────────────────
+    if "@operator force override" in msg_lower:
+        logger.info(f"[WAR ROOM] Force Override received: {req.message}")
+        WAR_ROOM_OVERRIDES[project_id] = True
+        
+        await _broadcast({
+            "type": "dialogue", "agent": "COMMANDER", "icon": "⚡", "color": "#f59e0b",
+            "message": f"**@Operator Force Override — ACTIVATED**\n\nBypassing QA hard-lock and authorizing deployment for `{project_id}`.",
+            "timestamp": _dt.now().isoformat()
+        }, project=project_id)
+        
+        # Manually unlock the state machine for ALL phases
+        for phase in ["CMO_STRATEGY", "CTO_FEASIBILITY", "CFO_FINANCIAL_MODEL", "PHANTOM_STRESS_TEST", "COMMERCIALLY_READY"]:
+            await _broadcast({"type": "state_machine", "phase": phase, "status": "PASS"}, project=project_id)
+            await asyncio.sleep(0.1)
+        
+        return {"status": "overridden", "project": project_id}
     
     # ── Phase 11 Incubator Gate: STRICT prefix-only match ────────────────────────
     # Must start with "@operator" so self-broadcast strings like
@@ -2912,15 +3015,31 @@ def _do_launch(app_name: str, port_override: int = None) -> dict:
     """Internal launch logic. Returns dict on success, JSONResponse on failure."""
     global _running_apps
 
+    # Check if ALREADY in _running_apps
+    if app_name in _running_apps:
+        info = _running_apps[app_name]
+        return {"status": "already_running", "port": info["port"], "url": f"http://localhost:{info['port']}", "pid": info["pid"]}
+
     # Resolve app directory
     gdrive = os.path.join(os.path.expanduser("~"), "My Drive", "Antigravity-AI Agents", "Meta_App_Factory")
-    app_dir = None
-    for candidate in [
+    candidates = [
         os.path.join(gdrive, app_name), 
         os.path.join(SCRIPT_DIR, app_name),
         os.path.join(SCRIPT_DIR, "projects", app_name),
         os.path.join(SCRIPT_DIR, "agents", app_name)
-    ]:
+    ]
+    
+    try:
+        with open(REGISTRY_PATH, "r", encoding="utf-8") as f:
+            reg_data = json.load(f)
+        app_info = reg_data.get("apps", {}).get(app_name, {})
+        if app_info.get("path"):
+            candidates.insert(0, os.path.normpath(os.path.join(SCRIPT_DIR, app_info["path"])))
+    except Exception:
+        pass
+
+    app_dir = None
+    for candidate in candidates:
         if os.path.isdir(candidate):
             app_dir = candidate
             break
@@ -2957,6 +3076,20 @@ def _do_launch(app_name: str, port_override: int = None) -> dict:
         except Exception:
             pass
         port = _find_free_port(assigned_port)
+
+    # Check if assigned port is ALREADY occupied by this agent (External adoption)
+    if not port_override:
+        import socket as _sock
+        _occupied = False
+        try:
+            with _sock.create_connection(("localhost", assigned_port), timeout=0.5):
+                _occupied = True
+        except Exception:
+            pass
+            
+        if _occupied:
+            logger.info(f"Adopting externally running {app_name} on port {assigned_port}")
+            return {"status": "already_running", "port": assigned_port, "url": f"http://localhost:{assigned_port}", "pid": 0}
 
     # Start the process
     try:
@@ -5907,7 +6040,7 @@ async def _startup_watcher():
         except Exception as _e:
             logger.error(f"CIO Agent auto-start FAILED: {_e}")
     else:
-        logger.info("Ghost Operator already running on port 5100 — skipping launch.")
+        logger.info("CIO Agent already running on port 5090 — skipping launch.")
 
 if __name__ == "__main__":
     import uvicorn

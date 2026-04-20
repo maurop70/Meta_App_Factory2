@@ -110,6 +110,18 @@ class AgentBase:
     """
 
     AGENT_ID = "base"
+    
+    def __init__(self):
+        self._trace = []
+
+    def add_trace(self, message: str, node: str = "INTERNAL", status: str = "INFO"):
+        """Add a thought process log entry to the agent's internal trace."""
+        self._trace.append({
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "node": node,
+            "message": message,
+            "status": status
+        })
 
     def run(self, intent: str) -> dict:
         """Override in subclass. Must return a flat dict with _provenance sidecar."""
@@ -182,23 +194,11 @@ class AgentBase:
 
     def merge_into_output(self, flat_result: dict, provenance_block: dict) -> dict:
         """
-        Attaches the _provenance sidecar to a flat output dict.
+        Attaches the _provenance and _trace sidecars to a flat output dict.
         Flat values are preserved unchanged — fully backward-compatible.
-
-        Example:
-            flat_result = {"verdict": "BEARISH", "trend_velocity": 3.2}
-            After merge:
-            {
-                "verdict": "BEARISH",            ← unchanged
-                "trend_velocity": 3.2,           ← unchanged
-                "_provenance": {
-                    "verdict": {ProvenanceClaim},
-                    "trend_velocity": {ProvenanceClaim}
-                },
-                "_agent_id": "cmo"
-            }
         """
         flat_result["_provenance"] = provenance_block
+        flat_result["trace"] = self._trace
         flat_result["_agent_id"] = self.AGENT_ID
         return flat_result
 

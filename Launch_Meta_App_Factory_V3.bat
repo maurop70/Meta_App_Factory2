@@ -81,6 +81,7 @@ set "PYTHONPATH=%CD%;%CD%\shared_modules;%PYTHONPATH%"
 
 :: ── Auto-Start Neural Network Clusters ──────────────────────
 echo  [1.6/3] Starting C-Suite and Elite Nodes...
+start "CMO Agent" /min cmd /c "cd ..\CMO_Elite_Agent\backend && \"%PYTHON%\" server.py"
 start "C-Suite Cluster" /min cmd /c "cd CFO_Agent && \"%PYTHON%\" server.py"
 start "Phantom QA Elite" /min cmd /c "cd Phantom_QA_Elite && Launch_Phantom_QA.bat"
 start "Master Architect Elite" /min cmd /c "cd Master_Architect_Elite_Logic && Launch_Master_Architect.bat"
@@ -93,6 +94,10 @@ start "Ngrok Zero-Trust Tunnel" /min "%PYTHON%" skills\expose_localhost.py
 :: ── Start n8n Credential Watchdog (V3 Active Self-Repair) ──
 echo  [1.8/3] Starting Aether Watchdog Daemon...
 start "V3 Watchdog Daemon" /min "%PYTHON%" n8n_watchdog.py --daemon
+
+:: ── War Room Pre-flight Checks ────────────────────────────
+echo  [1.9/3] Running War Room Pre-flight Checks...
+"%PYTHON%" warroom_preflight.py
 
 :: ── Start Frontend UI (Auto-detect port 5173 vs 5174) ────
 echo  [2/3] Starting Factory UI...

@@ -254,6 +254,10 @@ async def dashboard():
             <td><a href="/api/cio/memos/{m['filename']}" class="memo-link">📋 {m['filename']}</a></td>
             <td>{created}</td>
             <td>{size_kb} KB</td>
+            <td>
+                <button class="action-btn primary" style="padding: 4px 12px; font-size: 11px;" 
+                        onclick="authorizeUpgrade('{m['filename']}')">Authorize</button>
+            </td>
         </tr>"""
 
     if not memo_rows:
@@ -518,7 +522,7 @@ td {{
     <div class="card">
         <h3>Generated Upgrade Memos</h3>
         <table>
-            <thead><tr><th>Memo</th><th>Created</th><th>Size</th></tr></thead>
+            <thead><tr><th>Memo</th><th>Created</th><th>Size</th><th>Action</th></tr></thead>
             <tbody>{memo_rows}</tbody>
         </table>
     </div>
@@ -573,6 +577,39 @@ async function triggerSweep() {{
     }} finally {{
         btn.disabled = false;
         btn.textContent = '🔍 Trigger Intelligence Sweep';
+    }}
+}}
+
+async function authorizeUpgrade(filename) {{
+    const directive = prompt("Enter directive for Master Architect (e.g., 'Apply all high-priority fixes'):", "Apply CIO recommended architectural upgrades.");
+    if (!directive) return;
+
+    const result = document.getElementById('sweepResult');
+    result.className = '';
+    result.style.display = 'block';
+    result.innerHTML = '⏳ Dispatching authorization to War Room...';
+
+    try {{
+        const res = await fetch('/api/cio/authorize', {{
+            method: 'POST',
+            headers: {{'Content-Type': 'application/json'}},
+            body: JSON.stringify({{
+                memo_filename: filename,
+                directive: directive
+            }})
+        }});
+        const data = await res.json();
+
+        if (res.ok) {{
+            result.className = 'success';
+            result.innerHTML = '🚀 <strong>Authorization Sent!</strong><br>' + data.message;
+        }} else {{
+            result.className = 'error';
+            result.innerHTML = '❌ ' + (data.error || 'Failed to dispatch.');
+        }}
+    }} catch (err) {{
+        result.className = 'error';
+        result.innerHTML = '❌ Connection error: ' + err.message;
     }}
 }}
 </script>

@@ -255,6 +255,13 @@ def generate_news_report(market_snapshot=None):
 
         if resp is None or resp.status_code != 200:
             logger.error(f"All Gemini models failed. Last error: {last_error[:300]}")
+            # ── CIO Upgrade #2: Ollama Local Model Fallback ──────────────
+            # Source: CIO Frontier Report 2026-04-18 — Discovery #4
+            # "Local/Edge Deployment for Resource-Efficient Models"
+            ollama_result = _try_ollama_fallback(system_prompt, user_prompt, market_snapshot, now)
+            if ollama_result:
+                return ollama_result
+            # Final static fallback if Ollama also unavailable
             return _build_local_fallback(market_snapshot, now, f"All models failed: {last_error[:200]}")
 
         result = resp.json()
@@ -321,6 +328,135 @@ def generate_news_report(market_snapshot=None):
     except Exception as e:
         logger.error(f"News report generation failed: {e}")
         return _build_local_fallback(market_snapshot, now, str(e))
+
+
+def _try_ollama_fallback(system_prompt: str, user_prompt: str, market_snapshot, now) -> dict:
+    """
+    CIO Upgrade #2 — Ollama Local Model Fallback
+    ═════════════════════════════════════════════
+    Attempts to generate the news report using a locally-running Ollama
+    instance when all Gemini cloud models are unavailable.
+
+    Tries models in order: llama3 → mistral → phi3
+    Returns None if Ollama is not running or all local models fail.
+
+    Benefits:
+      - Ultra-low latency (<2s on modern hardware)
+      - Full offline/edge capability
+      - Zero cloud egress costs
+      - Enhanced privacy (no data leaves the machine)
+    """
+    import requests as _req
+
+    OLLAMA_BASE = "http://localhost:11434"
+    LOCAL_MODELS = ["llama3", "mistral", "phi3"]
+
+    # ── Health check: is Ollama running? ──────────────────────────
+    try:
+        health = _req.get(f"{OLLAMA_BASE}/api/tags", timeout=3)
+        if health.status_code != 200:
+            logger.info("[Ollama] Not available (health check failed). Skipping local fallback.")
+            return None
+        available_models = {m["name"].split(":")[0] for m in health.json().get("models", [])}
+        logger.info(f"[Ollama] Running. Available models: {available_models}")
+    except Exception as e:
+        logger.info(f"[Ollama] Not reachable: {e}. Skipping local fallback.")
+        return None
+
+    # ── Combine prompts for local model ───────────────────────────
+    full_prompt = (
+        f"{system_prompt}\n\n"
+        f"{user_prompt}\n\n"
+        "IMPORTANT: Respond with VALID JSON only matching the schema above. "
+        "No markdown, no code fences, no explanations outside the JSON."
+    )
+
+    for model_name in LOCAL_MODELS:
+        # Only try models that are actually installed
+        if model_name not in available_models:
+            logger.debug(f"[Ollama] Model '{model_name}' not installed, skipping.")
+            continue
+
+        try:
+            logger.info(f"[Ollama] Attempting local generation with {model_name}...")
+            resp = _req.post(
+                f"{OLLAMA_BASE}/api/generate",
+                json={
+                    "model": model_name,
+                    "prompt": full_prompt,
+                    "stream": False,
+                    "options": {
+                        "temperature": 0.3,
+                        "num_predict": 4096,
+                    }
+                },
+                timeout=90  # Local models can be slower on first call
+            )
+
+            if resp.status_code != 200:
+                logger.warning(f"[Ollama] {model_name} returned HTTP {resp.status_code}")
+                continue
+
+            raw_text = resp.json().get("response", "")
+            if not raw_text:
+                logger.warning(f"[Ollama] {model_name} returned empty response")
+                continue
+
+            # Strip markdown fences if present
+            clean = raw_text.strip()
+            if clean.startswith("```"):
+                clean = re.sub(r"^```(?:json)?\s*", "", clean)
+                clean = re.sub(r"```\s*$", "", clean)
+            clean = clean.strip()
+
+            # Find the JSON object (skip any preamble text)
+            json_start = clean.find("{")
+            if json_start > 0:
+                clean = clean[json_start:]
+
+            report = json.loads(clean)
+
+            # Add source metadata
+            report["generated_at"] = now.isoformat()
+            report["market_snapshot"] = market_snapshot or {}
+            report["_source"] = f"ollama/{model_name}"
+            report["_note"] = "Generated locally via Ollama — cloud models unavailable"
+
+            # Persist to disk
+            with open(REPORT_PATH, "w", encoding="utf-8") as f:
+                json.dump(report, f, indent=2, default=str)
+
+            logger.info(
+                f"[Ollama] ✅ Report generated with {model_name}: "
+                f"{len(report.get('headlines', []))} headlines"
+            )
+            return report
+
+        except json.JSONDecodeError as e:
+            logger.warning(f"[Ollama] {model_name} JSON parse error: {e}. Trying repair...")
+            # Attempt basic JSON repair
+            try:
+                open_braces = clean.count("{") - clean.count("}")
+                open_brackets = clean.count("[") - clean.count("]")
+                repaired = clean + "]" * max(0, open_brackets) + "}" * max(0, open_braces)
+                report = json.loads(repaired)
+                report["generated_at"] = now.isoformat()
+                report["market_snapshot"] = market_snapshot or {}
+                report["_source"] = f"ollama/{model_name}/repaired"
+                with open(REPORT_PATH, "w", encoding="utf-8") as f:
+                    json.dump(report, f, indent=2, default=str)
+                logger.info(f"[Ollama] Repaired JSON from {model_name}")
+                return report
+            except Exception:
+                logger.warning(f"[Ollama] {model_name} repair failed, trying next model.")
+                continue
+
+        except Exception as e:
+            logger.warning(f"[Ollama] {model_name} failed: {e}. Trying next model.")
+            continue
+
+    logger.warning("[Ollama] All local models exhausted. Falling back to static memo.")
+    return None
 
 
 def _build_local_fallback(market_snapshot, now, reason=""):

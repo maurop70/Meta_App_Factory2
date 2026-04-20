@@ -55,10 +55,12 @@ from cfo_engine import CFOExecutionController
 from cfo_compiler import CFOCompiler
 from cfo_logic import FinancialPayload, CFOAnalysisResult, calculate_financial_health
 from llm_router import LLMRouter
+from formula_auditor import CFOFormulaAuditor, ExcelFormula, FormulaAuditResult
 
 cfo = CFOExecutionController()
 cfo_compiler = CFOCompiler()
 llm_router = LLMRouter()
+formula_auditor = CFOFormulaAuditor()
 
 if os.getenv("GEMINI_API_KEY"):
     genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
@@ -1378,6 +1380,20 @@ async def process_audit(request: Request):
         "findings": [{"passed": final_status == "PASS", "test_name": "Fragility Gate", "details": f"Fragility Index is {math_result.fragility_index}"}]
     }
 
+
+
+# ── Specialized CFO Formula Auditor (CIO Discovery #4) ─────────
+@app.post("/api/cfo/formula/audit")
+async def audit_formula(formula: str = Form(...)):
+    """Audits an Excel formula for syntax, logic, and risks."""
+    result = formula_auditor.audit_formula(formula)
+    return result.dict()
+
+@app.post("/api/cfo/formula/generate")
+async def generate_formula(intent: str = Form(...)):
+    """Generates a Pydantic-validated Excel formula based on natural language intent."""
+    formula_obj = formula_auditor.generate_formula(intent)
+    return formula_obj.dict()
 
 
 # ── Hybrid LLM Router Status (CIO Discovery #3) ─────────
