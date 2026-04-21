@@ -1,82 +1,5 @@
 [
   {
-    "timestamp": "2026-04-08T11:31:27.566702",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: ghost_operator (port 5100)",
-    "outcome": {
-      "port": 5100,
-      "service": "ghost_operator",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T11:33:40.654981",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T11:33:46.694125",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: ghost_operator (port 5100)",
-    "outcome": {
-      "port": 5100,
-      "service": "ghost_operator",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T11:35:59.739878",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T11:36:05.789247",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: ghost_operator (port 5100)",
-    "outcome": {
-      "port": 5100,
-      "service": "ghost_operator",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T11:38:18.915497",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: c_suite (port 5070)",
-    "outcome": {
-      "port": 5070,
-      "service": "c_suite",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
-    "timestamp": "2026-04-08T11:38:24.950341",
-    "project": "NativeWatchdog",
-    "target": "Auto-Restart: ghost_operator (port 5100)",
-    "outcome": {
-      "port": 5100,
-      "service": "ghost_operator",
-      "consecutive_fails": 3
-    },
-    "attempts": "AUTO_RESTART"
-  },
-  {
     "timestamp": "2026-04-08T11:40:38.020245",
     "project": "NativeWatchdog",
     "target": "Auto-Restart: c_suite (port 5070)",
@@ -4946,5 +4869,84 @@
       "operator_status": 200
     },
     "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-20T11:39:13.091255",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart Dispatch: master_architect (port 5050)",
+    "outcome": {
+      "port": 5050,
+      "service": "master_architect",
+      "consecutive_fails": 3,
+      "operator_status": 200
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-20T11:39:21.178184",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart Dispatch: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3,
+      "operator_status": 200
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-20T11:39:29.252472",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart Dispatch: clo_legal (port 5080)",
+    "outcome": {
+      "port": 5080,
+      "service": "clo_legal",
+      "consecutive_fails": 3,
+      "operator_status": 200
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-20T14:40:53.952122",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart Dispatch: master_architect (port 5050)",
+    "outcome": {
+      "port": 5050,
+      "service": "master_architect",
+      "consecutive_fails": 3,
+      "operator_status": 200
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-20T14:41:02.087602",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart Dispatch: c_suite (port 5070)",
+    "outcome": {
+      "port": 5070,
+      "service": "c_suite",
+      "consecutive_fails": 3,
+      "operator_status": 200
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-20T14:41:10.214204",
+    "project": "NativeWatchdog",
+    "target": "Auto-Restart Dispatch: clo_legal (port 5080)",
+    "outcome": {
+      "port": 5080,
+      "service": "clo_legal",
+      "consecutive_fails": 3,
+      "operator_status": 200
+    },
+    "attempts": "AUTO_RESTART"
+  },
+  {
+    "timestamp": "2026-04-20T14:51:38.051999",
+    "project": "child_app",
+    "target": "https://humanresource.app.n8n.cloud/webhook/critic-v2",
+    "outcome": "buffered_on_first",
+    "attempts": null
   }
 ]

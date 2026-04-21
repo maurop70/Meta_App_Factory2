@@ -73,3 +73,5 @@ Employees email and phone.xlsx
 projects/*_chaos*/
 projects/*_chaos/
 Venture_Data/scout_pitches.json
+.git
+.dockerignore
