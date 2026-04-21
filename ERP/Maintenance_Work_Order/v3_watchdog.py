@@ -13,8 +13,9 @@ def run_server():
     
     while True:
         try:
-            # Start uvicorn as a subprocess
-            process = subprocess.Popen(cmd)
+            # Start uvicorn as a subprocess in a new console to prevent EOF crashes when run headlessly
+            # TODO: Remove Windows-specific creationflags during Docker migration as they will crash a Linux Docker daemon
+            process = subprocess.Popen(cmd, creationflags=subprocess.CREATE_NEW_CONSOLE if os.name == 'nt' else 0)
             
             # Wait for the process to exit
             process.wait()

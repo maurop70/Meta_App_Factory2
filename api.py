@@ -4399,27 +4399,75 @@ async def warroom_execute_outcome(request: Request):
             f"EOS CONTEXT:\n{eos_snapshot}"
         )
     
-    # Use Model Router (Claude preferred for structured planning)
+    # AAP Integration: Closed-loop generation and audit pipeline
+    def _generate_draft(prompt_text):
+        res = ""
+        if _MODEL_ROUTER_AVAILABLE:
+            res = _model_route("implementation_plan", prompt_text)
+        if not res:
+            api_key = get_secret("GEMINI_API_KEY")
+            if api_key:
+                try:
+                    import requests as _req
+                    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+                    headers = {"Content-Type": "application/json", "x-goog-api-key": api_key}
+                    data = {"contents": [{"role": "user", "parts": [{"text": prompt_text}]}]}
+                    r = _req.post(url, json=data, headers=headers, timeout=60)
+                    candidates = r.json().get("candidates", [])
+                    if candidates:
+                        res = candidates[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+                except Exception as e:
+                    logger.error(f"Plan generation failed: {e}")
+        return res
+
+    import sys
+    import importlib.util
+    from pathlib import Path
+
+    # PHASE 1: Hardened Import Logic
+    root_dir = Path(__file__).resolve().parent.parent
+    auditor_path = root_dir / "Specialist Agents" / "architecture_auditor.py"
+    
+    spec = importlib.util.spec_from_file_location("architecture_auditor", str(auditor_path))
+    architecture_auditor = importlib.util.module_from_spec(spec)
+    sys.modules["architecture_auditor"] = architecture_auditor
+    spec.loader.exec_module(architecture_auditor)
+    audit_implementation_plan = architecture_auditor.audit_implementation_plan
+
+    max_retries = 3
+    retry_count = 0
+    current_prompt = plan_prompt
     plan_text = ""
-    if _MODEL_ROUTER_AVAILABLE:
-        plan_text = _model_route("implementation_plan", plan_prompt)
-    
-    if not plan_text:
-        # Fallback to Gemini direct
-        api_key = get_secret("GEMINI_API_KEY")
-        if api_key:
-            try:
-                import requests as _req
-                url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
-                headers = {"Content-Type": "application/json", "x-goog-api-key": api_key}
-                data = {"contents": [{"role": "user", "parts": [{"text": plan_prompt}]}]}
-                r = _req.post(url, json=data, headers=headers, timeout=60)
-                candidates = r.json().get("candidates", [])
-                if candidates:
-                    plan_text = candidates[0].get("content", {}).get("parts", [{}])[0].get("text", "")
-            except Exception as e:
-                logger.error(f"Plan generation failed: {e}")
-    
+
+    while retry_count < max_retries:
+        draft_plan = _generate_draft(current_prompt)
+        if not draft_plan:
+            break
+            
+        logger.info(f"--> [AAP] Submitting draft plan to Architecture Auditor (Attempt {retry_count + 1})...")
+        audit_verdict = audit_implementation_plan(draft_plan)
+        
+        if audit_verdict.get("status") == "APPROVED":
+            logger.info("--> [AAP] STATUS: APPROVED. Proceeding to execution phase.")
+            plan_text = draft_plan
+            break
+        else:
+            logger.info("--> [AAP] STATUS: REJECTED. Initiating autonomous rewrite loop.")
+            correction_manifest = audit_verdict.get("correction_manifest", "Unspecified architectural flaw.")
+            current_prompt = (
+                f"Your previous implementation plan was REJECTED by the Senior Architecture Auditor.\n"
+                f"CORRECTIONS REQUIRED:\n{correction_manifest}\n\n"
+                f"ORIGINAL REQUEST:\n{plan_prompt}\n\n"
+                f"Rewrite the implementation plan, ensuring it perfectly complies with the required corrections."
+            )
+            retry_count += 1
+            plan_text = draft_plan # Fallback if max retries hit
+
+    # PHASE 2: Failsafe Lockdown
+    if retry_count >= max_retries and plan_text:
+        warning_header = "[CRITICAL ARCHITECTURE WARNING - MAX RETRIES EXCEEDED]\n\nThe Architecture Auditor repeatedly rejected the following implementation plan. It has been halted to prevent system degradation and MUST NOT be executed. Manual intervention required.\n\n"
+        plan_text = warning_header + plan_text
+            
     if not plan_text:
         plan_text = f"# Implementation Plan for {company}\n\nUnable to generate plan automatically. Please review the EOS deliverables in the project directory."
     

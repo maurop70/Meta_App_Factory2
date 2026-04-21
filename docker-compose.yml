@@ -1,0 +1,56 @@
+version: '3.8'
+
+x-maf-base: &maf-base
+  build:
+    context: .
+    target: backend
+  env_file: .env
+  restart: unless-stopped
+
+services:
+  api-gateway:
+    <<: *maf-base
+    container_name: maf_api_gateway
+    ports:
+      - "5000:5000"
+    command: uvicorn api:app --host 0.0.0.0 --port 5000
+
+  watchdog-daemon:
+    <<: *maf-base
+    container_name: maf_watchdog
+    command: python v3_watchdog.py --daemon
+
+  cfo-agent:
+    <<: *maf-base
+    container_name: maf_cfo_agent
+    working_dir: /app/CFO_Agent
+    command: python server.py
+    
+  cmo-agent:
+    <<: *maf-base
+    container_name: maf_cmo_agent
+    working_dir: /app/CMO_Elite_Agent/backend
+    command: python server.py
+
+  maintenance-backend:
+    <<: *maf-base
+    container_name: maf_maintenance_backend
+    ports:
+      - "8000:8000"
+    working_dir: /app/ERP/Maintenance_Work_Order
+    command: uvicorn maintenance_backend:app --host 0.0.0.0 --port 8000
+
+  factory-ui:
+    build:
+      context: ./factory_ui
+      dockerfile: Dockerfile.dev
+    container_name: maf_factory_ui
+    ports:
+      - "5173:5173"
+      - "5174:5174"
+    volumes:
+      - ./factory_ui:/app
+      - /app/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    restart: unless-stopped
