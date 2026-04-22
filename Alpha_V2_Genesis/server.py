@@ -35,9 +35,31 @@ def _v3_preflight():
 
 
 import os
+import sys
 import json
 import re
 import requests
+import logging
+
+# Ensure telemetry directory exists
+log_dir = "/var/log/aether_net"
+os.makedirs(log_dir, exist_ok=True)
+
+# Configure Telemetry with both Stream and File handlers
+logger = logging.getLogger("alpha_genesis")
+logger.setLevel(logging.INFO)
+
+formatter = logging.Formatter('%(asctime)s [%(name)s] %(levelname)s: %(message)s', datefmt="%H:%M:%S")
+
+# Console Handler
+ch = logging.StreamHandler(sys.stdout)
+ch.setFormatter(formatter)
+logger.addHandler(ch)
+
+# Telemetry File Handler
+fh = logging.FileHandler(os.path.join(log_dir, "alpha_genesis.log"))
+fh.setFormatter(formatter)
+logger.addHandler(fh)
 import sys
 import base64
 from datetime import datetime

@@ -17,6 +17,27 @@ except ImportError:
 # ── End V3 Integration ──────────────────────────────────
 
 from auto_heal import healed_post, auto_heal, diagnose
+import logging
+
+# Ensure telemetry directory exists
+log_dir = "/var/log/aether_net"
+os.makedirs(log_dir, exist_ok=True)
+
+# Configure Telemetry with both Stream and File handlers
+logger = logging.getLogger("resonance")
+logger.setLevel(logging.INFO)
+
+formatter = logging.Formatter('%(asctime)s [%(name)s] %(levelname)s: %(message)s', datefmt="%H:%M:%S")
+
+# Console Handler
+ch = logging.StreamHandler(sys.stdout)
+ch.setFormatter(formatter)
+logger.addHandler(ch)
+
+# Telemetry File Handler
+fh = logging.FileHandler(os.path.join(log_dir, "resonance.log"))
+fh.setFormatter(formatter)
+logger.addHandler(fh)
 
 def _v3_preflight():
     """V3: Ping Resonance_Watchdog_V3 before execution."""
@@ -248,7 +269,7 @@ DEFAULT_PARENT_CONFIG = {
 }
 
 # ── Council Engine Import ──────────────────────────────
-SENTINEL_DIR = os.path.join(SCRIPT_DIR, "Sentinel_Bridge")
+SENTINEL_DIR = os.path.join(SCRIPT_DIR, "Resonance_Engines")
 sys.path.insert(0, SENTINEL_DIR)
 try:
     from council_engine import build_council_prompt, get_council_status
@@ -990,7 +1011,7 @@ class DashboardCommandRequest(BaseModel):
 @app.post("/api/dashboard/command")
 def dashboard_command(req: DashboardCommandRequest):
     """Universal Input: sends a prompt to the n8n Brain webhook and returns the response."""
-    webhook_url = os.getenv("WEBHOOK_URL", "")
+    webhook_url = ""
     if not webhook_url:
         raise HTTPException(status_code=503, detail="WEBHOOK_URL not configured in .env")
 

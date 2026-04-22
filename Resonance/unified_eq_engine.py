@@ -66,7 +66,7 @@ logger = logging.getLogger("resonance.eq")
 SCRIPT_DIR = Path(__file__).resolve().parent
 FACTORY_DIR = SCRIPT_DIR.parent
 sys.path.insert(0, str(FACTORY_DIR))
-sys.path.insert(0, str(FACTORY_DIR / "Sentinel_Bridge"))
+sys.path.insert(0, str(FACTORY_DIR / "Resonance_Engines"))
 
 STATE_DIR = FACTORY_DIR / ".Gemini_state"
 EQ_STATE_PATH = STATE_DIR / "eq_state.json"

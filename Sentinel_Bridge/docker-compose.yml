@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  sentinel_bridge:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sentinel_bridge
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    ports:
+      # Zero collision with other macro-applications
+      - "5009:5009"
+    environment:
+      - SENTINEL_PORT=${SENTINEL_PORT:-5009}
+    volumes:
+      # Persistent volume for reminders, state, and fernet vaults
+      - ./data:/app/data
+      # Global system logic traversal to the root workspace (Read-Only)
+      - ../../.system_core:/app/.system_core:ro
+    restart: unless-stopped
+    networks:
+      - aether_net
+
+networks:
+  aether_net:
+    external: true
+    name: aether_net

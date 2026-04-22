@@ -1,0 +1,10 @@
+# Ignore local runtime data to prevent massive build context bloat
+Alpha_Data/
+__pycache__/
+*.pyc
+
+# Ignore legacy orchestration and local sync noise
+*.bat
+*.ps1
+.env
+.Gemini_state/

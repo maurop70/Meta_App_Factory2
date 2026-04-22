@@ -1,0 +1,15 @@
+# Ignore local runtime data to prevent massive build context bloat
+uploads/
+Professional_Reports/
+config/
+__pycache__/
+*.pyc
+
+# Ignore heavy node modules to protect Stage 1 build times
+resonance_ui/node_modules/
+
+# Ignore legacy orchestration and local sync noise
+*.bat
+*.ps1
+.env
+.Gemini_state/
