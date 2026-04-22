@@ -1,0 +1,26 @@
+{
+  "stress_level": 6.0,
+  "stress_history": [
+    {
+      "timestamp": "2026-03-11T20:53:24.847843+00:00",
+      "level": 6.0,
+      "signals": {
+        "error_rate": 3,
+        "circuit_breakers_open": 1,
+        "notification_frequency": 6
+      }
+    }
+  ],
+  "tone_feedback": [
+    {
+      "timestamp": "2026-03-11T20:53:24.848772+00:00",
+      "reaction": "positive",
+      "tone_used": "calming",
+      "context": "test context"
+    }
+  ],
+  "rejected_tones": [],
+  "preferred_tone": "calming",
+  "assessment_count": 1,
+  "last_assessment": "2026-03-11T20:53:24.847838+00:00"
+}

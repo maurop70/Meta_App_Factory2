@@ -1,79 +1,17 @@
-# ═══════════════════════════════════════════════════════
-#  Meta App Factory — Security Shield (.gitignore)
-# ═══════════════════════════════════════════════════════
+# Local Database & State
+*.db
+*.db-wal
+*.db-shm
+pending_sync/
+*.log
+auto_heal_log.json
 
-# ── Secrets & Credentials ─────────────────────────────
+# Environment Secrets
 .env
-*.env.local
-*.env.bak
-!env.template
-.vault_pw
-vault.enc
-vault.enc.salt
-*.key
 *.pem
-google_creds.json
-client_secret*.json
-token*.json
-token*.pickle
-utils/auth/
 
-# ── Node / Frontend ──────────────────────────────────
+# UI Build Artifacts
 node_modules/
 dist/
-.vite/
-
-# ── Python ───────────────────────────────────────────
 __pycache__/
-*.pyc
-*.pyo
-*.egg-info/
-.eggs/
-venv/
-.venv/
-
-# ── Logs ─────────────────────────────────────────────
-*.log
-alpha.log
-
-# ── Machine-Specific Runtime Data ────────────────────
-auto_heal_log.json
-local_pending_sync.json
-finance_state.json
-pending_sync/
-Alpha_Data/connection_info.json
-Alpha_Data/ledger_state.json
-Alpha_Data/ledger_cron_meta.json
-Alpha_Data/n8n_execution_log.json
-Alpha_Data/executions/
-Alpha_Data/news_report.json
-Alpha_Data/portfolio.json.bak
-Alpha_Data/.config_snapshots/
-Alpha_Data/LEDGER.md
-projects/*/warroom_history.json
-
-# ── OS Artifacts ─────────────────────────────────────
-.DS_Store
-Thumbs.db
-desktop.ini
-
-# ── Databases ────────────────────────────────────────
-*.db
-*.sqlite3
-
-# ── IDE ──────────────────────────────────────────────
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# ── Gemini State (session cache, not secrets) ────────
-.Gemini_state/
-
-# ── Agent Generated Data & Chaos Environments ────────
-CFO_Agent/reports/*.xlsx
-*.xlsx
-Employees email and phone.xlsx
-projects/*_chaos*/
-projects/*_chaos/
-Venture_Data/scout_pitches.json
+utils/auth/google_creds.json

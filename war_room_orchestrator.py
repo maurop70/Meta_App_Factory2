@@ -176,7 +176,7 @@ YOUR DIRECTIVE:
         # ── Direct REST call via httpx (async, no subprocess, no Windows pipe) ──
         # genai.Client on Windows uses gRPC over a named pipe → WinError 233.
         # httpx uses pure TCP sockets → zero subprocess involvement.
-        GEMINI_MODELS = ["gemini-2.5-pro", "gemini-2.0-flash", "gemini-1.5-flash"]
+        GEMINI_MODELS = ["gemini-2.5-pro", "gemini-2.5-flash"]
         GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 
         ceo_strategy = None

@@ -1,0 +1,5 @@
+print("Starting timeout test. This should be killed after 15 seconds.")
+start_time = time.time()
+while time.time() - start_time < 5:
+    time.sleep(1)
+print("Test completed successfully within expected time. Exiting.")
