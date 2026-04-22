@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  alpha_genesis:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: alpha_genesis
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+        reservations:
+          cpus: '0.50'
+          memory: 1G
+    ports:
+      - "5008:5008"
+    environment:
+      - ALPHA_RUNTIME_DIR=${ALPHA_RUNTIME_DIR}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    volumes:
+      # Mandatory persistent volume for Trade Journal, Portfolio, and Executions
+      - ./Alpha_Data:/app/Alpha_Data
+      - ../../.system_logs:/var/log/aether_net
+      # Global system logic traversal to the root workspace (Read-Only)
+      - ../../.system_core:/app/.system_core:ro
+    restart: unless-stopped
+    networks:
+      - aether_net
+
+networks:
+  aether_net:
+    external: true
+    name: aether_net

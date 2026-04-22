@@ -8,6 +8,26 @@ import os
 import sys
 import json
 import logging
+
+# Ensure telemetry directory exists
+log_dir = "/var/log/aether_net"
+os.makedirs(log_dir, exist_ok=True)
+
+# Configure Telemetry with both Stream and File handlers
+logger = logging.getLogger("meta_app_factory")
+logger.setLevel(logging.INFO)
+
+formatter = logging.Formatter('%(asctime)s [%(name)s] %(levelname)s: %(message)s', datefmt="%H:%M:%S")
+
+# Console Handler
+ch = logging.StreamHandler(sys.stdout)
+ch.setFormatter(formatter)
+logger.addHandler(ch)
+
+# Telemetry File Handler
+fh = logging.FileHandler(os.path.join(log_dir, "api_core.log"))
+fh.setFormatter(formatter)
+logger.addHandler(fh)
 import subprocess
 import threading
 import coo_agent
@@ -55,7 +75,7 @@ REGISTRY_PATH = os.path.join(SCRIPT_DIR, "registry.json")
 # ── Load .env so GEMINI_API_KEY and all secrets are available to every thread ──
 try:
     from dotenv import load_dotenv as _load_dotenv
-    _env_path = os.path.join(SCRIPT_DIR, ".env")
+    _env_path = os.path.join(SCRIPT_DIR, "..", ".env")
     if os.path.exists(_env_path):
         _load_dotenv(_env_path, override=True)
         logger.info(f"Loaded .env from {_env_path}")

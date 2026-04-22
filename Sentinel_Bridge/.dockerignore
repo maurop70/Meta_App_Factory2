@@ -1,0 +1,13 @@
+# Ignore local runtime data to prevent massive build context bloat
+data/
+__pycache__/
+*.pyc
+
+# Ignore non-execution artifacts
+tests/
+Documentation/
+README.md
+
+# Ignore legacy orchestration and local sync noise
+*.bat
+*.ps1

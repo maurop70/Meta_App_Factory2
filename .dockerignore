@@ -1,77 +1,45 @@
-# ═══════════════════════════════════════════════════════
-#  Meta App Factory — Security Shield (.gitignore)
-# ═══════════════════════════════════════════════════════
+# =========================================================
+# META APP FACTORY CORE — DOCKER IGNORE
+# =========================================================
+# Prevents massive build context bloat by blocking child apps
+# and local runtime data from the global API daemon.
 
-# ── Secrets & Credentials ─────────────────────────────
-.env
-*.env.local
-*.env.bak
-!env.template
-.vault_pw
-vault.enc
-vault.enc.salt
-*.key
-*.pem
-google_creds.json
-client_secret*.json
-token*.json
-token*.pickle
-utils/auth/
+# Block all child macro-applications
+Alpha_V2_Genesis/
+Resonance/
+Resonance2/
+Resonance3/
+Resonance4/
+Sentinel_Bridge/
+CMO_Agent/
+CFO_Agent/
+CIO_Agent/
+CLO_Agent/
+CPO_Agent/
+Command_Center/
+Venture_Architect_Agent/
+Adv_Autonomous_Agent/
+HR_N8N_Bridge/
 
-# ── Node / Frontend ──────────────────────────────────
-node_modules/
-dist/
-.vite/
+# Block persistent runtime data & state
+.Gemini_state/
+scratch/
+tmp/
+*.json
+!registry.json
+!commands.json
+!resilience_config.json
+!V3_MAP.json
+!antigravity.brand.json
 
-# ── Python ───────────────────────────────────────────
+# Block local documentation/reports
+*.html
+*.pdf
+
+# Python caching
 __pycache__/
 *.pyc
-*.pyo
-*.egg-info/
-.eggs/
-venv/
-.venv/
 
-# ── Logs ─────────────────────────────────────────────
-*.log
-alpha.log
-
-# ── Machine-Specific Runtime Data ────────────────────
-auto_heal_log.json
-local_pending_sync.json
-finance_state.json
-pending_sync/
-Alpha_Data/connection_info.json
-Alpha_Data/ledger_state.json
-Alpha_Data/ledger_cron_meta.json
-Alpha_Data/n8n_execution_log.json
-Alpha_Data/executions/
-Alpha_Data/news_report.json
-Alpha_Data/portfolio.json.bak
-Alpha_Data/.config_snapshots/
-Alpha_Data/LEDGER.md
-projects/*/warroom_history.json
-
-# ── OS Artifacts ─────────────────────────────────────
-.DS_Store
-Thumbs.db
-desktop.ini
-
-# ── IDE ──────────────────────────────────────────────
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# ── Gemini State (session cache, not secrets) ────────
-.Gemini_state/
-
-# ── Agent Generated Data & Chaos Environments ────────
-CFO_Agent/reports/*.xlsx
-*.xlsx
-Employees email and phone.xlsx
-projects/*_chaos*/
-projects/*_chaos/
-Venture_Data/scout_pitches.json
-.git
-.dockerignore
+# Local Git & env
+.git/
+.env

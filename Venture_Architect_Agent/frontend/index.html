@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Venture Architect — Financial & Business Strategy Command Center | Antigravity-AI</title>
+    <meta name="description" content="AI-powered venture architect command center with financial modeling, unit economics, business model canvas, and pitch deck generation.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <!-- ═══ Sidebar Navigation ═══ -->
+    <nav id="sidebar" class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">
+                <span class="logo-icon">🏛️</span>
+                <div class="logo-text">
+                    <span class="logo-title">Venture<span class="logo-accent">_Architect</span></span>
+                    <span class="logo-sub">Business Strategy</span>
+                </div>
+            </div>
+            <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">☰</button>
+        </div>
+
+        <div class="sidebar-nav">
+            <button class="nav-item active" data-panel="dashboard" id="nav-dashboard">
+                <span class="nav-icon">📊</span>
+                <span class="nav-label">Dashboard</span>
+            </button>
+            <button class="nav-item" data-panel="projects" id="nav-projects">
+                <span class="nav-icon">📁</span>
+                <span class="nav-label">Projects</span>
+            </button>
+            <button class="nav-item" data-panel="business-model" id="nav-business-model">
+                <span class="nav-icon">🧩</span>
+                <span class="nav-label">Business Model</span>
+            </button>
+            <button class="nav-item" data-panel="unit-economics" id="nav-unit-economics">
+                <span class="nav-icon">📈</span>
+                <span class="nav-label">Unit Economics</span>
+            </button>
+            <button class="nav-item" data-panel="financials" id="nav-financials">
+                <span class="nav-icon">💰</span>
+                <span class="nav-label">5-Year Financials</span>
+            </button>
+            <button class="nav-item" data-panel="pitch-deck" id="nav-pitch-deck">
+                <span class="nav-icon">🎬</span>
+                <span class="nav-label">Pitch Deck Generator</span>
+            </button>
+            <button class="nav-item" data-panel="cap-table" id="nav-cap-table">
+                <span class="nav-icon">🍰</span>
+                <span class="nav-label">Cap Table</span>
+            </button>
+            <button class="nav-item" data-panel="valuation" id="nav-valuation">
+                <span class="nav-icon">💎</span>
+                <span class="nav-label">Valuation</span>
+            </button>
+            <button class="nav-item" data-panel="gtm-budget" id="nav-gtm-budget">
+                <span class="nav-icon">🔥</span>
+                <span class="nav-label">GTM Budget</span>
+            </button>
+            <button class="nav-item" data-panel="scenarios" id="nav-scenarios">
+                <span class="nav-icon">🔮</span>
+                <span class="nav-label">Scenario Modeling</span>
+            </button>
+            <button class="nav-item" data-panel="project-library" id="nav-project-library">
+                <span class="nav-icon">🖼️</span>
+                <span class="nav-label">Project Library</span>
+            </button>
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="connection-status" id="connectionStatus">
+                <span class="status-dot offline"></span>
+                <span class="status-text">Checking...</span>
+            </div>
+            <div class="sidebar-brand">
+                <span class="brand-text">Antigravity-AI</span>
+                <span class="brand-version">v1.0.0</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ═══ Main Content Area ═══ -->
+    <main id="mainContent" class="main-content">
+        <!-- Project Switcher Bar -->
+        <div class="project-switcher-bar" id="projectSwitcherBar">
+            <span class="project-switcher-label">PROJECT:</span>
+            <select class="project-switcher-select" id="projectSwitcher">
+                <option value="default">Default Project</option>
+            </select>
+            <button class="btn-new-project-mini" onclick="showNewProjectModal()" title="New Project">＋</button>
+        </div>
+        <!-- Dynamic panels loaded by app.js -->
+        <div id="panel-container"></div>
+    </main>
+
+    <!-- ═══ Loading Overlay ═══ -->
+    <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="loading-card">
+            <div class="loading-spinner"></div>
+            <h3 class="loading-title" id="loadingTitle">Calculating...</h3>
+            <p class="loading-sub" id="loadingSub">Venture_Architect is processing the financial models</p>
+            <div class="progress-bar-container" id="progressBarContainer">
+                <div class="progress-bar-track">
+                    <div class="progress-bar-fill" id="progressBarFill"></div>
+                </div>
+                <div class="progress-stages" id="progressStages"></div>
+                <p class="progress-timer" id="progressTimer">Elapsed: 0s</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ Toast Notifications ═══ -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="/static/app.js?v=1"></script>
+</body>
+</html>

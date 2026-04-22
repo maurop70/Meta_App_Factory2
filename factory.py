@@ -87,11 +87,11 @@ try:
     load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 except ImportError:
     pass  # dotenv not installed; relies on system env vars
-N8N_API_KEY = os.getenv("N8N_API_KEY", "")
+N8N_API_KEY = ""
 if not N8N_API_KEY:
     print("[WARNING] N8N_API_KEY not set. n8n operations will fail.", flush=True)
 N8N_HEADERS = {"X-N8N-API-KEY": N8N_API_KEY, "Content-Type": "application/json"}
-DEFAULT_PROJECT_ID = os.getenv("N8N_DEFAULT_PROJECT_ID", "boV7btArBtpvCiXm")
+DEFAULT_PROJECT_ID = "boV7btArBtpvCiXm"
 
 class MetaAppFactory:
     # Canonical app storage: Google Drive > local fallback
@@ -381,7 +381,7 @@ except ImportError:
 load_dotenv()
 
 # Configuration from .env or defaults
-WEBHOOK_URL = os.getenv("WEBHOOK_URL", "URL_PLACEHOLDER")
+WEBHOOK_URL = "URL_PLACEHOLDER"
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECTS_DIR = os.getenv("PROJECTS_DIR", os.path.join(BASE_DIR, "Projects"))
 SKILLS_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "..", "skills"))
@@ -998,7 +998,7 @@ from google_suite import GoogleSuiteManager
 # Load Env
 env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
 load_dotenv(env_path)
-WEBHOOK_URL = os.getenv("WEBHOOK_URL", "URL_PLACEHOLDER")
+WEBHOOK_URL = "URL_PLACEHOLDER"
 
 # Configuration
 DEBUG_PROJECT = "Project_Debug_Phoenix"
@@ -1577,7 +1577,7 @@ def cmd_swdr(_args):
 
     # 1. Credential Sentinel — check N8N_API_KEY validity
     print("\n🔑 CREDENTIAL SENTINEL")
-    api_key = os.getenv("N8N_API_KEY", "")
+    api_key = ""
     if not api_key:
         print("   🔴 N8N_API_KEY: NOT SET")
     else:

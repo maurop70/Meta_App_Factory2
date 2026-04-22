@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  cmo_elite_agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cmo_elite_agent
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+        reservations:
+          cpus: '0.50'
+          memory: 1G
+    ports:
+      - "5020:5020"
+    env_file:
+      - ../../../../.env
+    volumes:
+      # Isolate code execution while linking necessary factory modules
+      - ../../../../.system_core:/app/.system_core:ro
+      - ../../../../.system_logs:/var/log/aether_net
+      - ../../../../shared_modules:/app/shared_modules:ro
+      - ../../../../Global_Projects:/app/Global_Projects
+    restart: unless-stopped
+    networks:
+      - aether_net
+
+networks:
+  aether_net:
+    driver: bridge

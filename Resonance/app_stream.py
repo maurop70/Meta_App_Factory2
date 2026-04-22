@@ -52,7 +52,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, SCRIPT_DIR)
 
 # Sentinel Bridge (Council Engine)
-SENTINEL_DIR = os.path.join(SCRIPT_DIR, "Sentinel_Bridge")
+SENTINEL_DIR = os.path.join(SCRIPT_DIR, "Resonance_Engines")
 sys.path.insert(0, SENTINEL_DIR)
 try:
     from council_engine import build_council_prompt

@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  resonance:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: resonance
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+        reservations:
+          cpus: '0.50'
+          memory: 1G
+    ports:
+      # Zero collision with Alpha (5008), CMO (5020), or API (5000)
+      - "5006:5006"
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - PORT=${PORT:-5006}
+    volumes:
+      # Persistent volumes for clinical reports and homework uploads
+      - ./uploads:/app/uploads
+      - ../../.system_logs:/var/log/aether_net
+      - ./Professional_Reports:/app/Professional_Reports
+      # FIX: Mounted as a directory to prevent single-file IsADirectoryError crashes
+      - ./config:/app/config
+      # Global system logic traversal to the root workspace (Read-Only)
+      - ../../.system_core:/app/.system_core:ro
+    restart: unless-stopped
+    networks:
+      - aether_net
+
+networks:
+  aether_net:
+    external: true
+    name: aether_net

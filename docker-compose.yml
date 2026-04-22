@@ -1,56 +1,41 @@
 version: '3.8'
 
-x-maf-base: &maf-base
-  build:
-    context: .
-    target: backend
-  env_file: .env
-  restart: unless-stopped
-
 services:
-  api-gateway:
-    <<: *maf-base
-    container_name: maf_api_gateway
-    ports:
-      - "5000:5000"
-    command: uvicorn api:app --host 0.0.0.0 --port 5000
-
-  watchdog-daemon:
-    <<: *maf-base
-    container_name: maf_watchdog
-    command: python v3_watchdog.py --daemon
-
-  cfo-agent:
-    <<: *maf-base
-    container_name: maf_cfo_agent
-    working_dir: /app/CFO_Agent
-    command: python server.py
-    
-  cmo-agent:
-    <<: *maf-base
-    container_name: maf_cmo_agent
-    working_dir: /app/CMO_Elite_Agent/backend
-    command: python server.py
-
-  maintenance-backend:
-    <<: *maf-base
-    container_name: maf_maintenance_backend
-    ports:
-      - "8000:8000"
-    working_dir: /app/ERP/Maintenance_Work_Order
-    command: uvicorn maintenance_backend:app --host 0.0.0.0 --port 8000
-
-  factory-ui:
+  meta_app_factory:
     build:
-      context: ./factory_ui
-      dockerfile: Dockerfile.dev
-    container_name: maf_factory_ui
+      context: .
+      dockerfile: Dockerfile
+    container_name: meta_app_factory_core
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
     ports:
-      - "5173:5173"
-      - "5174:5174"
-    volumes:
-      - ./factory_ui:/app
-      - /app/node_modules
+      # Core API explicit binding
+      - "5000:5000"
     environment:
-      - CHOKIDAR_USEPOLLING=true
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    volumes:
+      # Full bi-directional mount to ensure factory.py scaffolding operations
+      # (new folders, artifacts) write directly back to the host machine.
+      - .:/app
+      - ../.system_logs:/var/log/aether_net
+      # Explicit Architectural_Ledger.json mount from the global root workspace
+      - ../.system_core:/app/.system_core:ro
+      # Anonymous volume masks to blind the Core API from child I/O thrashing
+      - /app/Alpha_V2_Genesis/Alpha_Data
+      - /app/Resonance/uploads
+      - /app/Resonance/Professional_Reports
+      - /app/Sentinel_Bridge/data
     restart: unless-stopped
+    networks:
+      - aether_net
+
+networks:
+  aether_net:
+    name: aether_net
+    driver: bridge
