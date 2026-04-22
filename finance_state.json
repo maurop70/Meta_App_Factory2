@@ -1,0 +1,21 @@
+{
+    "project_budgets": {
+        "Aether_Mock_Trial": 25000.0,
+        "Aether_Test": 50000.0
+    },
+    "current_burn_rate": 75000.0,
+    "approval_tokens": [
+        {
+            "token": "a14d8a2c-5438-494f-8fe1-82f050885bf6",
+            "project_id": "Aether_Mock_Trial",
+            "committed_amount": 25000.0,
+            "timestamp": "2026-03-30T16:10:18.045000"
+        },
+        {
+            "token": "e2ba0fd8-9079-4cf3-ad42-8c52bbbb4646",
+            "project_id": "Aether_Test",
+            "committed_amount": 50000,
+            "timestamp": "2026-03-30T16:10:29.856681"
+        }
+    ]
+}

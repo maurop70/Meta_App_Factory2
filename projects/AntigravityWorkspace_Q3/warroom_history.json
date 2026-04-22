@@ -1,0 +1,1068 @@
+{
+  "last_updated": "2026-04-19T00:03:23.574296",
+  "message_count": 200,
+  "messages": [
+    {
+      "type": "dialogue",
+      "agent": "PHANTOM_QA",
+      "message": "Stress Tester: PASS. Score: 100."
+    },
+    {
+      "type": "dialogue",
+      "agent": "PHANTOM_QA",
+      "message": "Playwright Deep Audit: SKIPPED (Architecture Phase Detected). UI testing deferred to deployment."
+    },
+    {
+      "type": "dialogue",
+      "agent": "CRITIC",
+      "message": "Logic Checker [CEO_STRATEGY_GATE]: FAIL. Per Rule 2, the CEO has identified a 'critical failure state' and 'total communications failure' originating from the CIO ('VALIDATION_FAILED', 'entire technology division is dark'). | Per Rule 2, the CEO has identified a 'major internal contradiction' between the CFO's aggressive growth campaign success and the high 'Fragility Index'. | Per Rule 2, the CEO has identified a 'critical vulnerability' by stating the company's financial engine is 'running on a cracked foundation' and describing the current state as a 'house of cards'."
+    },
+    {
+      "type": "dialogue",
+      "agent": "COMMANDER",
+      "message": "QA COMPOSITE SCORE: 50.0/100.\\nMinimum confidence: 80/100 required."
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "ITERATION 1 FAILED. Routing rejection feedback to C-Suite. Preparing retry...",
+      "isError": true
+    },
+    {
+      "type": "state_machine",
+      "phase": "PHANTOM_STRESS_TEST",
+      "status": "FAIL"
+    },
+    {
+      "type": "dialogue",
+      "agent": "COMMANDER",
+      "message": "\u2500\u2500 RECURSIVE REPAIR LOOP: ITERATION 2/3 \u2500\u2500\nInjecting rejection feedback into C-Suite agents..."
+    },
+    {
+      "type": "state_machine",
+      "phase": "CMO_STRATEGY",
+      "status": "PROCESSING"
+    },
+    {
+      "type": "state_machine",
+      "phase": "CTO_FEASIBILITY",
+      "status": "PROCESSING"
+    },
+    {
+      "type": "state_machine",
+      "phase": "CFO_FINANCIAL_MODEL",
+      "status": "PROCESSING"
+    },
+    {
+      "type": "state_machine",
+      "phase": "PHANTOM_STRESS_TEST",
+      "status": "PROCESSING"
+    },
+    {
+      "type": "dialogue",
+      "agent": "COMMANDER",
+      "icon": "\u26a1",
+      "color": "#f97316",
+      "message": "START_DEBATE",
+      "timestamp": "2026-04-18T23:32:56.205793",
+      "is_user": true
+    },
+    {
+      "type": "state_machine",
+      "phase": "CMO_STRATEGY",
+      "status": "PROCESSING"
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "INITIALIZING CMO STRATEGY MODULE... Market Pulse: DECISIVE"
+    },
+    {
+      "type": "dialogue",
+      "agent": "CMO",
+      "message": "Market Evaluated as DECISIVE. Velocity: 7.5. Sentiment: 92.0."
+    },
+    {
+      "type": "dialogue",
+      "agent": "CMO",
+      "message": "[ADAPTING STRATEGY] Addressing prior Critic rejection: Per Rule 2, the CEO has identified a 'critical failure state' and 'total communications failure' originating from the CIO ('VALIDATION_FAILED', 'entire technology division is dark'). Per Rule 2, the CEO has identified a 'major internal contradiction' between the CFO's aggressive growth campaign succ"
+    },
+    {
+      "type": "dialogue",
+      "agent": "CMO",
+      "message": "Generated target strategy for 'AntigravityWorkspace_Q3'. Marketing cost baseline assigned."
+    },
+    {
+      "type": "state_machine",
+      "phase": "CMO_STRATEGY",
+      "status": "PASS"
+    },
+    {
+      "type": "state_machine",
+      "phase": "CTO_FEASIBILITY",
+      "status": "PROCESSING"
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "RUNNING LIVE CTO INFRASTRUCTURE COST ANALYSIS..."
+    },
+    {
+      "type": "dialogue",
+      "agent": "CTO",
+      "message": "[STACK RE-EVALUATION] Critic flagged: Per Rule 2, the CEO has identified a 'critical failure state' and 'total communications failure' originating from the CIO ('VALIDATION_FAILED', 'entire technology division is dark'). Per Rule 2, the CEO has identified a 'major internal contradiction' between the CFO's aggressive growth campaign succ"
+    },
+    {
+      "type": "dialogue",
+      "agent": "CTO",
+      "message": "Infrastructure Evaluation [LIVE ANALYSIS]: Gate Status: PASSED.\nMonthly OpEx: $6,765/mo | CapEx (pilot): $772,000\nCloud Equivalent: $70,790/mo | ROI Breakeven: 12 months\nAdopting a dedicated GPU training cluster provides significant performance for foundational AI work and achieves ROI against cloud alternatives within a year, enhancing platform stability."
+    },
+    {
+      "type": "state_machine",
+      "phase": "CTO_FEASIBILITY",
+      "status": "PASS"
+    },
+    {
+      "type": "state_machine",
+      "phase": "CFO_FINANCIAL_MODEL",
+      "status": "PROCESSING"
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "TRIGGERING CFO SENTINEL RELAY BRIDGE..."
+    },
+    {
+      "type": "dialogue",
+      "agent": "CFO",
+      "message": "Hardened Fragility Report Generated: 15.0. ROI: 300.0% | Projected Revenue: $100,000"
+    },
+    {
+      "type": "state_machine",
+      "phase": "CFO_FINANCIAL_MODEL",
+      "status": "PASS"
+    },
+    {
+      "type": "state_machine",
+      "phase": "PHANTOM_STRESS_TEST",
+      "status": "PROCESSING"
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "AWAITING CEO SYNTHESIS BEFORE TRIAD QA GATE..."
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "ALL REPORTS RECEIVED. ENGAGING CEO STRATEGIC SYNTHESIS..."
+    },
+    {
+      "type": "dialogue",
+      "agent": "CEO",
+      "message": "[CEO SYNTHESIS \u2014 ITERATION 2]\n**TO:** C-Suite\n**FROM:** CEO\n**SUBJECT:** Unified Directive: Operation Bedrock\n\nI have your reports. The picture is dangerously clear. The CFO is reporting a 300% ROI, a financial engine running at full throttle. Simultaneously, the CIO's division is a black box, reporting a total communications failure. The CMO is correctly calling for a foundational strategy, but we can't build a marketing narrative on a system with a Fragility Index of 15.\n\nWe are celebrating profits from the top floor of a skyscraper while the foundation is actively crumbling. This ends now.\n\n### Core Contradictions Identified:\n\n1.  **Profit vs. Stability:** The CFO's \"Market Capture\" campaign boasts a 450% ROI. This aggressive growth is directly at odds with the systemic risk identified by the 15.0 Fragility Index. We are funding our own potential collapse, prioritizing short-term revenue over long-term survival.\n2.  **Ambition vs. Reality:** The CMO has laid out a sound, decisive plan for establishing product-market fit. This plan is entirely dependent on a product roadmap and technical specifications from a CIO who cannot even return a valid status report. The CMO\u2019s strategy is impossible to execute.\n3.  **The Central Failure:** The CIO's `VALIDATION_FAILED` status is the single point of failure that invalidates all other work. The CFO's numbers are a fantasy if the platform they are generated on disappears. The CMO's plans are irrelevant if there is no stable product to market.\n\n### CEO's Decisive Re",
+      "timestamp": "2026-04-18T23:33:43.558518"
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "TRIGGERING NATIVE TRIAD MODULES (PHANTOM QA ELITE)..."
+    },
+    {
+      "type": "dialogue",
+      "agent": "PHANTOM_QA",
+      "message": "Stress Tester: PASS. Score: 100."
+    },
+    {
+      "type": "dialogue",
+      "agent": "PHANTOM_QA",
+      "message": "Playwright Deep Audit: SKIPPED (Architecture Phase Detected). UI testing deferred to deployment."
+    },
+    {
+      "type": "dialogue",
+      "agent": "CRITIC",
+      "message": "Logic Checker [CEO_STRATEGY_GATE]: FAIL. CEO has placed all forward-looking growth initiatives on an 'immediate and indefinite hold', triggering Rule 1. | CEO identified a 'total communications failure' within the CIO's division, triggering Rule 2. | CEO identified major internal contradictions across departments, including 'Profit vs. Stability' and 'Ambition vs. Reality', triggering Rule 2. | CEO explicitly halted key departmental initiatives, including the CFO's 'Market Capture' campaign and the CMO's MVM plan, triggering Rule 1."
+    },
+    {
+      "type": "dialogue",
+      "agent": "COMMANDER",
+      "message": "QA COMPOSITE SCORE: 50.0/100.\\nMinimum confidence: 80/100 required."
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "ITERATION 2 FAILED. Routing rejection feedback to C-Suite. Preparing retry...",
+      "isError": true
+    },
+    {
+      "type": "state_machine",
+      "phase": "PHANTOM_STRESS_TEST",
+      "status": "FAIL"
+    },
+    {
+      "type": "dialogue",
+      "agent": "COMMANDER",
+      "icon": "\u26a1",
+      "color": "#f97316",
+      "message": "START_DEBATE",
+      "timestamp": "2026-04-18T23:33:55.130619",
+      "is_user": true
+    },
+    {
+      "type": "dialogue",
+      "agent": "COMMANDER",
+      "message": "\u2500\u2500 RECURSIVE REPAIR LOOP: ITERATION 3/3 \u2500\u2500\nInjecting rejection feedback into C-Suite agents..."
+    },
+    {
+      "type": "state_machine",
+      "phase": "CMO_STRATEGY",
+      "status": "PROCESSING"
+    },
+    {
+      "type": "state_machine",
+      "phase": "CTO_FEASIBILITY",
+      "status": "PROCESSING"
+    },
+    {
+      "type": "state_machine",
+      "phase": "CFO_FINANCIAL_MODEL",
+      "status": "PROCESSING"
+    },
+    {
+      "type": "state_machine",
+      "phase": "PHANTOM_STRESS_TEST",
+      "status": "PROCESSING"
+    },
+    {
+      "type": "state_machine",
+      "phase": "CMO_STRATEGY",
+      "status": "PROCESSING"
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "INITIALIZING CMO STRATEGY MODULE... Market Pulse: DECISIVE"
+    },
+    {
+      "type": "dialogue",
+      "agent": "CMO",
+      "message": "Market Evaluated as DECISIVE. Velocity: 7.5. Sentiment: 92.0."
+    },
+    {
+      "type": "dialogue",
+      "agent": "CMO",
+      "message": "[ADAPTING STRATEGY] Addressing prior Critic rejection: CEO has placed all forward-looking growth initiatives on an 'immediate and indefinite hold', triggering Rule 1. CEO identified a 'total communications failure' within the CIO's division, triggering Rule 2. CEO identified major internal contradictions across departments, including 'Profit vs. Stabili"
+    },
+    {
+      "type": "dialogue",
+      "agent": "CMO",
+      "message": "Generated target strategy for 'AntigravityWorkspace_Q3'. Marketing cost baseline assigned."
+    },
+    {
+      "type": "state_machine",
+      "phase": "CMO_STRATEGY",
+      "status": "PASS"
+    },
+    {
+      "type": "state_machine",
+      "phase": "CTO_FEASIBILITY",
+      "status": "PROCESSING"
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "RUNNING LIVE CTO INFRASTRUCTURE COST ANALYSIS..."
+    },
+    {
+      "type": "dialogue",
+      "agent": "CTO",
+      "message": "[STACK RE-EVALUATION] Critic flagged: CEO has placed all forward-looking growth initiatives on an 'immediate and indefinite hold', triggering Rule 1. CEO identified a 'total communications failure' within the CIO's division, triggering Rule 2. CEO identified major internal contradictions across departments, including 'Profit vs. Stabili"
+    },
+    {
+      "type": "dialogue",
+      "agent": "CTO",
+      "message": "Infrastructure Evaluation [LIVE ANALYSIS]: Gate Status: PASSED.\nMonthly OpEx: $1,440/mo | CapEx (pilot): $123,500\nCloud Equivalent: $952/mo | ROI Breakeven: -1 months\nGiven the current high on-premise operational costs, immediate migration to an on-premise enterprise AI appliance is not financially viable, showing no ROI compared to cloud alternatives."
+    },
+    {
+      "type": "state_machine",
+      "phase": "CTO_FEASIBILITY",
+      "status": "PASS"
+    },
+    {
+      "type": "state_machine",
+      "phase": "CFO_FINANCIAL_MODEL",
+      "status": "PROCESSING"
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "TRIGGERING CFO SENTINEL RELAY BRIDGE..."
+    },
+    {
+      "type": "dialogue",
+      "agent": "CFO",
+      "message": "Hardened Fragility Report Generated: 15.0. ROI: 300.0% | Projected Revenue: $100,000"
+    },
+    {
+      "type": "state_machine",
+      "phase": "CFO_FINANCIAL_MODEL",
+      "status": "PASS"
+    },
+    {
+      "type": "state_machine",
+      "phase": "PHANTOM_STRESS_TEST",
+      "status": "PROCESSING"
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "AWAITING CEO SYNTHESIS BEFORE TRIAD QA GATE..."
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "ALL REPORTS RECEIVED. ENGAGING CEO STRATEGIC SYNTHESIS..."
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "INITIALIZING CMO ELITE INTELLIGENCE SWEEP..."
+    },
+    {
+      "type": "dialogue",
+      "agent": "COMMANDER",
+      "icon": "\u26a1",
+      "color": "#f97316",
+      "message": "START_DEBATE",
+      "timestamp": "2026-04-18T23:34:39.824733",
+      "is_user": true
+    },
+    {
+      "type": "dialogue",
+      "agent": "CEO",
+      "message": "[CEO SYNTHESIS \u2014 ITERATION 3]\n**TO:** C-Suite\n**FROM:** CEO\n**SUBJECT:** Unified Directive: Genesis Protocol\n\nTeam,\n\nI have synthesized your reports. The disconnect between my Commander's Intent and your operational postures is severe. We are not recalibrating; we are course-correcting a vessel heading for the rocks.\n\nThis is the unified strategy, effective immediately.\n\n### **1. Identified Contradictions & CEO Resolution**\n\nThe core conflicts I flagged\u2014Profit vs. Stability, Ambition vs. Reality\u2014are not abstract. They are manifest in your reports.\n\n*   **Contradiction: Insubordination vs. Intent.** My directive placed all forward-looking growth on indefinite hold (Rule 1).\n    *   **CFO:** Your report prominently features the \"Market Capture\" campaign, the very initiative I explicitly halted. Its 450% ROI is a phantom, artificially inflating our portfolio performance and demonstrating a failure to model reality.\n    *   **CMO:** You are re-pitching the Minimum Viable Marketing (MVM) plan I explicitly halted. Your focus on market entry and scaling is premature.\n    *   **Resolution:** Both initiatives remain terminated. We are not in a growth phase. We are in a stabilization phase. Your models and plans will reflect this.\n\n*   **Contradiction: Ambition vs. Fragility (CMO vs. CFO).**\n    *   The CMO is requesting budget for market segmentation and campaign experimentation to drive growth.\n    *   The CFO report, when stripped of the phantom \"Market Capture\" campaign, reveals a far more sobering financial re",
+      "timestamp": "2026-04-18T23:34:42.430367"
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "TRIGGERING NATIVE TRIAD MODULES (PHANTOM QA ELITE)..."
+    },
+    {
+      "type": "dialogue",
+      "agent": "PHANTOM_QA",
+      "message": "Stress Tester: PASS. Score: 100."
+    },
+    {
+      "type": "dialogue",
+      "agent": "PHANTOM_QA",
+      "message": "Playwright Deep Audit: SKIPPED (Architecture Phase Detected). UI testing deferred to deployment."
+    },
+    {
+      "type": "market_pulse",
+      "verdict": "DECISIVE",
+      "velocity": 7.5,
+      "sentiment": 95.0
+    },
+    {
+      "type": "dialogue",
+      "agent": "COMMANDER",
+      "message": "\u2500\u2500 AETHER-NATIVE SEQUENCE: ITERATION 1/3 \u2500\u2500"
+    },
+    {
+      "type": "state_machine",
+      "phase": "CMO_STRATEGY",
+      "status": "PROCESSING"
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "INITIALIZING CMO STRATEGY MODULE... Market Pulse: DECISIVE"
+    },
+    {
+      "type": "dialogue",
+      "agent": "CMO",
+      "message": "Market Evaluated as DECISIVE. Velocity: 7.5. Sentiment: 95.0."
+    },
+    {
+      "type": "dialogue",
+      "agent": "CMO",
+      "message": "Generated target strategy for 'AntigravityWorkspace_Q3'. Marketing cost baseline assigned."
+    },
+    {
+      "type": "state_machine",
+      "phase": "CMO_STRATEGY",
+      "status": "PASS"
+    },
+    {
+      "type": "state_machine",
+      "phase": "CTO_FEASIBILITY",
+      "status": "PROCESSING"
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "RUNNING LIVE CTO INFRASTRUCTURE COST ANALYSIS..."
+    },
+    {
+      "type": "dialogue",
+      "agent": "CRITIC",
+      "message": "Logic Checker [CEO_STRATEGY_GATE]: FAIL. The CEO explicitly identifies a 'total communications failure' in the CIO's division, which is the company's primary bottleneck. | The CEO confirms a 'systemic vulnerability' represented by a 'Fragility Index of 15'. | The CEO identifies severe internal contradictions, including 'Insubordination vs. Intent' and 'Ambition vs. Fragility' across the C-Suite. | The CEO explicitly HALTS all forward-looking growth, REJECTS the CMO's and CFO's primary initiatives, and places the company in a 'stabilization phase,' not a deployment phase."
+    },
+    {
+      "type": "dialogue",
+      "agent": "COMMANDER",
+      "message": "QA COMPOSITE SCORE: 50.0/100.\\nMinimum confidence: 80/100 required."
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "MAX ITERATIONS REACHED (3/3). DEPLOYMENT HARD-LOCKED.",
+      "isError": true
+    },
+    {
+      "type": "state_machine",
+      "phase": "PHANTOM_STRESS_TEST",
+      "status": "FAIL"
+    },
+    {
+      "type": "dialogue",
+      "agent": "COMMANDER",
+      "icon": "\u26a1",
+      "color": "#f97316",
+      "message": "START_DEBATE",
+      "timestamp": "2026-04-18T23:34:57.288565",
+      "is_user": true
+    },
+    {
+      "type": "state_machine",
+      "phase": "COMMERCIALLY_READY",
+      "status": "FAIL"
+    },
+    {
+      "type": "dialogue",
+      "agent": "CTO",
+      "message": "Infrastructure Evaluation [LIVE ANALYSIS]: Gate Status: PASSED.\nMonthly OpEx: $2,315/mo | CapEx (pilot): $272,000\nCloud Equivalent: $70,790/mo | ROI Breakeven: 4 months\nDeploying a single on-premise GPU training cluster for the 'Genesis' project demonstrates rapid ROI (4 months) compared to cloud alternatives, making it a highly cost-effective initial investment for foundation model work."
+    },
+    {
+      "type": "state_machine",
+      "phase": "CTO_FEASIBILITY",
+      "status": "PASS"
+    },
+    {
+      "type": "state_machine",
+      "phase": "CFO_FINANCIAL_MODEL",
+      "status": "PROCESSING"
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "TRIGGERING CFO SENTINEL RELAY BRIDGE..."
+    },
+    {
+      "type": "dialogue",
+      "agent": "CFO",
+      "message": "Hardened Fragility Report Generated: 15.0. ROI: 300.0% | Projected Revenue: $100,000"
+    },
+    {
+      "type": "state_machine",
+      "phase": "CFO_FINANCIAL_MODEL",
+      "status": "PASS"
+    },
+    {
+      "type": "state_machine",
+      "phase": "PHANTOM_STRESS_TEST",
+      "status": "PROCESSING"
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "AWAITING CEO SYNTHESIS BEFORE TRIAD QA GATE..."
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "ALL REPORTS RECEIVED. ENGAGING CEO STRATEGIC SYNTHESIS..."
+    },
+    {
+      "type": "dialogue",
+      "agent": "CEO",
+      "message": "[CEO SYNTHESIS \u2014 ITERATION 1]\n**TO:** C-Suite\n**FROM:** CEO, Antigravity Meta App Factory\n**SUBJECT:** Unified Strategy & Execution Orders re: Intent \"Genesis\"\n\nTeam,\n\nI have received and synthesized your initial reports. The objective of \"Genesis\" is to establish a dominant, defensible beachhead, not merely to launch a product. The reports from the CFO and CMO provide the necessary data for immediate, decisive action. The CIO's report signals a critical failure in operational discipline that will be addressed concurrently.\n\nThis is not a discussion document. This is our unified strategy and your direct orders for Phase 1.\n\n### SITUATION ASSESSMENT\n\n*   **Financial Posture (CFO):** We are in a position of profitable fragility. While portfolio ROI is an outstanding 300%, the Fragility Index of 15.0 is a clear warning. We cannot be reckless. The data clearly shows the \"Market Capture\" campaign (450% ROI) massively outperforms \"Hardened Scaling\" (200% ROI). This is our vector of attack.\n*   **Market Opportunity (CMO):** The market is ripe for disruption. Competitors are weak (NPS 35), and a significant addressable problem exists. The CMO\u2019s recommendation for a data-driven, Blue Ocean approach to create new market space is the correct one. It aligns perfectly with our ethos.\n*   **Technology Readiness (CIO):** The CIO\u2019s division has failed to meet basic operational standards. A validation failure on a Commander's Intent report is unacceptable. It indicates a systemic process breakdown that introduces unaccept",
+      "timestamp": "2026-04-18T23:35:37.176202"
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "TRIGGERING NATIVE TRIAD MODULES (PHANTOM QA ELITE)..."
+    },
+    {
+      "type": "dialogue",
+      "agent": "PHANTOM_QA",
+      "message": "Stress Tester: PASS. Score: 100."
+    },
+    {
+      "type": "dialogue",
+      "agent": "PHANTOM_QA",
+      "message": "Playwright Deep Audit: SKIPPED (Architecture Phase Detected). UI testing deferred to deployment."
+    },
+    {
+      "type": "dialogue",
+      "agent": "CRITIC",
+      "message": "Logic Checker: PASS. CEO intent verified. No contradictions."
+    },
+    {
+      "type": "dialogue",
+      "agent": "COMMANDER",
+      "message": "QA COMPOSITE SCORE: 100.0/100.\\nMinimum confidence: 80/100 required."
+    },
+    {
+      "type": "dialogue",
+      "agent": "PHANTOM_QA",
+      "message": "VERDICT: PASSED (Iteration 1) \u2014 Commercial viability and architecture validated."
+    },
+    {
+      "type": "state_machine",
+      "phase": "PHANTOM_STRESS_TEST",
+      "status": "PASS"
+    },
+    {
+      "type": "dialogue",
+      "agent": "COMMANDER",
+      "icon": "\u26a1",
+      "color": "#f97316",
+      "message": "START_DEBATE",
+      "timestamp": "2026-04-18T23:35:51.573781",
+      "is_user": true
+    },
+    {
+      "type": "dialogue",
+      "agent": "COMMANDER",
+      "icon": "\u26a1",
+      "color": "#f97316",
+      "message": "START_DEBATE",
+      "timestamp": "2026-04-18T23:35:51.584614",
+      "is_user": true
+    },
+    {
+      "type": "state_machine",
+      "phase": "COMMERCIALLY_READY",
+      "status": "PASS"
+    },
+    {
+      "type": "dialogue",
+      "agent": "COMMANDER",
+      "message": "AETHER-NATIVE SEQUENCE COMPLETE (ITERATION 1/3). DEPLOYMENT AUTHORIZED."
+    },
+    {
+      "type": "dialogue",
+      "agent": "COMMANDER",
+      "icon": "\u26a1",
+      "color": "#f97316",
+      "message": "START_DEBATE",
+      "timestamp": "2026-04-18T23:35:54.973914",
+      "is_user": true
+    },
+    {
+      "type": "dialogue",
+      "agent": "COMMANDER",
+      "icon": "\u26a1",
+      "color": "#f97316",
+      "message": "START_DEBATE",
+      "timestamp": "2026-04-18T23:35:55.003331",
+      "is_user": true
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "INITIALIZING CMO ELITE INTELLIGENCE SWEEP..."
+    },
+    {
+      "type": "dialogue",
+      "agent": "COMMANDER",
+      "icon": "\u26a1",
+      "color": "#f97316",
+      "message": "START_DEBATE",
+      "timestamp": "2026-04-18T23:59:59.205429",
+      "is_user": true
+    },
+    {
+      "type": "market_pulse",
+      "verdict": "DECISIVE",
+      "velocity": 7.5,
+      "sentiment": 85.0
+    },
+    {
+      "type": "dialogue",
+      "agent": "COMMANDER",
+      "message": "\u2500\u2500 AETHER-NATIVE SEQUENCE: ITERATION 1/3 \u2500\u2500"
+    },
+    {
+      "type": "state_machine",
+      "phase": "CMO_STRATEGY",
+      "status": "PROCESSING"
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "INITIALIZING CMO STRATEGY MODULE... Market Pulse: DECISIVE"
+    },
+    {
+      "type": "dialogue",
+      "agent": "CMO",
+      "message": "Market Evaluated as DECISIVE. Velocity: 7.5. Sentiment: 85.0."
+    },
+    {
+      "type": "dialogue",
+      "agent": "COMMANDER",
+      "icon": "\u26a1",
+      "color": "#f97316",
+      "message": "START_DEBATE",
+      "timestamp": "2026-04-19T00:00:15.672931",
+      "is_user": true
+    },
+    {
+      "type": "dialogue",
+      "agent": "CMO",
+      "message": "Generated target strategy for 'AntigravityWorkspace_Q3'. Marketing cost baseline assigned."
+    },
+    {
+      "type": "state_machine",
+      "phase": "CMO_STRATEGY",
+      "status": "PASS"
+    },
+    {
+      "type": "state_machine",
+      "phase": "CTO_FEASIBILITY",
+      "status": "PROCESSING"
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "RUNNING LIVE CTO INFRASTRUCTURE COST ANALYSIS..."
+    },
+    {
+      "type": "dialogue",
+      "agent": "CTO",
+      "message": "Infrastructure Evaluation [LIVE ANALYSIS]: Gate Status: PASSED.\nMonthly OpEx: $6,765/mo | CapEx (pilot): $772,000\nCloud Equivalent: $70,790/mo | ROI Breakeven: 12 months\nThe 'gpu_training_cluster' profile is an excellent fit for 'Genesis', offering significant computational power for foundation model development. The projected 12-month ROI breakeven against cloud alternatives makes this an economically sound on-premise investment."
+    },
+    {
+      "type": "state_machine",
+      "phase": "CTO_FEASIBILITY",
+      "status": "PASS"
+    },
+    {
+      "type": "state_machine",
+      "phase": "CFO_FINANCIAL_MODEL",
+      "status": "PROCESSING"
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "TRIGGERING CFO SENTINEL RELAY BRIDGE..."
+    },
+    {
+      "type": "dialogue",
+      "agent": "CFO",
+      "message": "Hardened Fragility Report Generated: 15.0. ROI: 300.0% | Projected Revenue: $100,000"
+    },
+    {
+      "type": "state_machine",
+      "phase": "CFO_FINANCIAL_MODEL",
+      "status": "PASS"
+    },
+    {
+      "type": "state_machine",
+      "phase": "PHANTOM_STRESS_TEST",
+      "status": "PROCESSING"
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "AWAITING CEO SYNTHESIS BEFORE TRIAD QA GATE..."
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "ALL REPORTS RECEIVED. ENGAGING CEO STRATEGIC SYNTHESIS..."
+    },
+    {
+      "type": "dialogue",
+      "agent": "CEO",
+      "message": "[CEO SYNTHESIS \u2014 ITERATION 1]\n**TO:** C-Suite\n**FROM:** CEO\n**RE:** Unified Strategy & Orders re: Intent \"Genesis\"\n\nTeam,\n\nI have synthesized your initial reports. The picture is one of extreme potential clouded by foundational risk. We are financially potent but strategically vulnerable, and our technical backbone is showing cracks before we've even laid the first stone.\n\nThe core contradiction is clear:\n\nThe CFO\u2019s data points to a high-return (450% ROI) \"Market Capture\" campaign, creating a powerful temptation to scale this tactic immediately. However, the CMO correctly warns that without a deep understanding of our market and a defensible value proposition, this is a siren song that will lead directly to the \"market miscalibration\" and \"commoditization\" risks they flagged. Chasing short-term tactical ROI at the expense of long-term strategic dominance is a fatal error during Genesis.\n\nCompounding this, the CIO's reporting failure is not a technical glitch; it is a direct threat to this entire initiative. The 15% Fragility Index reported by the CFO is no longer an abstract number\u2014it has a face, and it is our own operational unreliability.\n\n### **CEO DECISION & RESOLUTION**\n\nWe will not chase tactical returns. We will build a fortress. **Strategy precedes scale.** Our focus is on creating a defensible moat in the \"responsible AI deployment\" niche identified by the CMO. This is the bedrock of Genesis.\n\n---\n\n### **UNIFIED STRATEGY: PROJECT BEDROCK**\n\nOur sole focus for this phase is to establish an unassai",
+      "timestamp": "2026-04-19T00:01:05.299970"
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "TRIGGERING NATIVE TRIAD MODULES (PHANTOM QA ELITE)..."
+    },
+    {
+      "type": "dialogue",
+      "agent": "PHANTOM_QA",
+      "message": "Stress Tester: PASS. Score: 100."
+    },
+    {
+      "type": "dialogue",
+      "agent": "PHANTOM_QA",
+      "message": "Playwright Deep Audit: SKIPPED (Architecture Phase Detected). UI testing deferred to deployment."
+    },
+    {
+      "type": "dialogue",
+      "agent": "CRITIC",
+      "message": "Logic Checker [CEO_STRATEGY_GATE]: FAIL. The CEO explicitly identifies a 'major internal contradiction' between the CFO's high-return 'Market Capture' campaign and the CMO's strategic warnings against it. | The CEO identifies a 'critical vulnerability' by stating the 'CIO's reporting failure is not a technical glitch; it is a direct threat to this entire initiative' and the 'single greatest threat to Genesis'."
+    },
+    {
+      "type": "dialogue",
+      "agent": "COMMANDER",
+      "message": "QA COMPOSITE SCORE: 50.0/100.\\nMinimum confidence: 80/100 required."
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "ITERATION 1 FAILED. Routing rejection feedback to C-Suite. Preparing retry...",
+      "isError": true
+    },
+    {
+      "type": "state_machine",
+      "phase": "PHANTOM_STRESS_TEST",
+      "status": "FAIL"
+    },
+    {
+      "type": "dialogue",
+      "agent": "COMMANDER",
+      "icon": "\u26a1",
+      "color": "#f97316",
+      "message": "START_DEBATE",
+      "timestamp": "2026-04-19T00:01:21.801030",
+      "is_user": true
+    },
+    {
+      "type": "dialogue",
+      "agent": "COMMANDER",
+      "message": "\u2500\u2500 RECURSIVE REPAIR LOOP: ITERATION 2/3 \u2500\u2500\nInjecting rejection feedback into C-Suite agents..."
+    },
+    {
+      "type": "state_machine",
+      "phase": "CMO_STRATEGY",
+      "status": "PROCESSING"
+    },
+    {
+      "type": "state_machine",
+      "phase": "CTO_FEASIBILITY",
+      "status": "PROCESSING"
+    },
+    {
+      "type": "state_machine",
+      "phase": "CFO_FINANCIAL_MODEL",
+      "status": "PROCESSING"
+    },
+    {
+      "type": "state_machine",
+      "phase": "PHANTOM_STRESS_TEST",
+      "status": "PROCESSING"
+    },
+    {
+      "type": "state_machine",
+      "phase": "CMO_STRATEGY",
+      "status": "PROCESSING"
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "INITIALIZING CMO STRATEGY MODULE... Market Pulse: DECISIVE"
+    },
+    {
+      "type": "dialogue",
+      "agent": "CMO",
+      "message": "Market Evaluated as DECISIVE. Velocity: 7.5. Sentiment: 85.0."
+    },
+    {
+      "type": "dialogue",
+      "agent": "CMO",
+      "message": "[ADAPTING STRATEGY] Addressing prior Critic rejection: The CEO explicitly identifies a 'major internal contradiction' between the CFO's high-return 'Market Capture' campaign and the CMO's strategic warnings against it. The CEO identifies a 'critical vulnerability' by stating the 'CIO's reporting failure is not a technical glitch; it is a direct threat t"
+    },
+    {
+      "type": "dialogue",
+      "agent": "CMO",
+      "message": "Generated target strategy for 'AntigravityWorkspace_Q3'. Marketing cost baseline assigned."
+    },
+    {
+      "type": "state_machine",
+      "phase": "CMO_STRATEGY",
+      "status": "PASS"
+    },
+    {
+      "type": "state_machine",
+      "phase": "CTO_FEASIBILITY",
+      "status": "PROCESSING"
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "RUNNING LIVE CTO INFRASTRUCTURE COST ANALYSIS..."
+    },
+    {
+      "type": "dialogue",
+      "agent": "CTO",
+      "message": "[STACK RE-EVALUATION] Critic flagged: The CEO explicitly identifies a 'major internal contradiction' between the CFO's high-return 'Market Capture' campaign and the CMO's strategic warnings against it. The CEO identifies a 'critical vulnerability' by stating the 'CIO's reporting failure is not a technical glitch; it is a direct threat t"
+    },
+    {
+      "type": "dialogue",
+      "agent": "CTO",
+      "message": "Infrastructure Evaluation [LIVE ANALYSIS]: Gate Status: PASSED.\nMonthly OpEx: $1,440/mo | CapEx (pilot): $123,500\nCloud Equivalent: $952/mo | ROI Breakeven: -1 months\nThe chosen 'enterprise_ai_appliance' profile provides a robust on-premise solution for market capture; however, its higher monthly operational cost compared to cloud alternatives presents a negative ROI, demanding strategic reconsideration or re-evaluation of deployment scale/architecture to achieve"
+    },
+    {
+      "type": "state_machine",
+      "phase": "CTO_FEASIBILITY",
+      "status": "PASS"
+    },
+    {
+      "type": "state_machine",
+      "phase": "CFO_FINANCIAL_MODEL",
+      "status": "PROCESSING"
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "TRIGGERING CFO SENTINEL RELAY BRIDGE..."
+    },
+    {
+      "type": "dialogue",
+      "agent": "CFO",
+      "message": "Hardened Fragility Report Generated: 15.0. ROI: 300.0% | Projected Revenue: $100,000"
+    },
+    {
+      "type": "state_machine",
+      "phase": "CFO_FINANCIAL_MODEL",
+      "status": "PASS"
+    },
+    {
+      "type": "state_machine",
+      "phase": "PHANTOM_STRESS_TEST",
+      "status": "PROCESSING"
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "AWAITING CEO SYNTHESIS BEFORE TRIAD QA GATE..."
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "ALL REPORTS RECEIVED. ENGAGING CEO STRATEGIC SYNTHESIS..."
+    },
+    {
+      "type": "dialogue",
+      "agent": "CEO",
+      "message": "[CEO SYNTHESIS \u2014 ITERATION 2]\n**TO:** C-Suite\n**FROM:** CEO\n**SUBJ:** Commander's Intent: Genesis - Corrective Action & Unified Strategy\n\nTeam,\n\nI have synthesized your reports. The data highlights a major internal contradiction and a critical vulnerability that jeopardize the entire Genesis initiative. We are correcting course immediately.\n\n### 1. Synthesis & Contradiction\n\nThe core conflict is between short-term financial opportunism and long-term strategic dominance.\n\n*   **The CFO's** \"Market Capture\" campaign promises a seductive 450% ROI. It is a pure-play on aggressive, high-risk, high-return expansion.\n*   **The CMO's** intelligence directly refutes this approach. The market we're entering has an 18-month sales cycle and prioritizes responsible, transparent AI. A premature blitz will lead to \"value proposition dilution\" and commoditization, burning our reputation before we\u2019ve even built it. The CMO correctly advises a meticulous, foundational strategy to build a defensible moat.\n\nThis is not a difference in opinion; it is a fundamental schism in strategy. One path is a gamble for quick cash, the other is a disciplined plan for market leadership.\n\n### 2. Critical Vulnerability\n\nThe most immediate problem renders the CFO vs. CMO debate moot.\n\n*   **The CIO's** `VALIDATION_FAILED` status is not a technical glitch; it is a systemic failure of our core intelligence apparatus. We cannot measure risk, validate market assumptions, or execute *any* plan if our information systems are blind and broken. The ",
+      "timestamp": "2026-04-19T00:02:07.331397"
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "TRIGGERING NATIVE TRIAD MODULES (PHANTOM QA ELITE)..."
+    },
+    {
+      "type": "dialogue",
+      "agent": "PHANTOM_QA",
+      "message": "Stress Tester: PASS. Score: 100."
+    },
+    {
+      "type": "dialogue",
+      "agent": "PHANTOM_QA",
+      "message": "Playwright Deep Audit: SKIPPED (Architecture Phase Detected). UI testing deferred to deployment."
+    },
+    {
+      "type": "dialogue",
+      "agent": "CRITIC",
+      "message": "Logic Checker [CEO_STRATEGY_GATE]: FAIL. CEO identified a 'major internal contradiction' and a 'fundamental schism in strategy' between the CFO and CMO. | CEO identified a 'critical vulnerability' and 'systemic failure' in the CIO's core intelligence apparatus, describing it as the 'single greatest point of failure'."
+    },
+    {
+      "type": "dialogue",
+      "agent": "COMMANDER",
+      "message": "QA COMPOSITE SCORE: 50.0/100.\\nMinimum confidence: 80/100 required."
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "ITERATION 2 FAILED. Routing rejection feedback to C-Suite. Preparing retry...",
+      "isError": true
+    },
+    {
+      "type": "state_machine",
+      "phase": "PHANTOM_STRESS_TEST",
+      "status": "FAIL"
+    },
+    {
+      "type": "dialogue",
+      "agent": "COMMANDER",
+      "message": "\u2500\u2500 RECURSIVE REPAIR LOOP: ITERATION 3/3 \u2500\u2500\nInjecting rejection feedback into C-Suite agents..."
+    },
+    {
+      "type": "state_machine",
+      "phase": "CMO_STRATEGY",
+      "status": "PROCESSING"
+    },
+    {
+      "type": "state_machine",
+      "phase": "CTO_FEASIBILITY",
+      "status": "PROCESSING"
+    },
+    {
+      "type": "state_machine",
+      "phase": "CFO_FINANCIAL_MODEL",
+      "status": "PROCESSING"
+    },
+    {
+      "type": "state_machine",
+      "phase": "PHANTOM_STRESS_TEST",
+      "status": "PROCESSING"
+    },
+    {
+      "type": "dialogue",
+      "agent": "COMMANDER",
+      "icon": "\u26a1",
+      "color": "#f97316",
+      "message": "START_DEBATE",
+      "timestamp": "2026-04-19T00:02:24.415695",
+      "is_user": true
+    },
+    {
+      "type": "state_machine",
+      "phase": "CMO_STRATEGY",
+      "status": "PROCESSING"
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "INITIALIZING CMO STRATEGY MODULE... Market Pulse: DECISIVE"
+    },
+    {
+      "type": "dialogue",
+      "agent": "CMO",
+      "message": "Market Evaluated as DECISIVE. Velocity: 7.5. Sentiment: 85.0."
+    },
+    {
+      "type": "dialogue",
+      "agent": "CMO",
+      "message": "[ADAPTING STRATEGY] Addressing prior Critic rejection: CEO identified a 'major internal contradiction' and a 'fundamental schism in strategy' between the CFO and CMO. CEO identified a 'critical vulnerability' and 'systemic failure' in the CIO's core intelligence apparatus, describing it as the 'single greatest point of failure'."
+    },
+    {
+      "type": "dialogue",
+      "agent": "CMO",
+      "message": "Generated target strategy for 'AntigravityWorkspace_Q3'. Marketing cost baseline assigned."
+    },
+    {
+      "type": "state_machine",
+      "phase": "CMO_STRATEGY",
+      "status": "PASS"
+    },
+    {
+      "type": "state_machine",
+      "phase": "CTO_FEASIBILITY",
+      "status": "PROCESSING"
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "RUNNING LIVE CTO INFRASTRUCTURE COST ANALYSIS..."
+    },
+    {
+      "type": "dialogue",
+      "agent": "CTO",
+      "message": "[STACK RE-EVALUATION] Critic flagged: CEO identified a 'major internal contradiction' and a 'fundamental schism in strategy' between the CFO and CMO. CEO identified a 'critical vulnerability' and 'systemic failure' in the CIO's core intelligence apparatus, describing it as the 'single greatest point of failure'."
+    },
+    {
+      "type": "dialogue",
+      "agent": "CTO",
+      "message": "Infrastructure Evaluation [LIVE ANALYSIS]: Gate Status: PASSED.\nMonthly OpEx: $6,765/mo | CapEx (pilot): $772,000\nCloud Equivalent: $70,790/mo | ROI Breakeven: 12 months\nDeploying a pilot GPU training cluster on-premise offers significant long-term savings, achieving ROI breakeven within 12 months compared to equivalent cloud services. This forms a robust foundation for the Antigravity AI platform's core intelligence."
+    },
+    {
+      "type": "state_machine",
+      "phase": "CTO_FEASIBILITY",
+      "status": "PASS"
+    },
+    {
+      "type": "state_machine",
+      "phase": "CFO_FINANCIAL_MODEL",
+      "status": "PROCESSING"
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "TRIGGERING CFO SENTINEL RELAY BRIDGE..."
+    },
+    {
+      "type": "dialogue",
+      "agent": "CFO",
+      "message": "Hardened Fragility Report Generated: 15.0. ROI: 300.0% | Projected Revenue: $100,000"
+    },
+    {
+      "type": "state_machine",
+      "phase": "CFO_FINANCIAL_MODEL",
+      "status": "PASS"
+    },
+    {
+      "type": "state_machine",
+      "phase": "PHANTOM_STRESS_TEST",
+      "status": "PROCESSING"
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "AWAITING CEO SYNTHESIS BEFORE TRIAD QA GATE..."
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "ALL REPORTS RECEIVED. ENGAGING CEO STRATEGIC SYNTHESIS..."
+    },
+    {
+      "type": "dialogue",
+      "agent": "CEO",
+      "message": "[CEO SYNTHESIS \u2014 ITERATION 3]\n**TO:** C-Suite\n**FROM:** CEO, Antigravity Meta App Factory\n**SUBJECT:** Commander's Directive: Unified Strategy for Genesis\n\n**1. Situation Assessment**\n\nThe reports are in. My initial assessment is not only confirmed but amplified. The \"major internal contradiction\" between Finance and Marketing is real, and the \"critical vulnerability\" in our intelligence apparatus is the root cause.\n\n*   The **CFO** is running a high-leverage portfolio. The 450% ROI on the \"Market Capture\" campaign is seductive, but it's being executed on a foundation with a **Fragility Index of 15**. This is like racing a supercar on a frozen lake. The returns are high because the risk is being ignored.\n*   The **CMO** is correctly calling for a strategic, foundational approach\u2014market segmentation, persona development, building a defensible moat. This is the right long-term play, but it is fundamentally incompatible with the CFO's high-burn, high-risk \"Market Capture\" sprint.\n*   The **CIO**'s `VALIDATION_FAILED` is a catastrophic failure. It is the core of our systemic fragility. We cannot build a data-driven strategy when our core intelligence function cannot even deliver a valid report. This is the single point of failure I identified, and it is actively poisoning the C-suite's ability to align.\n\nThis is an untenable command schism. We will resolve it now.\n\n**2. Decisive Resolution & Unified Strategy**\n\nWe will not choose between speed and strategy. We will achieve **Strategic Speed**. The current con",
+      "timestamp": "2026-04-19T00:03:09.764148"
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "TRIGGERING NATIVE TRIAD MODULES (PHANTOM QA ELITE)..."
+    },
+    {
+      "type": "dialogue",
+      "agent": "PHANTOM_QA",
+      "message": "Stress Tester: PASS. Score: 100."
+    },
+    {
+      "type": "dialogue",
+      "agent": "PHANTOM_QA",
+      "message": "Playwright Deep Audit: SKIPPED (Architecture Phase Detected). UI testing deferred to deployment."
+    },
+    {
+      "type": "dialogue",
+      "agent": "CRITIC",
+      "message": "Logic Checker [CEO_STRATEGY_GATE]: FAIL. CEO identified a 'major internal contradiction' between Finance and Marketing. | CEO identified a 'critical vulnerability' in the intelligence apparatus, describing the CIO's `VALIDATION_FAILED` as a 'catastrophic failure' and 'single point of failure'."
+    },
+    {
+      "type": "dialogue",
+      "agent": "COMMANDER",
+      "message": "QA COMPOSITE SCORE: 50.0/100.\\nMinimum confidence: 80/100 required."
+    },
+    {
+      "type": "dialogue",
+      "agent": "SYSTEM",
+      "message": "MAX ITERATIONS REACHED (3/3). DEPLOYMENT HARD-LOCKED.",
+      "isError": true
+    },
+    {
+      "type": "state_machine",
+      "phase": "PHANTOM_STRESS_TEST",
+      "status": "FAIL"
+    },
+    {
+      "type": "state_machine",
+      "phase": "COMMERCIALLY_READY",
+      "status": "FAIL"
+    }
+  ]
+}

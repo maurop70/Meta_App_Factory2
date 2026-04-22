@@ -425,9 +425,8 @@ class GeoTalentScout:
 
     # ── Gemini model fallback chain (Aether Runtime self-healing) ──
     _GEMINI_MODELS = [
-        "gemini-2.5-flash",
-        "gemini-2.5-flash-lite",
-        "gemini-2.0-flash-001",
+        "gemini-2.5-pro",
+        "gemini-2.5-flash"
     ]
 
     def _classify_and_extract(self, raw_results: list, role_title: str,

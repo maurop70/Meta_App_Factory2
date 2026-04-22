@@ -1428,7 +1428,7 @@ if __name__ == "__main__":
     print("   LLM Status:GET  /api/llm/status")
     print("   Reports:   GET  /api/reports")
     print("")
-    print("   LLM Routing: LOCAL (Ollama) ↔ CLOUD (Gemini 2.5 Flash)")
+    print("   LLM Routing: LOCAL (Ollama) <-> CLOUD (Gemini 2.5 Flash)")
     print("   N8N Cloud: RETIRED (Native Intelligence Active)")
     print("")
     print("   Antigravity-AI | CFO Ultimate Excel Architect v3.1.0")
