@@ -57,6 +57,10 @@ projects/*/warroom_history.json
 Thumbs.db
 desktop.ini
 
+# ── Databases ────────────────────────────────────────
+*.db
+*.sqlite3
+
 # ── IDE ──────────────────────────────────────────────
 .vscode/
 .idea/
