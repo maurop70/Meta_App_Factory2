@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/MockAuthContext';
 import MWODashboard from '../components/MWODashboard';
 
 const AdminConsole = () => {

@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { MockAuthProvider, LoginSimulator, useAuth } from './context/MockAuthContext';
+import './App.css'; // Strictly Native Vanilla CSS
 import './App.css'; // Strictly Native Vanilla CSS
 
 // Import actual component files
@@ -10,13 +11,12 @@ import Login from './pages/Login';
 
 // Role-Gating Security Component
 const ProtectedRoute = ({ allowedRoles, children }) => {
-  const { isAuthenticated, userRole } = useAuth();
+  const { userRole } = useAuth();
+  
+  // Normalize Mock Roles to App Roles
+  const normalizedRole = userRole === 'HM (Admin)' ? 'Admin' : 'Technician';
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (allowedRoles && !allowedRoles.includes(userRole)) {
+  if (allowedRoles && !allowedRoles.includes(normalizedRole)) {
     return <Navigate to="/" replace />;
   }
 
@@ -25,16 +25,17 @@ const ProtectedRoute = ({ allowedRoles, children }) => {
 
 // Dynamic Home Router
 const RoleRouter = () => {
-  const { isAuthenticated, userRole } = useAuth();
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
-  return userRole === 'Admin' ? <Navigate to="/admin" replace /> : <Navigate to="/tech" replace />;
+  const { userRole } = useAuth();
+  const isAdmin = userRole === 'HM (Admin)';
+  return isAdmin ? <Navigate to="/admin" replace /> : <Navigate to="/tech" replace />;
 };
 
 function App() {
   return (
-    <AuthProvider>
+    <MockAuthProvider>
+      <LoginSimulator />
       <Router>
-        <div className="erp-app-container">
+          <div className="erp-app-container">
           <Routes>
             {/* Public Authentication Gate */}
             <Route path="/login" element={<Login />} />
@@ -67,7 +68,7 @@ function App() {
           </Routes>
         </div>
       </Router>
-    </AuthProvider>
+    </MockAuthProvider>
   );
 }
 
