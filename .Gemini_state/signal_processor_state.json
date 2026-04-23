@@ -1,0 +1,44 @@
+{
+  "processed_count": 1,
+  "triggers_fired": 0,
+  "last_processed": "2026-03-11T21:16:21.536159+00:00",
+  "recent_signals": [
+    {
+      "headline": "VIX Spikes to 35 as Market Crash Fears Grow",
+      "category": "Volatility Event",
+      "impact": "critical",
+      "score": 10,
+      "matched_keywords": [
+        "vix spike",
+        "volatility",
+        "crash",
+        "flash crash"
+      ],
+      "source": "Bloomberg",
+      "timestamp": "2026-03-11T21:16:21.536088+00:00"
+    },
+    {
+      "headline": "Fed Signals Emergency Rate Cut Amid Banking Stress",
+      "category": "Macroeconomic",
+      "impact": "high",
+      "score": 7,
+      "matched_keywords": [
+        "rate cut",
+        "fed"
+      ],
+      "source": "Reuters",
+      "timestamp": "2026-03-11T21:16:21.536048+00:00"
+    },
+    {
+      "headline": "Tech Earnings Beat Expectations Across the Board",
+      "category": "Corporate Earnings",
+      "impact": "medium",
+      "score": 4,
+      "matched_keywords": [
+        "earnings beat"
+      ],
+      "source": "CNBC",
+      "timestamp": "2026-03-11T21:16:21.536116+00:00"
+    }
+  ]
+}
