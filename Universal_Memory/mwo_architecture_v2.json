@@ -1,0 +1,56 @@
+{
+  "system_overview": {
+    "module": "Maintenance Work Order (MWO) Engine V2",
+    "objective": "A hardened, role-gated state machine replacing the temporal-heavy V1 schema.",
+    "storage": "Local SQLite database acting as the isolated edge cache."
+  },
+  "core_data_architecture": {
+    "schema_version": "V2",
+    "mwo_v2_schema": [
+      "mwo_id (TEXT PRIMARY KEY)",
+      "status (TEXT)",
+      "dm_urgency (TEXT)",
+      "hm_priority (TEXT)",
+      "description (TEXT)",
+      "assigned_tech (TEXT)",
+      "consumed_sku (TEXT)",
+      "manual_log (TEXT)",
+      "created_at (REAL)",
+      "triaged_at (REAL)",
+      "execution_start (REAL)",
+      "execution_end (REAL)",
+      "completed_at (REAL)"
+    ],
+    "indices": [
+      "idx_mwo_status (B-Tree on status column)",
+      "idx_mwo_tech (B-Tree on assigned_tech column)"
+    ]
+  },
+  "ui_role_views": {
+    "admin_console": {
+      "persona": "HM (Admin)",
+      "view_logic": "Global view. Maps dm_urgency, hm_priority, assigned_tech. Triggers COMPLETED state."
+    },
+    "tech_edge_node": {
+      "persona": "Tech-Alpha / Tech-Bravo",
+      "view_logic": "Strictly filtered array: status IN ('ASSIGNED', 'IN_PROGRESS') AND assigned_tech === userRole.",
+      "write_matrix": "Can mutate status to IN_PROGRESS or PENDING_REVIEW. Can inject consumed_sku and manual_log."
+    }
+  },
+  "state_machine": {
+    "AWAITING_TRIAGE": "Initial drop state.",
+    "ASSIGNED": "Task delegated to specific technician.",
+    "IN_PROGRESS": "Technician actuates start. Temporal lock: execution_start = COALESCE(execution_start, time.time()).",
+    "PENDING_REVIEW": "Technician completes edge work. Temporal lock: execution_end = time.time().",
+    "PENDING_REVIEW_REJECTION": "Admin rejects the payload. State reverts to IN_PROGRESS. Edge Node re-engages. execution_start timestamp remains locked via COALESCE.",
+    "COMPLETED": "Admin approval. Temporal lock: completed_at = time.time(). Triggers Universal Archival Handover."
+  },
+  "universal_archival_engine": {
+    "trigger_event": "Asynchronous Pub/Sub JSON file drop to Archival_Queue/ upon MWO transitioning to COMPLETED state.",
+    "canonical_sequence_schema": "[MODULE_CODE]-[YYYY]-[MM]-[SEQUENCE_ID]",
+    "mwo_module_code": "RFK26",
+    "rollover_constraint": "The [SEQUENCE_ID] integer MUST strictly reset to 0001 on the first day of a new calendar month. Continuous rollover across months is a fatal architectural violation.",
+    "template_routing": "Agent dispatches JSON payload to mwo_template.html based on document_type header.",
+    "file_handover_protocol": "Atomic Drop Protocol: FastAPI writes .tmp file to Archival_Queue/, flushes, then os.rename() to .json to prevent consumer race conditions."
+  }
+}
