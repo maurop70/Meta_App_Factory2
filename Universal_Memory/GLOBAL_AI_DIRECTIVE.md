@@ -1,1 +1,5 @@
 PERMANENT SYSTEM RULE: Every project and module within the Meta App Factory MUST possess a dedicated JSON memory artifact (e.g., mwo_architecture_v2.json). All autonomous agents MUST read the relevant JSON file upon initialization to establish context. Agents MUST synchronously write all new architectural specifications, schema alterations, and logic agreements to this JSON file. Relying on conversational context for architectural continuity is strictly prohibited.
+
+AUTONOMOUS QA PROTOCOL: Human-in-the-loop Quality Assurance is formally deprecated. The Commander is not a QA technician. All backend engines, state machines, and API bridges must be mathematically verified via autonomous scripts (e.g., Playwright headless browser tests) written and executed by the agent.
+
+EXTERNAL DOCUMENTATION SEVERANCE: The agent is strictly forbidden from writing, formatting, or synchronizing ecosystem memory to external cloud platforms (e.g., Google Docs, Notion). The absolute single source of truth for all architectural schema and memory is Universal_Memory/mwo_architecture_v2.json.
