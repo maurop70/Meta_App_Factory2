@@ -1,0 +1,17 @@
+[
+  {
+    "standard_id": "WV-UI-PREF-001",
+    "domain": "architecture",
+    "title": "Universal UI Preference: Toast Confirmations & Local History Pagination",
+    "insight": "Whenever proposing or building front-end web apps: 1) Action Confirmation: Always include a visual toast/success message that temporarily appears when an item is submitted, accompanied by an auto-clear of the form. 2) Object History: Provide a local session history widget allowing the user to navigate backward/forward through the objects they have just interacted with or submitted.",
+    "source_project": "Maintenance_Work_Order",
+    "source_agent": "MASTER_ARCHITECT",
+    "applicability": "universal",
+    "confidence": 1.0,
+    "status": "approved",
+    "approved_by": "COMMANDER",
+    "tags": [],
+    "created_at": "2026-04-15T20:25:04.784827+00:00",
+    "approved_at": ""
+  }
+]

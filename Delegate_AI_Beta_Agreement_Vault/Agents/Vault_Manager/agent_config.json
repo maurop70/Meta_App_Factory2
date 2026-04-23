@@ -1,0 +1,20 @@
+{
+    "name": "Vault Manager",
+    "version": "1.0.0",
+    "project": "Delegate AI Beta-Agreement Vault",
+    "status": "active",
+    "permissions": {
+        "Allow": [
+            "read_file(*)",
+            "mcp(analyze)"
+        ],
+        "Deny": [
+            "write_file(/path/to/core/engine)",
+            "command(rm)"
+        ],
+        "Ask": [
+            "command(*)",
+            "write_file(*)"
+        ]
+    }
+}

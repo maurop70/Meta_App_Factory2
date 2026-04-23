@@ -1,0 +1,14 @@
+{
+  "total_requests": 1,
+  "local_requests": 0,
+  "cloud_requests": 1,
+  "fallback_count": 1,
+  "circuit_breaker_trips": 0,
+  "last_request_at": "2026-04-10T22:40:47.315819",
+  "avg_local_latency_ms": 0.0,
+  "avg_cloud_latency_ms": 12160.8,
+  "_local_latencies": [],
+  "_cloud_latencies": [
+    12160.8
+  ]
+}
