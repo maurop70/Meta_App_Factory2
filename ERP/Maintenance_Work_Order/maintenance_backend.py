@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from supabase import create_client, Client
 from dotenv import load_dotenv
+from local_db import get_db_connection
 
 # Initialize Environment & Supabase
 # Script lives at: Meta_App_Factory/ERP/Maintenance_Work_Order/
@@ -22,11 +23,15 @@ env_path = os.path.join(_factory, '.env')
 load_dotenv(env_path)
 logging.basicConfig(level=logging.INFO)
 logging.getLogger("MaintenanceBackend").info(f"Loading .env from: {env_path}")
-url: str = os.environ.get("SUPABASE_URL")
-key: str = os.environ.get("SUPABASE_KEY")
+url: str = os.environ.get("SUPABASE_URL", "http://localhost:8000")
+key: str = os.environ.get("SUPABASE_KEY", "dummy")
 
-# Supabase Initialization
-supabase: Client = create_client(url, key)
+# Supabase Initialization (Legacy)
+try:
+    supabase: Client = create_client(url, key)
+except Exception as e:
+    logging.getLogger("MaintenanceBackend").warning("Supabase initialization bypassed. Running in native offline mode.")
+    supabase = None
 
 app = FastAPI(title="Maintenance Work Order API - Global ERP Connected")
 logger = logging.getLogger("MaintenanceBackend")
@@ -43,7 +48,12 @@ app.mount("/static", StaticFiles(directory=_frontend_dir), name="static")
 # CORS: Decoupled frontend access
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:5173", "http://127.0.0.1:5173",
+        "http://localhost:5174", "http://127.0.0.1:5174",
+        "http://localhost:5175", "http://127.0.0.1:5175",
+        "http://localhost:5176", "http://127.0.0.1:5176"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -77,7 +87,6 @@ class EquipmentSubmit(BaseModel):
     operational_status: str = "OPERATIONAL"
 
 class PinVerify(BaseModel):
-    user_id: str
     pin: str
 
 # --- SECURITY LAYER ---
@@ -109,30 +118,88 @@ async def search_users(name: str = Query("")):
     return [sanitize_user(u) for u in response.data]
 
 @app.post("/api/user/verify-pin")
-async def verify_pin(payload: PinVerify):
-    response = supabase.table("erp_employees").select("*, erp_roles(*)").eq("id", payload.user_id).execute()
-    if not response.data:
-        raise HTTPException(status_code=404, detail="User not found.")
-    user = response.data[0]
-    if user.get("pin_code") and user.get("pin_code") != payload.pin:
-        raise HTTPException(status_code=401, detail="Incorrect PIN.")
-    return sanitize_user(user)
+def verify_pin(payload: PinVerify):
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        query = """
+            SELECT e.id, e.name, e.authorization_level
+            FROM erp_employees e
+            WHERE e.pin_code = ?
+        """
+        cursor.execute(query, (payload.pin,))
+        row = cursor.fetchone()
+        
+        if not row:
+            raise HTTPException(status_code=401, detail="Incorrect PIN. Authorization Denied.")
+            
+        role = "Admin" if row["authorization_level"] == "ADMIN" else "Technician"
+        
+        return {
+            "status": "success",
+            "role": role,
+            "user": {
+                "id": row["id"],
+                "name": row["name"]
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"PIN Verification Failed: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error during verification.")
+    finally:
+        if conn:
+            conn.close()
+
+@app.get("/api/mwo")
+def get_mwo():
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM work_orders")
+        rows = [dict(row) for row in cursor.fetchall()]
+        return {"status": "success", "data": rows}
+    except Exception as e:
+        logger.error(f"Failed to fetch work orders: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error while fetching work orders.")
+    finally:
+        if conn:
+            conn.close()
 
 @app.post("/api/orders/submit")
 async def submit_order(order: WorkOrderSubmit):
+    conn = get_db_connection()
     try:
-        data = {
-            "reported_by": order.reported_by,
-            "asset_id": order.asset_id,
-            "issue_description": order.issue_description,
-            "status": "PENDING",
-            "reported_at": datetime.datetime.now().isoformat()
-        }
-        response = supabase.table("erp_maintenance_logs").insert(data).execute()
-        return {"status": "success", "data": response.data}
+        cursor = conn.cursor()
+        
+        # Temporal Fix: Strict UTC ISO 8601 string
+        reported_at = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        
+        cursor.execute(
+            """
+            INSERT INTO erp_maintenance_logs 
+            (reported_by, asset_id, issue_description, status, reported_at) 
+            VALUES (?, ?, ?, ?, ?)
+            RETURNING *
+            """,
+            (order.reported_by, order.asset_id, order.issue_description, "PENDING", reported_at)
+        )
+        
+        inserted_row = cursor.fetchone()
+        conn.commit()
+        
+        return {"status": "success", "data": [dict(inserted_row)]}
+        
     except Exception as e:
+        conn.rollback()
         logger.error(f"Insert Failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Database insertion failed. Transaction rolled back.")
+    finally:
+        conn.close()
 
 class AssignUpdate(BaseModel):
     order_id: str
@@ -140,8 +207,43 @@ class AssignUpdate(BaseModel):
 
 @app.post("/api/orders/assign")
 async def assign_order(payload: AssignUpdate):
-    response = supabase.table("erp_maintenance_logs").update({"assigned_to": payload.technician_id}).eq("id", payload.order_id).execute()
-    return response.data
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        
+        # Optimistic Locking: Only update if not currently assigned
+        cursor.execute(
+            """
+            UPDATE erp_maintenance_logs 
+            SET assigned_to = ? 
+            WHERE id = ? AND assigned_to IS NULL
+            RETURNING *
+            """,
+            (payload.technician_id, payload.order_id)
+        )
+        
+        # Concurrency Gate
+        if cursor.rowcount == 0:
+            conn.rollback()
+            raise HTTPException(
+                status_code=409, 
+                detail="Conflict: Order is already assigned or does not exist."
+            )
+            
+        assigned_row = cursor.fetchone()
+        conn.commit()
+        
+        # Return mimicking Supabase array structure
+        return [dict(assigned_row)]
+        
+    except HTTPException:
+        raise  # Re-raise the 409 Conflict intentionally
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Assign Failed: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error during assignment.")
+    finally:
+        conn.close()
 
 @app.post("/api/orders/update-status")
 async def update_status(update: StatusUpdate):
@@ -163,8 +265,55 @@ async def update_status(update: StatusUpdate):
 
 @app.get("/api/orders/active")
 async def get_active_orders():
-    response = supabase.table("erp_maintenance_logs").select("*, erp_assets(*), erp_employees!reported_by(*)").neq("status", "COMPLETE").execute()
-    return response.data
+    """
+    Retrieves all non-closed maintenance work orders, ordered newest first.
+    Strictly utilizes the new local SQLite adapter for concurrent stability.
+    """
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        query = """
+            SELECT 
+                id,
+                reported_by,
+                asset_id,
+                issue_description,
+                status,
+                assigned_to,
+                resolved_at,
+                reported_at
+            FROM erp_maintenance_logs
+            WHERE status != 'CLOSED'
+            ORDER BY reported_at DESC
+        """
+        
+        cursor.execute(query)
+        rows = cursor.fetchall()
+        
+        orders = []
+        for row in rows:
+            orders.append({
+                "id": row["id"],
+                "reported_by": row["reported_by"],
+                "asset_id": row["asset_id"],
+                "issue_description": row["issue_description"],
+                "status": row["status"],
+                "assigned_to": row["assigned_to"],
+                "resolved_at": row["resolved_at"],
+                "reported_at": row["reported_at"]
+            })
+            
+        return {"status": "success", "orders": orders}
+        
+    except Exception as e:
+        logger.error(f"Active orders telemetry query failed: {e}")
+        raise HTTPException(status_code=500, detail="Database Error: Unable to fetch active telemetry.")
+        
+    finally:
+        if conn:
+            conn.close()
 
 @app.get("/api/user/by-phone/{phone}")
 async def user_by_phone(phone: str):

@@ -43,9 +43,9 @@ def extract_text(filepath: str) -> str:
         return "[PDF_SKIPPED: PyMuPDF not installed on host]"
     return ""
 
-@app.get("/health")
+@app.get("/api/health")
 def health_ping():
-    return {"status": "healthy", "service": "CLO_Agent"}
+    return {"status": "ok", "service": "CLO_Agent"}
 
 @app.post("/scan_vault")
 async def scan_vault():

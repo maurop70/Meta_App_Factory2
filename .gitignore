@@ -1,29 +1,18 @@
-# ═══════════════════════════════════════════════════════
-#  Meta App Factory — Security Shield (.gitignore)
-# ═══════════════════════════════════════════════════════
+# Local Database & State
+*.db
+*.db-wal
+*.db-shm
+pending_sync/
+*.log
+auto_heal_log.json
 
-# ── Secrets & Credentials ─────────────────────────────
+# Environment Secrets
 .env
-*.env.local
-*.env.bak
-!env.template
-.vault_pw
-vault.enc
-vault.enc.salt
-*.key
 *.pem
-google_creds.json
-client_secret*.json
-token*.json
-token*.pickle
-utils/auth/
 
-# ── Node / Frontend ──────────────────────────────────
+# UI Build Artifacts
 node_modules/
 dist/
-.vite/
-
-# ── Python ───────────────────────────────────────────
 __pycache__/
 *.pyc
 *.pyo
@@ -80,3 +69,4 @@ Employees email and phone.xlsx
 projects/*_chaos*/
 projects/*_chaos/
 Venture_Data/scout_pitches.json
+utils/auth/google_creds.json

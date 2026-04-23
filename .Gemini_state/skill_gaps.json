@@ -1,0 +1,46 @@
+{
+  "gaps": [
+    {
+      "app": "Meta App Factory",
+      "error_count": 1,
+      "open_count": 0,
+      "max_complexity": 4,
+      "recommended_skills": [
+        {
+          "skill_id": "jsx_parse",
+          "skill_name": "JSX/React Syntax Validator",
+          "description": "Add AST-level JSX validation before writing React files",
+          "matched_pattern": "jsx"
+        }
+      ]
+    },
+    {
+      "app": "Alpha_V2_Genesis",
+      "error_count": 1,
+      "open_count": 0,
+      "max_complexity": 4,
+      "recommended_skills": [
+        {
+          "skill_id": "jsx_parse",
+          "skill_name": "JSX/React Syntax Validator",
+          "description": "Add AST-level JSX validation before writing React files",
+          "matched_pattern": "jsx"
+        },
+        {
+          "skill_id": "null_handling",
+          "skill_name": "Null-Safety Guard",
+          "description": "Implement defensive null checks across data pipelines",
+          "matched_pattern": "missing"
+        },
+        {
+          "skill_id": "context_awareness",
+          "skill_name": "Cross-Module Context Injector",
+          "description": "Ensure all UI tabs share context with AI chat components",
+          "matched_pattern": "context"
+        }
+      ]
+    }
+  ],
+  "last_scan": "2026-03-11T20:59:59.370433+00:00",
+  "scan_count": 1
+}
