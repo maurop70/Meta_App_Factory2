@@ -1,19 +1,28 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/MockAuthContext';
-import MWODashboard from '../components/MWODashboard';
 import CreateMWOForm from '../components/CreateMWOForm';
+import MWODashboard from '../components/MWODashboard';
+import AdminDataIngestion from '../components/AdminDataIngestion';
 
 const AdminConsole = () => {
   const { userRole, logout } = useAuth();
   const [refreshKey, setRefreshKey] = useState(0);
+  const [activeTab, setActiveTab] = useState('ingestion');
 
   const handleMWOCreated = () => {
     setRefreshKey(prev => prev + 1);
   };
+
+  const tabs = [
+    { id: 'ingestion', label: 'Data Ingestion' },
+    { id: 'hd', label: 'HD View' },
+    { id: 'hm', label: 'HM View' },
+    { id: 'tech', label: 'Tech View' }
+  ];
   
   return (
     <div className="factory-main" style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto', fontFamily: 'var(--font, Inter)' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border, rgba(99,102,241,0.15))' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border, rgba(99,102,241,0.15))' }}>
         <div>
           <h2 style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-primary, #e2e8f0)', marginBottom: '0.3rem' }}>Admin Command Console</h2>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--text-secondary, #94a3b8)' }}>
@@ -25,12 +34,55 @@ const AdminConsole = () => {
           Terminate Session
         </button>
       </div>
-      
-      <CreateMWOForm onMWOCreated={handleMWOCreated} />
-      
-      <div style={{ marginTop: '2rem' }}>
-        <MWODashboard key={refreshKey} />
+
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem' }}>
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            style={{
+              padding: '0.5rem 1rem',
+              borderRadius: '8px',
+              border: '1px solid',
+              borderColor: activeTab === tab.id ? 'var(--accent, #6366f1)' : 'var(--border, rgba(99,102,241,0.15))',
+              background: activeTab === tab.id ? 'rgba(99, 102, 241, 0.15)' : 'rgba(15, 23, 42, 0.5)',
+              color: activeTab === tab.id ? 'var(--text-primary, #e2e8f0)' : 'var(--text-muted, #64748b)',
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: '0.85rem',
+              transition: 'all 0.2s'
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
+      
+      {activeTab === 'ingestion' && (
+        <AdminDataIngestion />
+      )}
+      
+      {activeTab === 'hd' && (
+        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted, #64748b)', background: 'var(--bg-card, rgba(15, 23, 42, 0.85))', borderRadius: '12px', border: '1px solid var(--border)' }}>
+          HD Dashboard Component Pending...
+        </div>
+      )}
+      
+      {activeTab === 'hm' && (
+        <>
+          <CreateMWOForm onMWOCreated={handleMWOCreated} />
+          <div style={{ marginTop: '2rem' }}>
+            <MWODashboard key={refreshKey} />
+          </div>
+        </>
+      )}
+
+      {activeTab === 'tech' && (
+        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted, #64748b)', background: 'var(--bg-card, rgba(15, 23, 42, 0.85))', borderRadius: '12px', border: '1px solid var(--border)' }}>
+          Tech Dashboard Component Pending...
+        </div>
+      )}
+      
     </div>
   );
 };

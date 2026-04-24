@@ -53,3 +53,26 @@ def get_db_connection() -> sqlite3.Connection:
     conn.execute("PRAGMA foreign_keys=ON;")
     
     return conn
+
+def init_tables():
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                user_id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                role TEXT NOT NULL CHECK(role IN ('ADMIN', 'HD', 'HM', 'TECH')),
+                department TEXT,
+                reports_to_hm_id TEXT,
+                FOREIGN KEY(reports_to_hm_id) REFERENCES users(user_id)
+            )
+        ''')
+        conn.commit()
+    except Exception as e:
+        logger.error(f"Failed to initialize tables: {e}")
+    finally:
+        conn.close()
+
+# Initialize schema on load
+init_tables()
