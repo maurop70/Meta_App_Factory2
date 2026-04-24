@@ -7,26 +7,39 @@ import './App.css'; // Strictly Native Vanilla CSS
 import TechDashboard from './pages/TechDashboard';
 import AdminConsole from './pages/AdminConsole';
 import Login from './pages/Login';
+import MWODashboard from './components/MWODashboard'; // HM Feed
+import CreateMWOForm from './components/CreateMWOForm'; // DM Submission
 
-// Role-Gating Security Component
+// Strict Role-Gating Security Component
 const ProtectedRoute = ({ allowedRoles, children }) => {
   const { userRole } = useAuth();
   
-  // Normalize Mock Roles to App Roles
-  const normalizedRole = userRole === 'HM (Admin)' ? 'Admin' : 'Technician';
-
-  if (allowedRoles && !allowedRoles.includes(normalizedRole)) {
+  // Strict Enforcement: No coercing non-matching strings.
+  // If the payload does not explicitly match the allowed operational tiers, bounce immediately.
+  if (!allowedRoles || !allowedRoles.includes(userRole)) {
     return <Navigate to="/" replace />;
   }
 
   return children;
 };
 
-// Dynamic Home Router
+// Dynamic Home Router maps explicit roles to their terminal paths
 const RoleRouter = () => {
   const { userRole } = useAuth();
-  const isAdmin = userRole === 'HM (Admin)';
-  return isAdmin ? <Navigate to="/admin" replace /> : <Navigate to="/tech" replace />;
+  
+  switch (userRole) {
+    case 'Administrator':
+      return <Navigate to="/admin" replace />;
+    case 'DM':
+      return <Navigate to="/dm" replace />;
+    case 'HM':
+      return <Navigate to="/hm" replace />;
+    case 'Technician':
+      return <Navigate to="/tech" replace />;
+    default:
+      // Fallback for unauthenticated or non-matching payload strings
+      return <Navigate to="/login" replace />;
+  }
 };
 
 function App() {
@@ -52,21 +65,41 @@ function App() {
             {/* Base Routing */}
             <Route path="/" element={<RoleRouter />} />
 
-            {/* Quarantined Admin Space */}
+            {/* Global Console: Tabbed Visibility for Administrator */}
             <Route
               path="/admin/*"
               element={
-                <ProtectedRoute allowedRoles={['Admin']}>
+                <ProtectedRoute allowedRoles={['Administrator']}>
                   <AdminConsole />
                 </ProtectedRoute>
               }
             />
 
-            {/* Technician Floor Access */}
+            {/* Department Manager (DM) Submission View */}
+            <Route
+              path="/dm/*"
+              element={
+                <ProtectedRoute allowedRoles={['DM']}>
+                  <CreateMWOForm />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Head Maintenance (HM) Command Feed */}
+            <Route
+              path="/hm/*"
+              element={
+                <ProtectedRoute allowedRoles={['HM']}>
+                  <MWODashboard />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Technician Execution Floor */}
             <Route
               path="/tech/*"
               element={
-                <ProtectedRoute allowedRoles={['Technician', 'Admin']}>
+                <ProtectedRoute allowedRoles={['Technician']}>
                   <TechDashboard />
                 </ProtectedRoute>
               }

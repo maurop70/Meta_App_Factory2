@@ -3,7 +3,19 @@ import React, { createContext, useContext, useState } from 'react';
 const AuthContext = createContext();
 
 export const MockAuthProvider = ({ children }) => {
-  const [userRole, setUserRole] = useState(localStorage.getItem('userRole') || 'Tech-Alpha');
+  const validRoles = ['Administrator', 'DM', 'HM', 'Technician'];
+  
+  const getInitialRole = () => {
+    const cached = localStorage.getItem('userRole');
+    if (validRoles.includes(cached)) {
+      return cached;
+    }
+    // State Purge Protocol: Sever infinite loop from stale state
+    localStorage.removeItem('userRole');
+    return 'Technician';
+  };
+
+  const [userRole, setUserRole] = useState(getInitialRole);
 
   const setAndSaveUserRole = (role) => {
     localStorage.setItem('userRole', role);
@@ -22,7 +34,7 @@ export const useAuth = () => useContext(AuthContext);
 export const LoginSimulator = () => {
   const { userRole, setUserRole } = useAuth();
 
-  const roles = ['HM (Admin)', 'Tech-Alpha', 'Tech-Bravo'];
+  const roles = ['Administrator', 'DM', 'HM', 'Technician'];
 
   return (
     <div style={{ padding: '12px 20px', background: 'rgba(10, 14, 23, 0.95)', color: 'var(--text-primary)', display: 'flex', gap: '15px', alignItems: 'center', borderBottom: '1px solid var(--border)', backdropFilter: 'blur(12px)' }}>

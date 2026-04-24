@@ -15,7 +15,7 @@ const AdminConsole = () => {
 
   const tabs = [
     { id: 'ingestion', label: 'Data Ingestion' },
-    { id: 'hd', label: 'HD View' },
+    { id: 'dm', label: 'DM View' },
     { id: 'hm', label: 'HM View' },
     { id: 'tech', label: 'Tech View' }
   ];
@@ -62,19 +62,12 @@ const AdminConsole = () => {
         <AdminDataIngestion />
       )}
       
-      {activeTab === 'hd' && (
-        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted, #64748b)', background: 'var(--bg-card, rgba(15, 23, 42, 0.85))', borderRadius: '12px', border: '1px solid var(--border)' }}>
-          HD Dashboard Component Pending...
-        </div>
+      {activeTab === 'dm' && (
+        <CreateMWOForm onMWOCreated={handleMWOCreated} />
       )}
       
       {activeTab === 'hm' && (
-        <>
-          <CreateMWOForm onMWOCreated={handleMWOCreated} />
-          <div style={{ marginTop: '2rem' }}>
-            <MWODashboard key={refreshKey} />
-          </div>
-        </>
+        <MWODashboard key={refreshKey} />
       )}
 
       {activeTab === 'tech' && (
