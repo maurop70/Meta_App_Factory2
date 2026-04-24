@@ -363,6 +363,53 @@ async def create_mwo(payload: NewMWO):
     finally:
         conn.close()
 
+@app.post("/api/admin/users/bulk-upload")
+async def bulk_upload_users(file: UploadFile = File(...)):
+    if not file.filename.endswith(".csv"):
+        raise HTTPException(status_code=400, detail="Only CSV files are allowed.")
+    
+    conn = get_db_connection()
+    try:
+        content = await file.read()
+        csv_reader = csv.DictReader(io.StringIO(content.decode('utf-8')))
+        
+        cursor = conn.cursor()
+        rows_processed = 0
+        errors = 0
+        
+        for row in csv_reader:
+            try:
+                # Enforce required columns: user_id, name, role
+                # Enforce role enum: ADMIN, HD, HM, TECH
+                cursor.execute("""
+                    INSERT INTO users (user_id, name, role, department, reports_to_hm_id)
+                    VALUES (?, ?, ?, ?, ?)
+                    ON CONFLICT(user_id) DO UPDATE SET
+                        name=excluded.name,
+                        role=excluded.role,
+                        department=excluded.department,
+                        reports_to_hm_id=excluded.reports_to_hm_id
+                """, (
+                    row.get('user_id'),
+                    row.get('name'),
+                    row.get('role'),
+                    row.get('department'),
+                    row.get('reports_to_hm_id') or None
+                ))
+                rows_processed += 1
+            except Exception as e:
+                logger.error(f"Error processing row {row}: {e}")
+                errors += 1
+                
+        conn.commit()
+        return {"status": "success", "rows_processed": rows_processed, "errors": errors}
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Bulk upload failed: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error during CSV upload.")
+    finally:
+        conn.close()
+
 @app.get("/api/orders/active")
 async def get_active_orders():
     """

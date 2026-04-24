@@ -1,0 +1,6 @@
+user_id,name,role,department,reports_to_hm_id
+USR-A01,Arthur Admin,ADMIN,Operations,
+USR-HM1,Hank Equipment,HM,Equipment Maintenance,
+USR-HM2,Hannah Facility,HM,Facility Maintenance,
+USR-T01,Tom Tech,TECH,Equipment Maintenance,USR-HM1
+USR-T02,Tina Tech,TECH,Facility Maintenance,USR-HM2
