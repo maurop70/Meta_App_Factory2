@@ -99,7 +99,7 @@ const TechDashboard = () => {
 
   return (
     <div className="erp-dashboard-section" style={{ marginTop: '20px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '1rem' }}>
-      <h3 style={{ color: 'var(--text-primary)' }}>Technician Edge Node - Active Tasks</h3>
+      <h3 style={{ color: 'var(--text-primary)' }}>Technician Edge Node - Active Tasks (Active HMR)</h3>
       <div className="maf-data-table-wrapper">
         <table className="erp-data-table maf-data-matrix">
           <thead>
@@ -151,6 +151,7 @@ const TechDashboard = () => {
                         {/* Only allow valid state transitions from the Edge Node */}
                         <option value="IN_PROGRESS">{STATUS_DISPLAY_MAP["IN_PROGRESS"]}</option>
                         <option value="PENDING_REVIEW">{STATUS_DISPLAY_MAP["PENDING_REVIEW"]}</option>
+                        <option value="COMPLETED">{STATUS_DISPLAY_MAP["COMPLETED"]}</option>
                       </select>
                     </td>
 
