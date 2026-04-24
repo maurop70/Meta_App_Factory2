@@ -12,6 +12,8 @@ services:
       - mwo_net
     volumes:
       - ./Maintenance_Work_Order/data:/app/data
+      - ../../Universal_Memory/Shared_Artifacts:/app/shared_memory
+      - ../../Universal_Memory/Archival_Queue:/app/archival_queue
 
   mwo-frontend:
     build:
@@ -20,6 +22,9 @@ services:
     container_name: mwo_frontend
     ports:
       - "5175:5173"
+    volumes:
+      - ./maintenance_frontend:/app
+      - /app/node_modules
     depends_on:
       - mwo-backend
     networks:
