@@ -2,7 +2,6 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { MockAuthProvider, LoginSimulator, useAuth } from './context/MockAuthContext';
 import './App.css'; // Strictly Native Vanilla CSS
-import './App.css'; // Strictly Native Vanilla CSS
 
 // Import actual component files
 import TechDashboard from './pages/TechDashboard';
@@ -35,7 +34,17 @@ function App() {
     <MockAuthProvider>
       <LoginSimulator />
       <Router>
-          <div className="erp-app-container">
+        <div 
+          className="maf-app-shell" 
+          style={{ 
+            minHeight: '100vh', 
+            backgroundColor: 'var(--bg-dark)', 
+            color: 'var(--text-primary)', 
+            fontFamily: 'var(--font)',
+            display: 'flex',
+            flexDirection: 'column'
+          }}
+        >
           <Routes>
             {/* Public Authentication Gate */}
             <Route path="/login" element={<Login />} />

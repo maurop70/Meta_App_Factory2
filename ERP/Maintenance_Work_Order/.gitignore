@@ -1,0 +1,6 @@
+# SQLite Database State
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+data/*.db-wal
+data/*.db-shm

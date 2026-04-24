@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  mwo-backend:
+    build:
+      context: ./Maintenance_Work_Order
+      dockerfile: Dockerfile
+    container_name: mwo_backend
+    ports:
+      - "8000:8000"
+    networks:
+      - mwo_net
+    volumes:
+      - ./Maintenance_Work_Order/data:/app/data
+
+  mwo-frontend:
+    build:
+      context: ./maintenance_frontend
+      dockerfile: Dockerfile
+    container_name: mwo_frontend
+    ports:
+      - "5175:5173"
+    depends_on:
+      - mwo-backend
+    networks:
+      - mwo_net
+
+networks:
+  mwo_net:
+    driver: bridge
+
+volumes:
+  mwo_db_data:
