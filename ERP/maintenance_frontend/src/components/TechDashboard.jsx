@@ -53,30 +53,29 @@ const TechDashboard = () => {
     }));
   };
 
-  const handleUpdateClick = async (mwo_id) => {
+  const executeActuation = async (mwo_id, targetStatus) => {
     const originalOrder = workOrders.find(o => o.mwo_id === mwo_id) || {};
     const localUpdates = updates[mwo_id] || {};
     
-    // Defensive payload merge (Mapping back to backend schema)
+    // Merge payload with explicit null mapping for strict JSON compliance
     const payload = {
-      status: localUpdates.status || originalOrder.status,
-      consumed_sku: localUpdates.sku_consumed !== undefined ? localUpdates.sku_consumed : (originalOrder.sku_consumed || ""),
-      manual_log: localUpdates.manual_log !== undefined ? localUpdates.manual_log : (originalOrder.manual_log || "")
+      status: targetStatus,
+      consumed_sku: localUpdates.sku_consumed !== undefined ? localUpdates.sku_consumed : (originalOrder.sku_consumed || null),
+      manual_log: localUpdates.manual_log !== undefined ? localUpdates.manual_log : (originalOrder.manual_log || null)
     };
 
     try {
       await api.patch(`/api/mwo/${mwo_id}`, payload);
-      alert(`Work order ${mwo_id} successfully updated.`);
-      
-      // State Re-Hydration Logic & Local State Cleanup
       setFetchTrigger(prev => prev + 1);
+      // Clean local state
       setUpdates(prev => {
-        const next = { ...prev };
-        delete next[mwo_id];
-        return next;
+        const newState = { ...prev };
+        delete newState[mwo_id];
+        return newState;
       });
+      alert(`Actuation Confirmed: MWO updated to ${targetStatus}.`);
     } catch (err) {
-      console.error("Failed to update work order:", err);
+      console.error(err);
       alert("Failed to update work order. See console for details.");
     }
   };
@@ -97,102 +96,99 @@ const TechDashboard = () => {
     "COMPLETED": "Completed"
   };
 
+  const isAdmin = userRole === 'HM (Admin)' || userRole === 'Admin';
+
   return (
     <div className="erp-dashboard-section" style={{ marginTop: '20px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '1rem' }}>
-      <h3 style={{ color: 'var(--text-primary)' }}>Technician Edge Node - Active Tasks (Active HMR)</h3>
-      <div className="maf-data-table-wrapper">
-        <table className="erp-data-table maf-data-matrix">
-          <thead>
-            <tr>
-              <th className="maf-table-header">MWO ID</th>
-              <th className="maf-table-header">Task Description</th>
-              <th className="maf-table-header">Current Status</th>
-              <th className="maf-table-header">Update Status</th>
-              <th className="maf-table-header">Consumed SKU</th>
-              <th className="maf-table-header">Manual Log</th>
-              <th className="maf-table-header">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {workOrders.length === 0 ? (
-              <tr>
-                <td colSpan="7" style={{ textAlign: 'center', padding: '15px' }}>No active assignments found.</td>
-              </tr>
-            ) : (
-              workOrders.map((order, idx) => {
-                const orderUpdates = updates[order.mwo_id] || {};
-                const currentUpdateStatus = orderUpdates.status || order.status;
-                
-                const isRework = order.status === 'IN_PROGRESS' && order.execution_end !== null;
-                
-                return (
-                  <tr key={order.mwo_id || idx} className="maf-data-row" style={{ 
-                    borderLeft: isRework ? '4px solid var(--danger)' : 'none',
-                    backgroundColor: isRework ? 'rgba(239, 68, 68, 0.08)' : 'transparent'
-                  }}>
-                    <td className="maf-table-cell">{order.mwo_id || 'N/A'}</td>
-                    <td className="maf-table-cell">{order.description || 'N/A'}</td>
-                    <td className="maf-table-cell">
-                      {isRework ? (
-                        <span style={{ color: 'var(--danger)', fontWeight: 'bold', fontSize: '0.85rem' }}>IN PROGRESS (REWORK REQUIRED)</span>
-                      ) : (
-                        <span style={{ color: 'var(--accent)', fontWeight: '500' }}>{STATUS_DISPLAY_MAP[order.status] || order.status}</span>
-                      )}
-                    </td>
-                    
-                    {/* Read/Write Matrix: Restricted Status Dropdown */}
-                    <td className="maf-table-cell">
-                      <select 
-                        value={orderUpdates.status || ""}
-                        onChange={(e) => handleInputChange(order.mwo_id, 'status', e.target.value)}
-                        style={{ padding: '6px', width: '140px', background: 'rgba(15, 23, 42, 0.6)', border: '1px solid var(--border)', color: 'var(--text-primary)', borderRadius: '6px' }}
-                      >
-                        <option value="" disabled>Select Action</option>
-                        {/* Only allow valid state transitions from the Edge Node */}
-                        <option value="IN_PROGRESS">{STATUS_DISPLAY_MAP["IN_PROGRESS"]}</option>
-                        <option value="PENDING_REVIEW">{STATUS_DISPLAY_MAP["PENDING_REVIEW"]}</option>
-                        <option value="COMPLETED">{STATUS_DISPLAY_MAP["COMPLETED"]}</option>
-                      </select>
-                    </td>
+      <h3 style={{ color: 'var(--text-primary)', marginBottom: '1rem' }}>Technician Edge Node - Active Tasks (Expanded Ledger)</h3>
+      
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        {workOrders.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>No active assignments found.</div>
+        ) : (
+          workOrders.map((order, idx) => {
+            const orderUpdates = updates[order.mwo_id] || {};
+            const isRework = order.status === 'IN_PROGRESS' && order.start_date !== null;
+            
+            return (
+              <div key={order.mwo_id || idx} style={{
+                background: isRework ? 'rgba(239, 68, 68, 0.05)' : 'rgba(15, 23, 42, 0.4)',
+                border: `1px solid ${isRework ? 'var(--danger)' : 'var(--border)'}`,
+                borderRadius: '8px',
+                padding: '1.5rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1rem'
+              }}>
+                {/* Header Row */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+                  <div>
+                    <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-primary)' }}>{order.mwo_id || 'N/A'}</h4>
+                    <p style={{ margin: 0, color: 'var(--text-secondary)' }}>{order.description || 'N/A'}</p>
+                  </div>
+                  <div>
+                    {isRework ? (
+                      <span style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', padding: '4px 8px', borderRadius: '4px', fontWeight: 'bold', fontSize: '0.85rem' }}>REWORK REQUIRED</span>
+                    ) : (
+                      <span style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', color: 'var(--accent)', padding: '4px 8px', borderRadius: '4px', fontWeight: '500', fontSize: '0.85rem' }}>{STATUS_DISPLAY_MAP[order.status] || order.status}</span>
+                    )}
+                  </div>
+                </div>
 
-                    {/* Read/Write Matrix: SKU Input */}
-                    <td className="maf-table-cell">
-                      <input 
-                        type="text" 
-                        placeholder="Enter SKU..."
-                        defaultValue={order.sku_consumed || ''}
-                        onChange={(e) => handleInputChange(order.mwo_id, 'sku_consumed', e.target.value)}
-                        style={{ padding: '6px', width: '120px', background: 'rgba(15, 23, 42, 0.6)', border: '1px solid var(--border)', color: 'var(--text-primary)', borderRadius: '6px' }}
-                      />
-                    </td>
+                {/* Input Matrix */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Consumed SKU</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. SKU-1234"
+                      value={orderUpdates.sku_consumed !== undefined ? orderUpdates.sku_consumed : (order.sku_consumed || '')}
+                      onChange={(e) => handleInputChange(order.mwo_id, 'sku_consumed', e.target.value)}
+                      style={{ padding: '8px', background: 'rgba(15, 23, 42, 0.6)', border: '1px solid var(--border)', color: 'var(--text-primary)', borderRadius: '6px' }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Diagnostic / Resolution Log</label>
+                    <textarea 
+                      placeholder="Enter details..."
+                      value={orderUpdates.manual_log !== undefined ? orderUpdates.manual_log : (order.manual_log || '')}
+                      onChange={(e) => handleInputChange(order.mwo_id, 'manual_log', e.target.value)}
+                      style={{ padding: '8px', minHeight: '60px', resize: 'vertical', background: 'rgba(15, 23, 42, 0.6)', border: '1px solid var(--border)', color: 'var(--text-primary)', borderRadius: '6px' }}
+                    />
+                  </div>
+                </div>
 
-                    {/* Read/Write Matrix: Manual Log Input */}
-                    <td className="maf-table-cell">
-                      <textarea 
-                        placeholder="Enter diagnostic/resolution log..."
-                        defaultValue={order.manual_log || ''}
-                        onChange={(e) => handleInputChange(order.mwo_id, 'manual_log', e.target.value)}
-                        style={{ padding: '6px', width: '200px', resize: 'vertical', background: 'rgba(15, 23, 42, 0.6)', border: '1px solid var(--border)', color: 'var(--text-primary)', borderRadius: '6px', minHeight: '40px' }}
-                      />
-                    </td>
-
-                    {/* Submit Actuator */}
-                    <td className="maf-table-cell">
-                      <button 
-                        onClick={() => handleUpdateClick(order.mwo_id)}
-                        onMouseOver={(e) => { e.target.style.background = 'var(--accent-hover)'; e.target.style.transform = 'scale(1.02)'; }}
-                        onMouseOut={(e) => { e.target.style.background = 'var(--accent)'; e.target.style.transform = 'scale(1)'; }}
-                        style={{ padding: '6px 12px', cursor: 'pointer', backgroundColor: 'var(--accent)', color: '#fff', border: 'none', borderRadius: '6px', transition: 'all 0.2s', fontWeight: '500' }}
-                      >
-                        Update Work Order
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+                {/* 3-Button State Machine Actuation */}
+                <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem', justifyContent: 'flex-end', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
+                  <button 
+                    onClick={() => executeActuation(order.mwo_id, 'IN_PROGRESS')}
+                    disabled={order.status === 'IN_PROGRESS'}
+                    style={{ padding: '8px 16px', cursor: order.status === 'IN_PROGRESS' ? 'not-allowed' : 'pointer', backgroundColor: order.status === 'IN_PROGRESS' ? 'rgba(59,130,246,0.2)' : 'var(--accent)', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '500', transition: 'all 0.2s', opacity: order.status === 'IN_PROGRESS' ? 0.5 : 1 }}
+                  >
+                    START WORK
+                  </button>
+                  
+                  <button 
+                    onClick={() => executeActuation(order.mwo_id, 'PENDING_REVIEW')}
+                    disabled={order.status === 'PENDING_REVIEW'}
+                    style={{ padding: '8px 16px', cursor: order.status === 'PENDING_REVIEW' ? 'not-allowed' : 'pointer', backgroundColor: order.status === 'PENDING_REVIEW' ? 'rgba(245,158,11,0.2)' : '#f59e0b', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '500', transition: 'all 0.2s', opacity: order.status === 'PENDING_REVIEW' ? 0.5 : 1 }}
+                  >
+                    DONE - READY FOR REVIEW
+                  </button>
+                  
+                  {isAdmin && (
+                    <button 
+                      onClick={() => executeActuation(order.mwo_id, 'COMPLETED')}
+                      style={{ padding: '8px 16px', cursor: 'pointer', backgroundColor: 'var(--success)', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '500', transition: 'all 0.2s' }}
+                    >
+                      COMPLETE
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
     </div>
   );

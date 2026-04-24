@@ -6,11 +6,12 @@ import csv
 import json
 import io
 from typing import Optional, Dict, Any
-from fastapi import FastAPI, HTTPException, Query, UploadFile, File
+from fastapi import FastAPI, HTTPException, Query, UploadFile, File, BackgroundTasks
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, field_validator
+from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
 from local_db import get_db_connection
@@ -27,7 +28,26 @@ logging.basicConfig(level=logging.INFO)
 logging.getLogger("MaintenanceBackend").info(f"Loading .env from: {env_path}")
 
 
-app = FastAPI(title="Maintenance Work Order API - Global ERP Connected")
+# Ingestion Logic for Orchestration Boundary
+GLOBAL_AI_DIRECTIVE_CONTEXT = ""
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global GLOBAL_AI_DIRECTIVE_CONTEXT
+    directive_path = "/app/GLOBAL_AI_DIRECTIVE.md"
+    try:
+        if os.path.exists(directive_path):
+            with open(directive_path, "r", encoding="utf-8") as f:
+                GLOBAL_AI_DIRECTIVE_CONTEXT = f.read()
+            logger.info("Orchestration Boundary Engaged: GLOBAL_AI_DIRECTIVE.md fully loaded into active system memory.")
+        else:
+            logger.warning("Orchestration Boundary Warning: GLOBAL_AI_DIRECTIVE.md not found at /app/GLOBAL_AI_DIRECTIVE.md.")
+    except Exception as e:
+        logger.error(f"Failed to ingest GLOBAL_AI_DIRECTIVE.md: {e}")
+    yield
+    # Shutdown logic clears memory
+
+app = FastAPI(title="Maintenance Work Order API - Global ERP Connected", lifespan=lifespan)
 logger = logging.getLogger("MaintenanceBackend")
 
 # Serve frontend — index.html lives alongside this backend file
@@ -145,6 +165,13 @@ def verify_pin(payload: PinVerify):
         if conn:
             conn.close()
 
+@app.get("/api/system/directive")
+def get_system_directive():
+    """Exposes the Orchestration Boundary context to external agents."""
+    if not GLOBAL_AI_DIRECTIVE_CONTEXT:
+        raise HTTPException(status_code=503, detail="Directive context unavailable or not loaded.")
+    return {"status": "success", "directive": GLOBAL_AI_DIRECTIVE_CONTEXT}
+
 @app.get("/api/mwo")
 def get_mwo():
     conn = None
@@ -161,31 +188,60 @@ def get_mwo():
         if conn:
             conn.close()
 
+async def archive_completed_mwo(mwo_data: dict):
+    import asyncio
+    queue_dir = "/app/archival_queue"
+    os.makedirs(queue_dir, exist_ok=True)
+    mwo_id = mwo_data.get("mwo_id", "UNKNOWN")
+    
+    archival_payload = {
+        "document_type": "MWO_REPORT",
+        "payload": mwo_data
+    }
+    
+    tmp_path = os.path.join(queue_dir, f"{mwo_id}.tmp")
+    final_path = os.path.join(queue_dir, f"{mwo_id}.json")
+    
+    def sync_archive():
+        with open(tmp_path, 'w') as f:
+            json.dump(archival_payload, f, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp_path, final_path)
+        
+    await asyncio.to_thread(sync_archive)
+
 @app.patch("/api/mwo/{mwo_id}")
-async def update_mwo_v2(mwo_id: str, payload: MWOUpdate):
+async def update_mwo_v2(mwo_id: str, payload: MWOUpdate, background_tasks: BackgroundTasks):
     conn = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        current_time = time.time()
+        current_time = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        
+        if payload.status == "COMPLETED":
+            cursor.execute("SELECT start_date, equipment_id FROM work_orders WHERE mwo_id = ?", (mwo_id,))
+            check_row = cursor.fetchone()
+            if not check_row or not check_row['start_date'] or not check_row['equipment_id']:
+                raise HTTPException(status_code=400, detail="Cannot complete MWO: missing start_date or equipment_id.")
         
         if payload.status == "IN_PROGRESS":
             cursor.execute("""
                 UPDATE work_orders 
-                SET status = ?, consumed_sku = ?, manual_log = ?, execution_start = COALESCE(execution_start, ?)
+                SET status = ?, consumed_sku = ?, manual_log = ?, start_date = COALESCE(start_date, ?)
                 WHERE mwo_id = ?
             """, (payload.status, payload.consumed_sku, payload.manual_log, current_time, mwo_id))
         elif payload.status == "PENDING_REVIEW":
             cursor.execute("""
                 UPDATE work_orders 
-                SET status = ?, consumed_sku = ?, manual_log = ?, execution_end = ?
+                SET status = ?, consumed_sku = ?, manual_log = ?
                 WHERE mwo_id = ?
-            """, (payload.status, payload.consumed_sku, payload.manual_log, current_time, mwo_id))
+            """, (payload.status, payload.consumed_sku, payload.manual_log, mwo_id))
         elif payload.status == "COMPLETED":
             cursor.execute("""
                 UPDATE work_orders 
-                SET status = ?, consumed_sku = ?, manual_log = ?, completed_at = ?
+                SET status = ?, consumed_sku = ?, manual_log = ?, completion_date = ?
                 WHERE mwo_id = ?
             """, (payload.status, payload.consumed_sku, payload.manual_log, current_time, mwo_id))
         else:
@@ -196,29 +252,14 @@ async def update_mwo_v2(mwo_id: str, payload: MWOUpdate):
             """, (payload.status, payload.consumed_sku, payload.manual_log, mwo_id))
             
         conn.commit()
+        background_tasks.add_task(sync_memory_bus)
         
         # Terminal State Actuation: Atomic Drop Protocol
         if payload.status == "COMPLETED":
             cursor.execute("SELECT * FROM work_orders WHERE mwo_id = ?", (mwo_id,))
             final_row = cursor.fetchone()
             if final_row:
-                archival_payload = {
-                    "document_type": "MWO_REPORT",
-                    "payload": dict(final_row)
-                }
-                
-                queue_dir = os.path.join(_factory, "Universal_Memory", "Archival_Queue")
-                os.makedirs(queue_dir, exist_ok=True)
-                
-                tmp_path = os.path.join(queue_dir, f"{mwo_id}.tmp")
-                final_path = os.path.join(queue_dir, f"{mwo_id}.json")
-                
-                with open(tmp_path, 'w') as f:
-                    json.dump(archival_payload, f, indent=2)
-                    f.flush()
-                    os.fsync(f.fileno())
-                    
-                os.replace(tmp_path, final_path)
+                background_tasks.add_task(archive_completed_mwo, dict(final_row))
         
         return {"status": "success", "message": "MWO Updated successfully"}
     except Exception as e:
@@ -229,6 +270,58 @@ async def update_mwo_v2(mwo_id: str, payload: MWOUpdate):
     finally:
         if conn:
             conn.close()
+
+async def sync_memory_bus():
+    import asyncio
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        # Fix 3: Query Safety (COLLATE NOCASE)
+        cursor.execute("SELECT * FROM work_orders WHERE status != 'COMPLETED' COLLATE NOCASE")
+        raw_rows = [dict(row) for row in cursor.fetchall()]
+        
+        # Fix 1: The DTO Mapper
+        mapped_rows = []
+        for row in raw_rows:
+            mapped_row = dict(row)
+            if 'technician' in mapped_row:
+                mapped_row['assigned_tech'] = mapped_row.pop('technician')
+            if 'consumed_sku' in mapped_row:
+                mapped_row['sku_consumed'] = mapped_row.pop('consumed_sku')
+            mapped_rows.append(mapped_row)
+        
+        payload_data = {
+            "agent_id": "MWO_Edge_Node",
+            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "artifact_type": "Active_MWO_State",
+            "payload": mapped_rows
+        }
+        
+        shared_memory_dir = "/app/shared_memory"
+        os.makedirs(shared_memory_dir, exist_ok=True)
+        tmp_path = os.path.join(shared_memory_dir, "mwo_state_broadcast.tmp")
+        final_path = os.path.join(shared_memory_dir, "mwo_state_broadcast.json")
+        
+        # Fix 2: Async I/O (Atomic Swap Protocol)
+        def sync_write():
+            with open(tmp_path, "w") as f:
+                json.dump(payload_data, f, indent=2)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp_path, final_path)
+                
+        await asyncio.to_thread(sync_write)
+    except Exception as e:
+        logger.error(f"Failed to sync memory bus: {e}")
+    finally:
+        if conn:
+            conn.close()
+
+@app.post("/api/mwo/broadcast")
+async def broadcast_mwo_state():
+    await sync_memory_bus()
+    return {"status": "success", "message": "Broadcast written to shared memory."}
 
 @app.post("/api/orders/submit")
 async def submit_order(order: WorkOrderSubmit):

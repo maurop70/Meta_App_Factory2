@@ -11,9 +11,11 @@ services:
     networks:
       - mwo_net
     volumes:
+      - ./Maintenance_Work_Order:/app
       - ./Maintenance_Work_Order/data:/app/data
       - ../../Universal_Memory/Shared_Artifacts:/app/shared_memory
       - ../../Universal_Memory/Archival_Queue:/app/archival_queue
+      - ../Universal_Memory/GLOBAL_AI_DIRECTIVE.md:/app/GLOBAL_AI_DIRECTIVE.md:ro
 
   mwo-frontend:
     build:
