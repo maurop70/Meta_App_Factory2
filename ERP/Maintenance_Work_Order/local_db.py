@@ -5,37 +5,8 @@ import logging
 
 logger = logging.getLogger("LocalDB")
 
-# ═══════════════════════════════════════════════════════
-# GOOGLE DRIVE DEADLOCK BYPASS
-# ═══════════════════════════════════════════════════════
-# SQLite requires exclusive OS-level file locks for WAL mode.
-# Google Drive's virtual filesystem (FUSE/VFS) aggressively
-# locks .db/.db-wal/.db-shm files, causing permanent deadlocks
-# on synchronous reads. The database is relocated to a safe
-# local directory outside the Drive sync boundary.
-# ═══════════════════════════════════════════════════════
-
 _here = os.path.dirname(os.path.abspath(__file__))
-_DRIVE_DB_PATH = os.path.join(os.path.dirname(_here), "maintenance_erp.db")
-
-# Safe local storage — completely outside Google Drive sync
-_LOCAL_DB_DIR = os.path.join("C:\\", "erp_local_data")
-DB_PATH = os.path.join(_LOCAL_DB_DIR, "maintenance_erp.db")
-
-def _ensure_local_db():
-    """
-    Ensures the local DB exists. If it doesn't but the Drive copy does,
-    copies it down as a one-time seed operation.
-    """
-    os.makedirs(_LOCAL_DB_DIR, exist_ok=True)
-    if not os.path.exists(DB_PATH) and os.path.exists(_DRIVE_DB_PATH):
-        logger.info(f"Seeding local DB from Drive: {_DRIVE_DB_PATH} -> {DB_PATH}")
-        shutil.copy2(_DRIVE_DB_PATH, DB_PATH)
-    elif not os.path.exists(DB_PATH):
-        logger.warning("No source DB found. A fresh database will be created.")
-
-# Execute seed check on module import
-_ensure_local_db()
+DB_PATH = os.path.join(_here, "data", "maintenance_erp.db")
 
 def get_db_connection() -> sqlite3.Connection:
     """

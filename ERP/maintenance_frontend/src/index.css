@@ -1,18 +1,35 @@
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  /* Inherited from MAF global matrix */
+  --bg-dark: #0a0e17;
+  --bg-card: rgba(15, 23, 42, 0.85);
+  --bg-chat: rgba(20, 30, 50, 0.92);
+  --accent: #6366f1;
+  --accent-glow: rgba(99, 102, 241, 0.25);
+  --accent-hover: #818cf8;
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --border: rgba(99, 102, 241, 0.15);
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --visionary: #9D4EDD;
+  --visionary-bg: rgba(157, 78, 221, 0.12);
+  --maintenance-bg: rgba(70, 130, 180, 0.12);
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
+  /* Overrides for local variables to use MAF matrix */
+  --text: var(--text-secondary);
+  --text-h: var(--text-primary);
+  --bg: var(--bg-dark);
+  --code-bg: var(--bg-chat);
+  --accent-bg: var(--accent-glow);
+  --accent-border: var(--border);
+  --social-bg: rgba(244, 243, 236, 0.5);
+  --shadow: rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+
+  --sans: var(--font);
+  --heading: var(--font);
   --mono: ui-monospace, Consolas, monospace;
 
   font: 18px/145% var(--sans);
@@ -25,7 +42,10 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  @media (max-width: 1024px) {
+}
+
+@media (max-width: 1024px) {
+  :root {
     font-size: 16px;
   }
 }
@@ -108,4 +128,55 @@ code {
   line-height: 135%;
   padding: 4px 8px;
   background: var(--code-bg);
+}
+
+/* ========================================================= */
+/* MAF REUSABLE LAYOUT EXTRACTS                              */
+/* ========================================================= */
+
+.maf-layout-grid {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  font-family: var(--font);
+}
+
+.maf-data-table-wrapper {
+  overflow-x: auto;
+  margin-top: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-card);
+}
+
+.maf-data-matrix {
+  width: 100%;
+  text-align: left;
+  border-collapse: collapse;
+  color: var(--text-secondary);
+}
+
+.maf-data-matrix th {
+  padding: 1rem;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  background: rgba(15, 23, 42, 0.5);
+}
+
+.maf-data-matrix td {
+  padding: 1rem;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+}
+
+.maf-data-row {
+  transition: background 0.2s;
+}
+
+.maf-data-row:hover {
+  background: rgba(99, 102, 241, 0.05);
 }

@@ -25,25 +25,32 @@ export const LoginSimulator = () => {
   const roles = ['HM (Admin)', 'Tech-Alpha', 'Tech-Bravo'];
 
   return (
-    <div style={{ padding: '10px', backgroundColor: '#222', color: '#fff', display: 'flex', gap: '15px', alignItems: 'center', borderBottom: '1px solid #444' }}>
-      <strong style={{ color: '#00ffcc' }}>Mock Identity Injection:</strong>
-      <span style={{ marginRight: '10px' }}>Active Persona: {userRole}</span>
-      {roles.map(role => (
-        <button
-          key={role}
-          onClick={() => setUserRole(role)}
-          style={{
-            padding: '5px 10px',
-            backgroundColor: userRole === role ? '#0056b3' : '#444',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-        >
-          Inject {role}
-        </button>
-      ))}
+    <div style={{ padding: '12px 20px', background: 'rgba(10, 14, 23, 0.95)', color: 'var(--text-primary)', display: 'flex', gap: '15px', alignItems: 'center', borderBottom: '1px solid var(--border)', backdropFilter: 'blur(12px)' }}>
+      <strong style={{ color: 'var(--accent)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Mock Identity Injection:</strong>
+      <span style={{ marginRight: '10px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Active Persona: <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{userRole}</span></span>
+      <div style={{ display: 'flex', gap: '8px' }}>
+        {roles.map(role => (
+          <button
+            key={role}
+            onClick={() => setUserRole(role)}
+            onMouseOver={(e) => { if(userRole !== role) e.target.style.background = 'rgba(99, 102, 241, 0.2)'; }}
+            onMouseOut={(e) => { if(userRole !== role) e.target.style.background = 'rgba(15, 23, 42, 0.6)'; }}
+            style={{
+              padding: '6px 12px',
+              backgroundColor: userRole === role ? 'var(--accent)' : 'rgba(15, 23, 42, 0.6)',
+              color: userRole === role ? '#fff' : 'var(--text-secondary)',
+              border: `1px solid ${userRole === role ? 'var(--accent)' : 'var(--border)'}`,
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '0.8rem',
+              transition: 'all 0.2s ease',
+              fontWeight: '500'
+            }}
+          >
+            Inject {role}
+          </button>
+        ))}
+      </div>
     </div>
   );
 };
