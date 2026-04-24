@@ -307,6 +307,62 @@ async def assign_order(payload: AssignUpdate):
 
 
 
+class NewMWO(BaseModel):
+    mwo_id: Optional[str] = None
+    description: str
+    assigned_tech: str
+    status: str = "PENDING_REVIEW"
+
+@app.post("/api/mwo")
+async def create_mwo(payload: NewMWO):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        current_time = time.time()
+        
+        # Auto-generate ID if missing or empty
+        final_mwo_id = payload.mwo_id
+        if not final_mwo_id or not final_mwo_id.strip():
+            cursor.execute("SELECT mwo_id FROM work_orders WHERE mwo_id LIKE 'MWO-%' ORDER BY mwo_id DESC LIMIT 1")
+            last_record = cursor.fetchone()
+            next_num = 1
+            if last_record and last_record['mwo_id']:
+                try:
+                    # e.g. MWO-2026-003 -> 3
+                    parts = last_record['mwo_id'].split('-')
+                    if len(parts) >= 3:
+                        last_num = int(parts[-1])
+                        next_num = last_num + 1
+                except ValueError:
+                    pass
+            current_year = datetime.datetime.now(datetime.timezone.utc).year
+            final_mwo_id = f"MWO-{current_year}-{next_num:03d}"
+            
+        if not final_mwo_id or not final_mwo_id.strip():
+            raise ValueError("Generated MWO ID is invalid.")
+
+        cursor.execute(
+            """
+            INSERT INTO work_orders 
+            (mwo_id, description, assigned_tech, status, hm_priority, dm_urgency, execution_start) 
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (final_mwo_id, payload.description, payload.assigned_tech, payload.status, "Normal", "Normal", current_time)
+        )
+        conn.commit()
+        
+        # Fetch the newly created record
+        cursor.execute("SELECT * FROM work_orders WHERE mwo_id = ?", (final_mwo_id,))
+        new_row = cursor.fetchone()
+        
+        return {"status": "success", "message": "MWO created successfully", "data": dict(new_row) if new_row else {}}
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Failed to create MWO: {e}")
+        raise HTTPException(status_code=500, detail=str(e) or "Internal server error while creating MWO.")
+    finally:
+        conn.close()
+
 @app.get("/api/orders/active")
 async def get_active_orders():
     """
