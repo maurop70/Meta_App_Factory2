@@ -1,0 +1,18 @@
+{
+  "document_type": "MWO_REPORT",
+  "payload": {
+    "mwo_id": "MWO-2026-002",
+    "status": "COMPLETED",
+    "dm_urgency": "MEDIUM",
+    "hm_priority": "HIGH",
+    "description": "Ammonia leak in chiller 2",
+    "assigned_tech": "Tech-Alpha",
+    "consumed_sku": null,
+    "manual_log": null,
+    "created_at": 1776901212.0429654,
+    "triaged_at": 1776903012.0429654,
+    "execution_start": 1776908419.614709,
+    "execution_end": 1776910432.4527075,
+    "completed_at": 1776910437.5705402
+  }
+}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAuth } from '../context/MockAuthContext';
+import { useAuth } from '../context/AuthContext';
 import TechDashboardComponent from '../components/TechDashboard';
 
 const TechDashboard = () => {

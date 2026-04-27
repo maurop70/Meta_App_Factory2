@@ -1,31 +1,97 @@
 import os
 import logging
+import sqlite3
 import datetime
 import time
 import csv
 import json
 import io
+import aiofiles
 from typing import Optional, Dict, Any
-from fastapi import FastAPI, HTTPException, Query, UploadFile, File, BackgroundTasks
+import jwt
+import uuid
+from datetime import datetime, timedelta, timezone
+from fastapi import FastAPI, HTTPException, Query, UploadFile, File, BackgroundTasks, Header, Body, Depends, Security, Response, Path
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse
+
+
+from dotenv import load_dotenv
+import base64
+from fastapi import Request
+
+# Initialize Environment
+_here = os.path.dirname(os.path.abspath(__file__))
+_erp  = os.path.dirname(_here)
+_factory = os.path.dirname(_erp)
+env_path = os.path.join(_factory, '.env')
+load_dotenv(env_path)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("MaintenanceBackend")
+logger.info(f"Loading .env from: {env_path}")
+
+
+# --- CRYPTOGRAPHIC CONFIGURATION ---
+priv_b64 = os.environ.get("JWT_PRIVATE_KEY_B64")
+pub_b64 = os.environ.get("JWT_PUBLIC_KEY_B64")
+
+if not priv_b64 or not pub_b64:
+    raise RuntimeError("FATAL: JWT_PRIVATE_KEY_B64 or JWT_PUBLIC_KEY_B64 missing from environment.")
+
+PRIVATE_KEY = base64.b64decode(priv_b64).decode('utf-8')
+PUBLIC_KEY = base64.b64decode(pub_b64).decode('utf-8')
+
+ALGORITHM = "RS256"
+
+ACCESS_TOKEN_EXPIRE_MINUTES = 15
+
+# --- IN-MEMORY JTI BLACKLIST ---
+REVOKED_JTIS = set()
+security = HTTPBearer()
+
+def create_access_token(user_id: str, role: str) -> str:
+    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    jti = str(uuid.uuid4())
+    payload = {
+        "sub": str(user_id),
+        "role": role.upper(),
+        "iat": datetime.now(timezone.utc),
+        "exp": expire,
+        "jti": jti
+    }
+    return jwt.encode(payload, PRIVATE_KEY, algorithm=ALGORITHM)
+
+
+def create_refresh_token(user_id: str, role: str) -> str:
+    expire = datetime.now(timezone.utc) + timedelta(days=7)
+    jti = str(uuid.uuid4())
+    payload = {
+        "sub": str(user_id),
+        "role": role.upper(),
+        "iat": datetime.now(timezone.utc),
+        "exp": expire,
+        "jti": jti,
+        "type": "refresh"
+    }
+    return jwt.encode(payload, PRIVATE_KEY, algorithm=ALGORITHM)
+
+def verify_jwt_token(credentials: HTTPAuthorizationCredentials = Security(security)) -> dict:
+    token = credentials.credentials
+    try:
+        payload = jwt.decode(token, PUBLIC_KEY, algorithms=[ALGORITHM])
+        if payload.get("jti") in REVOKED_JTIS:
+            raise HTTPException(status_code=401, detail="Token Revoked (JTI Blacklisted).")
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token Expired.")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=403, detail="Cryptographic Verification Failed.")
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, field_validator
 from contextlib import asynccontextmanager
 
-from dotenv import load_dotenv
 from local_db import get_db_connection
-
-# Initialize Environment
-# Script lives at: Meta_App_Factory/ERP/Maintenance_Work_Order/
-# .env lives at:   Meta_App_Factory/.env  → 3 levels up
-_here = os.path.dirname(os.path.abspath(__file__))           # …/Maintenance_Work_Order
-_erp  = os.path.dirname(_here)                                # …/ERP
-_factory = os.path.dirname(_erp)                              # …/Meta_App_Factory
-env_path = os.path.join(_factory, '.env')
-load_dotenv(env_path)
-logging.basicConfig(level=logging.INFO)
-logging.getLogger("MaintenanceBackend").info(f"Loading .env from: {env_path}")
 
 
 # Ingestion Logic for Orchestration Boundary
@@ -34,7 +100,7 @@ GLOBAL_AI_DIRECTIVE_CONTEXT = ""
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global GLOBAL_AI_DIRECTIVE_CONTEXT
-    directive_path = "/app/GLOBAL_AI_DIRECTIVE.md"
+    directive_path = os.path.join(_here, "GLOBAL_AI_DIRECTIVE.md")
     try:
         if os.path.exists(directive_path):
             with open(directive_path, "r", encoding="utf-8") as f:
@@ -48,7 +114,6 @@ async def lifespan(app: FastAPI):
     # Shutdown logic clears memory
 
 app = FastAPI(title="Maintenance Work Order API - Global ERP Connected", lifespan=lifespan)
-logger = logging.getLogger("MaintenanceBackend")
 
 # Serve frontend — index.html lives alongside this backend file
 _frontend_dir = _here  # Meta_App_Factory/ERP/Maintenance_Work_Order/
@@ -104,9 +169,11 @@ class PinVerify(BaseModel):
     pin: str
 
 class MWOUpdate(BaseModel):
-    status: str
+    status: Optional[str] = None
     consumed_sku: Optional[str] = None
     manual_log: Optional[str] = None
+    assigned_tech: Optional[str] = None
+    hm_priority: Optional[str] = None
 
     @field_validator('consumed_sku', 'manual_log', mode='before')
     @classmethod
@@ -124,12 +191,107 @@ def sanitize_user(user: dict) -> dict:
     sanitized["has_pin"] = has_pin
     return sanitized
 
+def get_current_mwo(mwo_id: str):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM work_orders WHERE mwo_id = ?", (mwo_id,))
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="MWO not found.")
+        return dict(row)
+    finally:
+        conn.close()
+
+def verify_rbac_pipeline(
+    payload: MWOUpdate = Body(...), 
+    current_mwo: dict = Depends(get_current_mwo),
+    jwt_payload: dict = Depends(verify_jwt_token)
+):
+    updates = payload.model_dump(exclude_unset=True)
+    if not updates:
+        return current_mwo
+
+    role = jwt_payload.get("role")
+    user_id = jwt_payload.get("sub")
+
+    current_status = current_mwo.get("status")
+    new_status = updates.get("status", current_status)
+
+    if role == "ADMINISTRATOR":
+        return current_mwo
+
+    if role == "DM":
+        allowed_keys = {"dm_urgency"}
+        invalid_keys = set(updates.keys()) - allowed_keys
+        if invalid_keys:
+            raise HTTPException(status_code=403, detail=f"RBAC / Pipeline Violation for DM {user_id}")
+        return current_mwo
+
+    if role == "TECHNICIAN":
+        allowed_keys = {"status", "manual_log"}
+        invalid_keys = set(updates.keys()) - allowed_keys
+        if invalid_keys:
+            raise HTTPException(status_code=403, detail="RBAC / Pipeline Violation: Unauthorized mutation.")
+
+        if "status" in updates and new_status != current_status:
+            is_valid_transition = (
+                (current_status == "ASSIGNED" and new_status == "IN_PROGRESS") or
+                (current_status == "IN_PROGRESS" and new_status == "PENDING_REVIEW")
+            )
+            if not is_valid_transition:
+                raise HTTPException(status_code=403, detail="RBAC / Pipeline Violation: Unauthorized mutation.")
+        return current_mwo
+
+    if role == "HM":
+        allowed_keys = {"assigned_tech", "hm_priority", "status", "manual_log"} 
+        invalid_keys = set(updates.keys()) - allowed_keys
+        if invalid_keys:
+            raise HTTPException(status_code=403, detail="RBAC / Pipeline Violation: Unauthorized mutation.")
+
+        if "status" in updates and new_status != current_status:
+            is_valid_transition = (
+                (current_status == "UNASSIGNED" and new_status == "ASSIGNED") or
+                (current_status == "PENDING_REVIEW" and new_status == "COMPLETED") or
+                (new_status == "UNASSIGNED")
+            )
+            if not is_valid_transition:
+                raise HTTPException(status_code=403, detail="RBAC / Pipeline Violation: Unauthorized mutation.")
+        return current_mwo
+
+    raise HTTPException(status_code=403, detail="RBAC / Pipeline Violation: Unauthorized mutation.")
+
+
 # --- ENDPOINTS ---
 
 
 
-@app.post("/api/user/verify-pin")
-def verify_pin(payload: PinVerify):
+
+@app.post("/api/user/refresh")
+def refresh_token(request: Request):
+    token = request.cookies.get("refresh_token")
+    if not token:
+        raise HTTPException(status_code=401, detail="Refresh Token Missing.")
+        
+    try:
+        payload = jwt.decode(token, PUBLIC_KEY, algorithms=[ALGORITHM])
+        if payload.get("type") != "refresh":
+            raise HTTPException(status_code=403, detail="Invalid Token Type.")
+        if payload.get("jti") in REVOKED_JTIS:
+            raise HTTPException(status_code=401, detail="Token Revoked (JTI Blacklisted).")
+            
+        user_id = payload.get("sub")
+        role = payload.get("role")
+        
+        new_access_token = create_access_token(user_id=user_id, role=role)
+        return {"status": "success", "access_token": new_access_token, "token_type": "bearer"}
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Refresh Token Expired.")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=403, detail="Cryptographic Verification Failed.")
+
+@app.post("/api/user/authenticate")
+def authenticate_user(payload: PinVerify, response: Response):
     conn = None
     try:
         conn = get_db_connection()
@@ -144,23 +306,28 @@ def verify_pin(payload: PinVerify):
         row = cursor.fetchone()
         
         if not row:
-            raise HTTPException(status_code=401, detail="Incorrect PIN. Authorization Denied.")
+            raise HTTPException(status_code=401, detail="Authorization Denied.")
             
-        role = "Admin" if row["authorization_level"] == "ADMIN" else "Technician"
+        role = row["authorization_level"].upper()
+            
+        if role not in ["ADMIN", "ADMINISTRATOR", "DM", "HM", "TECHNICIAN", "TECH"]:
+            raise HTTPException(status_code=500, detail="Invalid DB Role Mapping.")
+        
+        access_token = create_access_token(user_id=row["id"], role=role)
+        refresh_token = create_refresh_token(user_id=row["id"], role=role)
+        
+        response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=True, samesite="Strict")
         
         return {
             "status": "success",
-            "role": role,
+            "access_token": access_token,
+            "token_type": "bearer",
             "user": {
                 "id": row["id"],
-                "name": row["name"]
+                "name": row["name"],
+                "role": role
             }
         }
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"PIN Verification Failed: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error during verification.")
     finally:
         if conn:
             conn.close()
@@ -212,56 +379,79 @@ async def archive_completed_mwo(mwo_data: dict):
     await asyncio.to_thread(sync_archive)
 
 @app.patch("/api/mwo/{mwo_id}")
-async def update_mwo_v2(mwo_id: str, payload: MWOUpdate, background_tasks: BackgroundTasks):
+async def update_mwo_v2(mwo_id: str, payload: MWOUpdate, background_tasks: BackgroundTasks, rbac_verified_mwo: dict = Depends(verify_rbac_pipeline)):
     conn = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        current_time = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        current_time = datetime.now(timezone.utc).isoformat()
+        update_data = payload.model_dump(exclude_unset=True)
+
+        if not update_data:
+            return {"status": "success", "message": "No changes provided"}
         
-        if payload.status == "COMPLETED":
-            cursor.execute("SELECT start_date, equipment_id FROM work_orders WHERE mwo_id = ?", (mwo_id,))
+        # Guard: Terminal State Prerequisites (COMPLETED / APPROVED)
+        # All three fields must be non-null and valid before terminal closure.
+        target_status = update_data.get("status")
+        if target_status in ("COMPLETED", "APPROVED"):
+            cursor.execute("SELECT start_date, equipment_id, assigned_tech FROM work_orders WHERE mwo_id = ?", (mwo_id,))
             check_row = cursor.fetchone()
-            if not check_row or not check_row['start_date'] or not check_row['equipment_id']:
-                raise HTTPException(status_code=400, detail="Cannot complete MWO: missing start_date or equipment_id.")
+            if not check_row:
+                raise HTTPException(status_code=404, detail=f"MWO {mwo_id} not found.")
+
+            missing = []
+            current_tech = check_row['assigned_tech']
+            if not current_tech or current_tech.strip().upper() in ('', 'UNASSIGNED'):
+                missing.append("assigned_tech")
+            if not check_row['equipment_id']:
+                missing.append("equipment_id")
+            if not check_row['start_date']:
+                missing.append("start_date")
+
+            if missing:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Cannot transition to {target_status}: missing prerequisites [{', '.join(missing)}]."
+                )
+
+            if target_status == "COMPLETED":
+                update_data["completed_at"] = current_time
+
+        # Guard: Start Date Injection
+        if update_data.get("status") == "IN_PROGRESS":
+            cursor.execute("SELECT start_date FROM work_orders WHERE mwo_id = ?", (mwo_id,))
+            check_row = cursor.fetchone()
+            if check_row and not check_row['start_date']:
+                update_data["start_date"] = current_time
+
+        # Dynamic SQL Generation
+        columns = []
+        values = []
+        for key, value in update_data.items():
+            columns.append(f"{key} = ?")
+            values.append(value)
         
-        if payload.status == "IN_PROGRESS":
-            cursor.execute("""
-                UPDATE work_orders 
-                SET status = ?, consumed_sku = ?, manual_log = ?, start_date = COALESCE(start_date, ?)
-                WHERE mwo_id = ?
-            """, (payload.status, payload.consumed_sku, payload.manual_log, current_time, mwo_id))
-        elif payload.status == "PENDING_REVIEW":
-            cursor.execute("""
-                UPDATE work_orders 
-                SET status = ?, consumed_sku = ?, manual_log = ?
-                WHERE mwo_id = ?
-            """, (payload.status, payload.consumed_sku, payload.manual_log, mwo_id))
-        elif payload.status == "COMPLETED":
-            cursor.execute("""
-                UPDATE work_orders 
-                SET status = ?, consumed_sku = ?, manual_log = ?, completion_date = ?
-                WHERE mwo_id = ?
-            """, (payload.status, payload.consumed_sku, payload.manual_log, current_time, mwo_id))
-        else:
-            cursor.execute("""
-                UPDATE work_orders 
-                SET status = ?, consumed_sku = ?, manual_log = ?
-                WHERE mwo_id = ?
-            """, (payload.status, payload.consumed_sku, payload.manual_log, mwo_id))
-            
+        sql = f"UPDATE work_orders SET {', '.join(columns)} WHERE mwo_id = ?"
+        values.append(mwo_id)
+        
+        cursor.execute(sql, tuple(values))
         conn.commit()
+        
         background_tasks.add_task(sync_memory_bus)
         
         # Terminal State Actuation: Atomic Drop Protocol
-        if payload.status == "COMPLETED":
+        if update_data.get("status") == "COMPLETED":
             cursor.execute("SELECT * FROM work_orders WHERE mwo_id = ?", (mwo_id,))
             final_row = cursor.fetchone()
             if final_row:
                 background_tasks.add_task(archive_completed_mwo, dict(final_row))
         
-        return {"status": "success", "message": "MWO Updated successfully"}
+        return {"status": "success", "message": "MWO Updated successfully", "patch": update_data}
+    except HTTPException:
+        if conn:
+            conn.rollback()
+        raise
     except Exception as e:
         logger.error(f"Failed to update MWO {mwo_id}: {e}")
         if conn:
@@ -293,7 +483,7 @@ async def sync_memory_bus():
         
         payload_data = {
             "agent_id": "MWO_Edge_Node",
-            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "artifact_type": "Active_MWO_State",
             "payload": mapped_rows
         }
@@ -330,7 +520,7 @@ async def submit_order(order: WorkOrderSubmit):
         cursor = conn.cursor()
         
         # Temporal Fix: Strict UTC ISO 8601 string
-        reported_at = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        reported_at = datetime.now(timezone.utc).isoformat()
         
         cursor.execute(
             """
@@ -428,7 +618,7 @@ async def create_mwo(payload: NewMWO):
                         next_num = last_num + 1
                 except ValueError:
                     pass
-            current_year = datetime.datetime.now(datetime.timezone.utc).year
+            current_year = datetime.now(timezone.utc).year
             final_mwo_id = f"MWO-{current_year}-{next_num:03d}"
             
         if not final_mwo_id or not final_mwo_id.strip():
@@ -456,52 +646,97 @@ async def create_mwo(payload: NewMWO):
     finally:
         conn.close()
 
-@app.post("/api/admin/users/bulk-upload")
-async def bulk_upload_users(file: UploadFile = File(...)):
-    if not file.filename.endswith(".csv"):
-        raise HTTPException(status_code=400, detail="Only CSV files are allowed.")
-    
+import shutil
+from pydantic import ValidationError
+from typing import Literal
+
+# STRICT SCHEMA ENFORCEMENT
+class UserUploadSchema(BaseModel):
+    user_id: str = Field(..., min_length=1)
+    name: str = Field(..., min_length=1)
+    role: Literal['ADMIN', 'HD', 'HM', 'TECH']
+    department: str
+    reports_to_hm_id: Optional[str] = None
+
+    @field_validator('reports_to_hm_id', mode='before')
+    @classmethod
+    def empty_string_to_none(cls, v):
+        return None if v == "" else v
+
+def process_csv_background(file_path: str):
     conn = get_db_connection()
+    # Enforce WAL mode for concurrent read/writes
+    conn.execute("PRAGMA journal_mode=WAL;") 
+    cursor = conn.cursor()
+    
     try:
-        content = await file.read()
-        csv_reader = csv.DictReader(io.StringIO(content.decode('utf-8')))
-        
-        cursor = conn.cursor()
         rows_processed = 0
         errors = 0
-        
-        for row in csv_reader:
-            try:
-                # Enforce required columns: user_id, name, role
-                # Enforce role enum: ADMIN, HD, HM, TECH
-                cursor.execute("""
-                    INSERT INTO users (user_id, name, role, department, reports_to_hm_id)
-                    VALUES (?, ?, ?, ?, ?)
-                    ON CONFLICT(user_id) DO UPDATE SET
-                        name=excluded.name,
-                        role=excluded.role,
-                        department=excluded.department,
-                        reports_to_hm_id=excluded.reports_to_hm_id
-                """, (
-                    row.get('user_id'),
-                    row.get('name'),
-                    row.get('role'),
-                    row.get('department'),
-                    row.get('reports_to_hm_id') or None
-                ))
-                rows_processed += 1
-            except Exception as e:
-                logger.error(f"Error processing row {row}: {e}")
-                errors += 1
-                
+        with open(file_path, mode='r', encoding='utf-8') as f:
+            csv_reader = csv.DictReader(f)
+            
+            for raw_row in csv_reader:
+                try:
+                    # Rigorous Schema Validation before DB interaction
+                    valid_row = UserUploadSchema(**raw_row)
+                    
+                    cursor.execute("""
+                        INSERT INTO users (user_id, name, role, department, reports_to_hm_id)
+                        VALUES (?, ?, ?, ?, ?)
+                        ON CONFLICT(user_id) DO UPDATE SET
+                            name=excluded.name,
+                            role=excluded.role,
+                            department=excluded.department,
+                            reports_to_hm_id=excluded.reports_to_hm_id
+                    """, (
+                        valid_row.user_id,
+                        valid_row.name,
+                        valid_row.role,
+                        valid_row.department,
+                        valid_row.reports_to_hm_id
+                    ))
+                    rows_processed += 1
+                except ValidationError as ve:
+                    logger.error(f"Schema violation for row {raw_row}: {ve}")
+                    errors += 1
+                    continue # Skip invalid rows, do not crash batch
+                except Exception as e:
+                    logger.error(f"DB Error for row {raw_row}: {e}")
+                    errors += 1
+                    continue
+                    
         conn.commit()
-        return {"status": "success", "rows_processed": rows_processed, "errors": errors}
+        logger.info(f"[BACKGROUND WORKER] CSV Ingestion Complete. Processed: {rows_processed}, Skipped: {errors}")
     except Exception as e:
         conn.rollback()
-        logger.error(f"Bulk upload failed: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error during CSV upload.")
+        logger.error(f"Critical failure in background CSV processing: {e}")
     finally:
         conn.close()
+        # Autonomous cleanup of temp file
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
+@app.post("/api/admin/users/bulk-upload", status_code=202)
+async def bulk_upload_users(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
+    if not file.filename.endswith(".csv"):
+        raise HTTPException(status_code=400, detail="Strictly CSV payloads authorized.")
+    
+    tmp_path = f"/tmp/{file.filename}"
+    
+    # Asynchronous chunked writing strictly prevents ASGI event loop blocking
+    try:
+        async with aiofiles.open(tmp_path, 'wb') as out_file:
+            while content := await file.read(1024 * 1024):  # 1MB chunks
+                await out_file.write(content)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Failed to write payload to temporary storage.")
+    finally:
+        await file.close()
+
+    # Offload strictly to background thread
+    background_tasks.add_task(process_csv_background, tmp_path)
+    
+    return {"status": "accepted", "message": "Payload queued for validation and processing."}
 
 @app.get("/api/orders/active")
 async def get_active_orders():
@@ -556,3 +791,138 @@ async def get_active_orders():
             conn.close()
 
 
+@app.get("/api/admin/users")
+async def get_admin_users(
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=100),
+    jwt_payload: dict = Depends(verify_jwt_token)
+):
+    # Strict RBAC Enforcement
+    actor_role = jwt_payload.get("role")
+    if actor_role != "ADMIN":
+        raise HTTPException(status_code=403, detail="RBAC Violation: ADMIN clearance required.")
+        
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        
+        # Mathematical SQLite Pagination
+        offset = (page - 1) * limit
+        
+        # Enforce Soft Delete Boundary
+        cursor.execute("""
+            SELECT user_id, name, role, department, reports_to_hm_id, is_active
+            FROM users
+            WHERE is_active = 1
+            ORDER BY user_id ASC
+            LIMIT ? OFFSET ?
+        """, (limit, offset))
+        
+        rows = cursor.fetchall()
+        
+        # C-Optimized Serialization
+        users = [{
+            "user_id": row["user_id"],
+            "name": row["name"],
+            "role": row["role"],
+            "department": row["department"],
+            "reports_to_hm_id": row["reports_to_hm_id"],
+            "is_active": row["is_active"]
+        } for row in rows]
+            
+        return users
+        
+    except Exception as e:
+        logger.error(f"Failed to fetch paginated matrix: {e}")
+        raise HTTPException(status_code=500, detail="Database Error: Unable to fetch telemetry.")
+    finally:
+        if conn:
+            conn.close()
+            
+@app.get("/api/admin/users/{user_id}/audit-log")
+async def get_user_audit_log(
+    user_id: str = Path(..., description="The target user's enterprise ID"),
+    jwt_payload: dict = Depends(verify_jwt_token)
+):
+    actor_role = jwt_payload.get("role")
+    
+    # Strict Taxonomy Validation
+    if actor_role != "ADMIN":
+
+        raise HTTPException(status_code=403, detail="RBAC Violation: ADMIN clearance required.")
+        
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT event_id, target_user_id, actor_user_id, action_type, timestamp 
+            FROM user_audit_logs 
+            WHERE target_user_id = ? 
+            ORDER BY timestamp DESC
+        """, (user_id,))
+        
+        rows = cursor.fetchall()
+        events = [{"event_id": r["event_id"], "target_user_id": r["target_user_id"], "actor_user_id": r["actor_user_id"], "action": r["action_type"], "timestamp": r["timestamp"]} for r in rows]
+            
+        return {"target_user_id": user_id, "events": events}
+    except Exception as e:
+        logger.error(f"Audit log retrieval failed for {user_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve contextual telemetry.")
+    finally:
+        conn.close()
+
+@app.delete("/api/admin/users/{user_id}", status_code=204)
+async def terminate_user_access(
+    user_id: str = Path(..., description="The target user's enterprise ID to terminate"),
+    jwt_payload: dict = Depends(verify_jwt_token)
+):
+    actor_user_id = jwt_payload.get("sub")
+    actor_role = jwt_payload.get("role")
+
+    # Strict Taxonomy Validation
+    if actor_role != "ADMIN":
+        raise HTTPException(status_code=403, detail="RBAC Violation: ADMIN clearance required.")
+        
+    if actor_user_id == user_id:
+        raise HTTPException(status_code=400, detail="Self-termination is architecturally prohibited.")
+        
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        
+        # Native Context Manager for Guaranteed Atomicity
+        with conn:
+            cursor.execute("SELECT is_active FROM users WHERE user_id = ?", (user_id,))
+            target_user = cursor.fetchone()
+            
+            if not target_user:
+                raise HTTPException(status_code=404, detail="Target user not found in the matrix.")
+            if target_user["is_active"] == 0:
+                raise HTTPException(status_code=400, detail="Target user is already structurally terminated.")
+                
+            cursor.execute("""
+                UPDATE users 
+                SET is_active = 0, token_version = token_version + 1 
+                WHERE user_id = ?
+            """, (user_id,))
+            
+            event_id = str(uuid.uuid4())
+            action_type = "TERMINATE_ACCESS"
+            
+            cursor.execute("""
+                INSERT INTO user_audit_logs (event_id, target_user_id, actor_user_id, action_type) 
+                VALUES (?, ?, ?, ?)
+            """, (event_id, user_id, actor_user_id, action_type))
+            
+        return None  
+        
+    except HTTPException:
+        raise
+    except sqlite3.Error as e:
+        logger.error(f"Atomic transaction failed during structural termination: {e}")
+        raise HTTPException(status_code=500, detail="Database constraints aborted the structural termination.")
+    except Exception as e:
+        logger.error(f"Unexpected error during termination sequence: {e}")
+        raise HTTPException(status_code=500, detail="An unexpected error aborted the actuation.")
+    finally:
+        conn.close()

@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { MockAuthProvider, LoginSimulator, useAuth } from './context/MockAuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import './App.css'; // Strictly Native Vanilla CSS
 
 // Import actual component files
@@ -28,13 +28,15 @@ const RoleRouter = () => {
   const { userRole } = useAuth();
   
   switch (userRole) {
-    case 'Administrator':
+    case 'ADMINISTRATOR':
+    case 'ADMIN':
       return <Navigate to="/admin" replace />;
     case 'DM':
       return <Navigate to="/dm" replace />;
     case 'HM':
       return <Navigate to="/hm" replace />;
-    case 'Technician':
+    case 'TECHNICIAN':
+    case 'TECH':
       return <Navigate to="/tech" replace />;
     default:
       // Fallback for unauthenticated or non-matching payload strings
@@ -44,8 +46,7 @@ const RoleRouter = () => {
 
 function App() {
   return (
-    <MockAuthProvider>
-      <LoginSimulator />
+    <AuthProvider>
       <Router>
         <div 
           className="maf-app-shell" 
@@ -69,7 +70,7 @@ function App() {
             <Route
               path="/admin/*"
               element={
-                <ProtectedRoute allowedRoles={['Administrator']}>
+                <ProtectedRoute allowedRoles={['ADMINISTRATOR', 'ADMIN']}>
                   <AdminConsole />
                 </ProtectedRoute>
               }
@@ -99,7 +100,7 @@ function App() {
             <Route
               path="/tech/*"
               element={
-                <ProtectedRoute allowedRoles={['Technician']}>
+                <ProtectedRoute allowedRoles={['TECHNICIAN', 'TECH']}>
                   <TechDashboard />
                 </ProtectedRoute>
               }
@@ -110,7 +111,7 @@ function App() {
           </Routes>
         </div>
       </Router>
-    </MockAuthProvider>
+    </AuthProvider>
   );
 }
 

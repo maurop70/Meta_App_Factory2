@@ -6,6 +6,9 @@ import sqlite3
 from datetime import datetime, timezone
 from jinja2 import Environment, FileSystemLoader
 from xhtml2pdf import pisa
+from concurrent.futures import ProcessPoolExecutor
+
+MAX_WORKERS = os.cpu_count() or 4
 
 # Directory Setup
 ENGINE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -66,71 +69,58 @@ def get_next_sequence(module_code):
     
     return f"{module_code}-{year}-{month}-{last_sequence:04d}"
 
+def render_and_archive_pdf(processing_path: str, filename: str):
+    try:
+        with open(processing_path, 'r') as f:
+            data = json.load(f)
+        
+        sequence_number = get_next_sequence('MWO')
+        rendered_html = template.render(sequence_number=sequence_number, **data['payload'])
+        
+        pdf_filename = filename.replace('.json', '.pdf')
+        pdf_path = os.path.join(PROCESSING_DIR, pdf_filename)
+        
+        with open(pdf_path, "w+b") as result_file:
+            pisa_status = pisa.CreatePDF(rendered_html, dest=result_file)
+            
+        if pisa_status.err:
+            raise Exception("xhtml2pdf compilation failure.")
+            
+        permanent_json_path = os.path.join(PERMANENT_DIR, filename)
+        permanent_pdf_path = os.path.join(PERMANENT_DIR, pdf_filename)
+        shutil.move(processing_path, permanent_json_path)
+        shutil.move(pdf_path, permanent_pdf_path)
+        
+        return True
+
+    except Exception as e:
+        print(f"[ARCHIVAL ENGINE] Critical failure compiling {filename}: {e}")
+        dead_letter_path = os.path.join(DEAD_LETTER_DIR, filename)
+        shutil.move(processing_path, dead_letter_path)
+        return False
+
 def main_loop():
     bootstrapper()
     
-    # The Atomic Watchdog Loop
-    while True:
-        for filename in os.listdir(QUEUE_DIR):
-            # Explicitly ignore temporal locks
-            if filename.endswith(".tmp"):
-                continue
-            
-            if filename.endswith(".json"):
+    with ProcessPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        while True:
+            for filename in os.listdir(QUEUE_DIR):
+                if filename.endswith(".tmp") or not filename.endswith(".json"):
+                    continue
+                
                 queue_path = os.path.join(QUEUE_DIR, filename)
                 processing_path = os.path.join(PROCESSING_DIR, filename)
                 
-                # The Mutual Exclusion Claim
                 try:
                     shutil.move(queue_path, processing_path)
                 except FileNotFoundError:
-                    # Move failed: another worker thread successfully claimed it
                     continue
                 
-                # Mock Processing
-                source_id = filename.replace('.json', '')
-                try:
-                    with open(processing_path, 'r') as f:
-                        data = json.load(f)
-                        if isinstance(data, dict) and 'payload' in data and 'mwo_id' in data['payload']:
-                            source_id = data['payload']['mwo_id']
-                    
-                    print(f"[ARCHIVAL ENGINE] Claimed and reading payload for: {source_id}")
-                    
-                    # Generate Canonical Sequence
-                    sequence_number = get_next_sequence('MWO')
-                    
-                    # PDF Compilation Engine (Pure-Python Pivot)
-                    rendered_html = template.render(sequence_number=sequence_number, **data['payload'])
-                    pdf_filename = filename.replace('.json', '.pdf')
-                    pdf_path = os.path.join(PROCESSING_DIR, pdf_filename)
-                    
-                    with open(pdf_path, "w+b") as result_file:
-                        pisa_status = pisa.CreatePDF(rendered_html, dest=result_file)
-                        
-                    if pisa_status.err:
-                        raise Exception("xhtml2pdf compilation failed.")
-                    
-                    print(f"[ARCHIVAL ENGINE] PDF Compiled for: {sequence_number}")
-                    
-                except Exception as e:
-                    print(f"[ARCHIVAL ENGINE] Error processing payload for {filename}: {e}")
-                    dead_letter_path = os.path.join(DEAD_LETTER_DIR, filename)
-                    shutil.move(processing_path, dead_letter_path)
-                    
-                    # Cleanup generated PDF if it exists but failed
-                    pdf_filename = filename.replace('.json', '.pdf')
-                    pdf_path = os.path.join(PROCESSING_DIR, pdf_filename)
-                    if os.path.exists(pdf_path):
-                        os.remove(pdf_path)
-                else:
-                    # Terminal Handover
-                    permanent_json_path = os.path.join(PERMANENT_DIR, filename)
-                    permanent_pdf_path = os.path.join(PERMANENT_DIR, pdf_filename)
-                    shutil.move(processing_path, permanent_json_path)
-                    shutil.move(pdf_path, permanent_pdf_path)
-        
-        time.sleep(5)
+                print(f"[ARCHIVAL ENGINE] Dispatching payload to CPU worker: {filename}")
+                
+                executor.submit(render_and_archive_pdf, processing_path, filename)
+            
+            time.sleep(2)
 
 if __name__ == "__main__":
     main_loop()

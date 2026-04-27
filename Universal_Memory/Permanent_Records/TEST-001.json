@@ -1,0 +1,9 @@
+{
+    "document_type": "MWO_REPORT",
+    "payload": {
+        "mwo_id": "TEST-001",
+        "status": "COMPLETED",
+        "description": "Autonomous Test",
+        "assigned_tech": "AY-Agent"
+    }
+}

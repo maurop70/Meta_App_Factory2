@@ -1,20 +1,81 @@
 import axios from 'axios';
 
-const api = axios.create({
-  baseURL: 'http://127.0.0.1:8000',
-  headers: { 'Content-Type': 'application/json' },
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
+
+let accessToken = null;
+let isRefreshing = false;
+let failedQueue = [];
+
+export const setAccessToken = (token) => {
+    accessToken = token;
+};
+
+const processQueue = (error, token = null) => {
+    failedQueue.forEach(prom => {
+        if (error) {
+            prom.reject(error);
+        } else {
+            prom.resolve(token);
+        }
+    });
+    failedQueue = [];
+};
+
+export const triggerRefresh = async () => {
+    if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+            failedQueue.push({ resolve, reject });
+        });
+    }
+    isRefreshing = true;
+    try {
+        const { data } = await axios.post(`${API_BASE_URL}/user/refresh`, {}, { withCredentials: true });
+        setAccessToken(data.access_token);
+        processQueue(null, data.access_token);
+        return data.access_token;
+    } catch (refreshError) {
+        processQueue(refreshError, null);
+        setAccessToken(null);
+        // Decouple network layer from UI. Broadcast destruction event.
+        window.dispatchEvent(new CustomEvent('auth:termination'));
+        return Promise.reject(refreshError);
+    } finally {
+        isRefreshing = false;
+    }
+};
+
+const apiClient = axios.create({
+    baseURL: API_BASE_URL,
+    headers: { 'Content-Type': 'application/json' },
+    withCredentials: true 
 });
 
-// Interceptor to parse FastAPI errors into clean strings
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.data?.detail) {
-      const detail = error.response.data.detail;
-      error.response.data.detail = Array.isArray(detail) ? detail.map(d => d.msg).join(', ') : JSON.stringify(detail);
+apiClient.interceptors.request.use(config => {
+    if (accessToken) {
+        config.headers['Authorization'] = `Bearer ${accessToken}`;
+    }
+    return config;
+}, error => Promise.reject(error));
+
+apiClient.interceptors.response.use(response => {
+    return response;
+}, async error => {
+    const originalRequest = error.config;
+    if (error.response?.data?.detail && typeof error.response.data.detail !== 'string') {
+        const detail = error.response.data.detail;
+        error.response.data.detail = Array.isArray(detail) ? detail.map(d => d.msg).join(', ') : JSON.stringify(detail);
+    }
+    if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url.includes('/user/authenticate')) {
+        originalRequest._retry = true;
+        try {
+            const token = await triggerRefresh();
+            originalRequest.headers['Authorization'] = `Bearer ${token}`;
+            return apiClient(originalRequest);
+        } catch (err) {
+            return Promise.reject(err);
+        }
     }
     return Promise.reject(error);
-  }
-);
+});
 
-export default api;
+export default apiClient;
