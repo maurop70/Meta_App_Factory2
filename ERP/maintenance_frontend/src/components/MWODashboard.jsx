@@ -1,6 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import { useAuth } from '../context/MockAuthContext';
+import { useAuth } from '../context/AuthContext';
+import MWODetailModal from './MWODetailModal';
+
+// PHASE 20.60: Terminal states that structurally lock mutation vectors
+const TERMINAL_STATES = ['COMPLETED', 'APPROVED'];
+
+// PHASE 20.63: Shared Style References
+const STYLE_DANGER = { background: 'rgba(239, 68, 68, 0.15)', color: 'var(--danger, #ef4444)' };
+const STYLE_WARNING = { background: 'rgba(245, 158, 11, 0.15)', color: 'var(--warning, #f59e0b)' };
+const STYLE_ACTIVE = { background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8' };
+const STYLE_SUCCESS = { background: 'rgba(16, 185, 129, 0.15)', color: 'var(--success, #10b981)' };
+const STYLE_MUTED = { background: 'rgba(148, 163, 184, 0.15)', color: 'var(--text-secondary, #94a3b8)' };
+
+export const STATUS_COLORS = {
+  UNASSIGNED: STYLE_DANGER,
+  PENDING_REVIEW: STYLE_DANGER,
+  IN_PROGRESS: STYLE_ACTIVE,
+  COMPLETED: STYLE_SUCCESS,
+  APPROVED: STYLE_SUCCESS
+};
+
+export const URGENCY_COLORS = {
+  HIGH: STYLE_DANGER,
+  CRITICAL: STYLE_DANGER,
+  AOG: STYLE_DANGER,
+  MEDIUM: STYLE_WARNING,
+  LOW: STYLE_MUTED,
+  NORMAL: STYLE_MUTED
+};
 
 const MWODashboard = () => {
   const [workOrders, setWorkOrders] = useState([]);
@@ -8,6 +36,8 @@ const MWODashboard = () => {
   const [fetchTrigger, setFetchTrigger] = useState(0);
   const [selectedMWO, setSelectedMWO] = useState(null);
   const { userRole } = useAuth();
+
+  const isTerminal = (s) => TERMINAL_STATES.includes(s);
 
   useEffect(() => {
     const fetchMWO = async () => {
@@ -37,36 +67,24 @@ const MWODashboard = () => {
     fetchMWO();
   }, [fetchTrigger]);
 
-  const handleComplete = async (mwo_id) => {
+  const handlePatch = async (order, payload) => {
     try {
-      await api.patch(`/api/mwo/${mwo_id}`, { status: "COMPLETED" });
-      alert(`Work order ${mwo_id} successfully COMPLETED.`);
+      // API Bridge Active
+      await api.patch(`/api/mwo/${order.mwo_id}`, payload);
+      
+      // Optimistic local DOM update confined to setState
+      setWorkOrders(prev => prev.map(wo =>
+        wo.mwo_id === order.mwo_id ? { ...wo, ...payload } : wo
+      ));
+      
+      setSelectedMWO(null);
       setFetchTrigger(prev => prev + 1);
-    } catch (err) {
-      console.error("Failed to complete work order:", err);
-      alert("Failed to complete work order. See console for details.");
+    } catch (error) {
+      console.error("Local Patch Mock Failed:", error);
     }
   };
 
-  const handleReject = async (mwo_id) => {
-    try {
-      await api.patch(`/api/mwo/${mwo_id}`, { status: "IN_PROGRESS" });
-      alert(`Work order ${mwo_id} REJECTED and returned to IN_PROGRESS.`);
-      setFetchTrigger(prev => prev + 1);
-    } catch (err) {
-      console.error("Failed to reject work order:", err);
-      alert("Failed to reject work order. See console for details.");
-    }
-  };
 
-  const getUrgencyBadge = (urgency) => {
-    switch(urgency) {
-      case 'High': return { background: 'rgba(245, 158, 11, 0.15)', color: '#fbbf24' };
-      case 'Critical':
-      case 'AOG': return { background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444' };
-      default: return { background: 'rgba(148, 163, 184, 0.15)', color: '#94a3b8' };
-    }
-  };
 
   if (status.type === 'loading') {
     return <div className="erp-status-message loading">{status.message}</div>;
@@ -171,12 +189,12 @@ const MWODashboard = () => {
           <thead>
             <tr style={{ background: 'rgba(99, 102, 241, 0.1)', borderBottom: '1px solid var(--border, rgba(99, 102, 241, 0.15))', color: 'var(--text-secondary, #94a3b8)' }}>
               <th style={{ padding: '0.8rem 1rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.7rem' }}>MWO ID</th>
+              <th style={{ padding: '0.8rem 1rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.7rem' }}>Equipment</th>
               <th style={{ padding: '0.8rem 1rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.7rem' }}>Assigned Tech</th>
               <th style={{ padding: '0.8rem 1rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.7rem' }}>Status</th>
               <th style={{ padding: '0.8rem 1rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.7rem' }}>DM Urgency</th>
               <th style={{ padding: '0.8rem 1rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.7rem' }}>HM Priority</th>
               <th style={{ padding: '0.8rem 1rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.7rem' }}>Description</th>
-              <th style={{ padding: '0.8rem 1rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.7rem' }}>Manual Log</th>
             </tr>
           </thead>
           <tbody>
@@ -190,43 +208,26 @@ const MWODashboard = () => {
                   <td data-label="MWO ID" style={{ padding: '1rem 1.2rem', color: '#818cf8', fontWeight: 500, cursor: 'pointer', textDecoration: 'underline' }} onClick={() => setSelectedMWO(order)}>
                     {order.mwo_id || 'N/A'}
                   </td>
+                  <td data-label="EQUIPMENT" style={{ padding: '1rem 1.2rem', color: 'var(--text-secondary, #94a3b8)', fontFamily: 'monospace', fontSize: '0.75rem' }}>
+                    {order.equipment_id || '—'}
+                  </td>
                   <td data-label="ASSIGNED TECH" style={{ padding: '1rem 1.2rem', color: 'var(--accent-hover, #818cf8)' }}>
-                    {order.status !== 'COMPLETED' && userRole === 'HM' ? (
-                      <select className="table-select" defaultValue={order.assigned_tech || 'Unassigned'}>
-                        <option value="Unassigned">Unassigned</option>
-                        <option value="Tech-Alpha">Tech-Alpha</option>
-                        <option value="Tech-Bravo">Tech-Bravo</option>
-                        <option value="Tech-Charlie">Tech-Charlie</option>
-                      </select>
-                    ) : (
-                      order.assigned_tech || 'Unassigned'
-                    )}
+                    {order.assigned_tech || 'Unassigned'}
                   </td>
                   <td data-label="STATUS" style={{ padding: '1rem 1.2rem' }}>
-                    <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 600, background: order.status === 'COMPLETED' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)', color: order.status === 'COMPLETED' ? 'var(--success, #10b981)' : 'var(--warning, #f59e0b)' }}>
+                    <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 600, ...(STATUS_COLORS[order.status] || STYLE_MUTED) }}>
                       {order.status || 'Pending'}
                     </span>
                   </td>
                   <td data-label="DM URGENCY" style={{ padding: '1rem 1.2rem' }}>
-                    <span style={{ padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.75rem', whiteSpace: 'nowrap', fontWeight: 600, ...getUrgencyBadge(order.dm_urgency || 'Normal') }}>
+                    <span style={{ padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.75rem', whiteSpace: 'nowrap', fontWeight: 600, ...(URGENCY_COLORS[(order.dm_urgency || 'NORMAL').toUpperCase()] || STYLE_MUTED) }}>
                       {order.dm_urgency || 'Normal'}
                     </span>
                   </td>
                   <td data-label="HM PRIORITY" style={{ padding: '1rem 1.2rem', color: 'var(--text-secondary, #94a3b8)' }}>
-                    {order.status !== 'COMPLETED' && userRole === 'HM' ? (
-                      <select className="table-select" defaultValue={order.hm_priority || 'Normal'}>
-                        <option value="Low">Low</option>
-                        <option value="Normal">Normal</option>
-                        <option value="High">High</option>
-                        <option value="Critical">Critical</option>
-                        <option value="AOG">AOG</option>
-                      </select>
-                    ) : (
-                      order.hm_priority || 'Normal'
-                    )}
+                    {order.hm_priority || 'Normal'}
                   </td>
                   <td data-label="DESCRIPTION" style={{ padding: '1rem 1.2rem', color: 'var(--text-primary, #e2e8f0)' }}>{order.description || 'N/A'}</td>
-                  <td data-label="MANUAL LOG" style={{ padding: '1rem 1.2rem', color: 'var(--text-muted, #64748b)' }}>{order.manual_log || 'None'}</td>
                 </tr>
               ))
             )}
@@ -235,30 +236,11 @@ const MWODashboard = () => {
       </div>
       
       {/* Detail Overlay Modal */}
-      {selectedMWO && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999 }}>
-          <div style={{ background: 'var(--bg-card, rgba(15, 23, 42, 0.95))', border: '1px solid rgba(255, 255, 255, 0.12)', borderRadius: '12px', padding: '2rem', width: '90%', maxWidth: '500px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', color: '#fff' }}>
-            <h3 style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)', paddingBottom: '0.5rem', marginBottom: '1.5rem', fontWeight: 600 }}>Work Order Details</h3>
-            <p style={{ marginBottom: '0.8rem' }}><strong style={{ color: '#94a3b8' }}>ID:</strong> {selectedMWO.mwo_id}</p>
-            <p style={{ marginBottom: '0.8rem' }}><strong style={{ color: '#94a3b8' }}>Requester Name:</strong> {selectedMWO.requester_name || 'DM-Alpha'}</p>
-            <p style={{ marginBottom: '0.8rem' }}><strong style={{ color: '#94a3b8' }}>Department:</strong> {selectedMWO.department || 'Operations'}</p>
-            <p style={{ marginBottom: '0.8rem' }}><strong style={{ color: '#94a3b8' }}>Location:</strong> {selectedMWO.location_id}</p>
-            <p style={{ marginBottom: '0.8rem' }}><strong style={{ color: '#94a3b8' }}>Description:</strong><br/>{selectedMWO.description}</p>
-            <p style={{ marginBottom: '1.5rem' }}><strong style={{ color: '#94a3b8' }}>Technician Log:</strong><br/>{selectedMWO.manual_log || 'No notes provided by technician.'}</p>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              {selectedMWO.status === 'PENDING_REVIEW' ? (
-                <div style={{ display: 'flex', gap: '0.8rem', marginRight: 'auto' }}>
-                  <button className="btn-approve" onClick={() => { handleComplete(selectedMWO.mwo_id); setSelectedMWO(null); }}>Approve Work</button>
-                  <button className="btn-reject" onClick={() => { handleReject(selectedMWO.mwo_id); setSelectedMWO(null); }}>Reject / Rework</button>
-                </div>
-              ) : (
-                <div />
-              )}
-              <button onClick={() => setSelectedMWO(null)} style={{ padding: '0.6rem 1.2rem', background: 'rgba(255, 255, 255, 0.1)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, transition: 'all 0.2s', marginLeft: 'auto' }} onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'} onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}>Close</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <MWODetailModal 
+        selectedMWO={selectedMWO} 
+        closeModal={() => setSelectedMWO(null)} 
+        handlePatch={handlePatch} 
+      />
     </div>
   );
 };

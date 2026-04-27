@@ -1,0 +1,18 @@
+{
+  "document_type": "MWO_REPORT",
+  "payload": {
+    "mwo_id": "AUTO-QA-005",
+    "status": "COMPLETED",
+    "dm_urgency": "Normal",
+    "hm_priority": "Normal",
+    "description": "dummy SKU 5",
+    "assigned_tech": "AY-Agent",
+    "consumed_sku": null,
+    "manual_log": null,
+    "created_at": null,
+    "triaged_at": null,
+    "execution_start": 1776992632.1123471,
+    "execution_end": null,
+    "completed_at": 1776992642.940674
+  }
+}

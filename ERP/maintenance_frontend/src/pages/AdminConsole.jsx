@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { useAuth } from '../context/MockAuthContext';
+import { useAuth } from '../context/AuthContext';
 import CreateMWOForm from '../components/CreateMWOForm';
 import MWODashboard from '../components/MWODashboard';
 import AdminDataIngestion from '../components/AdminDataIngestion';
+import EnterpriseDataMatrix from '../components/EnterpriseDataMatrix';
 
 const AdminConsole = () => {
   const { userRole, logout } = useAuth();
@@ -59,7 +60,10 @@ const AdminConsole = () => {
       </div>
       
       {activeTab === 'ingestion' && (
-        <AdminDataIngestion />
+        <>
+          <AdminDataIngestion />
+          <EnterpriseDataMatrix />
+        </>
       )}
       
       {activeTab === 'dm' && (

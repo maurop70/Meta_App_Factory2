@@ -1,47 +1,106 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { setAccessToken, triggerRefresh } from '../services/api';
 
-const AuthContext = createContext(null);
+const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userRole, setUserRole] = useState(null);
-  const [user, setUser] = useState(null);
+    const [userRole, setUserRole] = useState(null);
+    const [isBootstrapped, setIsBootstrapped] = useState(false);
+    const refreshTimerRef = useRef(null);
+    const isLoggedOutRef = useRef(false);
 
-  // Boot-up sequence: Read from local memory securely (Run ONCE via empty dependency array)
-  useEffect(() => {
-    const storedRole = localStorage.getItem('erp_role');
-    const storedUser = localStorage.getItem('erp_user');
-    if (storedRole) {
-      setIsAuthenticated(true);
-      // Capitalize role to strictly match App.jsx router expectations
-      setUserRole(storedRole.charAt(0).toUpperCase() + storedRole.slice(1).toLowerCase());
-      setUser(storedUser);
-    }
-  }, []); // <- Critical: Empty array prevents infinite loop
+    const clearRefreshTimer = () => {
+        if (refreshTimerRef.current) {
+            clearTimeout(refreshTimerRef.current);
+            refreshTimerRef.current = null;
+        }
+    };
 
-  const login = (role, userData, pin) => {
-    const cleanRole = role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
-    setIsAuthenticated(true);
-    setUserRole(cleanRole);
-    setUser(userData);
-    localStorage.setItem('erp_role', cleanRole);
-    localStorage.setItem('erp_user', typeof userData === 'string' ? userData : JSON.stringify(userData));
-  };
+    const logout = () => {
+        isLoggedOutRef.current = true;
+        clearRefreshTimer();
+        setAccessToken(null);
+        setUserRole(null);
+        // Add React Router navigation here depending on your routing setup
+    };
 
-  const logout = () => {
-    setIsAuthenticated(false);
-    setUserRole(null);
-    setUser(null);
-    localStorage.removeItem('erp_role');
-    localStorage.removeItem('erp_user');
-    window.location.href = '/login'; // Force hard physical redirect
-  };
+    const setupProactiveRefresh = (token) => {
+        if (isLoggedOutRef.current || !token) return;
+        clearRefreshTimer();
+        
+        try {
+            // SILENT PATCH: Fixed split() array indexing to prevent TypeError
+            const payloadBase64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+            const payloadJson = atob(payloadBase64);
+            const payload = JSON.parse(payloadJson);
+            const expTimeMs = payload.exp * 1000;
+            const currentTimeMs = Date.now();
+            
+            const timeUntilRefreshMs = (expTimeMs - currentTimeMs) - (60 * 1000);
+            
+            if (timeUntilRefreshMs > 0) {
+                refreshTimerRef.current = setTimeout(async () => {
+                    if (isLoggedOutRef.current) return; // Strict unmounted mutation check
+                    try {
+                        const newToken = await triggerRefresh();
+                        setupProactiveRefresh(newToken);
+                    } catch (err) {
+                        logout();
+                    }
+                }, timeUntilRefreshMs);
+            } else {
+                triggerRefresh().then(newToken => setupProactiveRefresh(newToken)).catch(logout);
+            }
+        } catch (err) {
+            console.error("JWT Decode Error", err);
+            logout();
+        }
+    };
 
-  return (
-    <AuthContext.Provider value={{ isAuthenticated, userRole, user, login, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
+    const authenticateContext = (token, role) => {
+        isLoggedOutRef.current = false;
+        setAccessToken(token);
+        setUserRole(role);
+        setupProactiveRefresh(token);
+    };
+
+    // SYSTEM BOOTSTRAP & EVENT LISTENER
+    useEffect(() => {
+        const handleAuthTermination = () => logout();
+        window.addEventListener('auth:termination', handleAuthTermination);
+
+        const bootstrapSession = async () => {
+            try {
+                // Attempt to silently reconstruct session from HttpOnly cookie on F5
+                const token = await triggerRefresh();
+                const payloadBase64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+                const payload = JSON.parse(atob(payloadBase64));
+                
+                // Assuming 'role' or equivalent key exists in your JWT payload
+                authenticateContext(token, payload.role || payload.sub_role); 
+            } catch (error) {
+                // Initial session reconstruction failed (user is logged out)
+            } finally {
+                setIsBootstrapped(true);
+            }
+        };
+
+        bootstrapSession();
+
+        return () => {
+            window.removeEventListener('auth:termination', handleAuthTermination);
+            clearRefreshTimer();
+        };
+    }, []);
+
+    // Prevent rendering protected routes until session reconstruction resolves
+    if (!isBootstrapped) return null; // Or insert a global strict loading indicator here
+
+    return (
+        <AuthContext.Provider value={{ userRole, authenticateContext, logout }}>
+            {children}
+        </AuthContext.Provider>
+    );
 };
 
 export const useAuth = () => useContext(AuthContext);

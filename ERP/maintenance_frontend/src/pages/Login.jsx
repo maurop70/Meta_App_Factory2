@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import { useAuth } from '../context/MockAuthContext';
+import { useAuth } from '../context/AuthContext';
 
 const Login = () => {
-  const { userRole } = useAuth();
+  const { userRole, authenticateContext } = useAuth();
   const navigate = useNavigate();
   const [pin, setPin] = useState('');
   const [status, setStatus] = useState({ type: 'idle', message: '' });
 
   // Reactive Routing Patch
   useEffect(() => {
-    if (userRole && ['Administrator', 'DM', 'HM', 'Technician'].includes(userRole)) {
+    if (userRole && ['ADMIN', 'ADMINISTRATOR', 'DM', 'HM', 'TECH', 'TECHNICIAN'].includes(userRole)) {
       navigate('/', { replace: true });
     }
   }, [userRole, navigate]);
@@ -22,8 +22,21 @@ const Login = () => {
       setStatus({ type: 'error', message: 'Authorization PIN is required.' });
       return;
     }
-    // Form Submission Hijack (Fallback bypass)
-    navigate('/', { replace: true });
+    setStatus({ type: 'loading', message: '' });
+    try {
+      const response = await api.post('/user/authenticate', { pin });
+      const { access_token, user } = response.data;
+      
+      authenticateContext(access_token, user.role);
+      
+      // Navigation is handled implicitly by the useEffect watching userRole
+    } catch (err) {
+      console.error(err);
+      setStatus({ 
+        type: 'error', 
+        message: err.response?.data?.detail || 'Authentication failed. Please check your PIN.' 
+      });
+    }
   };
 
   const handlePinChange = (e) => {
