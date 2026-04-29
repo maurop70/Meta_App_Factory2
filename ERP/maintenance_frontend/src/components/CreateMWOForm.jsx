@@ -30,7 +30,7 @@ const CreateMWOForm = ({ onMWOCreated }) => {
     e.preventDefault();
     setStatusMsg('Submitting...');
     try {
-      await api.post('/api/mwo', {
+      await api.post('/mwo', {
         mwo_id: mwoId,
         description: description,
         equipment_id: equipmentId,

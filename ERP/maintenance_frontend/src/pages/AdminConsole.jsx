@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import CreateMWOForm from '../components/CreateMWOForm';
-import MWODashboard from '../components/MWODashboard';
+import HMDashboard from '../components/HMDashboard';
 import AdminDataIngestion from '../components/AdminDataIngestion';
 import EnterpriseDataMatrix from '../components/EnterpriseDataMatrix';
+import EquipmentMatrix from '../components/EquipmentMatrix';
+import PartsMatrix from '../components/PartsMatrix';
 
 const AdminConsole = () => {
   const { userRole, logout } = useAuth();
   const [refreshKey, setRefreshKey] = useState(0);
   const [activeTab, setActiveTab] = useState('ingestion');
+  const [ingestionTab, setIngestionTab] = useState('PERSONNEL');
 
   const handleMWOCreated = () => {
     setRefreshKey(prev => prev + 1);
@@ -60,10 +63,53 @@ const AdminConsole = () => {
       </div>
       
       {activeTab === 'ingestion' && (
-        <>
-          <AdminDataIngestion />
-          <EnterpriseDataMatrix />
-        </>
+        <div className="data-ingestion-container">
+          
+          {/* SUB-NAVIGATION MATRIX */}
+          <div className="sub-nav-matrix" style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
+            <button 
+              onClick={() => setIngestionTab('PERSONNEL')}
+              style={{ padding: '0.5rem 1rem', background: ingestionTab === 'PERSONNEL' ? 'rgba(99, 102, 241, 0.15)' : 'transparent', color: ingestionTab === 'PERSONNEL' ? '#818cf8' : '#94a3b8', border: '1px solid', borderColor: ingestionTab === 'PERSONNEL' ? 'rgba(99, 102, 241, 0.5)' : 'transparent', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, transition: 'all 0.2s' }}
+            >
+              PERSONNEL SCHEMA
+            </button>
+            <button 
+              onClick={() => setIngestionTab('EQUIPMENT')}
+              style={{ padding: '0.5rem 1rem', background: ingestionTab === 'EQUIPMENT' ? 'rgba(99, 102, 241, 0.15)' : 'transparent', color: ingestionTab === 'EQUIPMENT' ? '#818cf8' : '#94a3b8', border: '1px solid', borderColor: ingestionTab === 'EQUIPMENT' ? 'rgba(99, 102, 241, 0.5)' : 'transparent', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, transition: 'all 0.2s' }}
+            >
+              EQUIPMENT SCHEMA
+            </button>
+            <button 
+              onClick={() => setIngestionTab('PARTS')}
+              style={{ padding: '0.5rem 1rem', background: ingestionTab === 'PARTS' ? 'rgba(99, 102, 241, 0.15)' : 'transparent', color: ingestionTab === 'PARTS' ? '#818cf8' : '#94a3b8', border: '1px solid', borderColor: ingestionTab === 'PARTS' ? 'rgba(99, 102, 241, 0.5)' : 'transparent', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, transition: 'all 0.2s' }}
+            >
+              PARTS SCHEMA
+            </button>
+          </div>
+
+          {/* PERSONNEL ISOLATION BOUNDARY */}
+          {ingestionTab === 'PERSONNEL' && (
+            <div className="personnel-view-layer">
+              <AdminDataIngestion />
+              <EnterpriseDataMatrix />
+            </div>
+          )}
+
+          {/* EQUIPMENT ISOLATION BOUNDARY */}
+          {ingestionTab === 'EQUIPMENT' && (
+            <div className="equipment-view-layer">
+              <EquipmentMatrix />
+            </div>
+          )}
+
+          {/* PARTS ISOLATION BOUNDARY */}
+          {ingestionTab === 'PARTS' && (
+            <div className="parts-view-layer">
+              <PartsMatrix />
+            </div>
+          )}
+
+        </div>
       )}
       
       {activeTab === 'dm' && (
@@ -71,7 +117,7 @@ const AdminConsole = () => {
       )}
       
       {activeTab === 'hm' && (
-        <MWODashboard key={refreshKey} />
+        <HMDashboard key={refreshKey} />
       )}
 
       {activeTab === 'tech' && (

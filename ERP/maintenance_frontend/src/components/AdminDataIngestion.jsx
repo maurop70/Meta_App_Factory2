@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
+import AdminSingleIngestionModal from './AdminSingleIngestionModal';
 
 const AdminDataIngestion = () => {
   const [file, setFile] = useState(null);
   const [status, setStatus] = useState({ type: '', message: '' });
   const [loading, setLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [showSingleModal, setShowSingleModal] = useState(false);
 
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
@@ -70,8 +72,10 @@ const AdminDataIngestion = () => {
   };
 
   return (
-    <div style={{ background: 'var(--bg-card, rgba(15, 23, 42, 0.85))', border: '1px solid var(--border, rgba(99, 102, 241, 0.15))', borderRadius: '12px', padding: '1.5rem', backdropFilter: 'blur(8px)', marginTop: '20px', fontFamily: "var(--font, Inter)" }}>
-      <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-primary, #e2e8f0)', marginBottom: '0.5rem' }}>Bulk User Ingestion</h3>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginTop: '20px', fontFamily: "var(--font, Inter)" }}>
+      {/* LEFT PANE: BULK INGESTION */}
+      <div style={{ background: 'var(--bg-card, rgba(15, 23, 42, 0.85))', border: '1px solid var(--border, rgba(99, 102, 241, 0.15))', borderRadius: '12px', padding: '1.5rem', backdropFilter: 'blur(8px)' }}>
+        <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-primary, #e2e8f0)', marginBottom: '0.5rem' }}>Bulk User Ingestion</h3>
       <p style={{ color: 'var(--text-secondary, #94a3b8)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>Upload a CSV file containing user_id, name, role, department, and reports_to_hm_id.</p>
       
       <div 
@@ -129,6 +133,23 @@ const AdminDataIngestion = () => {
           {loading ? 'Processing...' : 'Upload Data'}
         </button>
       </div>
+      </div>
+
+      {/* RIGHT PANE: MANUAL ENTRY */}
+      <div style={{ background: 'var(--bg-card, rgba(15, 23, 42, 0.85))', border: '1px solid var(--border, rgba(99, 102, 241, 0.15))', borderRadius: '12px', padding: '1.5rem', backdropFilter: 'blur(8px)' }}>
+        <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-primary, #e2e8f0)', marginBottom: '0.5rem' }}>Manual Record Entry</h3>
+        <p style={{ color: 'var(--text-secondary, #94a3b8)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>Inject single personnel records directly into the live schema.</p>
+        <button 
+          onClick={() => setShowSingleModal(true)}
+          style={{ padding: '0.6rem 1.5rem', background: 'linear-gradient(135deg, var(--accent, #6366f1), #7c3aed)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '0.85rem', boxShadow: '0 4px 15px var(--accent-glow, rgba(99, 102, 241, 0.25))' }}
+        >
+          + Add Personnel
+        </button>
+      </div>
+
+      {showSingleModal && (
+        <AdminSingleIngestionModal closeModal={() => setShowSingleModal(false)} />
+      )}
     </div>
   );
 };

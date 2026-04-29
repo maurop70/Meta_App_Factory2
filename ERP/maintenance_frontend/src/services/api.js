@@ -1,6 +1,5 @@
 import axios from 'axios';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 let accessToken = null;
 let isRefreshing = false;
@@ -57,7 +56,15 @@ apiClient.interceptors.request.use(config => {
     return config;
 }, error => Promise.reject(error));
 
-apiClient.interceptors.response.use(response => {
+apiClient.interceptors.response.use(async response => {
+    if (response.status === 205 && response.headers['x-token-flush'] === 'true') {
+        setAccessToken(null);
+        try {
+            await triggerRefresh();
+        } catch (err) {
+            console.error("Proactive token flush failed during refresh", err);
+        }
+    }
     return response;
 }, async error => {
     const originalRequest = error.config;

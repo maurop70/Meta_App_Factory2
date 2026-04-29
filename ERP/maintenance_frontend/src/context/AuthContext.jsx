@@ -5,6 +5,7 @@ const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
     const [userRole, setUserRole] = useState(null);
+    const [jwtPayload, setJwtPayload] = useState(null);
     const [isBootstrapped, setIsBootstrapped] = useState(false);
     const refreshTimerRef = useRef(null);
     const isLoggedOutRef = useRef(false);
@@ -21,6 +22,7 @@ export const AuthProvider = ({ children }) => {
         clearRefreshTimer();
         setAccessToken(null);
         setUserRole(null);
+        setJwtPayload(null);
         // Add React Router navigation here depending on your routing setup
     };
 
@@ -57,10 +59,11 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    const authenticateContext = (token, role) => {
+    const authenticateContext = (token, role, payload) => {
         isLoggedOutRef.current = false;
         setAccessToken(token);
         setUserRole(role);
+        setJwtPayload(payload);
         setupProactiveRefresh(token);
     };
 
@@ -77,7 +80,7 @@ export const AuthProvider = ({ children }) => {
                 const payload = JSON.parse(atob(payloadBase64));
                 
                 // Assuming 'role' or equivalent key exists in your JWT payload
-                authenticateContext(token, payload.role || payload.sub_role); 
+                authenticateContext(token, payload.role || payload.sub_role, payload); 
             } catch (error) {
                 // Initial session reconstruction failed (user is logged out)
             } finally {
@@ -97,7 +100,7 @@ export const AuthProvider = ({ children }) => {
     if (!isBootstrapped) return null; // Or insert a global strict loading indicator here
 
     return (
-        <AuthContext.Provider value={{ userRole, authenticateContext, logout }}>
+        <AuthContext.Provider value={{ userRole, jwtPayload, authenticateContext, logout }}>
             {children}
         </AuthContext.Provider>
     );
