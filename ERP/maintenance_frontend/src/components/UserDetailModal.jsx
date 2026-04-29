@@ -9,6 +9,10 @@ const UserDetailModal = ({ userId, onClose, onActuationSuccess }) => {
   const [confirmId, setConfirmId] = useState('');
   const [actuationStatus, setActuationStatus] = useState(null);
   
+  // Escalation State
+  const [escalationRole, setEscalationRole] = useState('TECH');
+  const [escalationDept, setEscalationDept] = useState('');
+
   const closeTimerRef = useRef(null);
 
   // Esc Key Interception & Timer Cleanup
@@ -16,13 +20,24 @@ const UserDetailModal = ({ userId, onClose, onActuationSuccess }) => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') onClose();
     };
-    window.addEventListener('keydown', handleKeyDown);
+    
+    const isLocked = actuationStatus?.type === 'loading' || actuationStatus?.type === 'success';
+    
+    // Temporarily unbind global Escape key interception while loading or success
+    if (!isLocked) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
     
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose, actuationStatus?.type]);
+
+  useEffect(() => {
+    return () => {
       if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
     };
-  }, [onClose]);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -43,6 +58,31 @@ const UserDetailModal = ({ userId, onClose, onActuationSuccess }) => {
     fetchAuditPayload();
     return () => { isMounted = false; };
   }, [userId]);
+
+  const handleEscalateUser = async () => {
+    setActuationStatus({ type: 'loading', message: 'Executing structural escalation...' });
+    try {
+      const payload = {
+        role: escalationRole,
+        department: escalationDept
+      };
+      
+      const response = await api.put(`/admin/users/${userId}/escalate`, payload);
+      
+      // Seamlessly handle both the 205 Reset Content and 200 OK responses
+      if (response.status === 205) {
+        setActuationStatus({ type: 'success', message: 'Self-escalation successful. Re-authenticating...' });
+      } else {
+        setActuationStatus({ type: 'success', message: 'Role escalation successful.' });
+      }
+
+      closeTimerRef.current = setTimeout(() => {
+        onActuationSuccess(); // Trigger parent refresh and close
+      }, 2000);
+    } catch (err) {
+      setActuationStatus({ type: 'error', message: err.response?.data?.detail || 'System actuation failed.' });
+    }
+  };
 
   const handleTerminateAccess = async () => {
     if (confirmId !== userId) return; 
@@ -66,12 +106,26 @@ const UserDetailModal = ({ userId, onClose, onActuationSuccess }) => {
       role="dialog" 
       aria-modal="true"
       style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.85)', zIndex: 9999, display: 'flex', justifyContent: 'center', alignItems: 'center', backdropFilter: 'blur(4px)' }}
+      onClick={(e) => {
+        // Unbind backdrop click handler during lockout
+        const isLocked = actuationStatus?.type === 'loading' || actuationStatus?.type === 'success';
+        if (e.target === e.currentTarget && !isLocked) {
+          onClose();
+        }
+      }}
     >
       <div className="modal-container" style={{ background: 'var(--bg-dark, #0a0e17)', padding: '2rem', borderRadius: '12px', border: '1px solid var(--border)', width: '90%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
         
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1rem' }}>
           <h2 style={{ color: 'var(--text-primary)', margin: 0, fontSize: '1.25rem' }}>System Actuation: <span style={{ color: 'var(--accent)' }}>{userId}</span></h2>
-          <button onClick={onClose} aria-label="Close modal" style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '1.5rem', transition: 'color 0.2s' }}>×</button>
+          <button 
+            onClick={onClose} 
+            disabled={actuationStatus?.type === 'loading' || actuationStatus?.type === 'success'}
+            aria-label="Close modal" 
+            style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: (actuationStatus?.type === 'loading' || actuationStatus?.type === 'success') ? 'not-allowed' : 'pointer', fontSize: '1.5rem', transition: 'color 0.2s', opacity: (actuationStatus?.type === 'loading' || actuationStatus?.type === 'success') ? 0.5 : 1 }}
+          >
+            ×
+          </button>
         </div>
 
         {loading && <div style={{ color: 'var(--text-secondary)', padding: '2rem', textAlign: 'center' }}>Ingesting contextual audit log...</div>}
@@ -95,6 +149,50 @@ const UserDetailModal = ({ userId, onClose, onActuationSuccess }) => {
               )}
             </div>
 
+            <div className="escalation-zone" style={{ border: '1px solid rgba(99, 102, 241, 0.3)', borderRadius: '8px', padding: '1.5rem', background: 'rgba(99, 102, 241, 0.05)', marginBottom: '1.5rem' }}>
+              <h3 style={{ color: 'var(--accent, #6366f1)', fontSize: '1rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ fontSize: '1.2rem' }}>⬆️</span> Role Escalation
+              </h3>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: 1.5 }}>
+                Mutate the structural taxonomy clearance for this subject.
+              </p>
+              
+              <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+                <select 
+                  value={escalationRole} 
+                  onChange={(e) => setEscalationRole(e.target.value)}
+                  disabled={actuationStatus?.type === 'loading' || actuationStatus?.type === 'success'}
+                  style={{ flex: 1, padding: '0.75rem', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border)', color: 'white', borderRadius: '4px' }}
+                >
+                  <option value="ADMIN">ADMIN</option>
+                  <option value="DM">DM</option>
+                  <option value="HM">HM</option>
+                  <option value="TECH">TECH</option>
+                </select>
+                <input 
+                  type="text" 
+                  value={escalationDept} 
+                  onChange={(e) => setEscalationDept(e.target.value)}
+                  placeholder="Department String"
+                  disabled={actuationStatus?.type === 'loading' || actuationStatus?.type === 'success'}
+                  style={{ flex: 2, padding: '0.75rem', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border)', color: 'white', borderRadius: '4px' }}
+                />
+              </div>
+              <button 
+                onClick={handleEscalateUser}
+                disabled={!escalationRole || !escalationDept.trim() || actuationStatus?.type === 'loading' || actuationStatus?.type === 'success'}
+                style={{ 
+                  width: '100%', padding: '0.8rem', fontWeight: 700, borderRadius: '4px', transition: 'all 0.2s',
+                  cursor: (!escalationRole || !escalationDept.trim() || actuationStatus?.type === 'loading' || actuationStatus?.type === 'success') ? 'not-allowed' : 'pointer',
+                  background: (!escalationRole || !escalationDept.trim() || actuationStatus?.type === 'loading' || actuationStatus?.type === 'success') ? 'rgba(99, 102, 241, 0.1)' : 'var(--accent, #6366f1)',
+                  color: (!escalationRole || !escalationDept.trim() || actuationStatus?.type === 'loading' || actuationStatus?.type === 'success') ? 'var(--text-muted, #64748b)' : 'white',
+                  border: 'none', letterSpacing: '0.05em'
+                }}
+              >
+                EXECUTE ESCALATION
+              </button>
+            </div>
+
             <div className="actuation-zone" style={{ border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '8px', padding: '1.5rem', background: 'rgba(239, 68, 68, 0.05)' }}>
               <h3 style={{ color: 'var(--danger, #ef4444)', fontSize: '1rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <span style={{ fontSize: '1.2rem' }}>⚠️</span> Destructive Actuation
@@ -116,20 +214,21 @@ const UserDetailModal = ({ userId, onClose, onActuationSuccess }) => {
                 disabled={confirmId !== userId || actuationStatus?.type === 'loading' || actuationStatus?.type === 'success'}
                 style={{ 
                   width: '100%', padding: '0.8rem', fontWeight: 700, borderRadius: '4px', transition: 'all 0.2s',
-                  cursor: confirmId === userId ? 'pointer' : 'not-allowed',
-                  background: confirmId === userId ? 'var(--danger, #ef4444)' : 'rgba(239, 68, 68, 0.1)',
-                  color: confirmId === userId ? 'white' : 'var(--text-muted, #64748b)',
+                  cursor: (confirmId !== userId || actuationStatus?.type === 'loading' || actuationStatus?.type === 'success') ? 'not-allowed' : 'pointer',
+                  background: (confirmId === userId && actuationStatus?.type !== 'loading' && actuationStatus?.type !== 'success') ? 'var(--danger, #ef4444)' : 'rgba(239, 68, 68, 0.1)',
+                  color: (confirmId === userId && actuationStatus?.type !== 'loading' && actuationStatus?.type !== 'success') ? 'white' : 'var(--text-muted, #64748b)',
                   border: 'none', letterSpacing: '0.05em'
                 }}
               >
-                {actuationStatus?.type === 'loading' ? 'EXECUTING TRANSACTION...' : 'TERMINATE SYSTEM ACCESS'}
+                TERMINATE SYSTEM ACCESS
               </button>
-              {actuationStatus && (
-                <div style={{ marginTop: '1rem', padding: '0.75rem', borderRadius: '4px', textAlign: 'center', fontSize: '0.85rem', fontWeight: 600, color: actuationStatus.type === 'error' ? 'var(--danger)' : 'var(--success)', background: actuationStatus.type === 'error' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)' }}>
-                  {actuationStatus.message}
-                </div>
-              )}
             </div>
+            
+            {actuationStatus && (
+              <div style={{ marginTop: '1rem', padding: '0.75rem', borderRadius: '4px', textAlign: 'center', fontSize: '0.85rem', fontWeight: 600, color: actuationStatus.type === 'error' ? 'var(--danger)' : 'var(--success)', background: actuationStatus.type === 'error' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)' }}>
+                {actuationStatus.message}
+              </div>
+            )}
           </>
         )}
       </div>

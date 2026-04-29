@@ -1,155 +1,139 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
+import TechCompletionModal from './TechCompletionModal';
+import TechConsumePartModal from './TechConsumePartModal';
 
 const TechDashboard = () => {
   const [workOrders, setWorkOrders] = useState([]);
-  const [status, setStatus] = useState({ type: 'loading', message: 'Loading Work Orders...' });
-  const [updates, setUpdates] = useState({});
-  const { userRole } = useAuth();
-  
-  // Assume Tech-Alpha is the active mock identity for strict data isolation
-  const activeTech = 'Tech-Alpha';
+  const [status, setStatus] = useState({ type: 'loading', message: 'Loading Assigned Work Orders...' });
+  const [selectedMWO, setSelectedMWO] = useState(null);
+  const [page, setPage] = useState(0);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [consumeMwoId, setConsumeMwoId] = useState(null);
+
+  const executeArchiveRetrieval = async (mwoId) => {
+    if (isDownloading) return; // Prevent race conditions
+    
+    try {
+      setIsDownloading(true);
+      
+      // 1. Authenticated Blob Hydration
+      const response = await api.get(`/mwo/${mwoId}/archive`, {
+        responseType: 'blob' // CRITICAL: Bypass JSON parsing
+      });
+
+      // 2. Dynamic Memory Mount
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const downloadUrl = window.URL.createObjectURL(blob);
+
+      // 3. Phantom DOM Actuation
+      const phantomLink = document.createElement('a');
+      phantomLink.href = downloadUrl;
+      phantomLink.setAttribute('download', `ARCHIVE_${mwoId}.pdf`);
+      document.body.appendChild(phantomLink);
+      phantomLink.click();
+
+      // 4. Synchronous Teardown & Memory Purge
+      phantomLink.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+
+    } catch (error) {
+      console.error("Archive Retrieval Execution Error:", error);
+      alert("Failed to retrieve structural archive. Verify RBAC clearance and file integrity.");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const fetchAssignedMWO = async () => {
+    try {
+      const response = await api.get(`/mwo/assigned?limit=50&offset=${page * 50}`);
+      const dbPayload = response.data.data || response.data;
+      setWorkOrders(Array.isArray(dbPayload) ? dbPayload : []);
+      setStatus({ type: 'success', message: '' });
+    } catch (err) {
+      console.warn("Network fragmentation detected.", err);
+      setStatus({ type: 'error', message: 'Failed to connect to backend' });
+    }
+  };
 
   useEffect(() => {
-    const fetchMWO = async () => {
-      try {
-        const response = await axios.get('/api/mwo');
-        const dbPayload = response.data.data;
-        
-        // Strict Data Isolation: Filter active state to assigned_tech and hide PENDING_ASSIGNMENT
-        const filtered = dbPayload.filter(order => 
-          order.assigned_tech === activeTech && 
-          order.status !== 'PENDING_ASSIGNMENT'
-        );
-        
-        setWorkOrders(filtered);
-        setStatus({ type: 'success', message: '' });
-      } catch (err) {
-        console.warn("Network fragmentation detected.", err);
-        setStatus({ type: 'error', message: 'Failed to connect to backend' });
-      }
-    };
-    
-    fetchMWO();
-  }, [activeTech]);
+    fetchAssignedMWO();
+  }, [page]);
 
-  const handleLogChange = (mwo_id, val) => {
-    setUpdates(prev => ({ ...prev, [mwo_id]: val }));
+  const handleExecute = (mwo) => {
+    setSelectedMWO(mwo);
   };
 
-  const handleStartWork = async (mwo_id) => {
-    const originalState = [...workOrders];
-    
-    // Optimistic mutation to IN_PROGRESS
-    setWorkOrders(prev => prev.map(order => {
-      if (order.mwo_id === mwo_id) {
-        return { ...order, status: 'IN_PROGRESS' };
-      }
-      return order;
-    }));
-    
-    try {
-      await axios.patch('/api/mwo/' + mwo_id, { status: 'IN_PROGRESS' });
-    } catch (err) {
-      console.error("Backend patch failed. Reverting local state.", err);
-      setWorkOrders(originalState);
-    }
+  const closeModal = () => {
+    setSelectedMWO(null);
   };
 
-  const handleCompleteWork = async (mwo_id) => {
-    const currentLogInputValue = updates[mwo_id] || '';
-    const originalState = [...workOrders];
-    
-    // Optimistic mutation to PENDING_REVIEW
-    setWorkOrders(prev => prev.map(order => {
-      if (order.mwo_id === mwo_id) {
-        return { ...order, status: 'PENDING_REVIEW', manual_log: currentLogInputValue };
-      }
-      return order;
-    }));
-    
-    try {
-      await axios.patch('/api/mwo/' + mwo_id, { status: 'PENDING_REVIEW', manual_log: currentLogInputValue });
-    } catch (err) {
-      console.error("Backend patch failed. Reverting local state.", err);
-      setWorkOrders(originalState);
-    }
+  const executeCompletion = async (mwo_id, payload) => {
+    await api.patch(`/mwo/${mwo_id}/complete`, payload);
+    await fetchAssignedMWO();
   };
 
-  const handleUndoWork = async (mwo_id) => {
-    const currentLogInputValue = updates[mwo_id] || '';
-    const originalState = [...workOrders];
-    
-    // Optimistic mutation back to IN_PROGRESS
-    setWorkOrders(prev => prev.map(order => {
-      if (order.mwo_id === mwo_id) {
-        return { ...order, status: 'IN_PROGRESS', manual_log: currentLogInputValue };
-      }
-      return order;
-    }));
-    
-    try {
-      await axios.patch('/api/mwo/' + mwo_id, { status: 'IN_PROGRESS', manual_log: currentLogInputValue });
-    } catch (err) {
-      console.error("Backend patch failed. Reverting local state.", err);
-      setWorkOrders(originalState);
-    }
-  };
-
-  if (status.type === 'loading') {
-    return <div className="erp-status-message loading">{status.message}</div>;
-  }
-
-  if (status.type === 'error') {
-    return <div className="erp-status-message error">{status.message}</div>;
-  }
+  if (status.type === 'loading') return <div className="erp-status-message loading">{status.message}</div>;
+  if (status.type === 'error') return <div className="erp-status-message error">{status.message}</div>;
 
   return (
-    <div style={{ background: 'var(--bg-card, rgba(15, 23, 42, 0.85))', border: '1px solid var(--border, rgba(99, 102, 241, 0.15))', borderRadius: '12px', padding: '1.5rem', backdropFilter: 'blur(8px)', fontFamily: "var(--font, Inter)" }}>
-      {/* Mobile-First CSS Reflow */}
+    <div style={{ background: 'var(--bg-card, rgba(15, 23, 42, 0.85))', border: '1px solid var(--border, rgba(16, 185, 129, 0.15))', borderRadius: '12px', padding: '1.5rem', backdropFilter: 'blur(8px)', fontFamily: "var(--font, Inter)" }}>
       <style>{`
-        .btn-action {
-          background: rgba(59, 130, 246, 0.15);
-          color: #60a5fa;
-          border: 1px solid rgba(59, 130, 246, 0.3);
+        .btn-execute {
+          background: rgba(16, 185, 129, 0.15);
+          color: #34d399;
+          border: 1px solid rgba(16, 185, 129, 0.3);
           padding: 0.4rem 0.8rem;
           border-radius: 6px;
           cursor: pointer;
           font-size: 0.7rem;
           font-weight: 600;
           transition: all 0.2s;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
         }
-        .btn-action:hover {
-          background: var(--accent, #3b82f6);
+        .btn-execute:hover {
+          background: var(--accent-green, #10b981);
           color: #fff;
         }
-        .log-input {
+        
+        .responsive-matrix {
           width: 100%;
-          min-width: 150px;
-          padding: 0.4rem 0.5rem;
-          border-radius: 6px;
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          background: rgba(255, 255, 255, 0.04);
-          color: var(--text-primary, #e2e8f0);
-          font-size: 0.75rem;
-          outline: none;
-          transition: border-color 0.2s;
+          text-align: left;
+          border-collapse: collapse;
+          font-size: 0.82rem;
         }
-        .log-input:focus {
-          border-color: #6366f1;
+        .responsive-matrix th {
+          padding: 0.8rem 1rem;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          font-size: 0.7rem;
         }
+        .responsive-matrix td {
+          padding: 1rem 1.2rem;
+        }
+        .responsive-matrix tr {
+          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
         @media (max-width: 900px) {
-          table, thead, tbody, th, td, tr { display: block; width: 100%; }
-          thead tr { position: absolute; top: -9999px; left: -9999px; }
-          tr {
+          .responsive-matrix, .responsive-matrix thead, .responsive-matrix tbody, .responsive-matrix th, .responsive-matrix td, .responsive-matrix tr { 
+            display: block; 
+            width: 100%; 
+          }
+          .responsive-matrix thead tr { 
+            position: absolute; top: -9999px; left: -9999px; 
+          }
+          .responsive-matrix tr {
             margin-bottom: 1.5rem;
             border: 1px solid rgba(255, 255, 255, 0.15);
             border-radius: 12px;
             background: rgba(255, 255, 255, 0.02);
             padding: 1rem;
           }
-          td {
+          .responsive-matrix td {
             border: none;
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
             position: relative;
@@ -160,8 +144,8 @@ const TechDashboard = () => {
             justify-content: flex-end;
             align-items: center;
           }
-          td:last-child { border-bottom: 0; }
-          td::before {
+          .responsive-matrix td:last-child { border-bottom: 0; }
+          .responsive-matrix td::before {
             content: attr(data-label);
             position: absolute;
             left: 0;
@@ -176,100 +160,105 @@ const TechDashboard = () => {
       `}</style>
       
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem' }}>
-        <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary, #e2e8f0)', margin: 0 }}>Active Assignments - Tech Edge</h3>
+        <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary, #e2e8f0)', margin: 0 }}>My Active Assignments</h3>
       </div>
       
-      <div style={{ overflowX: 'auto', borderRadius: '8px', border: '1px solid var(--border, rgba(99, 102, 241, 0.15))', background: 'rgba(10, 14, 23, 0.5)' }}>
-        <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+      <div style={{ overflowX: 'auto', borderRadius: '8px', border: '1px solid var(--border, rgba(16, 185, 129, 0.15))', background: 'rgba(10, 14, 23, 0.5)' }}>
+        <table className="responsive-matrix">
           <thead>
-            <tr style={{ background: 'rgba(99, 102, 241, 0.1)', borderBottom: '1px solid var(--border, rgba(99, 102, 241, 0.15))', color: 'var(--text-secondary, #94a3b8)' }}>
-              <th style={{ padding: '0.8rem 1rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.7rem' }}>MWO ID</th>
-              <th style={{ padding: '0.8rem 1rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.7rem' }}>Status</th>
-              <th style={{ padding: '0.8rem 1rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.7rem' }}>DM Urgency</th>
-              <th style={{ padding: '0.8rem 1rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.7rem' }}>Description</th>
-              <th style={{ padding: '0.8rem 1rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.7rem' }}>Manual Log</th>
-              <th style={{ padding: '0.8rem 1rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.7rem' }}>Action</th>
+            <tr style={{ background: 'rgba(16, 185, 129, 0.1)', borderBottom: '1px solid var(--border, rgba(16, 185, 129, 0.15))', color: 'var(--text-secondary, #94a3b8)' }}>
+              <th>MWO ID</th>
+              <th>Status</th>
+              <th>Equipment</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody>
             {workOrders.length === 0 ? (
               <tr>
-                <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted, #64748b)' }}>No active assignments.</td>
+                <td colSpan="4" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted, #64748b)' }}>No active assignments found.</td>
               </tr>
             ) : (
-              workOrders.map((order) => {
-                const isPendingReview = order.status === 'PENDING_REVIEW';
-                const currentLog = updates[order.mwo_id] !== undefined ? updates[order.mwo_id] : (order.manual_log || '');
-                return (
-                  <tr key={order.mwo_id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                    <td data-label="MWO ID" style={{ padding: '1rem 1.2rem', color: '#818cf8', fontWeight: 500 }}>
-                      {order.mwo_id}
-                    </td>
-                    <td data-label="STATUS" style={{ padding: '1rem 1.2rem' }}>
-                      <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 600, background: isPendingReview ? 'rgba(245, 158, 11, 0.15)' : 'rgba(59, 130, 246, 0.15)', color: isPendingReview ? 'var(--warning, #f59e0b)' : 'var(--accent, #3b82f6)' }}>
-                        {order.status}
-                      </span>
-                    </td>
-                    <td data-label="DM URGENCY" style={{ padding: '1rem 1.2rem', color: '#e2e8f0' }}>
-                      <span style={{ padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.75rem', whiteSpace: 'nowrap', fontWeight: 600, background: order.dm_urgency === 'High' || order.dm_urgency === 'Critical' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(148, 163, 184, 0.15)', color: order.dm_urgency === 'High' || order.dm_urgency === 'Critical' ? '#fbbf24' : '#94a3b8' }}>
-                        {order.dm_urgency || 'Normal'}
-                      </span>
-                    </td>
-                    <td data-label="DESCRIPTION" style={{ padding: '1rem 1.2rem', color: '#e2e8f0' }}>
-                      {order.description}
-                    </td>
-                    <td data-label="MANUAL LOG" style={{ padding: '1rem 1.2rem' }}>
-                      <textarea 
-                        className="log-input"
-                        placeholder="Enter repair log..."
-                        value={currentLog}
-                        onChange={(e) => handleLogChange(order.mwo_id, e.target.value)}
-                        disabled={isPendingReview}
-                        style={{ 
-                          minHeight: '40px', 
-                          resize: 'vertical',
-                          opacity: isPendingReview ? 0.5 : 1,
-                          cursor: isPendingReview ? 'not-allowed' : 'text'
-                        }}
-                      />
-                    </td>
-                    <td data-label="ACTION" style={{ padding: '1rem 1.2rem' }}>
-                      {order.status === 'ASSIGNED' && (
+              workOrders.map((order) => (
+                <tr key={order.mwo_id}>
+                  <td data-label="MWO ID" style={{ color: '#34d399', fontWeight: 500 }}>
+                    {order.mwo_id}
+                  </td>
+                  <td data-label="STATUS">
+                    <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 600, background: 'rgba(16, 185, 129, 0.15)', color: '#10b981' }}>
+                      {order.status}
+                    </span>
+                  </td>
+                  <td data-label="EQUIPMENT" style={{ color: '#e2e8f0' }}>
+                    {order.equipment_id}
+                  </td>
+                  <td data-label="ACTION">
+                    {order.status === 'COMPLETED' ? (
+                      <button 
+                        className="btn-execute" 
+                        onClick={() => executeArchiveRetrieval(order.mwo_id)}
+                        disabled={isDownloading}
+                        style={{ background: isDownloading ? 'rgba(148, 163, 184, 0.15)' : 'rgba(99, 102, 241, 0.15)', color: isDownloading ? '#94a3b8' : '#818cf8', borderColor: isDownloading ? 'transparent' : 'rgba(99, 102, 241, 0.3)' }}
+                      >
+                        {isDownloading ? 'EXTRACTING...' : 'DOWNLOAD ARCHIVE'}
+                      </button>
+                    ) : (
+                      <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
                         <button 
-                          className="btn-action" 
-                          onClick={() => handleStartWork(order.mwo_id)}
+                          className="btn-execute" 
+                          onClick={() => handleExecute(order)}
                         >
-                          Start Work
+                          Execute
                         </button>
-                      )}
-                      {order.status === 'IN_PROGRESS' && (
                         <button 
-                          className="btn-action" 
-                          onClick={() => handleCompleteWork(order.mwo_id)}
+                          className="btn-execute" 
+                          onClick={() => setConsumeMwoId(order.mwo_id)}
+                          style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#fbbf24', borderColor: 'rgba(245, 158, 11, 0.3)' }}
                         >
-                          Complete Work
+                          Consume Part
                         </button>
-                      )}
-                      {order.status === 'PENDING_REVIEW' && (
-                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', justifyContent: 'flex-end' }}>
-                          <span style={{ color: '#64748b', fontSize: '0.8rem', fontStyle: 'italic' }}>Review Pending</span>
-                          <button 
-                            className="btn-action" 
-                            style={{ background: 'transparent', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444' }}
-                            onClick={() => handleUndoWork(order.mwo_id)}
-                          >
-                            Undo
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ))
             )}
           </tbody>
         </table>
       </div>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
+        <button 
+          onClick={() => setPage(p => Math.max(0, p - 1))}
+          disabled={page === 0}
+          style={{ padding: '0.5rem 1rem', background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '6px', cursor: page === 0 ? 'not-allowed' : 'pointer', opacity: page === 0 ? 0.5 : 1, transition: 'all 0.2s', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase' }}
+        >
+          Previous
+        </button>
+        <span style={{ color: '#94a3b8', fontSize: '0.85rem', alignSelf: 'center', fontWeight: 600 }}>Page {page + 1}</span>
+        <button 
+          onClick={() => setPage(p => p + 1)}
+          disabled={workOrders.length < 50}
+          style={{ padding: '0.5rem 1rem', background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '6px', cursor: workOrders.length < 50 ? 'not-allowed' : 'pointer', opacity: workOrders.length < 50 ? 0.5 : 1, transition: 'all 0.2s', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase' }}
+        >
+          Next
+        </button>
+      </div>
+
+      {selectedMWO && (
+        <TechCompletionModal 
+          selectedMWO={selectedMWO} 
+          closeModal={closeModal} 
+          executeCompletion={executeCompletion}
+        />
+      )}
+
+      <TechConsumePartModal
+        isOpen={!!consumeMwoId}
+        onClose={() => setConsumeMwoId(null)}
+        mwoId={consumeMwoId}
+        onConsumeSuccess={() => fetchAssignedMWO()}
+      />
     </div>
   );
 };

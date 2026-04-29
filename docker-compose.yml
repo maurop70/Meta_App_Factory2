@@ -1,41 +1,74 @@
 version: '3.8'
-
 services:
-  meta_app_factory:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: meta_app_factory_core
-    deploy:
-      resources:
-        limits:
-          cpus: '0.50'
-          memory: 512M
-        reservations:
-          cpus: '0.25'
-          memory: 256M
-    ports:
-      # Core API explicit binding
-      - "5000:5000"
-    environment:
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
-    volumes:
-      # Full bi-directional mount to ensure factory.py scaffolding operations
-      # (new folders, artifacts) write directly back to the host machine.
-      - .:/app
-      - ../.system_logs:/var/log/aether_net
-      # Explicit Architectural_Ledger.json mount from the global root workspace
-      - ../.system_core:/app/.system_core:ro
-      # Anonymous volume masks to blind the Core API from child I/O thrashing
-      - /app/Alpha_V2_Genesis/Alpha_Data
-      - /app/Resonance/uploads
-      - /app/Resonance/Professional_Reports
-      - /app/Sentinel_Bridge/data
+  minio:
+    image: minio/minio:latest
     restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    volumes:
+      - mwo_backup_volume:/data
     networks:
-      - aether_net
+      - erp_net
+
+  create_bucket:
+    image: minio/mc
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until (/usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin); do echo '...waiting...' && sleep 1; done;
+      /usr/bin/mc mb myminio/litestream || true;
+      exit 0;
+      "
+    networks:
+      - erp_net
+
+  backend:
+    build: 
+      context: ./ERP/Maintenance_Work_Order
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+    volumes:
+      - mwo_db_volume:/app/data
+    env_file:
+      - .env
+    environment:
+      - MINIO_BUCKET=litestream
+      - MINIO_ENDPOINT=http://minio:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+    depends_on:
+      - minio
+      - create_bucket
+    networks:
+      - erp_net
+
+  edge_proxy:
+    build:
+      context: ./ERP/maintenance_frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./certs:/etc/nginx/certs:ro
+    depends_on:
+      - backend
+    networks:
+      - erp_net
+
+volumes:
+  mwo_db_volume:
+  mwo_log_volume:
+  mwo_backup_volume:
 
 networks:
-  aether_net:
-    name: aether_net
-    driver: bridge
+  erp_net:

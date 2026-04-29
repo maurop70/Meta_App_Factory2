@@ -1,0 +1,15 @@
+dbs:
+  - path: /app/data/maintenance_erp.db
+    replicas:
+      - type: s3
+        bucket: $MINIO_BUCKET
+        path: db
+        endpoint: $MINIO_ENDPOINT
+        access-key-id: $MINIO_ACCESS_KEY
+        secret-access-key: $MINIO_SECRET_KEY
+        region: us-east-1
+        force-path-style: true
+        # Explicit retention and syncing boundaries
+        sync-interval: 1s
+        snapshot-interval: 24h
+        retention: 168h # Retain snapshots and WALs for 7 days

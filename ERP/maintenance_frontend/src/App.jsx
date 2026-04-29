@@ -7,16 +7,27 @@ import './App.css'; // Strictly Native Vanilla CSS
 import TechDashboard from './pages/TechDashboard';
 import AdminConsole from './pages/AdminConsole';
 import Login from './pages/Login';
-import MWODashboard from './components/MWODashboard'; // HM Feed
+import HMDashboard from './components/HMDashboard'; // HM Feed
 import CreateMWOForm from './components/CreateMWOForm'; // DM Submission
 
 // Strict Role-Gating Security Component
 const ProtectedRoute = ({ allowedRoles, children }) => {
-  const { userRole } = useAuth();
+  const { userRole, jwtPayload } = useAuth();
   
+  // Synchronous deep-inspection of JWT payload
+  if (!jwtPayload) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  // Verify expiration
+  const currentTimeMs = Date.now();
+  if (jwtPayload.exp * 1000 < currentTimeMs) {
+    return <Navigate to="/login" replace />;
+  }
+
   // Strict Enforcement: No coercing non-matching strings.
   // If the payload does not explicitly match the allowed operational tiers, bounce immediately.
-  if (!allowedRoles || !allowedRoles.includes(userRole)) {
+  if (!allowedRoles || !allowedRoles.includes(userRole) || !allowedRoles.includes(jwtPayload.role)) {
     return <Navigate to="/" replace />;
   }
 
@@ -91,7 +102,7 @@ function App() {
               path="/hm/*"
               element={
                 <ProtectedRoute allowedRoles={['HM']}>
-                  <MWODashboard />
+                  <HMDashboard />
                 </ProtectedRoute>
               }
             />
