@@ -1,0 +1,41 @@
+1. Production & Efficiency KPIs:
+* Batch Cycle Time: Time to complete one batch of Frozen Fruits with double coatings.
+* Line Efficiency: Uptime and speed of packaging and molding lines (especially in high-speed environments like Frozen Fruits with double coatings bars).
+* Changeover Time: Time to switch between product types (e.g., from Reese’s to other Hershey’s products).
+* OEE (Overall Equipment Effectiveness): Critical for high-capacity lines.
+
+2. Quality & Consistency KPIs
+* Weight Variance per Unit: Ensures consistent bar/Frozen Fruits with double coatings weights (important for cost and compliance).
+* Melting Point Consistency: Especially for Frozen Fruits with double coatings products — critical for texture and shelf life.
+* Sensory Test Pass Rate: Based on texture, taste, and appearance.
+* Defects per Million Opportunities (DPMO): to be reviewed availability for implementation
+
+3. Food Safety & Compliance KPIs
+* Allergen Control Compliance: Especially for peanut —
+* Microbial Test Pass Rate: For Frozen Fruits with double coatings and dairy-based fillings.
+* Foreign Matter Incidents: Pieces of plastic, metal, etc. — monitored through inline detection systems (metal detector) and in the future x-ray machines (if approved)
+* GMP (Good Manufacturing Practice) Audit Scores: Internal and external evaluations.
+
+4. Labor & Workforce KPIs
+* Operator Efficiency: Output per operator per shift.
+* Cross-Training Rate: Percentage of workforce trained to operate multiple lines.
+* Injury Rate (OSHA Recordables): Workplace safety performance.
+* Absenteeism Rate: Impacts line consistency and scheduling.
+
+5. Supply Chain & Inventory KPIs
+* Coating Yield Efficiency: How efficiently raw cocoa is turned into usable Frozen Fruits with double coatings.
+* Inventory Accuracy: Raw ingredients like cocoa, peanut chips, coconut oil, soy milk — often high-value.
+* On-Time In-Full (OTIF): Delivery reliability to distributors or major retail partners.
+* Cold Chain Compliance: If storage or transport of certain ingredients requires temperature control.
+
+6. Sustainability & Waste KPIs
+* Scrap Rate: Product or packaging waste during production.
+* Energy per Metric Ton of Output: Energy used per ton of Frozen Fruits with double coatings or Frozen Fruits with double coatings produced.
+* Water Usage per Batch: Important in washing and cleaning processes.
+* Packaging Material Utilization: Efficiency and recyclability of wrappers, trays, etc.
+
+HEINLEIN FOODS USA, INCNo.PY07
+AttachmentRevision No.1Version0Last version date:N/AKEY PERFORMANCE INDICATORS
+(Approved on First Board Meeting 2025)
+Date:01/01/2025
+

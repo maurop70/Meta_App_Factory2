@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Corporate Secretary | Antigravity AI</title>
+    <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+    <div class="background-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+    </div>
+    
+    <main class="glass-container">
+        <header>
+            <h1>Corporate Secretary</h1>
+            <p>Generate formal meeting minutes instantly with Antigravity AI.</p>
+        </header>
+        
+        <form id="secretary-form" enctype="multipart/form-data">
+            <div class="form-group">
+                <div class="label-wrapper">
+                    <label for="target-month">Target Month & Year</label>
+                    <div class="tooltip">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="info-icon"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                        <span class="tooltip-text">Specify the exact month and year for the meeting minutes (e.g., 'April 2026').</span>
+                    </div>
+                </div>
+                <input type="text" id="target-month" name="target_month" placeholder="e.g., April 2026" required>
+            </div>
+            
+            <div class="form-group drop-zone" id="master-drop-zone">
+                <div class="label-wrapper">
+                    <label>Master Data Files</label>
+                    <div class="tooltip">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="info-icon"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                        <span class="tooltip-text">Upload the overarching yearly or foundational files. Formats: .xlsx, .xls, .docx, .doc, .pdf, .csv</span>
+                    </div>
+                </div>
+                <p>Drag & drop or <span>click to browse</span></p>
+                <input type="file" id="master-files" name="master_files" multiple hidden>
+                <div class="file-list" id="master-file-list"></div>
+            </div>
+            
+            <div class="form-group drop-zone" id="monthly-drop-zone">
+                <div class="label-wrapper">
+                    <label>Monthly Specific Files</label>
+                    <div class="tooltip">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="info-icon"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                        <span class="tooltip-text">Upload specific reports (Ecolab, HR, etc.) for this exact month. Formats: .pdf, .xlsx, .txt, .csv, .docx</span>
+                    </div>
+                </div>
+                <p>Drag & drop or <span>click to browse</span></p>
+                <input type="file" id="monthly-files" name="monthly_files" multiple required hidden>
+                <div class="file-list" id="monthly-file-list"></div>
+            </div>
+            
+            <button type="submit" id="generate-btn">
+                <span class="btn-text">Generate Minutes</span>
+                <span class="loader hidden"></span>
+            </button>
+        </form>
+        
+        <div id="status-message" class="hidden"></div>
+    </main>
+
+    <script src="./app.js"></script>
+</body>
+</html>
