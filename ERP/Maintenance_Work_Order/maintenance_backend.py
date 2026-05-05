@@ -1477,19 +1477,26 @@ def get_hms(jwt_payload: dict = Depends(verify_jwt_token)):
     finally:
         conn.close()
 
-@app.get("/api/mwo")
-def get_mwo(limit: int = 50, offset: int = 0, target_hm: Optional[str] = None):
+@app.get("/mwo")
+def get_mwo(limit: int = 50, offset: int = 0, jwt_payload: dict = Depends(verify_jwt_token)):
+    role = jwt_payload.get("role")
+    user_id = jwt_payload.get("sub")
+    
+    if role not in ["ADMINISTRATOR", "ADMIN", "HM"]:
+        raise HTTPException(status_code=403, detail="RBAC Violation")
+        
     conn = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         cols = "w.mwo_id, w.status, w.dm_urgency, w.hm_priority, w.description, w.assigned_tech, w.assigned_hm_id, w.consumed_sku, w.manual_log, w.created_at, w.triaged_at, w.execution_start, w.execution_end, w.completed_at, w.start_date, w.equipment_id, e.nomenclature as equipment_nomenclature, w.location_id, w.material_cost, w.archival_pdf_path"
         
-        base_query = f"SELECT {cols} FROM work_orders w LEFT JOIN erp_equipment e ON w.equipment_id = e.equipment_id WHERE w.status IN ('UNASSIGNED', 'ASSIGNED', 'PENDING_REVIEW', 'COMPLETED')"
+        base_query = f"SELECT {cols} FROM work_orders w LEFT JOIN erp_equipment e ON w.equipment_id = e.equipment_id WHERE w.status IN ('UNASSIGNED', 'ASSIGNED', 'PENDING_REVIEW')"
         params = []
-        if target_hm:
+        
+        if role == "HM":
             base_query += " AND w.assigned_hm_id = ?"
-            params.append(target_hm)
+            params.append(user_id)
             
         base_query += " ORDER BY w.execution_start DESC LIMIT ? OFFSET ?"
         params.extend([limit, offset])
@@ -2881,16 +2888,19 @@ def get_work_orders_queue(
         conn.close()
 
 class AssignMWOPayload(BaseModel):
-    assigned_hm_id: str
+    assigned_tech_id: str
+    hm_priority: str = "Normal"
 
-@app.patch("/api/mwo/{mwo_id}/assign")
+@app.patch("/mwo/{mwo_id}/assign")
 def assign_mwo(
     mwo_id: str,
     payload: AssignMWOPayload,
     jwt_payload: dict = Depends(verify_jwt_token)
 ):
     role = jwt_payload.get("role")
-    if role not in ["ADMINISTRATOR", "ADMIN", "DM", "HM"]:
+    user_id = jwt_payload.get("sub")
+    
+    if role not in ["ADMINISTRATOR", "ADMIN", "HM"]:
         raise HTTPException(status_code=403, detail="RBAC Violation")
         
     conn = get_db_connection()
@@ -2899,29 +2909,37 @@ def assign_mwo(
         
         cursor.execute("BEGIN IMMEDIATE TRANSACTION")
         
-        cursor.execute("SELECT is_active FROM erp_employees WHERE id = ?", (payload.assigned_hm_id,))
-        emp = cursor.fetchone()
+        cursor.execute("SELECT is_active, department_id FROM erp_employees WHERE id = ? AND role = 'TECH'", (payload.assigned_tech_id,))
+        tech_emp = cursor.fetchone()
         
-        if not emp:
-            raise HTTPException(status_code=404, detail="Employee not found.")
+        if not tech_emp:
+            raise HTTPException(status_code=404, detail="Technician not found or invalid role.")
             
-        if not emp['is_active']:
-            raise HTTPException(status_code=400, detail="Structural Violation: Cannot assign to an inactive employee.")
+        if not tech_emp['is_active']:
+            raise HTTPException(status_code=400, detail="Structural Violation: Cannot assign to an inactive technician.")
             
+        if role == "HM":
+            cursor.execute("SELECT department_id FROM erp_employees WHERE id = ?", (user_id,))
+            hm_emp = cursor.fetchone()
+            if hm_emp and hm_emp['department_id'] != tech_emp['department_id']:
+                raise HTTPException(status_code=403, detail="RBAC Violation: Cannot assign a technician outside your departmental isolation boundary.")
+            
+        triaged_time = time.time()
+        
         cursor.execute(
             """
             UPDATE work_orders 
-            SET assigned_tech = ?, status = 'ASSIGNED' 
+            SET assigned_tech = ?, hm_priority = ?, triaged_at = ?, status = 'ASSIGNED' 
             WHERE mwo_id = ? AND status IN ('UNASSIGNED', 'UNASSIGNED_ESCALATION')
             """,
-            (payload.assigned_hm_id, mwo_id)
+            (payload.assigned_tech_id, payload.hm_priority, triaged_time, mwo_id)
         )
         
         if cursor.rowcount == 0:
             raise HTTPException(status_code=404, detail="MWO not found or already assigned.")
             
         conn.commit()
-        return {"status": "success", "message": f"MWO {mwo_id} successfully assigned to {payload.assigned_hm_id}"}
+        return {"status": "success", "message": f"MWO {mwo_id} successfully assigned to {payload.assigned_tech_id}."}
     except HTTPException:
         conn.rollback()
         raise

@@ -65,24 +65,8 @@ const DispatchQueueTable = () => {
                 </h3>
                 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    {['ADMINISTRATOR', 'ADMIN'].includes(userRole) && (
-                        <select 
-                            value={targetDm} 
-                            onChange={(e) => setTargetDm(e.target.value)}
-                            style={{
-                                background: 'rgba(15, 23, 42, 0.8)', color: '#38bdf8',
-                                border: '1px solid rgba(56, 189, 248, 0.3)', padding: '0.4rem 0.8rem',
-                                borderRadius: '6px', fontWeight: 600, fontSize: '0.85rem', outline: 'none'
-                            }}
-                        >
-                            <option value="">-- Impersonate DM --</option>
-                            {dmRoster.map(dm => (
-                                <option key={dm.id} value={dm.id}>{dm.id} ({dm.name})</option>
-                            ))}
-                        </select>
-                    )}
                     <div style={{ background: 'rgba(56, 189, 248, 0.1)', border: '1px solid rgba(56, 189, 248, 0.3)', padding: '0.4rem 0.8rem', borderRadius: '6px', color: '#38bdf8', fontWeight: 600, fontSize: '0.85rem' }}>
-                        DM ID: {targetDm || currentUserId}
+                        DM ID: {currentUserId}
                     </div>
                 </div>
             </div>

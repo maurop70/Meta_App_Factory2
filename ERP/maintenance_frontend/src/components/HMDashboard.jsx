@@ -45,15 +45,12 @@ const HMDashboard = () => {
 
   const fetchMWO = async () => {
     try {
-      const activeHm = targetHm || hmId;
-      const response = await api.get(`/mwo?limit=50&offset=${page * 50}&target_hm=${activeHm}`);
+      const response = await api.get(`/mwo?limit=50&offset=${page * 50}`);
       const dbPayload = response.data.data || response.data;
       
-      // Strict Data Isolation: HM inbound queue processes UNASSIGNED, ASSIGNED, and PENDING_REVIEW
       const rawOrders = Array.isArray(dbPayload) ? dbPayload : [];
-      const filtered = rawOrders.filter(order => order.status === 'UNASSIGNED' || order.status === 'ASSIGNED' || order.status === 'PENDING_REVIEW');
       
-      setWorkOrders(filtered);
+      setWorkOrders(rawOrders);
       setStatus({ type: 'success', message: '' });
     } catch (err) {
       console.warn("Network fragmentation detected.", err);
