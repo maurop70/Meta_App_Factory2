@@ -1,40 +1,48 @@
 version: '3.8'
 
 services:
+  gateway-core:
+    build:
+      context: ./Module_0_Gateway
+    container_name: gateway-core
+    ports:
+      - "9000:9000"
+    volumes:
+      - ./Module_0_Gateway/data:/app/data
+      - ./Module_0_Gateway/keys:/app/keys
+    networks:
+      - erp_net
+    restart: unless-stopped
+
   mwo-backend:
     build:
       context: ./Maintenance_Work_Order
-      dockerfile: Dockerfile
-    container_name: mwo_backend
+    container_name: mwo-backend
     ports:
       - "8000:8000"
-    networks:
-      - mwo_net
     volumes:
-      - ./Maintenance_Work_Order:/app
       - ./Maintenance_Work_Order/data:/app/data
-      - ../../Universal_Memory/Shared_Artifacts:/app/shared_memory
-      - ../../Universal_Memory/Archival_Queue:/app/archival_queue
-      - ../Universal_Memory/GLOBAL_AI_DIRECTIVE.md:/app/GLOBAL_AI_DIRECTIVE.md:ro
+    networks:
+      - erp_net
+    depends_on:
+      - gateway-core
+    restart: unless-stopped
+    environment:
+      - TZ=UTC
 
   mwo-frontend:
     build:
       context: ./maintenance_frontend
-      dockerfile: Dockerfile
-    container_name: mwo_frontend
+    container_name: mwo-frontend
     ports:
-      - "5175:5173"
-    volumes:
-      - ./maintenance_frontend:/app
-      - /app/node_modules
-    depends_on:
-      - mwo-backend
+      - "8080:80"
     networks:
-      - mwo_net
+      - erp_net
+    depends_on:
+      - gateway-core
+      - mwo-backend
+    restart: unless-stopped
 
 networks:
-  mwo_net:
+  erp_net:
     driver: bridge
-
-volumes:
-  mwo_db_data:

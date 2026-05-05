@@ -40,28 +40,29 @@ const TechConsumePartModal = ({ isOpen, onClose, mwoId, onConsumeSuccess }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (isProcessing) return;
-    let isMounted = true;
 
     try {
       setIsProcessing(true);
       setError(null);
+
+      // 1. Atomic Mutation Dispatch
       await api.post(`/mwo/${mwoId}/consume_part`, {
         part_id: formData.part_id,
         quantity_consumed: parseInt(formData.quantity_consumed, 10)
       });
-      if (isMounted) {
-        onConsumeSuccess();
-        onClose();
-      }
-    } catch (err) {
-      if (isMounted) {
-        setError(err.response?.data?.detail || "Structural Violation: Allocation failed.");
-      }
-    } finally {
-      if (isMounted) setIsProcessing(false);
-    }
 
-    return () => { isMounted = false; };
+      // 2. Success Resolution Phase — Transit Lockout HELD
+      // All closure vectors (Escape, backdrop, buttons) remain disabled
+      // because isProcessing is still true.
+      await onConsumeSuccess();
+
+      // 3. Post-resolution teardown — safe to release
+      onClose();
+    } catch (err) {
+      setError(err.response?.data?.detail || "Structural Violation: Allocation failed.");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const inputStyle = {
@@ -77,7 +78,7 @@ const TechConsumePartModal = ({ isOpen, onClose, mwoId, onConsumeSuccess }) => {
 
   const modalContent = (
     <div
-      style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
+      style={{ position: 'fixed', inset: 0, zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
       onClick={() => { if (!isProcessing) onClose(); }}
     >
       <div

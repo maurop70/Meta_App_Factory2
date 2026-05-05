@@ -1,4 +1,6 @@
 import os
+import openpyxl
+from openpyxl.worksheet.datavalidation import DataValidation
 import logging
 import sqlite3
 import datetime
@@ -53,48 +55,40 @@ if not os.environ.get("JWT_PRIVATE_KEY_B64"):
 
 
 # --- CRYPTOGRAPHIC CONFIGURATION ---
-priv_b64 = os.environ.get("JWT_PRIVATE_KEY_B64")
-pub_b64 = os.environ.get("JWT_PUBLIC_KEY_B64")
+import urllib.request
+import json
+import time
 
-if not priv_b64 or not pub_b64:
-    raise RuntimeError("FATAL: JWT_PRIVATE_KEY_B64 or JWT_PUBLIC_KEY_B64 missing from environment.")
-
-PRIVATE_KEY = base64.b64decode(priv_b64).decode('utf-8')
-PUBLIC_KEY = base64.b64decode(pub_b64).decode('utf-8')
-
+PUBLIC_KEY = None
 ALGORITHM = "RS256"
 
-ACCESS_TOKEN_EXPIRE_MINUTES = 15
+def fetch_public_key():
+    global PUBLIC_KEY
+    url = "http://127.0.0.1:9000/api/v1/auth/public-key"
+    max_retries = 5
+    for attempt in range(max_retries):
+        try:
+            req = urllib.request.Request(url)
+            with urllib.request.urlopen(req) as response:
+                data = json.loads(response.read().decode())
+                PUBLIC_KEY = data["public_key"]
+                logger.info("Successfully fetched Public Key from Module 0 Gateway.")
+                break
+        except Exception as e:
+            logger.warning(f"Failed to fetch public key from Gateway (attempt {attempt+1}/{max_retries}): {e}")
+            if attempt < max_retries - 1:
+                time.sleep(2)
+            else:
+                raise RuntimeError("FATAL: Could not retrieve PUBLIC_KEY from Module 0 Gateway.")
+
+fetch_public_key()
 
 # --- IN-MEMORY JTI BLACKLIST ---
 REVOKED_JTIS = set()
 security = HTTPBearer()
 
-def create_access_token(user_id: str, role: str) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    jti = str(uuid.uuid4())
-    payload = {
-        "sub": str(user_id),
-        "role": role.upper(),
-        "iat": datetime.now(timezone.utc),
-        "exp": expire,
-        "jti": jti
-    }
-    return jwt.encode(payload, PRIVATE_KEY, algorithm=ALGORITHM)
-
-
-def create_refresh_token(user_id: str, role: str) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(days=7)
-    jti = str(uuid.uuid4())
-    payload = {
-        "sub": str(user_id),
-        "role": role.upper(),
-        "iat": datetime.now(timezone.utc),
-        "exp": expire,
-        "jti": jti,
-        "type": "refresh"
-    }
-    return jwt.encode(payload, PRIVATE_KEY, algorithm=ALGORITHM)
+# Token Minting is now fully delegated to Module 0 Gateway.
+# Only validation occurs here.
 
 def verify_jwt_token(credentials: HTTPAuthorizationCredentials = Security(security)) -> dict:
     token = credentials.credentials
@@ -105,7 +99,8 @@ def verify_jwt_token(credentials: HTTPAuthorizationCredentials = Security(securi
         return payload
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token Expired.")
-    except jwt.InvalidTokenError:
+    except jwt.InvalidTokenError as e:
+        logger.error(f"JWT Verification Error: {str(e)}")
         raise HTTPException(status_code=403, detail="Cryptographic Verification Failed.")
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, field_validator
@@ -113,6 +108,8 @@ from contextlib import asynccontextmanager
 
 from local_db import get_db_connection
 import os
+import openpyxl
+from openpyxl.worksheet.datavalidation import DataValidation
 from fpdf import FPDF
 
 
@@ -138,13 +135,17 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Maintenance Work Order API - Global ERP Connected", lifespan=lifespan)
 
 # Serve frontend — index.html lives alongside this backend file
-_frontend_dir = _here  # Meta_App_Factory/ERP/Maintenance_Work_Order/
+_frontend_dir = os.path.join(_erp, "maintenance_frontend", "dist")
 
 @app.get("/", include_in_schema=False)
 async def serve_index():
-    return FileResponse(os.path.join(_frontend_dir, "index.html"))
+    index_path = os.path.join(_frontend_dir, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    return {"status": "ok", "message": "MWO Backend API Active. Frontend must be built and placed in maintenance_frontend/dist to be served from root."}
 
-app.mount("/static", StaticFiles(directory=_frontend_dir), name="static")
+if os.path.exists(_frontend_dir):
+    app.mount("/static", StaticFiles(directory=_frontend_dir), name="static")
 
 # CORS: Decoupled frontend access
 app.add_middleware(
@@ -188,12 +189,13 @@ class EquipmentSubmit(BaseModel):
     operational_status: str = "OPERATIONAL"
 
 class EquipmentIngestionRecord(BaseModel):
-    equipment_id: str = Field(..., description="Unique Equipment Identifier")
     nomenclature: str = Field(..., min_length=2, description="Human-readable equipment name")
-    category: str = Field(..., description="Equipment category/type")
+    category_id: str = Field(..., description="FK reference to erp_categories.id")
     status: str = Field(default="ACTIVE", description="Strictly enforced operational state")
-    department: str = Field(..., description="Localization matching Phase 34.5 taxonomy")
+    department_id: str = Field(..., description="FK reference to erp_departments.id")
     assigned_tech_id: Optional[str] = None
+    location_id: str = Field(..., description="Physical location tag")
+    assigned_hm_id: str = Field(..., description="Hub Manager assigned to this equipment")
     
     @field_validator('status', mode='before')
     @classmethod
@@ -210,62 +212,66 @@ class EquipmentIngestionRecord(BaseModel):
             return None
         return v
 
-class EquipmentStatusUpdate(BaseModel):
-    status: str = Field(..., description="ACTIVE, DEGRADED, OFFLINE")
+class EquipmentActuationPayload(BaseModel):
+    status: str = Field(..., description="ACTIVE, DEGRADED, OFFLINE, RETIRED")
     assigned_tech_id: Optional[str] = None
 
     @field_validator('status', mode='before')
     @classmethod
     def validate_status(cls, v):
-        allowed_states = {"ACTIVE", "DEGRADED", "OFFLINE"}
+        allowed_states = {"ACTIVE", "DEGRADED", "OFFLINE", "RETIRED"}
         if str(v).upper() not in allowed_states:
             raise ValueError(f"Structural Violation: Status must be one of {allowed_states}")
         return str(v).upper()
 
+    @field_validator('assigned_tech_id', mode='before')
+    @classmethod
+    def empty_string_to_none(cls, v):
+        if isinstance(v, str) and not v.strip():
+            return None
+        return v
+
 class EmployeeIngestionRecord(BaseModel):
-    id: str = Field(..., description="Unique Employee Identifier (e.g., U-001)")
     name: str = Field(..., min_length=2, max_length=100)
-    authorization_level: str = Field(..., description="Mapped Role (e.g., ADMIN, TECH)")
+    role: str = Field(..., description="Mapped Role (e.g., ADMIN, TECH)")
     pin_code: str = Field(..., min_length=4, max_length=12, description="Raw PIN to be hashed")
     is_active: int = Field(default=1, ge=0, le=1)
     
-    # [PHASE 34.5 UNIFICATION INJECTIONS]
-    department: str = Field(..., min_length=2, description="Physical operational department")
+    # [PHASE 35.3 RELATIONAL INJECTIONS]
+    department_id: str = Field(..., min_length=2, description="Physical operational department FK")
     reports_to_hm_id: Optional[str] = None
+    
+    @field_validator('role', mode='before')
+    @classmethod
+    def validate_role(cls, v):
+        allowed = {"ADMINISTRATOR", "ADMIN", "HM", "TECH"}
+        if str(v).upper() not in allowed:
+            raise ValueError(f"Structural Violation: Role must be one of {allowed}")
+        return str(v).upper()
     
     @field_validator('reports_to_hm_id', mode='after')
     @classmethod
     def require_hm_for_tech(cls, v, info):
-        role = info.data.get('authorization_level', '').upper()
+        role = info.data.get('role', '').upper()
         if role in ["TECH", "TECHNICIAN"] and not v:
             raise ValueError("Structural Violation: A TECHNICIAN must be assigned a reporting HM.")
         return v
 
-    @field_validator('authorization_level', mode='before')
-    @classmethod
-    def validate_role(cls, v):
-        allowed_roles = {"ADMIN", "ADMINISTRATOR", "DM", "HM", "TECHNICIAN", "TECH"}
-        if str(v).upper() not in allowed_roles:
-            raise ValueError(f"Invalid authorization_level. Must be one of {allowed_roles}")
-        return str(v).upper()
-
 # [PHASE 34.9] Parts Catalog Ingestion Schema
 class PartIngestionRecord(BaseModel):
-    part_id: str = Field(..., description="Unique Part Identifier (e.g., PRT-001)")
     nomenclature: str = Field(..., min_length=2, description="Human-readable part name")
-    category: str = Field(..., description="Part category (e.g., ELECTRICAL, HYDRAULIC, CONSUMABLE)")
+    category_id: str = Field(..., description="Foreign Key to erp_categories")
     quantity_on_hand: int = Field(default=0, ge=0, description="Initial physical stock count")
     reorder_threshold: int = Field(default=5, ge=0, description="Minimum threshold before alert")
     unit_cost: float = Field(default=0.0, ge=0.0, description="Financial cost per unit")
 
-    @field_validator('category', mode='before')
-    @classmethod
-    def enforce_uppercase_category(cls, v):
-        return str(v).upper()
-
 class PartConsumptionPayload(BaseModel):
     part_id: str = Field(..., description="Unique Part Identifier")
     quantity_consumed: int = Field(..., gt=0, description="Amount to deduct and allocate")
+
+class ProcurementActuation(BaseModel):
+    status: str = Field(..., description="Target state: APPROVED, REJECTED, or FULFILLED")
+    authorized_quantity: Optional[int] = Field(default=None, ge=1, description="Required only when status is APPROVED")
 
 class PinVerify(BaseModel):
     employee_id: str = Field(..., description="Unique ERP Employee Identifier")
@@ -290,7 +296,7 @@ class MWOIngestionRecord(BaseModel):
     @field_validator('status', mode='before')
     @classmethod
     def validate_status(cls, v):
-        allowed_states = {"UNASSIGNED", "ASSIGNED", "IN_PROGRESS", "PENDING_REVIEW", "COMPLETED"}
+        allowed_states = {"UNASSIGNED", "ASSIGNED", "IN_PROGRESS", "PAUSED", "PENDING_REVIEW", "COMPLETED"}
         if str(v).upper() not in allowed_states:
             raise ValueError(f"Structural Violation: Status must be one of {allowed_states}")
         return str(v).upper()
@@ -327,6 +333,18 @@ class MWOUpdate(BaseModel):
         if isinstance(v, str) and not v.strip():
             return None
         return v
+
+class MWOExecutePayload(BaseModel):
+    action: str = Field(..., description="START, PAUSE, COMPLETE")
+    manual_log: Optional[str] = None
+
+    @field_validator('action', mode='before')
+    @classmethod
+    def validate_action(cls, v):
+        allowed = {"START", "PAUSE", "COMPLETE"}
+        if str(v).upper() not in allowed:
+            raise ValueError(f"Action must be one of {allowed}")
+        return str(v).upper()
 
 # --- SECURITY LAYER ---
 
@@ -414,153 +432,13 @@ def verify_rbac_pipeline(
 
 
 
-@app.post("/api/user/refresh")
-def refresh_token(request: Request):
-    token = request.cookies.get("refresh_token")
-    if not token:
-        raise HTTPException(status_code=401, detail="Refresh Token Missing.")
-        
-    try:
-        payload = jwt.decode(token, PUBLIC_KEY, algorithms=[ALGORITHM])
-        if payload.get("type") != "refresh":
-            raise HTTPException(status_code=403, detail="Invalid Token Type.")
-        if payload.get("jti") in REVOKED_JTIS:
-            raise HTTPException(status_code=401, detail="Token Revoked (JTI Blacklisted).")
-            
-        user_id = payload.get("sub")
-        role = payload.get("role")
-        
-        new_access_token = create_access_token(user_id=user_id, role=role)
-        return {"status": "success", "access_token": new_access_token, "token_type": "bearer"}
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Refresh Token Expired.")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=403, detail="Cryptographic Verification Failed.")
-
-# --- RATE LIMITER & CRYPTO ---
-import bcrypt
-import asyncio
-
-MAX_ATTEMPTS = 5
-LOCKOUT_WINDOW_MINUTES = 15
-
-def verify_password_hash(plain_pin: str, hashed_pin: str) -> bool:
-    """CPU-bound cryptographic task."""
-    try:
-        return bcrypt.checkpw(plain_pin.encode('utf-8'), hashed_pin.encode('utf-8'))
-    except Exception:
-        return False
-
-def check_rate_limit(employee_id: str):
-    conn = get_db_connection()
-    try:
-        cursor = conn.cursor()
-        now = int(time.time())
-        cutoff = now - (LOCKOUT_WINDOW_MINUTES * 60)
-        
-        # Bounded read to avoid DB lock thrashing under brute force
-        cursor.execute("SELECT COUNT(*) as attempt_count FROM auth_rate_limits WHERE employee_id = ? AND attempt_timestamp > ?", (employee_id, cutoff))
-        row = cursor.fetchone()
-        
-        if row and row['attempt_count'] >= MAX_ATTEMPTS:
-            raise HTTPException(status_code=429, detail="Rate limit exceeded. Account locked.")
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Database error during rate limit verification: {e}")
-        raise HTTPException(status_code=500, detail="Security boundary enforcement failed.")
-    finally:
-        conn.close()
-
-def record_failed_attempt(employee_id: str):
-    conn = get_db_connection()
-    try:
-        cursor = conn.cursor()
-        now = int(time.time())
-        cursor.execute("INSERT INTO auth_rate_limits (employee_id, attempt_timestamp) VALUES (?, ?)", (employee_id, now))
-        conn.commit()
-    except Exception as e:
-        logger.error(f"Failed to record authentication anomaly: {e}")
-    finally:
-        conn.close()
-
-def clear_failed_attempts(employee_id: str):
-    conn = get_db_connection()
-    try:
-        cursor = conn.cursor()
-        now = int(time.time())
-        cutoff = now - (LOCKOUT_WINDOW_MINUTES * 60)
-        
-        # Self-healing ledger pruning deferred to successful login
-        cursor.execute("DELETE FROM auth_rate_limits WHERE attempt_timestamp < ?", (cutoff,))
-        cursor.execute("DELETE FROM auth_rate_limits WHERE employee_id = ?", (employee_id,))
-        conn.commit()
-    except Exception as e:
-        logger.error(f"Failed to clear rate limit ledger: {e}")
-    finally:
-        conn.close()
-
-@app.post("/api/user/authenticate")
-async def authenticate_user(payload: PinVerify, response: Response):
-    check_rate_limit(payload.employee_id)
-    
-    conn = None
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        # Isolate query to ID only. DO NOT pass the raw PIN.
-        query = '''
-            SELECT e.id, e.name, e.authorization_level, e.pin_hash
-            FROM erp_employees e
-            WHERE e.id = ? AND e.is_active = 1
-        '''
-        cursor.execute(query, (payload.employee_id,))
-        row = cursor.fetchone()
-        
-        if not row:
-            record_failed_attempt(payload.employee_id)
-            raise HTTPException(status_code=401, detail="Authorization Denied.")
-            
-        # Offload CPU-bound hash verification to thread pool to prevent ASGI blocking
-        is_valid = await asyncio.to_thread(verify_password_hash, payload.pin, row["pin_hash"])
-        
-        if not is_valid:
-            record_failed_attempt(payload.employee_id)
-            raise HTTPException(status_code=401, detail="Authorization Denied.")
-            
-        # Clean up rate limit state for successful logins
-        clear_failed_attempts(payload.employee_id)
-            
-        role = row["authorization_level"].upper()
-        if role not in ["ADMIN", "ADMINISTRATOR", "DM", "HM", "TECHNICIAN", "TECH"]:
-            raise HTTPException(status_code=500, detail="Invalid DB Role Mapping.")
-        
-        access_token = create_access_token(user_id=row["id"], role=role)
-        refresh_token = create_refresh_token(user_id=row["id"], role=role)
-        
-        response.set_cookie(
-            key="refresh_token", 
-            value=refresh_token, 
-            httponly=True, 
-            secure=True, 
-            samesite="Strict", 
-            path="/api/user/refresh"
-        )
-        
-        return {
-            "access_token": access_token,
-            "token_type": "bearer",
-            "expires_in": 900
-        }
-    finally:
-        if conn:
-            conn.close()
+# Authentication and Identity management (including login, refresh, and rate limiting)
+# have been fully delegated to the Module 0 Gateway on port 9000.
 
 # [PHASE 34.5 INJECTION] Provide HM routing matrix to the UI
 @app.get("/api/admin/hms")
 def get_hms(
-    department: str = Query(..., description="Target department to filter HMs"),
+    department_id: str = Query(..., description="Target department ID to filter HMs"),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
     jwt_payload: dict = Depends(verify_jwt_token)
@@ -573,10 +451,10 @@ def get_hms(
             """
             SELECT id, name 
             FROM erp_employees 
-            WHERE authorization_level = 'HM' AND is_active = 1 AND department = ? 
+            WHERE role = 'HM' AND is_active = 1 AND department_id = ? 
             LIMIT ? OFFSET ?
             """,
-            (department, limit, offset)
+            (department_id, limit, offset)
         )
         rows = [dict(row) for row in cursor.fetchall()]
         return {"status": "success", "data": rows}
@@ -594,6 +472,10 @@ async def ingest_single_user(payload: EmployeeIngestionRecord, jwt_payload: dict
     if role not in ["ADMINISTRATOR", "ADMIN"]:
         raise HTTPException(status_code=403, detail="RBAC Violation: Administrative clearance required.")
         
+    # Mandatory Silent Patch: Explicit Route-Level Validation
+    if payload.role == 'TECH' and not payload.reports_to_hm_id:
+        raise HTTPException(status_code=400, detail="Structural Violation: TECH must be bound to a reporting HM.")
+        
     conn = None
     try:
         conn = get_db_connection()
@@ -607,17 +489,22 @@ async def ingest_single_user(payload: EmployeeIngestionRecord, jwt_payload: dict
             payload.pin_code
         )
         
-        # 3. Atomic Database Insertion
+        # 3. PK Synthesization
+        import uuid
+        new_id = f"U-{uuid.uuid4().hex[:6].upper()}"
+        
+        # 4. Atomic Database Insertion (Cryptographic isolation - NO plaintext pin_code)
+        cursor.execute("PRAGMA foreign_keys = ON")
         cursor.execute(
             """
-            INSERT INTO erp_employees (id, name, authorization_level, pin_code, pin_hash, is_active, department, reports_to_hm_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO erp_employees (id, name, role, pin_hash, is_active, department_id, reports_to_hm_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
-            (payload.id, payload.name, payload.authorization_level, payload.pin_code, pin_hash, payload.is_active, payload.department, payload.reports_to_hm_id)
+            (new_id, payload.name, payload.role, pin_hash, payload.is_active, payload.department_id, payload.reports_to_hm_id)
         )
         conn.commit()
         
-        return {"status": "success", "message": f"Personnel {payload.id} successfully ingested."}
+        return {"status": "success", "message": f"Personnel {new_id} successfully ingested."}
     except sqlite3.IntegrityError:
         if conn:
             conn.rollback()
@@ -631,30 +518,272 @@ async def ingest_single_user(payload: EmployeeIngestionRecord, jwt_payload: dict
         if conn:
             conn.close()
 
-# [PHASE 34.6 INJECTION]
+# [PHASE 35.1 INJECTION — FK-NORMALIZED]
 @app.post("/api/admin/ingest/equipment")
 def ingest_equipment(payload: EquipmentIngestionRecord, jwt_payload: dict = Depends(verify_jwt_token)):
     role = jwt_payload.get("role")
     if role not in ["ADMINISTRATOR", "ADMIN"]:
         raise HTTPException(status_code=403, detail="RBAC Violation: Administrative clearance required.")
         
+    # Autonomously generate PK — operators never dictate physical keys
+    equipment_id = f"EQ-{uuid.uuid4().hex[:6].upper()}"
+
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
+        cursor.execute("PRAGMA foreign_keys = ON")
         cursor.execute(
             """
-            INSERT INTO erp_equipment (equipment_id, nomenclature, category, status, department, assigned_tech_id)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO erp_equipment (equipment_id, nomenclature, category_id, status, department_id, assigned_tech_id, location_id, assigned_hm_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (payload.equipment_id, payload.nomenclature, payload.category, payload.status, payload.department, payload.assigned_tech_id)
+            (equipment_id, payload.nomenclature, payload.category_id, payload.status, payload.department_id, payload.assigned_tech_id, payload.location_id, payload.assigned_hm_id)
         )
         conn.commit()
-        return {"status": "success", "message": f"Equipment {payload.equipment_id} successfully ingested."}
-    except sqlite3.IntegrityError:
-        raise HTTPException(status_code=409, detail="Structural Violation: Equipment ID already exists.")
+        return {"status": "success", "message": f"Equipment {equipment_id} successfully ingested.", "equipment_id": equipment_id}
+    except sqlite3.IntegrityError as e:
+        raise HTTPException(status_code=409, detail=f"Structural Violation: FK constraint or duplicate key. {e}")
     except Exception as e:
         logger.error(f"Equipment Ingestion Error: {e}")
         raise HTTPException(status_code=500, detail="Internal Execution Error.")
+    finally:
+        conn.close()
+
+
+def generate_xlsx_template(headers, template_name, categories=[], departments=[], locations=[], hms=[], techs=[]):
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Ingestion_Template"
+    
+    for col_idx, header in enumerate(headers, 1):
+        ws.cell(row=1, column=col_idx, value=header)
+        
+    lookup_ws = wb.create_sheet(title="_Lookups")
+    lookup_ws.sheet_state = 'hidden'
+    
+    current_col = 1
+    def add_lookup_col(name, items):
+        nonlocal current_col
+        lookup_ws.cell(row=1, column=current_col, value=name)
+        for r_idx, item in enumerate(items, 2):
+            lookup_ws.cell(row=r_idx, column=current_col, value=item)
+        col_letter = openpyxl.utils.get_column_letter(current_col)
+        formula = f"=_Lookups!${col_letter}$2:${col_letter}${len(items)+1 if len(items)>0 else 2}"
+        current_col += 1
+        return formula
+
+    if "category_name" in headers and categories:
+        form = add_lookup_col("Categories", categories)
+        dv = DataValidation(type="list", formula1=form, allow_blank=False)
+        col_letter = openpyxl.utils.get_column_letter(headers.index("category_name") + 1)
+        dv.add(f"{col_letter}2:{col_letter}1048576")
+        ws.add_data_validation(dv)
+        
+    if "department_name" in headers and departments:
+        form = add_lookup_col("Departments", departments)
+        dv = DataValidation(type="list", formula1=form, allow_blank=False)
+        col_letter = openpyxl.utils.get_column_letter(headers.index("department_name") + 1)
+        dv.add(f"{col_letter}2:{col_letter}1048576")
+        ws.add_data_validation(dv)
+        
+    if "location" in headers and locations:
+        form = add_lookup_col("Locations", locations)
+        dv = DataValidation(type="list", formula1=form, allow_blank=False)
+        col_letter = openpyxl.utils.get_column_letter(headers.index("location") + 1)
+        dv.add(f"{col_letter}2:{col_letter}1048576")
+        ws.add_data_validation(dv)
+        
+    if "hm_name" in headers and hms:
+        form = add_lookup_col("HMs", hms)
+        dv = DataValidation(type="list", formula1=form, allow_blank=False)
+        col_letter = openpyxl.utils.get_column_letter(headers.index("hm_name") + 1)
+        dv.add(f"{col_letter}2:{col_letter}1048576")
+        ws.add_data_validation(dv)
+        
+    if "reports_to_hm_name" in headers and hms:
+        form = add_lookup_col("HMs", hms)
+        dv = DataValidation(type="list", formula1=form, allow_blank=True)
+        col_letter = openpyxl.utils.get_column_letter(headers.index("reports_to_hm_name") + 1)
+        dv.add(f"{col_letter}2:{col_letter}1048576")
+        ws.add_data_validation(dv)
+        
+    if "tech_name" in headers and techs:
+        form = add_lookup_col("Techs", techs)
+        dv = DataValidation(type="list", formula1=form, allow_blank=True)
+        col_letter = openpyxl.utils.get_column_letter(headers.index("tech_name") + 1)
+        dv.add(f"{col_letter}2:{col_letter}1048576")
+        ws.add_data_validation(dv)
+        
+    if "status" in headers:
+        dv = DataValidation(type="list", formula1='"ACTIVE,DEGRADED,OFFLINE"', allow_blank=False)
+        col_letter = openpyxl.utils.get_column_letter(headers.index("status") + 1)
+        dv.add(f"{col_letter}2:{col_letter}1048576")
+        ws.add_data_validation(dv)
+
+    if "role" in headers:
+        dv = DataValidation(type="list", formula1='"ADMINISTRATOR,ADMIN,DM,HM,TECH"', allow_blank=False)
+        col_letter = openpyxl.utils.get_column_letter(headers.index("role") + 1)
+        dv.add(f"{col_letter}2:{col_letter}1048576")
+        ws.add_data_validation(dv)
+
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    return Response(
+        content=output.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={template_name}.xlsx"}
+    )
+
+# [PHASE 35.1.1] Bulk CSV Ingestion Endpoints
+@app.get("/api/admin/ingest/equipment/template")
+def get_equipment_ingestion_template(jwt_payload: dict = Depends(verify_jwt_token)):
+    role = jwt_payload.get("role")
+    if role not in ["ADMINISTRATOR", "ADMIN", "HM"]:
+        raise HTTPException(status_code=403, detail="RBAC Violation.")
+    
+    conn = get_db_connection()
+    try:
+        c = conn.cursor()
+        c.execute("SELECT name FROM erp_categories")
+        categories = [row['name'] for row in c.fetchall()]
+        c.execute("SELECT name FROM erp_departments")
+        departments = [row['name'] for row in c.fetchall()]
+        c.execute("SELECT name FROM erp_locations")
+        locations = [row['name'] for row in c.fetchall()]
+        c.execute("SELECT name FROM erp_employees WHERE role='HM'")
+        hms = [row['name'] for row in c.fetchall()]
+    finally:
+        conn.close()
+        
+    headers = ["nomenclature", "category_name", "status", "department_name", "location", "hm_name"]
+    return generate_xlsx_template(headers, "equipment_ingestion_template", categories, departments, locations, hms)
+
+@app.post("/api/admin/ingest/equipment/bulk")
+async def bulk_ingest_equipment(file: UploadFile = File(...), jwt_payload: dict = Depends(verify_jwt_token)):
+    role = jwt_payload.get("role")
+    if role not in ["ADMINISTRATOR", "ADMIN"]:
+        raise HTTPException(status_code=403, detail="RBAC Violation: Administrative clearance required.")
+        
+    if not file.filename.endswith('.xlsx'):
+        raise HTTPException(status_code=400, detail="Invalid file format. Please upload an XLSX file.")
+        
+    content = await file.read()
+    try:
+        wb = openpyxl.load_workbook(filename=io.BytesIO(content), data_only=True)
+        ws = wb.active
+        header_row = next(ws.iter_rows(min_row=1, max_row=1, values_only=True))
+        if not header_row: raise ValueError("Empty file")
+        expected_fields = {"nomenclature", "category_name", "status", "department_name", "location", "hm_name"}
+        if not expected_fields.issubset(set(header_row)):
+            raise HTTPException(status_code=400, detail=f"Invalid XLSX structure. Expected minimum headers: {', '.join(expected_fields)}")
+        rows = []
+        for row_values in ws.iter_rows(min_row=2, values_only=True):
+            if not any(row_values): continue
+            row_dict = dict(zip(header_row, row_values))
+            rows.append(row_dict)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to read XLSX: {e}")
+    if not rows:
+        raise HTTPException(status_code=400, detail="CSV file is empty.")
+        
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("PRAGMA foreign_keys = ON")
+        
+        # Pre-fetch lookup mappings to avoid N+1 queries
+        cursor.execute("SELECT id, name FROM erp_categories")
+        cat_map = {row['name'].lower().strip(): row['id'] for row in cursor.fetchall()}
+        
+        cursor.execute("SELECT id, name FROM erp_departments")
+        dep_map = {row['name'].lower().strip(): row['id'] for row in cursor.fetchall()}
+        
+        cursor.execute("SELECT id, name FROM erp_locations")
+        loc_map = {row['name'].lower().strip(): row['id'] for row in cursor.fetchall()}
+        
+        cursor.execute("SELECT id, name FROM erp_employees WHERE role = 'HM'")
+        hm_map = {row['name'].lower().strip(): row['id'] for row in cursor.fetchall()}
+
+        cursor.execute("BEGIN TRANSACTION")
+        
+        inserted_count = 0
+        for i, row in enumerate(rows):
+            # Clean up keys and values
+            row_data = {k.strip(): str(v).strip() if v is not None else None for k, v in row.items()}
+            
+            # Resolve Names to IDs
+            cat_name = row_data.get('category_name')
+            if not cat_name:
+                raise ValueError(f"Row {i+2}: Missing category_name")
+            if cat_name.lower() not in cat_map:
+                new_cat = f"CAT-{uuid.uuid4().hex[:6].upper()}"
+                cursor.execute("INSERT INTO erp_categories (id, name) VALUES (?, ?)", (new_cat, cat_name.strip()))
+                cat_map[cat_name.lower()] = new_cat
+            cat_id = cat_map[cat_name.lower()]
+                
+            dep_name = row_data.get('department_name')
+            if not dep_name:
+                raise ValueError(f"Row {i+2}: Missing department_name")
+            if dep_name.lower() not in dep_map:
+                new_dep = f"DEP-{uuid.uuid4().hex[:6].upper()}"
+                cursor.execute("INSERT INTO erp_departments (id, name) VALUES (?, ?)", (new_dep, dep_name.strip()))
+                dep_map[dep_name.lower()] = new_dep
+            dep_id = dep_map[dep_name.lower()]
+            
+            hm_name = row_data.get('hm_name')
+            if not hm_name or hm_name.lower() not in hm_map:
+                raise ValueError(f"Row {i+2}: Unknown HM Name '{hm_name}'")
+            hm_id = hm_map[hm_name.lower()]
+            
+            loc_name = row_data.get('location')
+            if not loc_name:
+                raise ValueError(f"Row {i+2}: Missing location")
+            if loc_name.lower() not in loc_map:
+                new_loc = f"LOC-{uuid.uuid4().hex[:6].upper()}"
+                cursor.execute("INSERT INTO erp_locations (id, name) VALUES (?, ?)", (new_loc, loc_name.strip()))
+                loc_map[loc_name.lower()] = new_loc
+            loc_id = loc_map[loc_name.lower()]
+            
+            # Autonomously generate PK
+            equipment_id = f"EQ-{uuid.uuid4().hex[:6].upper()}"
+            
+            # Status validation
+            status = row_data.get('status', 'ACTIVE') or 'ACTIVE'
+            status = status.upper()
+            if status not in {"ACTIVE", "DEGRADED", "OFFLINE"}:
+                raise ValueError(f"Row {i+2}: Status must be ACTIVE, DEGRADED, or OFFLINE.")
+                
+            cursor.execute(
+                """
+                INSERT INTO erp_equipment (equipment_id, nomenclature, category_id, status, department_id, location_id, assigned_hm_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    equipment_id, 
+                    row_data.get('nomenclature'), 
+                    cat_id, 
+                    status, 
+                    dep_id, 
+                    loc_id, 
+                    hm_id
+                )
+            )
+            inserted_count += 1
+            
+        conn.commit()
+        return {"status": "success", "message": f"Successfully ingested {inserted_count} equipment records."}
+        
+    except sqlite3.IntegrityError as e:
+        conn.rollback()
+        raise HTTPException(status_code=409, detail=f"Structural Violation on bulk insert. {e}")
+    except ValueError as e:
+        conn.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Bulk Equipment Ingestion Error: {e}")
+        raise HTTPException(status_code=500, detail="Internal Execution Error during bulk ingestion.")
     finally:
         conn.close()
 
@@ -662,21 +791,29 @@ def ingest_equipment(payload: EquipmentIngestionRecord, jwt_payload: dict = Depe
 def get_equipment(
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
-    department: Optional[str] = Query(None, description="Optional filter by department"),
+    department_id: Optional[str] = Query(None, description="Optional filter by department FK"),
     jwt_payload: dict = Depends(verify_jwt_token)
 ):
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
-        query_columns = "equipment_id, nomenclature, category, status, department, assigned_tech_id"
-        if department:
+        base_query = """
+            SELECT e.equipment_id, e.nomenclature, e.category_id, c.name AS category,
+                   e.status, e.department_id, d.name AS department, e.assigned_tech_id,
+                   e.location_id, l.name AS location_name
+            FROM erp_equipment e
+            LEFT JOIN erp_categories c ON e.category_id = c.id
+            LEFT JOIN erp_departments d ON e.department_id = d.id
+            LEFT JOIN erp_locations l ON e.location_id = l.id
+        """
+        if department_id:
             cursor.execute(
-                f"SELECT {query_columns} FROM erp_equipment WHERE department = ? LIMIT ? OFFSET ?",
-                (department, limit, offset)
+                f"{base_query} WHERE e.department_id = ? LIMIT ? OFFSET ?",
+                (department_id, limit, offset)
             )
         else:
             cursor.execute(
-                f"SELECT {query_columns} FROM erp_equipment LIMIT ? OFFSET ?",
+                f"{base_query} LIMIT ? OFFSET ?",
                 (limit, offset)
             )
         rows = [dict(row) for row in cursor.fetchall()]
@@ -687,28 +824,176 @@ def get_equipment(
     finally:
         conn.close()
 
-@app.patch("/api/admin/equipment/{equipment_id}/status")
-def update_equipment_status(equipment_id: str, payload: EquipmentStatusUpdate, jwt_payload: dict = Depends(verify_jwt_token)):
+# [PHASE 35.1] Paginated Lookup Routes
+@app.get("/api/admin/lookups/categories")
+def get_categories(
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    jwt_payload: dict = Depends(verify_jwt_token)
+):
     role = jwt_payload.get("role")
-    if role not in ["ADMINISTRATOR", "ADMIN", "DM", "HM"]:
-        raise HTTPException(status_code=403, detail="RBAC Violation: Clearance required to actuate equipment state.")
+    if role not in ["ADMINISTRATOR", "ADMIN", "HM"]:
+        raise HTTPException(status_code=403, detail="RBAC Violation.")
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, name FROM erp_categories ORDER BY name LIMIT ? OFFSET ?", (limit, offset))
+        return {"data": [dict(r) for r in cursor.fetchall()]}
+    finally:
+        conn.close()
+
+@app.get("/api/admin/lookups/departments")
+
+@app.get("/api/admin/lookups/locations")
+def get_locations(
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    jwt_payload: dict = Depends(verify_jwt_token)
+):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, name FROM erp_locations ORDER BY name LIMIT ? OFFSET ?", (limit, offset))
+        return {"data": [dict(r) for r in cursor.fetchall()]}
+    finally:
+        conn.close()
+
+@app.post("/api/admin/ingest/department")
+def ingest_department(payload: dict = Body(...), jwt_payload: dict = Depends(verify_jwt_token)):
+    role = jwt_payload.get("role")
+    if role not in ["ADMINISTRATOR", "ADMIN"]:
+        raise HTTPException(status_code=403, detail="RBAC Violation")
+    name = payload.get("name")
+    if not name or len(name) < 2:
+        raise HTTPException(status_code=400, detail="Invalid department name")
         
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
+        import uuid
+        new_id = f"DEP-{uuid.uuid4().hex[:6].upper()}"
+        cursor.execute("INSERT INTO erp_departments (id, name) VALUES (?, ?)", (new_id, name))
+        conn.commit()
+        return {"status": "success", "id": new_id, "name": name}
+    except sqlite3.IntegrityError:
+        raise HTTPException(status_code=409, detail="Department already exists")
+    finally:
+        conn.close()
+
+@app.post("/api/admin/ingest/location")
+def ingest_location(payload: dict = Body(...), jwt_payload: dict = Depends(verify_jwt_token)):
+    role = jwt_payload.get("role")
+    if role not in ["ADMINISTRATOR", "ADMIN"]:
+        raise HTTPException(status_code=403, detail="RBAC Violation")
+    name = payload.get("name")
+    if not name or len(name) < 2:
+        raise HTTPException(status_code=400, detail="Invalid location name")
         
-        cursor.execute("SELECT equipment_id FROM erp_equipment WHERE equipment_id = ?", (equipment_id,))
-        if not cursor.fetchone():
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        import uuid
+        new_id = f"LOC-{uuid.uuid4().hex[:6].upper()}"
+        cursor.execute("INSERT INTO erp_locations (id, name) VALUES (?, ?)", (new_id, name))
+        conn.commit()
+        return {"status": "success", "id": new_id, "name": name}
+    except sqlite3.IntegrityError:
+        raise HTTPException(status_code=409, detail="Location already exists")
+    finally:
+        conn.close()
+
+def get_departments(
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    jwt_payload: dict = Depends(verify_jwt_token)
+):
+    role = jwt_payload.get("role")
+    if role not in ["ADMINISTRATOR", "ADMIN", "HM"]:
+        raise HTTPException(status_code=403, detail="RBAC Violation.")
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, name FROM erp_departments ORDER BY name LIMIT ? OFFSET ?", (limit, offset))
+        return {"data": [dict(r) for r in cursor.fetchall()]}
+    finally:
+        conn.close()
+
+@app.get("/api/admin/lookups/technicians")
+def get_technicians(
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    jwt_payload: dict = Depends(verify_jwt_token)
+):
+    role = jwt_payload.get("role")
+    if role not in ["ADMINISTRATOR", "ADMIN", "HM"]:
+        raise HTTPException(status_code=403, detail="RBAC Violation.")
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT id, name FROM erp_employees WHERE authorization_level = 'TECHNICIAN' AND is_active = 1 ORDER BY name LIMIT ? OFFSET ?",
+            (limit, offset)
+        )
+        return {"data": [dict(r) for r in cursor.fetchall()]}
+    finally:
+        conn.close()
+
+# [PHASE 35.2] Equipment Actuation Gateway
+@app.put("/api/admin/equipment/{equipment_id}/actuate")
+def actuate_equipment(
+    equipment_id: str,
+    payload: EquipmentActuationPayload,
+    jwt_payload: dict = Depends(verify_jwt_token)
+):
+    role = jwt_payload.get("role")
+    if role not in ["ADMINISTRATOR", "ADMIN", "HM"]:
+        raise HTTPException(status_code=403, detail="RBAC Violation: ADMIN or HM clearance required to actuate equipment.")
+        
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("PRAGMA foreign_keys = ON")
+        cursor.execute("BEGIN TRANSACTION")
+        
+        # 1. Existence + Current State Check
+        cursor.execute(
+            "SELECT equipment_id, status, assigned_tech_id FROM erp_equipment WHERE equipment_id = ?",
+            (equipment_id,)
+        )
+        record = cursor.fetchone()
+        if not record:
             raise HTTPException(status_code=404, detail="Equipment not found.")
-            
+        
+        # 2. RETIRED Immutability: Once retired, no further mutations
+        if record['status'] == 'RETIRED':
+            raise HTTPException(status_code=400, detail="Structural Violation: RETIRED equipment is permanently locked.")
+        
+        # 3. If retiring, clear tech assignment (equipment removed from service)
+        tech_id = payload.assigned_tech_id
+        if payload.status == 'RETIRED':
+            tech_id = None
+        
+        # 4. Mutation
         cursor.execute(
             "UPDATE erp_equipment SET status = ?, assigned_tech_id = ? WHERE equipment_id = ?",
-            (payload.status, payload.assigned_tech_id, equipment_id)
+            (payload.status, tech_id, equipment_id)
         )
         conn.commit()
-        return {"status": "success", "message": f"Equipment {equipment_id} state updated to {payload.status}."}
+        
+        return {
+            "status": "success",
+            "message": f"Equipment {equipment_id} actuated to {payload.status}.",
+            "retired": payload.status == 'RETIRED'
+        }
+    except HTTPException:
+        conn.rollback()
+        raise
+    except sqlite3.IntegrityError as e:
+        conn.rollback()
+        raise HTTPException(status_code=409, detail=f"FK Violation: {e}")
     except Exception as e:
-        logger.error(f"Failed to update equipment status: {e}")
+        conn.rollback()
+        logger.error(f"Equipment Actuation Error: {e}")
         raise HTTPException(status_code=500, detail="Internal server error.")
     finally:
         conn.close()
@@ -722,17 +1007,24 @@ def ingest_part(payload: PartIngestionRecord, jwt_payload: dict = Depends(verify
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
+        
+        # PK Synthesization
+        import uuid
+        new_id = f"PRT-{uuid.uuid4().hex[:6].upper()}"
+        
+        # Enforce Relational Integrity
+        cursor.execute("PRAGMA foreign_keys = ON")
         cursor.execute(
             """
-            INSERT INTO erp_parts (part_id, nomenclature, category, quantity_on_hand, reorder_threshold, unit_cost)
+            INSERT INTO erp_parts (part_id, nomenclature, category_id, quantity_on_hand, reorder_threshold, unit_cost)
             VALUES (?, ?, ?, ?, ?, ?)
             """,
-            (payload.part_id, payload.nomenclature, payload.category, payload.quantity_on_hand, payload.reorder_threshold, payload.unit_cost)
+            (new_id, payload.nomenclature, payload.category_id, payload.quantity_on_hand, payload.reorder_threshold, payload.unit_cost)
         )
         conn.commit()
-        return {"status": "success", "message": f"Part {payload.part_id} successfully cataloged."}
+        return {"status": "success", "message": f"Part {new_id} successfully cataloged."}
     except sqlite3.IntegrityError:
-        raise HTTPException(status_code=409, detail="Structural Violation: Part ID already exists in the catalog.")
+        raise HTTPException(status_code=409, detail="Structural Violation: Relational boundary mismatch or nomenclature uniqueness conflict.")
     except Exception as e:
         logger.error(f"Part Ingestion Error: {e}")
         raise HTTPException(status_code=500, detail="Internal Execution Error.")
@@ -748,11 +1040,12 @@ def get_parts(
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
-        # Explicit Column Enumeration Enforced
         cursor.execute(
             """
-            SELECT part_id, nomenclature, category, quantity_on_hand, reorder_threshold, unit_cost 
-            FROM erp_parts 
+            SELECT p.part_id, p.nomenclature, c.name as category, p.quantity_on_hand, p.reorder_threshold, p.unit_cost 
+            FROM erp_parts p
+            LEFT JOIN erp_categories c ON p.category_id = c.id
+            ORDER BY p.part_id ASC
             LIMIT ? OFFSET ?
             """,
             (limit, offset)
@@ -765,10 +1058,70 @@ def get_parts(
     finally:
         conn.close()
 
+from datetime import datetime, timezone
+
+def worker_evaluate_threshold(part_id: str):
+    """
+    Strictly isolated asynchronous threshold evaluation worker.
+    Executes outside the HTTP response cycle.
+    """
+    db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "maintenance_erp.db")
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    try:
+        c = conn.cursor()
+        
+        # 1. Evaluate Threshold Boundary
+        c.execute("SELECT quantity_on_hand, reorder_threshold FROM erp_parts WHERE part_id = ?", (part_id,))
+        part = c.fetchone()
+        
+        if not part:
+            logger.error(f"[WORKER TERMINATION] part_id {part_id} not found in physical ledger.")
+            return
+            
+        if part['quantity_on_hand'] > part['reorder_threshold']:
+            # Threshold not breached. Silently terminate CPU cycle.
+            return
+            
+        # 2. Logical Concurrency Check (Save UUID generation and INSERT overhead)
+        c.execute("""
+            SELECT procurement_id FROM erp_procurement_queue 
+            WHERE part_id = ? AND status IN ('PENDING', 'APPROVED')
+        """, (part_id,))
+        
+        if c.fetchone():
+            # Active procurement cycle already exists. Prevent supply chain spam.
+            logger.info(f"[WORKER TERMINATION] Active procurement already queued for {part_id}.")
+            return
+            
+        # 3. Payload Synthesization
+        procurement_id = f"PROC-{uuid.uuid4().hex[:6].upper()}"
+        triggered_at = datetime.now(timezone.utc).isoformat()
+        
+        # 4. Atomic Insertion
+        c.execute("""
+            INSERT INTO erp_procurement_queue (procurement_id, part_id, triggered_at, status)
+            VALUES (?, ?, ?, 'PENDING')
+        """, (procurement_id, part_id, triggered_at))
+        
+        conn.commit()
+        logger.warning(f"[ACTUATION ENGAGED] Low Stock Alert: {procurement_id} queued for {part_id}.")
+        
+    except sqlite3.IntegrityError as e:
+        # The partial index intercepted a race condition spanning the logical check.
+        conn.rollback()
+        logger.info(f"[CONCURRENCY LOCK ENGAGED] Redundant procurement blocked for {part_id}: {e}")
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"[FATAL WORKER EXCEPTION] Evaluation failed for {part_id}: {e}")
+    finally:
+        conn.close()
+
 @app.post("/api/mwo/{mwo_id}/consume_part")
 def consume_part(
     mwo_id: str, 
     payload: PartConsumptionPayload, 
+    background_tasks: BackgroundTasks,
     jwt_payload: dict = Depends(verify_jwt_token)
 ):
     tech_id = jwt_payload.get("sub")
@@ -784,13 +1137,17 @@ def consume_part(
         # Initiate Atomic Block
         cursor.execute("BEGIN TRANSACTION")
 
-        # 1. State Validation: MWO Lockout Check
-        cursor.execute("SELECT status FROM work_orders WHERE mwo_id = ?", (mwo_id,))
+        # 1. State Validation: MWO Lockout + RBAC Ownership Check
+        cursor.execute("SELECT status, assigned_tech FROM work_orders WHERE mwo_id = ?", (mwo_id,))
         mwo_state = cursor.fetchone()
         if not mwo_state:
             raise HTTPException(status_code=404, detail="MWO ledger entry not found.")
         if mwo_state['status'] == 'COMPLETED':
             raise HTTPException(status_code=400, detail="Structural Violation: Cannot allocate parts to a finalized MWO.")
+
+        # RBAC Enforcement: TECH-tier must be the assigned operator
+        if role in ["TECH"] and mwo_state['assigned_tech'] != tech_id:
+            raise HTTPException(status_code=403, detail="RBAC Violation: Technician is not the assigned operator for this MWO.")
 
         # 2. State Validation: Stock Verification
         cursor.execute("SELECT quantity_on_hand FROM erp_parts WHERE part_id = ?", (payload.part_id,))
@@ -800,11 +1157,13 @@ def consume_part(
         if part_state['quantity_on_hand'] < payload.quantity_consumed:
             raise HTTPException(status_code=400, detail="Stock Violation: Insufficient physical inventory for allocation.")
 
-        # 3. Actuation: Stock Depletion
+        # 3. Actuation: Stock Depletion with DB-Level Floor Guard
         cursor.execute(
-            "UPDATE erp_parts SET quantity_on_hand = quantity_on_hand - ? WHERE part_id = ?",
-            (payload.quantity_consumed, payload.part_id)
+            "UPDATE erp_parts SET quantity_on_hand = quantity_on_hand - ? WHERE part_id = ? AND quantity_on_hand >= ?",
+            (payload.quantity_consumed, payload.part_id, payload.quantity_consumed)
         )
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=400, detail="Stock Violation: Concurrent depletion detected. Inventory floor breached.")
 
         # 4. Actuation: Append-Only Ledger Linkage
         txn_id = f"TXN-{uuid.uuid4().hex[:8].upper()}"
@@ -818,6 +1177,10 @@ def consume_part(
 
         # Commit Atomic Block
         conn.commit()
+        
+        # Background Evaluation Trigger
+        background_tasks.add_task(worker_evaluate_threshold, payload.part_id)
+        
         return {"status": "success", "message": f"Allocated {payload.quantity_consumed}x {payload.part_id} to {mwo_id}. Ledger ID: {txn_id}"}
 
     except HTTPException:
@@ -859,6 +1222,215 @@ def get_available_inventory(
     except Exception as e:
         logger.error(f"Inventory extraction failed: {e}")
         raise HTTPException(status_code=500, detail="Catalog extraction error.")
+# [PHASE 37] Procurement Authorization Matrix
+@app.get("/api/admin/procurement")
+def get_procurement_queue(
+    status: Optional[str] = Query(None, description="Filter by status (e.g., PENDING)"),
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    jwt_payload: dict = Depends(verify_jwt_token)
+):
+    role = jwt_payload.get("role")
+    if role not in ["ADMINISTRATOR", "ADMIN", "HM"]:
+        raise HTTPException(status_code=403, detail="RBAC Violation: Administrative clearance required.")
+        
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        
+        query = """
+            SELECT pq.procurement_id, pq.part_id, pq.triggered_at, pq.status, 
+                   p.nomenclature, p.quantity_on_hand, p.reorder_threshold, p.unit_cost
+            FROM erp_procurement_queue pq
+            JOIN erp_parts p ON pq.part_id = p.part_id
+        """
+        params = []
+        
+        if status:
+            query += " WHERE pq.status = ?"
+            params.append(status)
+            
+        query += " ORDER BY pq.triggered_at DESC LIMIT ? OFFSET ?"
+        params.extend([limit, offset])
+        
+        cursor.execute(query, tuple(params))
+        rows = [dict(row) for row in cursor.fetchall()]
+        
+        return {"status": "success", "data": rows}
+    except Exception as e:
+        logger.error(f"Procurement Queue Projection Error: {e}")
+        raise HTTPException(status_code=500, detail="Matrix synchronization failed.")
+    finally:
+        conn.close()
+
+@app.put("/api/admin/procurement/{procurement_id}/actuate")
+def actuate_procurement(
+    procurement_id: str,
+    payload: ProcurementActuation,
+    jwt_payload: dict = Depends(verify_jwt_token)
+):
+    role = jwt_payload.get("role")
+    if role not in ["ADMINISTRATOR", "ADMIN", "HM"]:
+        raise HTTPException(status_code=403, detail="RBAC Violation.")
+        
+    if payload.status not in ["APPROVED", "REJECTED", "FULFILLED"]:
+        raise HTTPException(status_code=400, detail="Invalid target status.")
+        
+    if payload.status == "APPROVED" and not payload.authorized_quantity:
+        raise HTTPException(status_code=400, detail="Structural Violation: APPROVED state requires an authorized_quantity.")
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        # Escalate to immediate write-lock to prevent read-modify-write race conditions
+        cursor.execute("BEGIN IMMEDIATE TRANSACTION")
+        
+        cursor.execute("SELECT status, part_id, authorized_quantity FROM erp_procurement_queue WHERE procurement_id = ?", (procurement_id,))
+        record = cursor.fetchone()
+        
+        if not record:
+            raise HTTPException(status_code=404, detail="Procurement record not found.")
+            
+        current_status = record["status"]
+        part_id = record["part_id"]
+        db_authorized_qty = record["authorized_quantity"]
+        
+        # State Machine Enforcement
+        if current_status in ["REJECTED", "FULFILLED"]:
+            raise HTTPException(status_code=400, detail=f"Terminal State Violation: Cannot transition from {current_status}.")
+        if current_status == "PENDING" and payload.status not in ["APPROVED", "REJECTED"]:
+            raise HTTPException(status_code=400, detail=f"State Violation: PENDING shifts to APPROVED or REJECTED.")
+        if current_status == "APPROVED" and payload.status != "FULFILLED":
+            raise HTTPException(status_code=400, detail=f"State Violation: APPROVED shifts to FULFILLED.")
+
+        # Actuation & Payload Binding
+        if payload.status == "APPROVED":
+            cursor.execute(
+                "UPDATE erp_procurement_queue SET status = ?, authorized_quantity = ? WHERE procurement_id = ?", 
+                (payload.status, payload.authorized_quantity, procurement_id)
+            )
+        else:
+            cursor.execute(
+                "UPDATE erp_procurement_queue SET status = ? WHERE procurement_id = ?", 
+                (payload.status, procurement_id)
+            )
+        
+        # Autonomous Inventory Hook (FULFILLED only)
+        if payload.status == "FULFILLED":
+            if not db_authorized_qty:
+                raise HTTPException(status_code=500, detail="Fatal execution error: FULFILLED triggered without prior authorized_quantity.")
+            
+            cursor.execute(
+                "UPDATE erp_parts SET quantity_on_hand = quantity_on_hand + ? WHERE part_id = ?",
+                (db_authorized_qty, part_id)
+            )
+            
+        conn.commit()
+        return {"status": "success", "message": f"Procurement {procurement_id} transitioned to {payload.status}."}
+        
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Procurement Actuation Error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error during actuation.")
+    finally:
+        conn.close()
+
+
+# [PHASE 40] Technician Execution Matrix
+@app.patch("/api/mwo/{mwo_id}/execute")
+def execute_mwo(
+    mwo_id: str,
+    payload: MWOExecutePayload,
+    jwt_payload: dict = Depends(verify_jwt_token)
+):
+    role = jwt_payload.get("role")
+    tech_id = jwt_payload.get("sub")
+    
+    if role not in ["TECHNICIAN", "TECH", "ADMINISTRATOR", "ADMIN"]:
+        raise HTTPException(status_code=403, detail="RBAC Violation: Clearance required to execute work orders.")
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("BEGIN IMMEDIATE TRANSACTION")
+        if payload.action == "START":
+            if role in ["ADMINISTRATOR", "ADMIN"]:
+                cursor.execute(
+                    "UPDATE work_orders SET status = 'IN_PROGRESS', execution_start = ? WHERE mwo_id = ? AND status IN ('ASSIGNED', 'UNASSIGNED', 'PAUSED')",
+                    (time.time(), mwo_id)
+                )
+            else:
+                cursor.execute(
+                    "UPDATE work_orders SET status = 'IN_PROGRESS', execution_start = ? WHERE mwo_id = ? AND status IN ('ASSIGNED', 'PAUSED') AND assigned_tech = ?",
+                    (time.time(), mwo_id, tech_id)
+                )
+
+            if cursor.rowcount == 0:
+                raise HTTPException(status_code=409, detail="State Conflict: Work order is either already locked, not assigned to you, or invalid state.")
+            
+            conn.commit()
+            return {"status": "success", "message": f"Execution Lock Acquired on {mwo_id}."}
+
+        elif payload.action == "COMPLETE":
+            cursor.execute("SELECT execution_start, accumulated_labor_seconds FROM work_orders WHERE mwo_id = ?", (mwo_id,))
+            row = cursor.fetchone()
+            if not row or not row["execution_start"]:
+                raise HTTPException(status_code=400, detail="Cannot complete a work order that hasn't started.")
+            
+            end_time = time.time()
+            start_time = row["execution_start"]
+            accumulated = row["accumulated_labor_seconds"] or 0.0
+            
+            total_labor_seconds = accumulated + (end_time - start_time)
+            labor_hours = total_labor_seconds / 3600.0
+
+            if role in ["ADMINISTRATOR", "ADMIN"]:
+                cursor.execute(
+                    "UPDATE work_orders SET status = 'PENDING_REVIEW', execution_end = ?, labor_hours = ?, manual_log = ? WHERE mwo_id = ? AND status = 'IN_PROGRESS'",
+                    (end_time, labor_hours, payload.manual_log, mwo_id)
+                )
+            else:
+                cursor.execute(
+                    "UPDATE work_orders SET status = 'PENDING_REVIEW', execution_end = ?, labor_hours = ?, manual_log = ? WHERE mwo_id = ? AND status = 'IN_PROGRESS' AND assigned_tech = ?",
+                    (end_time, labor_hours, payload.manual_log, mwo_id, tech_id)
+                )
+
+            if cursor.rowcount == 0:
+                raise HTTPException(status_code=409, detail="State Conflict: Cannot complete. Verification failed.")
+            
+            conn.commit()
+            return {"status": "success", "message": f"Execution completed for {mwo_id}.", "labor_hours": round(labor_hours, 4)}
+
+        elif payload.action == "PAUSE":
+            # Calculate elapsed time and add to accumulated_labor_seconds
+            cursor.execute("SELECT execution_start, accumulated_labor_seconds FROM work_orders WHERE mwo_id = ?", (mwo_id,))
+            row = cursor.fetchone()
+            if not row or not row["execution_start"]:
+                raise HTTPException(status_code=400, detail="Cannot pause a work order that hasn't started.")
+                
+            elapsed = time.time() - row["execution_start"]
+            new_accumulated = (row["accumulated_labor_seconds"] or 0.0) + elapsed
+            
+            cursor.execute(
+                "UPDATE work_orders SET status = 'PAUSED', execution_start = NULL, accumulated_labor_seconds = ? WHERE mwo_id = ? AND status = 'IN_PROGRESS' AND (assigned_tech = ? OR ? IN ('ADMINISTRATOR', 'ADMIN'))",
+                (new_accumulated, mwo_id, tech_id, role)
+            )
+            if cursor.rowcount == 0:
+                raise HTTPException(status_code=409, detail="State Conflict: Cannot pause.")
+            
+            conn.commit()
+            return {"status": "success", "message": f"Execution paused on {mwo_id}."}
+
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Execution Route Error: {e}")
+        raise HTTPException(status_code=500, detail="Internal execution error.")
     finally:
         conn.close()
 
@@ -878,7 +1450,7 @@ def get_technicians(jwt_payload: dict = Depends(verify_jwt_token)):
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
-        cursor.execute("SELECT user_id, name FROM users WHERE role = 'TECH' AND is_active = 1")
+        cursor.execute("SELECT id as user_id, name FROM erp_employees WHERE role = 'TECH' AND is_active = 1")
         rows = [dict(row) for row in cursor.fetchall()]
         return {"status": "success", "data": rows}
     except Exception as e:
@@ -887,17 +1459,42 @@ def get_technicians(jwt_payload: dict = Depends(verify_jwt_token)):
     finally:
         conn.close()
 
+@app.get("/api/mwo/hms")
+def get_hms(jwt_payload: dict = Depends(verify_jwt_token)):
+    role = jwt_payload.get("role")
+    if role not in ["ADMINISTRATOR", "ADMIN"]:
+        raise HTTPException(status_code=403, detail="RBAC Violation: Clearance required to view HM roster.")
+        
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id as user_id, name FROM erp_employees WHERE role = 'HM' AND is_active = 1")
+        rows = [dict(row) for row in cursor.fetchall()]
+        return {"status": "success", "data": rows}
+    except Exception as e:
+        logger.error(f"Failed to fetch hms: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error while fetching hms.")
+    finally:
+        conn.close()
+
 @app.get("/api/mwo")
-def get_mwo(limit: int = 50, offset: int = 0):
+def get_mwo(limit: int = 50, offset: int = 0, target_hm: Optional[str] = None):
     conn = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cols = "mwo_id, status, dm_urgency, hm_priority, description, assigned_tech, consumed_sku, manual_log, created_at, triaged_at, execution_start, execution_end, completed_at, start_date, equipment_id, location_id, material_cost, archival_pdf_path"
-        cursor.execute(
-            f"SELECT {cols} FROM work_orders WHERE status = 'UNASSIGNED' ORDER BY execution_start DESC LIMIT ? OFFSET ?",
-            (limit, offset)
-        )
+        cols = "w.mwo_id, w.status, w.dm_urgency, w.hm_priority, w.description, w.assigned_tech, w.assigned_hm_id, w.consumed_sku, w.manual_log, w.created_at, w.triaged_at, w.execution_start, w.execution_end, w.completed_at, w.start_date, w.equipment_id, e.nomenclature as equipment_nomenclature, w.location_id, w.material_cost, w.archival_pdf_path"
+        
+        base_query = f"SELECT {cols} FROM work_orders w LEFT JOIN erp_equipment e ON w.equipment_id = e.equipment_id WHERE w.status IN ('UNASSIGNED', 'ASSIGNED', 'PENDING_REVIEW', 'COMPLETED')"
+        params = []
+        if target_hm:
+            base_query += " AND w.assigned_hm_id = ?"
+            params.append(target_hm)
+            
+        base_query += " ORDER BY w.execution_start DESC LIMIT ? OFFSET ?"
+        params.extend([limit, offset])
+        
+        cursor.execute(base_query, tuple(params))
         rows = [dict(row) for row in cursor.fetchall()]
         return {"status": "success", "data": rows}
     except Exception as e:
@@ -909,25 +1506,90 @@ def get_mwo(limit: int = 50, offset: int = 0):
 
 async def archive_completed_mwo(mwo_data: dict):
     import asyncio
+    from fpdf import FPDF
+    
     queue_dir = "/app/archival_queue"
+    # Fallback for local Windows execution
+    if not os.path.exists("/app") and os.name == 'nt':
+        queue_dir = "C:\\app\\archival_queue"
+        
     os.makedirs(queue_dir, exist_ok=True)
     mwo_id = mwo_data.get("mwo_id", "UNKNOWN")
     
-    archival_payload = {
-        "document_type": "MWO_REPORT",
-        "payload": mwo_data
-    }
-    
     tmp_path = os.path.join(queue_dir, f"{mwo_id}.tmp")
-    final_path = os.path.join(queue_dir, f"{mwo_id}.json")
+    final_path = os.path.join(queue_dir, f"{mwo_id}.pdf")
     
     def sync_archive():
-        with open(tmp_path, 'w') as f:
-            json.dump(archival_payload, f, indent=2)
-            f.flush()
-            os.fsync(f.fileno())
-        os.replace(tmp_path, final_path)
+        pdf = FPDF()
+        pdf.add_page()
         
+        # Header
+        pdf.set_font("Arial", 'B', 16)
+        pdf.cell(0, 10, "Maintenance Work Order - Final Report", ln=True, align='C')
+        pdf.ln(10)
+        
+        # Details
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(50, 10, "MWO ID:")
+        pdf.set_font("Arial", '', 12)
+        pdf.cell(0, 10, str(mwo_id), ln=True)
+        
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(50, 10, "Equipment ID:")
+        pdf.set_font("Arial", '', 12)
+        pdf.cell(0, 10, str(mwo_data.get('equipment_id', 'N/A')), ln=True)
+        
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(50, 10, "Assigned Tech:")
+        pdf.set_font("Arial", '', 12)
+        pdf.cell(0, 10, str(mwo_data.get('assigned_tech', 'N/A')), ln=True)
+        
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(50, 10, "Labor Hours:")
+        pdf.set_font("Arial", '', 12)
+        labor = mwo_data.get('labor_hours')
+        pdf.cell(0, 10, f"{labor:.2f} hrs" if labor else 'N/A', ln=True)
+        
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(50, 10, "Completed At:")
+        pdf.set_font("Arial", '', 12)
+        pdf.cell(0, 10, str(mwo_data.get('completed_at', 'N/A')), ln=True)
+        
+        pdf.ln(5)
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(0, 10, "Initial Description:", ln=True)
+        pdf.set_font("Arial", '', 11)
+        pdf.multi_cell(0, 8, str(mwo_data.get('description', 'N/A')))
+        
+        pdf.ln(5)
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(0, 10, "Resolution Notes (Manual Log):", ln=True)
+        pdf.set_font("Arial", '', 11)
+        pdf.multi_cell(0, 8, str(mwo_data.get('manual_log', 'N/A')))
+        
+        # Save to correct archives folder
+        directory_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "archives/work_orders"))
+        os.makedirs(directory_path, exist_ok=True)
+        file_path = f"{directory_path}/{mwo_id}.pdf"
+        
+        pdf.output(tmp_path)
+        os.replace(tmp_path, file_path)
+        
+        # Link in DB
+        conn = get_db_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE work_orders SET archival_pdf_path = ? WHERE mwo_id = ?",
+                (file_path, mwo_id)
+            )
+            conn.commit()
+            logger.info(f"[WORKER SUCCESS] PDF archived for MWO: {mwo_id} at {file_path}")
+        except Exception as e:
+            logger.error(f"[WORKER ERROR] Failed to update archival path for MWO {mwo_id}: {e}")
+        finally:
+            conn.close()
+            
     await asyncio.to_thread(sync_archive)
 
 def reconcile_inventory_ledger(mwo_id: str, consumed_sku: str):
@@ -973,15 +1635,26 @@ def reconcile_inventory_ledger(mwo_id: str, consumed_sku: str):
             conn.close()
 
 @app.get("/api/mwo/assigned")
-def get_assigned_mwo(limit: int = Query(50), offset: int = Query(0), jwt_payload: dict = Depends(verify_jwt_token)):
+def get_assigned_mwo(
+    limit: int = Query(50), 
+    offset: int = Query(0), 
+    target_tech: str = Query(None),
+    jwt_payload: dict = Depends(verify_jwt_token)
+):
     user_id = jwt_payload.get("sub")
+    role = jwt_payload.get("role")
+    
+    # RBAC Impersonation Override
+    if target_tech and role in ["ADMINISTRATOR", "ADMIN", "HM"]:
+        user_id = target_tech
+        
     conn = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cols = "mwo_id, status, dm_urgency, hm_priority, description, assigned_tech, consumed_sku, manual_log, created_at, triaged_at, execution_start, execution_end, completed_at, start_date, equipment_id, location_id, material_cost, archival_pdf_path"
+        cols = "w.mwo_id, w.status, w.dm_urgency, w.hm_priority, w.description, w.assigned_tech, w.consumed_sku, w.manual_log, w.created_at, w.triaged_at, w.execution_start, w.execution_end, w.completed_at, w.start_date, w.equipment_id, e.nomenclature as equipment_nomenclature, w.location_id, l.name as location_nomenclature, w.material_cost, w.archival_pdf_path"
         cursor.execute(
-            f"SELECT {cols} FROM work_orders WHERE assigned_tech = ? AND status IN ('ASSIGNED', 'COMPLETED') ORDER BY mwo_id DESC LIMIT ? OFFSET ?",
+            f"SELECT {cols} FROM work_orders w LEFT JOIN erp_equipment e ON w.equipment_id = e.equipment_id LEFT JOIN erp_locations l ON w.location_id = l.id WHERE w.assigned_tech = ? AND w.status IN ('ASSIGNED', 'IN_PROGRESS', 'PAUSED', 'PENDING_REVIEW', 'COMPLETED') ORDER BY w.mwo_id DESC LIMIT ? OFFSET ?",
             (user_id, limit, offset)
         )
         rows = [dict(row) for row in cursor.fetchall()]
@@ -994,13 +1667,14 @@ def get_assigned_mwo(limit: int = Query(50), offset: int = Query(0), jwt_payload
             conn.close()
 
 class TechCompletePayload(BaseModel):
-    consumed_sku: Optional[str] = None
-    manual_log: str = Field(..., min_length=1)
+    resolution_notes: str = Field(..., min_length=1)
+    labor_hours: float = Field(..., gt=0)
 
 def archive_mwo_pdf_worker(mwo_id: str):
     """
     [ASYNC ISOLATED WORKER]
     Target: CPU-Bound PDF Generation & I/O Archival
+    Executes strictly off the primary FastAPI thread via BackgroundTasks.
     """
     conn = get_db_connection()
     try:
@@ -1010,7 +1684,8 @@ def archive_mwo_pdf_worker(mwo_id: str):
         # 1. Explicit Data Extraction (Strict Enumeration)
         cursor.execute(
             """
-            SELECT mwo_id, status, assigned_tech, manual_log 
+            SELECT mwo_id, status, assigned_tech, equipment_id, description,
+                   resolution_notes, labor_hours, completed_at
             FROM work_orders 
             WHERE mwo_id = ?
             """, 
@@ -1022,25 +1697,95 @@ def archive_mwo_pdf_worker(mwo_id: str):
             logger.error(f"[WORKER FATAL] MWO {mwo_id} not found during archival extraction.")
             return
 
-        # 2. Native Python PDF Byte-Compilation
+        # 1b. Extract consumed parts from inventory ledger
+        cursor.execute(
+            """
+            SELECT transaction_id, part_id, quantity_consumed, tech_id, transaction_timestamp
+            FROM erp_inventory_ledger
+            WHERE mwo_id = ?
+            ORDER BY transaction_timestamp ASC
+            """,
+            (mwo_id,)
+        )
+        consumed_parts = [dict(row) for row in cursor.fetchall()]
+
+        # 2. Native Python PDF Byte-Compilation (fpdf2 Spatial Doctrine)
         pdf = FPDF()
         pdf.add_page()
-        pdf.set_font("helvetica", size=12)
         
         # Header
-        pdf.set_font("helvetica", style="B", size=16)
-        pdf.cell(0, 10, text=f"MAINTENANCE WORK ORDER ARCHIVE", new_x="LMARGIN", new_y="NEXT", align="C")
-        pdf.ln(10)
-        
-        # Payload Iteration
-        pdf.set_font("helvetica", size=12)
-        for key in mwo_data.keys():
-            pdf.set_font("helvetica", style="B", size=12)
-            pdf.cell(50, 10, text=f"{key.replace('_', ' ').upper()}:", new_x="RIGHT", new_y="TOP")
-            
-            pdf.set_font("helvetica", size=12)
-            # Use multi_cell for unbounded text like manual_log
-            pdf.multi_cell(0, 10, text=str(mwo_data[key]), new_x="LMARGIN", new_y="NEXT")
+        pdf.set_font("helvetica", style="B", size=18)
+        pdf.cell(0, 12, text="MAINTENANCE WORK ORDER ARCHIVE", new_x="LMARGIN", new_y="NEXT", align="C")
+        pdf.ln(4)
+        pdf.set_font("helvetica", size=9)
+        pdf.set_text_color(120, 120, 120)
+        pdf.cell(0, 6, text=f"Generated from sealed ledger transaction", new_x="LMARGIN", new_y="NEXT", align="C")
+        pdf.set_text_color(0, 0, 0)
+        pdf.ln(8)
+
+        # Separator
+        pdf.set_draw_color(16, 185, 129)
+        pdf.set_line_width(0.5)
+        pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+        pdf.ln(6)
+
+        # MWO Detail Rows
+        detail_fields = [
+            ("MWO ID", mwo_data["mwo_id"]),
+            ("STATUS", mwo_data["status"]),
+            ("ASSIGNED TECH", mwo_data["assigned_tech"] or "N/A"),
+            ("EQUIPMENT ID", mwo_data["equipment_id"] or "N/A"),
+            ("COMPLETED AT", mwo_data["completed_at"] or "N/A"),
+            ("LABOR HOURS", str(mwo_data["labor_hours"] or "N/A")),
+        ]
+
+        for label, value in detail_fields:
+            pdf.set_font("helvetica", style="B", size=10)
+            pdf.cell(50, 8, text=f"{label}:", new_x="RIGHT", new_y="TOP")
+            pdf.set_font("helvetica", size=10)
+            pdf.cell(0, 8, text=str(value), new_x="LMARGIN", new_y="NEXT")
+
+        pdf.ln(4)
+
+        # Description
+        if mwo_data["description"]:
+            pdf.set_font("helvetica", style="B", size=10)
+            pdf.cell(0, 8, text="DESCRIPTION:", new_x="LMARGIN", new_y="NEXT")
+            pdf.set_font("helvetica", size=10)
+            pdf.multi_cell(0, 6, text=str(mwo_data["description"]), new_x="LMARGIN", new_y="NEXT")
+            pdf.ln(4)
+
+        # Resolution Notes
+        pdf.set_font("helvetica", style="B", size=10)
+        pdf.cell(0, 8, text="RESOLUTION NOTES:", new_x="LMARGIN", new_y="NEXT")
+        pdf.set_font("helvetica", size=10)
+        pdf.multi_cell(0, 6, text=str(mwo_data["resolution_notes"] or "N/A"), new_x="LMARGIN", new_y="NEXT")
+        pdf.ln(6)
+
+        # Consumed Parts Table
+        if consumed_parts:
+            pdf.set_draw_color(16, 185, 129)
+            pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+            pdf.ln(4)
+            pdf.set_font("helvetica", style="B", size=11)
+            pdf.cell(0, 8, text="CONSUMED PARTS LEDGER", new_x="LMARGIN", new_y="NEXT")
+            pdf.ln(2)
+
+            # Table header
+            pdf.set_font("helvetica", style="B", size=9)
+            pdf.cell(35, 7, text="TXN ID", new_x="RIGHT", new_y="TOP")
+            pdf.cell(30, 7, text="PART ID", new_x="RIGHT", new_y="TOP")
+            pdf.cell(15, 7, text="QTY", new_x="RIGHT", new_y="TOP")
+            pdf.cell(30, 7, text="TECH", new_x="RIGHT", new_y="TOP")
+            pdf.cell(0, 7, text="TIMESTAMP", new_x="LMARGIN", new_y="NEXT")
+
+            pdf.set_font("helvetica", size=9)
+            for part in consumed_parts:
+                pdf.cell(35, 6, text=str(part["transaction_id"]), new_x="RIGHT", new_y="TOP")
+                pdf.cell(30, 6, text=str(part["part_id"]), new_x="RIGHT", new_y="TOP")
+                pdf.cell(15, 6, text=str(part["quantity_consumed"]), new_x="RIGHT", new_y="TOP")
+                pdf.cell(30, 6, text=str(part["tech_id"]), new_x="RIGHT", new_y="TOP")
+                pdf.cell(0, 6, text=str(part["transaction_timestamp"] or ""), new_x="LMARGIN", new_y="NEXT")
 
         # 3. Defensive Physical I/O Archival
         directory_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "archives/work_orders"))
@@ -1060,6 +1805,42 @@ def archive_mwo_pdf_worker(mwo_id: str):
 
     except Exception as e:
         logger.error(f"[WORKER FATAL] PDF Archival failed for MWO {mwo_id}: {e}")
+    finally:
+        conn.close()
+
+@app.get("/api/mwo/archive/list")
+def get_archive_list(jwt_payload: dict = Depends(verify_jwt_token)):
+    role = jwt_payload.get("role")
+    user_id = jwt_payload.get("sub")
+    
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        
+        cols = "w.mwo_id, w.status, w.description, w.completed_at, w.equipment_id, e.nomenclature as equipment_nomenclature, w.archival_pdf_path"
+        base_query = f"SELECT {cols} FROM work_orders w LEFT JOIN erp_equipment e ON w.equipment_id = e.equipment_id WHERE w.status = 'COMPLETED'"
+        params = []
+        
+        if role == "DM":
+            base_query += " AND e.department_id = (SELECT department_id FROM erp_employees WHERE id = ?)"
+            params.append(user_id)
+        elif role == "HM":
+            base_query += " AND w.assigned_hm_id = ?"
+            params.append(user_id)
+        elif role == "TECH":
+            base_query += " AND w.assigned_tech = ?"
+            params.append(user_id)
+        elif role not in ["ADMINISTRATOR", "ADMIN"]:
+            raise HTTPException(status_code=403, detail="RBAC Violation: Invalid role clearance.")
+            
+        base_query += " ORDER BY w.completed_at DESC"
+        
+        cursor.execute(base_query, tuple(params))
+        rows = [dict(row) for row in cursor.fetchall()]
+        return {"status": "success", "data": rows}
+    except Exception as e:
+        logger.error(f"Failed to fetch archive list: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error while fetching archive list.")
     finally:
         conn.close()
 
@@ -1091,10 +1872,24 @@ def retrieve_mwo_archive(mwo_id: str, jwt_payload: dict = Depends(verify_jwt_tok
 
         # 2. Cryptographic Role Matrix Authorization
         if role not in ["ADMINISTRATOR", "ADMIN", "HM"]:
+            if role == "DM":
+                cursor.execute("SELECT department_id FROM erp_employees WHERE id = ?", (user_id,))
+                dm_record = cursor.fetchone()
+                if not dm_record:
+                    raise HTTPException(status_code=403, detail="RBAC Violation: DM profile not found.")
+                
+                dm_dept = dm_record['department_id']
+                cursor.execute(
+                    "SELECT e.department_id FROM work_orders w JOIN erp_equipment e ON w.equipment_id = e.equipment_id WHERE w.mwo_id = ?",
+                    (mwo_id,)
+                )
+                eq_record = cursor.fetchone()
+                if not eq_record or eq_record['department_id'] != dm_dept:
+                    raise HTTPException(status_code=403, detail="RBAC Violation: MWO does not belong to your department.")
             # Strict Tech Validation: Must be the exactly assigned operator
-            if role == "TECH" and record['assigned_tech'] != user_id:
+            elif role == "TECH" and record['assigned_tech'] != user_id:
                 raise HTTPException(status_code=403, detail="RBAC Violation: You are not authorized to view this structural archive.")
-            elif role not in ["TECH"]:
+            elif role not in ["TECH", "DM"]:
                  raise HTTPException(status_code=403, detail="RBAC Violation: Invalid role clearance.")
 
         # 3. Physical I/O Integrity Verification
@@ -1118,48 +1913,71 @@ def retrieve_mwo_archive(mwo_id: str, jwt_payload: dict = Depends(verify_jwt_tok
     finally:
         conn.close()
 
-@app.patch("/api/mwo/{mwo_id}/complete")
+@app.post("/api/mwo/{mwo_id}/complete")
 def complete_mwo(
     mwo_id: str, 
     payload: TechCompletePayload, 
     background_tasks: BackgroundTasks, 
     jwt_payload: dict = Depends(verify_jwt_token)
 ):
+    tech_id = jwt_payload.get("sub")
     role = jwt_payload.get("role")
-    if role not in ["ADMINISTRATOR", "ADMIN", "HM"]:
+    
+    if role not in ["ADMINISTRATOR", "ADMIN", "HM", "TECH"]:
         raise HTTPException(status_code=403, detail="RBAC Violation: Clearance required to finalize MWO.")
         
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
         
-        # 1. Optimal Existence & State Check
-        cursor.execute("SELECT mwo_id, status FROM work_orders WHERE mwo_id = ?", (mwo_id,))
+        # Initiate Atomic Block
+        cursor.execute("BEGIN TRANSACTION")
+        
+        # 1. RBAC Parity Check + State Validation
+        cursor.execute("SELECT status, assigned_tech FROM work_orders WHERE mwo_id = ?", (mwo_id,))
         mwo_record = cursor.fetchone()
         if not mwo_record:
             raise HTTPException(status_code=404, detail="MWO not found.")
         if mwo_record['status'] == 'COMPLETED':
             raise HTTPException(status_code=400, detail="MWO is already finalized.")
-            
-        # 2. State Mutation (Status -> COMPLETED)
+        if mwo_record['status'] != 'IN_PROGRESS':
+            raise HTTPException(status_code=400, detail=f"State Violation: MWO must be IN_PROGRESS to finalize. Current: {mwo_record['status']}")
+
+        # RBAC Enforcement: TECH-tier must be the assigned operator
+        if role in ["TECH"] and mwo_record['assigned_tech'] != tech_id:
+            raise HTTPException(status_code=403, detail="RBAC Violation: Technician is not the assigned operator for this MWO.")
+
+        # 2. Mutation: Status -> COMPLETED + Log Insertion
+        current_time = datetime.now(timezone.utc).isoformat()
         cursor.execute(
-            "UPDATE work_orders SET status = 'COMPLETED', manual_log = ? WHERE mwo_id = ?",
-            (payload.manual_log, mwo_id)
+            """
+            UPDATE work_orders 
+            SET status = 'COMPLETED', 
+                resolution_notes = ?, 
+                labor_hours = ?,
+                completed_at = ?
+            WHERE mwo_id = ?
+            """,
+            (payload.resolution_notes, payload.labor_hours, current_time, mwo_id)
         )
+        
+        # 3. Commit: Physically seal the database ledger
         conn.commit()
         
-        # 3. Asynchronous Thread Handoff
+        # 4. Asynchronous Dispatch (POST-COMMIT): PDF generation in background worker
         background_tasks.add_task(archive_mwo_pdf_worker, mwo_id)
         
         return {
             "status": "success", 
-            "message": f"MWO {mwo_id} finalized. PDF archival dispatched asynchronously."
+            "message": f"MWO {mwo_id} finalized. Resolution logged. PDF archival dispatched asynchronously."
         }
     except HTTPException:
+        conn.rollback()
         raise
     except Exception as e:
+        conn.rollback()
         logger.error(f"MWO Completion Error: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error.")
+        raise HTTPException(status_code=500, detail="Internal server error during MWO termination.")
     finally:
         conn.close()
 
@@ -1192,7 +2010,7 @@ async def update_mwo_v2(mwo_id: str, payload: MWOUpdate, background_tasks: Backg
             if not check_row['equipment_id']:
                 missing.append("equipment_id")
             if not check_row['start_date']:
-                missing.append("start_date")
+                update_data["start_date"] = current_time
 
             if missing:
                 raise HTTPException(
@@ -1378,7 +2196,6 @@ async def assign_order(payload: AssignUpdate):
 
 
 class NewMWO(BaseModel):
-    mwo_id: Optional[str] = None
     description: str
     equipment_id: str
     location_id: str
@@ -1386,41 +2203,56 @@ class NewMWO(BaseModel):
     assigned_tech: Optional[str] = None
     status: Optional[str] = "PENDING_REVIEW"
 
-@app.post("/api/mwo")
-async def create_mwo(payload: NewMWO):
+    @field_validator('equipment_id', 'location_id')
+    @classmethod
+    def reject_concatenated_strings(cls, v: str) -> str:
+        if '(' in v or 'Loc:' in v or ')' in v or ' ' in v:
+            raise ValueError("Foreign Keys must be absolute IDs, not concatenated display strings.")
+        return v
+
+@app.post("/mwo")
+async def create_mwo(payload: NewMWO, jwt_payload: dict = Depends(verify_jwt_token)):
+    role = jwt_payload.get("role")
+    creator_id = jwt_payload.get("sub")
+    
+    if role not in ["ADMINISTRATOR", "ADMIN", "DM"]:
+        raise HTTPException(status_code=403, detail="RBAC Violation: Unauthorized identity.")
+        
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
         current_time = time.time()
         
-        # Auto-generate ID if missing or empty
-        final_mwo_id = payload.mwo_id
-        if not final_mwo_id or not final_mwo_id.strip():
-            cursor.execute("SELECT mwo_id FROM work_orders WHERE mwo_id LIKE 'MWO-%' ORDER BY mwo_id DESC LIMIT 1")
-            last_record = cursor.fetchone()
-            next_num = 1
-            if last_record and last_record['mwo_id']:
-                try:
-                    # e.g. MWO-2026-003 -> 3
-                    parts = last_record['mwo_id'].split('-')
-                    if len(parts) >= 3:
-                        last_num = int(parts[-1])
-                        next_num = last_num + 1
-                except ValueError:
-                    pass
-            current_year = datetime.now(timezone.utc).year
-            final_mwo_id = f"MWO-{current_year}-{next_num:03d}"
+        # Auto-generate ID autonomously without client input
+        cursor.execute("SELECT mwo_id FROM work_orders WHERE mwo_id LIKE 'MWO-%' ORDER BY mwo_id DESC LIMIT 1")
+        last_record = cursor.fetchone()
+        next_num = 1
+        if last_record and last_record['mwo_id']:
+            try:
+                # e.g. MWO-2026-003 -> 3
+                parts = last_record['mwo_id'].split('-')
+                if len(parts) >= 3:
+                    last_num = int(parts[-1])
+                    next_num = last_num + 1
+            except ValueError:
+                pass
+        current_year = datetime.now(timezone.utc).year
+        final_mwo_id = f"MWO-{current_year}-{next_num:03d}"
             
         if not final_mwo_id or not final_mwo_id.strip():
             raise ValueError("Generated MWO ID is invalid.")
 
+        cursor.execute("SELECT assigned_hm_id FROM erp_equipment WHERE equipment_id = ?", (payload.equipment_id,))
+        eq_row = cursor.fetchone()
+        assigned_hm_id = eq_row['assigned_hm_id'] if eq_row else None
+
         cursor.execute(
             """
             INSERT INTO work_orders 
-            (mwo_id, description, equipment_id, location_id, dm_urgency, assigned_tech, status, hm_priority, execution_start) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (mwo_id, description, equipment_id, location_id, dm_urgency, assigned_tech, assigned_hm_id, status, hm_priority, execution_start, created_by) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (final_mwo_id, payload.description, payload.equipment_id, payload.location_id, payload.urgency, payload.assigned_tech, "UNASSIGNED", "Normal", current_time)
+            (final_mwo_id, payload.description, payload.equipment_id, payload.location_id, payload.urgency, payload.assigned_tech, assigned_hm_id, "UNASSIGNED", "Normal", current_time, creator_id)
         )
         conn.commit()
         
@@ -1995,19 +2827,353 @@ async def escalate_user(
     finally:
         conn.close()
 
+# [PHASE 36.1] MWO Queue & Assignment Dispatch
+
+@app.get("/api/work-orders/queue")
+def get_work_orders_queue(
+    limit: int = Query(25, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    status: Optional[str] = Query(None),
+    target_dm: Optional[str] = Query(None),
+    jwt_payload: dict = Depends(verify_jwt_token)
+):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        
+        role = jwt_payload.get("role")
+        user_id = jwt_payload.get("sub")
+        
+        active_user = target_dm if target_dm and role in ["ADMINISTRATOR", "ADMIN"] else user_id
+        active_role = "DM" if target_dm and role in ["ADMINISTRATOR", "ADMIN"] else role
+        
+        query = "SELECT COUNT(*) as total_count FROM work_orders w"
+        data_query = "SELECT w.mwo_id, w.status, w.dm_urgency, w.hm_priority, w.equipment_id, w.description, w.created_at FROM work_orders w"
+        params = []
+        
+        if active_role == "DM":
+            query += " JOIN erp_equipment e ON w.equipment_id = e.equipment_id WHERE e.department_id = (SELECT department_id FROM erp_employees WHERE id = ?)"
+            data_query += " JOIN erp_equipment e ON w.equipment_id = e.equipment_id WHERE e.department_id = (SELECT department_id FROM erp_employees WHERE id = ?)"
+            params.append(active_user)
+        else:
+            query += " WHERE 1=1"
+            data_query += " WHERE 1=1"
+        
+        if status:
+            query += " AND w.status = ?"
+            data_query += " AND w.status = ?"
+            params.append(status)
+            
+        cursor.execute(query, params)
+        count_row = cursor.fetchone()
+        total_count = count_row['total_count'] if count_row else 0
+        
+        data_query += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
+        params.extend([limit, offset])
+        
+        cursor.execute(data_query, params)
+        rows = [dict(row) for row in cursor.fetchall()]
+        return {"status": "success", "total_count": total_count, "data": rows}
+    except Exception as e:
+        logger.error(f"Failed to fetch MWO queue: {e}")
+        raise HTTPException(status_code=500, detail="Queue synchronization failed.")
+    finally:
+        conn.close()
+
+class AssignMWOPayload(BaseModel):
+    assigned_hm_id: str
+
+@app.patch("/api/mwo/{mwo_id}/assign")
+def assign_mwo(
+    mwo_id: str,
+    payload: AssignMWOPayload,
+    jwt_payload: dict = Depends(verify_jwt_token)
+):
+    role = jwt_payload.get("role")
+    if role not in ["ADMINISTRATOR", "ADMIN", "DM", "HM"]:
+        raise HTTPException(status_code=403, detail="RBAC Violation")
+        
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        
+        cursor.execute("BEGIN IMMEDIATE TRANSACTION")
+        
+        cursor.execute("SELECT is_active FROM erp_employees WHERE id = ?", (payload.assigned_hm_id,))
+        emp = cursor.fetchone()
+        
+        if not emp:
+            raise HTTPException(status_code=404, detail="Employee not found.")
+            
+        if not emp['is_active']:
+            raise HTTPException(status_code=400, detail="Structural Violation: Cannot assign to an inactive employee.")
+            
+        cursor.execute(
+            """
+            UPDATE work_orders 
+            SET assigned_tech = ?, status = 'ASSIGNED' 
+            WHERE mwo_id = ? AND status IN ('UNASSIGNED', 'UNASSIGNED_ESCALATION')
+            """,
+            (payload.assigned_hm_id, mwo_id)
+        )
+        
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="MWO not found or already assigned.")
+            
+        conn.commit()
+        return {"status": "success", "message": f"MWO {mwo_id} successfully assigned to {payload.assigned_hm_id}"}
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Assignment Actuation Error: {e}")
+        raise HTTPException(status_code=500, detail="Assignment failed.")
+    finally:
+        conn.close()
+
+@app.get("/api/employees")
+def get_employees(
+    role: Optional[str] = Query(None),
+    is_active: Optional[int] = Query(None),
+    jwt_payload: dict = Depends(verify_jwt_token)
+):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        query = "SELECT id, name, role, is_active FROM erp_employees WHERE 1=1"
+        params = []
+        if role:
+            query += " AND role = ?"
+            params.append(role)
+        if is_active is not None:
+            query += " AND is_active = ?"
+            params.append(is_active)
+            
+        cursor.execute(query, params)
+        rows = [dict(row) for row in cursor.fetchall()]
+        return {"status": "success", "data": rows}
+    finally:
+        conn.close()
+
 # --- FRONTEND DEPLOYMENT ---
 frontend_dist_path = os.path.join(_erp, 'maintenance_frontend', 'dist')
 
 if os.path.exists(frontend_dist_path):
     app.mount("/assets", StaticFiles(directory=os.path.join(frontend_dist_path, "assets")), name="assets")
     
-    @app.get("/{full_path:path}")
-    async def serve_frontend(full_path: str):
-        if full_path.startswith("api/"):
-            raise HTTPException(status_code=404, detail="API Route Not Found")
+# Personnel Bulk
+@app.get("/api/admin/ingest/personnel/template")
+def get_personnel_ingestion_template(jwt_payload: dict = Depends(verify_jwt_token)):
+    role = jwt_payload.get("role")
+    if role not in ["ADMINISTRATOR", "ADMIN"]:
+        raise HTTPException(status_code=403, detail="RBAC Violation.")
+    
+    conn = get_db_connection()
+    try:
+        c = conn.cursor()
+        c.execute("SELECT name FROM erp_departments")
+        departments = [row['name'] for row in c.fetchall()]
+        c.execute("SELECT name FROM erp_employees WHERE role='HM'")
+        hms = [row['name'] for row in c.fetchall()]
+    finally:
+        conn.close()
+        
+    headers = ["name", "role", "pin_code", "department_name", "reports_to_hm_name"]
+    return generate_xlsx_template(headers, "personnel_ingestion_template", departments=departments, hms=hms)
+
+@app.post("/api/admin/ingest/personnel/bulk")
+async def bulk_ingest_personnel(file: UploadFile = File(...), jwt_payload: dict = Depends(verify_jwt_token)):
+    role = jwt_payload.get("role")
+    if role not in ["ADMINISTRATOR", "ADMIN"]:
+        raise HTTPException(status_code=403, detail="RBAC Violation")
+        
+    if not file.filename.endswith('.xlsx'):
+        raise HTTPException(status_code=400, detail="Invalid file format.")
+        
+    content = await file.read()
+    try:
+        wb = openpyxl.load_workbook(filename=io.BytesIO(content), data_only=True)
+        ws = wb.active
+        header_row = next(ws.iter_rows(min_row=1, max_row=1, values_only=True))
+        rows = []
+        for row_values in ws.iter_rows(min_row=2, values_only=True):
+            if not any(row_values): continue
+            row_dict = dict(zip(header_row, row_values))
+            rows.append(row_dict)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to read XLSX: {e}")
+        
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("PRAGMA foreign_keys = ON")
+        
+        cursor.execute("SELECT id, name FROM erp_departments")
+        dep_map = {row['name'].lower().strip(): row['id'] for row in cursor.fetchall()}
+        
+        cursor.execute("SELECT id, name FROM erp_employees WHERE role = 'HM'")
+        hm_map = {row['name'].lower().strip(): row['id'] for row in cursor.fetchall()}
+
+        cursor.execute("BEGIN TRANSACTION")
+        
+        import bcrypt
+        
+        # Pass 1: Parse and validate all users, assign IDs, and update hm_map
+        parsed_users = []
+        for i, row in enumerate(rows):
+            row_data = {k.strip(): str(v).strip() if v is not None else None for k, v in row.items()}
             
-        path = os.path.join(frontend_dist_path, full_path)
-        if full_path and os.path.isfile(path):
-            return FileResponse(path)
+            name = row_data.get('name')
+            prole = row_data.get('role', '').upper()
+            pin = row_data.get('pin_code')
+            if not name or not prole or not pin:
+                raise ValueError(f"Row {i+2}: Missing required fields.")
+                
+            dep_name = row_data.get('department_name')
+            if not dep_name:
+                raise ValueError(f"Row {i+2}: Missing department_name")
+            if dep_name.lower() not in dep_map:
+                new_dep = f"DEP-{uuid.uuid4().hex[:6].upper()}"
+                cursor.execute("INSERT INTO erp_departments (id, name) VALUES (?, ?)", (new_dep, dep_name.strip()))
+                dep_map[dep_name.lower()] = new_dep
+            dep_id = dep_map[dep_name.lower()]
             
-        return FileResponse(os.path.join(frontend_dist_path, "index.html"))
+            new_id = f"U-{uuid.uuid4().hex[:6].upper()}"
+            
+            if prole in ['HM', 'DM', 'ADMINISTRATOR', 'ADMIN']:
+                hm_map[name.lower().strip()] = new_id
+                
+            parsed_users.append({
+                'row_index': i + 2,
+                'id': new_id,
+                'name': name,
+                'role': prole,
+                'pin': pin,
+                'department_id': dep_id,
+                'reports_to': row_data.get('reports_to_hm_name')
+            })
+
+        # Sort so that Managers are inserted before Technicians to satisfy Foreign Key constraints
+        parsed_users.sort(key=lambda u: 0 if u['role'] in ['ADMINISTRATOR', 'ADMIN', 'DM', 'HM'] else 1)
+
+        # Pass 2: Resolve HM relationships and insert
+        inserted_count = 0
+        for user in parsed_users:
+            hm_name = user['reports_to']
+            hm_id = None
+            if hm_name:
+                if hm_name.lower().strip() not in hm_map:
+                    raise ValueError(f"Row {user['row_index']}: Unknown HM Name '{hm_name}'")
+                hm_id = hm_map[hm_name.lower().strip()]
+                
+            if user['role'] in ['TECH', 'TECHNICIAN'] and not hm_id:
+                raise ValueError(f"Row {user['row_index']}: TECH must have a reports_to_hm_name")
+
+            pin_hash = bcrypt.hashpw(user['pin'].encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+            
+            cursor.execute(
+                "INSERT INTO erp_employees (id, name, role, pin_hash, is_active, department_id, reports_to_hm_id) VALUES (?, ?, ?, ?, 1, ?, ?)",
+                (user['id'], user['name'], user['role'], pin_hash, user['department_id'], hm_id)
+            )
+            inserted_count += 1
+            
+        conn.commit()
+        return {"status": "success", "message": f"Successfully ingested {inserted_count} personnel."}
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+# Parts Bulk
+@app.get("/api/admin/ingest/part/template")
+def get_part_ingestion_template(jwt_payload: dict = Depends(verify_jwt_token)):
+    role = jwt_payload.get("role")
+    if role not in ["ADMINISTRATOR", "ADMIN"]:
+        raise HTTPException(status_code=403, detail="RBAC Violation.")
+    
+    conn = get_db_connection()
+    try:
+        c = conn.cursor()
+        c.execute("SELECT name FROM erp_categories")
+        categories = [row['name'] for row in c.fetchall()]
+    finally:
+        conn.close()
+        
+    headers = ["nomenclature", "category_name", "quantity_on_hand", "reorder_threshold", "unit_cost"]
+    return generate_xlsx_template(headers, "part_ingestion_template", categories=categories)
+
+@app.post("/api/admin/ingest/part/bulk")
+async def bulk_ingest_part(file: UploadFile = File(...), jwt_payload: dict = Depends(verify_jwt_token)):
+    role = jwt_payload.get("role")
+    if role not in ["ADMINISTRATOR", "ADMIN"]:
+        raise HTTPException(status_code=403, detail="RBAC Violation")
+        
+    if not file.filename.endswith('.xlsx'):
+        raise HTTPException(status_code=400, detail="Invalid file format.")
+        
+    content = await file.read()
+    try:
+        wb = openpyxl.load_workbook(filename=io.BytesIO(content), data_only=True)
+        ws = wb.active
+        header_row = next(ws.iter_rows(min_row=1, max_row=1, values_only=True))
+        rows = []
+        for row_values in ws.iter_rows(min_row=2, values_only=True):
+            if not any(row_values): continue
+            row_dict = dict(zip(header_row, row_values))
+            rows.append(row_dict)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to read XLSX: {e}")
+        
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("PRAGMA foreign_keys = ON")
+        
+        cursor.execute("SELECT id, name FROM erp_categories")
+        cat_map = {row['name'].lower().strip(): row['id'] for row in cursor.fetchall()}
+
+        cursor.execute("BEGIN TRANSACTION")
+        
+        inserted_count = 0
+        for i, row in enumerate(rows):
+            row_data = {k.strip(): str(v).strip() if v is not None else None for k, v in row.items()}
+            
+            cat_name = row_data.get('category_name')
+            if not cat_name:
+                raise ValueError(f"Row {i+2}: Missing category_name")
+            if cat_name.lower() not in cat_map:
+                new_cat = f"CAT-{uuid.uuid4().hex[:6].upper()}"
+                cursor.execute("INSERT INTO erp_categories (id, name) VALUES (?, ?)", (new_cat, cat_name.strip()))
+                cat_map[cat_name.lower()] = new_cat
+            cat_id = cat_map[cat_name.lower()]
+
+            new_id = f"PRT-{uuid.uuid4().hex[:6].upper()}"
+            
+            cursor.execute(
+                "INSERT INTO erp_parts (part_id, nomenclature, category_id, quantity_on_hand, reorder_threshold, unit_cost) VALUES (?, ?, ?, ?, ?, ?)",
+                (new_id, row_data.get('nomenclature'), cat_id, int(row_data.get('quantity_on_hand', 0)), int(row_data.get('reorder_threshold', 5)), float(row_data.get('unit_cost', 0.0)))
+            )
+            inserted_count += 1
+            
+        conn.commit()
+        return {"status": "success", "message": f"Successfully ingested {inserted_count} parts."}
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+@app.get("/{full_path:path}")
+async def serve_frontend(full_path: str):
+    if full_path.startswith("api/"):
+        raise HTTPException(status_code=404, detail="API Route Not Found")
+        
+    path = os.path.join(frontend_dist_path, full_path)
+    if full_path and os.path.isfile(path):
+        return FileResponse(path)
+        
+    return FileResponse(os.path.join(frontend_dist_path, "index.html"))
+
+

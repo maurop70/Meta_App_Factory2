@@ -6,11 +6,14 @@ import AdminDataIngestion from '../components/AdminDataIngestion';
 import EnterpriseDataMatrix from '../components/EnterpriseDataMatrix';
 import EquipmentMatrix from '../components/EquipmentMatrix';
 import PartsMatrix from '../components/PartsMatrix';
+import ProcurementMatrix from '../components/ProcurementMatrix';
+import DispatchQueueTable from '../components/DispatchQueueTable';
+import TechDashboard from '../components/TechDashboard';
 
 const AdminConsole = () => {
   const { userRole, logout } = useAuth();
   const [refreshKey, setRefreshKey] = useState(0);
-  const [activeTab, setActiveTab] = useState('ingestion');
+  const [activeTab, setActiveTab] = useState('dispatch');
   const [ingestionTab, setIngestionTab] = useState('PERSONNEL');
 
   const handleMWOCreated = () => {
@@ -21,7 +24,9 @@ const AdminConsole = () => {
     { id: 'ingestion', label: 'Data Ingestion' },
     { id: 'dm', label: 'DM View' },
     { id: 'hm', label: 'HM View' },
-    { id: 'tech', label: 'Tech View' }
+    { id: 'tech', label: 'Tech View' },
+    { id: 'procurement', label: 'Procurement' },
+    { id: 'dispatch', label: 'Dispatch Queue' }
   ];
   
   return (
@@ -121,9 +126,15 @@ const AdminConsole = () => {
       )}
 
       {activeTab === 'tech' && (
-        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted, #64748b)', background: 'var(--bg-card, rgba(15, 23, 42, 0.85))', borderRadius: '12px', border: '1px solid var(--border)' }}>
-          Tech Dashboard Component Pending...
-        </div>
+        <TechDashboard />
+      )}
+      
+      {activeTab === 'procurement' && (
+        <ProcurementMatrix />
+      )}
+
+      {activeTab === 'dispatch' && (
+        <DispatchQueueTable />
       )}
       
     </div>

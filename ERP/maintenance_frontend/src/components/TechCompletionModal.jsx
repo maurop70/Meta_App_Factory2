@@ -9,8 +9,11 @@ const TechCompletionModal = ({ selectedMWO, closeModal, executeCompletion }) => 
 
   const isMounted = useRef(true);
   useEffect(() => {
+    isMounted.current = true;
     return () => { isMounted.current = false; };
   }, []);
+
+  if (!selectedMWO) return null;
 
   // Isolation Guard: Trap focus inside modal
   useEffect(() => {

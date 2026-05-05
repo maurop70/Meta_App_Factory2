@@ -28,7 +28,7 @@ export const triggerRefresh = async () => {
     }
     isRefreshing = true;
     try {
-        const { data } = await axios.post(`${API_BASE_URL}/user/refresh`, {}, { withCredentials: true });
+        const { data } = await axios.post(`${API_BASE_URL}/v1/auth/refresh`, {}, { withCredentials: true });
         setAccessToken(data.access_token);
         processQueue(null, data.access_token);
         return data.access_token;

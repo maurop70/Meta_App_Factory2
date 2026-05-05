@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
@@ -31,7 +32,11 @@ const Login = () => {
     setIsActuating(true);
     
     try {
-      const response = await api.post('/user/authenticate', { employee_id: employeeId, pin });
+      const response = await axios.post(
+        '/api/v1/auth/login', 
+        { emp_id: employeeId, pin },
+        { withCredentials: true }
+      );
       const { access_token } = response.data;
       
       const payloadBase64 = access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
