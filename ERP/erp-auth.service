@@ -1,0 +1,15 @@
+[Unit]
+Description=ERP Gateway Authentication Microservice (Port 9000)
+After=network.target
+
+[Service]
+User=root
+WorkingDirectory=/opt/erp/gateway
+Environment="PATH=/opt/erp/backend/venv/bin"
+ExecStart=/opt/erp/backend/venv/bin/python gateway_server.py
+
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

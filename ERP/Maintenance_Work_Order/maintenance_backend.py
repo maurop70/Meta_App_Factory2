@@ -1511,93 +1511,7 @@ def get_mwo(limit: int = 50, offset: int = 0, jwt_payload: dict = Depends(verify
         if conn:
             conn.close()
 
-async def archive_completed_mwo(mwo_data: dict):
-    import asyncio
-    from fpdf import FPDF
-    
-    queue_dir = "/app/archival_queue"
-    # Fallback for local Windows execution
-    if not os.path.exists("/app") and os.name == 'nt':
-        queue_dir = "C:\\app\\archival_queue"
-        
-    os.makedirs(queue_dir, exist_ok=True)
-    mwo_id = mwo_data.get("mwo_id", "UNKNOWN")
-    
-    tmp_path = os.path.join(queue_dir, f"{mwo_id}.tmp")
-    final_path = os.path.join(queue_dir, f"{mwo_id}.pdf")
-    
-    def sync_archive():
-        pdf = FPDF()
-        pdf.add_page()
-        
-        # Header
-        pdf.set_font("Arial", 'B', 16)
-        pdf.cell(0, 10, "Maintenance Work Order - Final Report", ln=True, align='C')
-        pdf.ln(10)
-        
-        # Details
-        pdf.set_font("Arial", 'B', 12)
-        pdf.cell(50, 10, "MWO ID:")
-        pdf.set_font("Arial", '', 12)
-        pdf.cell(0, 10, str(mwo_id), ln=True)
-        
-        pdf.set_font("Arial", 'B', 12)
-        pdf.cell(50, 10, "Equipment ID:")
-        pdf.set_font("Arial", '', 12)
-        pdf.cell(0, 10, str(mwo_data.get('equipment_id', 'N/A')), ln=True)
-        
-        pdf.set_font("Arial", 'B', 12)
-        pdf.cell(50, 10, "Assigned Tech:")
-        pdf.set_font("Arial", '', 12)
-        pdf.cell(0, 10, str(mwo_data.get('assigned_tech', 'N/A')), ln=True)
-        
-        pdf.set_font("Arial", 'B', 12)
-        pdf.cell(50, 10, "Labor Hours:")
-        pdf.set_font("Arial", '', 12)
-        labor = mwo_data.get('labor_hours')
-        pdf.cell(0, 10, f"{labor:.2f} hrs" if labor else 'N/A', ln=True)
-        
-        pdf.set_font("Arial", 'B', 12)
-        pdf.cell(50, 10, "Completed At:")
-        pdf.set_font("Arial", '', 12)
-        pdf.cell(0, 10, str(mwo_data.get('completed_at', 'N/A')), ln=True)
-        
-        pdf.ln(5)
-        pdf.set_font("Arial", 'B', 12)
-        pdf.cell(0, 10, "Initial Description:", ln=True)
-        pdf.set_font("Arial", '', 11)
-        pdf.multi_cell(0, 8, str(mwo_data.get('description', 'N/A')))
-        
-        pdf.ln(5)
-        pdf.set_font("Arial", 'B', 12)
-        pdf.cell(0, 10, "Resolution Notes (Manual Log):", ln=True)
-        pdf.set_font("Arial", '', 11)
-        pdf.multi_cell(0, 8, str(mwo_data.get('manual_log', 'N/A')))
-        
-        # Save to correct archives folder
-        directory_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "archives/work_orders"))
-        os.makedirs(directory_path, exist_ok=True)
-        file_path = f"{directory_path}/{mwo_id}.pdf"
-        
-        pdf.output(tmp_path)
-        os.replace(tmp_path, file_path)
-        
-        # Link in DB
-        conn = get_db_connection()
-        try:
-            cursor = conn.cursor()
-            cursor.execute(
-                "UPDATE work_orders SET archival_pdf_path = ? WHERE mwo_id = ?",
-                (file_path, mwo_id)
-            )
-            conn.commit()
-            logger.info(f"[WORKER SUCCESS] PDF archived for MWO: {mwo_id} at {file_path}")
-        except Exception as e:
-            logger.error(f"[WORKER ERROR] Failed to update archival path for MWO {mwo_id}: {e}")
-        finally:
-            conn.close()
-            
-    await asyncio.to_thread(sync_archive)
+
 
 def reconcile_inventory_ledger(mwo_id: str, consumed_sku: str):
     # REMOVED: async keyword (Forces Starlette threadpool delegation)
@@ -1677,7 +1591,7 @@ class TechCompletePayload(BaseModel):
     resolution_notes: str = Field(..., min_length=1)
     labor_hours: float = Field(..., gt=0)
 
-def archive_mwo_pdf_worker(mwo_id: str):
+def archive_mwo_pdf_worker(mwo_id: str, resolution_notes: str, labor_hours: float):
     """
     [ASYNC ISOLATED WORKER]
     Target: CPU-Bound PDF Generation & I/O Archival
@@ -1688,17 +1602,27 @@ def archive_mwo_pdf_worker(mwo_id: str):
         cursor = conn.cursor()
         logger.info(f"[WORKER ENGAGED] Initiating asynchronous PDF archival for MWO: {mwo_id}")
         
+        import time
+        current_time = time.time()
+        
         # 1. Explicit Data Extraction (Strict Enumeration)
         cursor.execute(
             """
-            SELECT mwo_id, status, assigned_tech, equipment_id, description,
-                   resolution_notes, labor_hours, completed_at
+            SELECT mwo_id, status, assigned_tech, equipment_id, description
             FROM work_orders 
             WHERE mwo_id = ?
             """, 
             (mwo_id,)
         )
-        mwo_data = cursor.fetchone()
+        row = cursor.fetchone()
+        if not row:
+            logger.error(f"[WORKER FATAL] MWO {mwo_id} not found during archival extraction.")
+            return
+            
+        mwo_data = dict(row)
+        mwo_data["resolution_notes"] = resolution_notes
+        mwo_data["labor_hours"] = labor_hours
+        mwo_data["completed_at"] = current_time
         
         if not mwo_data:
             logger.error(f"[WORKER FATAL] MWO {mwo_id} not found during archival extraction.")
@@ -1802,10 +1726,14 @@ def archive_mwo_pdf_worker(mwo_id: str):
         pdf.output(file_path)
         logger.info(f"[WORKER I/O] Byte-compilation physically written to {file_path}")
 
-        # 4. State Mutation (Schema Linkage)
+        # 4. State Mutation (Schema Linkage & Time Telemetry)
         cursor.execute(
-            "UPDATE work_orders SET archival_pdf_path = ? WHERE mwo_id = ?",
-            (file_path, mwo_id)
+            """
+            UPDATE work_orders 
+            SET archival_pdf_path = ?, status = 'COMPLETED', completed_at = ?, resolution_notes = ?, labor_hours = ? 
+            WHERE mwo_id = ?
+            """,
+            (file_path, current_time, resolution_notes, labor_hours, mwo_id)
         )
         conn.commit()
         logger.info(f"[WORKER SUCCESS] Archival cycle finalized for MWO: {mwo_id}")
@@ -1920,7 +1848,7 @@ def retrieve_mwo_archive(mwo_id: str, jwt_payload: dict = Depends(verify_jwt_tok
     finally:
         conn.close()
 
-@app.post("/api/mwo/{mwo_id}/complete")
+@app.post("/mwo/{mwo_id}/complete", status_code=202)
 def complete_mwo(
     mwo_id: str, 
     payload: TechCompletePayload, 
@@ -1937,8 +1865,6 @@ def complete_mwo(
     try:
         cursor = conn.cursor()
         
-        # Initiate Atomic Block
-        cursor.execute("BEGIN TRANSACTION")
         
         # 1. RBAC Parity Check + State Validation
         cursor.execute("SELECT status, assigned_tech FROM work_orders WHERE mwo_id = ?", (mwo_id,))
@@ -1947,37 +1873,21 @@ def complete_mwo(
             raise HTTPException(status_code=404, detail="MWO not found.")
         if mwo_record['status'] == 'COMPLETED':
             raise HTTPException(status_code=400, detail="MWO is already finalized.")
-        if mwo_record['status'] != 'IN_PROGRESS':
-            raise HTTPException(status_code=400, detail=f"State Violation: MWO must be IN_PROGRESS to finalize. Current: {mwo_record['status']}")
+        if mwo_record['status'] not in ['IN_PROGRESS', 'PENDING_REVIEW']:
+            raise HTTPException(status_code=400, detail=f"State Violation: MWO must be IN_PROGRESS or PENDING_REVIEW to finalize. Current: {mwo_record['status']}")
 
         # RBAC Enforcement: TECH-tier must be the assigned operator
         if role in ["TECH"] and mwo_record['assigned_tech'] != tech_id:
             raise HTTPException(status_code=403, detail="RBAC Violation: Technician is not the assigned operator for this MWO.")
 
-        # 2. Mutation: Status -> COMPLETED + Log Insertion
-        current_time = datetime.now(timezone.utc).isoformat()
-        cursor.execute(
-            """
-            UPDATE work_orders 
-            SET status = 'COMPLETED', 
-                resolution_notes = ?, 
-                labor_hours = ?,
-                completed_at = ?
-            WHERE mwo_id = ?
-            """,
-            (payload.resolution_notes, payload.labor_hours, current_time, mwo_id)
-        )
+        # 2. Asynchronous Dispatch: PDF generation & DB completion in background worker
+        background_tasks.add_task(archive_mwo_pdf_worker, mwo_id, payload.resolution_notes, payload.labor_hours)
         
-        # 3. Commit: Physically seal the database ledger
-        conn.commit()
-        
-        # 4. Asynchronous Dispatch (POST-COMMIT): PDF generation in background worker
-        background_tasks.add_task(archive_mwo_pdf_worker, mwo_id)
-        
-        return {
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=202, content={
             "status": "success", 
-            "message": f"MWO {mwo_id} finalized. Resolution logged. PDF archival dispatched asynchronously."
-        }
+            "message": f"MWO {mwo_id} accepted. PDF archival and finalization dispatched asynchronously."
+        })
     except HTTPException:
         conn.rollback()
         raise

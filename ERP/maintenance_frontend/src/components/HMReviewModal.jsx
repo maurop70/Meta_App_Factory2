@@ -54,6 +54,7 @@ const HMReviewModal = ({ selectedMWO, closeModal, executeApproval }) => {
 
   const modalContent = (
     <div 
+      className="modal-backdrop"
       role="dialog"
       aria-modal="true"
       onClick={handleBackdropClick}
