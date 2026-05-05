@@ -1,0 +1,117 @@
+HR Journal APRIL
+
+From 04/01 to 04/12
+
+Employes Pulse Check
+
+I spent approximately 1.5 hours each day in the production room to monitor the production process and identify areas for improvement in personnel organization to enhance productivity. I engaged in conversations with employees from both shifts, who expressed satisfaction with their jobs and relationships with colleagues. During a meeting with Jessica Vallejos, she shared insights about the strict yet respectful management style of Dousander Bedoya, the manager. While there is pressure to perform, it is not enforced through harshness. The relationships among managers, supervisors, and workers are cordial and respectful.
+
+Identified Issues
+
+-New baggers were implemented with no training from the manufacturer. The manufacturer is not helpful, so the mechanics are figuring things out themselves. A lot of issues and a lot of downtime
+-There are some issues in the bulk line as will be described below
+
+How to address those issues
+
+-Looking for a new mechanic to replace Moises Benitez
+-Cesar (Head of the maintenance department) will train the people who carry out the morning setup in the bulk line
+
+
+04/13/2026
+
+General
+
+Meeting with QA Manager and all staff to inform about the SQF Audit that will take place tomorrow 04/14/26
+
+Cesar (Head of the department confirmed he came in the morning to make sure the Bulk set up is correct and reinforced some elements of the setting up
+
+DIscussed with Cesar if we should issue a warning for Moises Benitez (Mechanic)
+
+
+Terminations
+
+? Zairo Rodriguez gave one week notice. He is leaving the company on the 04/15/26 (his last day with Heinlein Foods. I started the research of new candidates
+? I am still looking for a Mechanic
+
+
+04/14/2026
+
+Melissa Rivera Cabrera quit because too much pressure from the production Supervisor (Anggi) and QA assistant. She had difficulties in adapting to the pace of the production and to the following of the rules
+
+04/15/2026
+
+General
+
+Meeting with Production Manager and Production Planning Supervisor.  There is a communication issue between them. I will be the “man in the middle” to facilitate the communication and I have to define the limits  within which The Planning supervisor can talk to the Production Manager’s workers
+
+I spoke to the head of Maintenance to implement starting today the use of the Maintenance Work Order form. I am preparing an app dedicated to it. The purpose: accountability
+
+04/16/26
+
+Meeting with Production Manager, Planning Manager, Maintenance Manager to pinpoint the reasons to such a low productivity. Issues identified:
+-For different reasons that I list below, the conveyor belt is running half of the speed. This exposes the fruit to room temperature too long. To address this first issue and increase the productivity at once, we should fill out only the end part of the first conveyor belt with frozen fruit (not all of it), but the part we are filling must be FULLY filled out. This would allow to have 10-20% more product (for banana) and maybe 30% more of strawberries go through the line and have less exposure to room environment. This should happen immediately until we take care of the list below.
+-Couverture- We are trying a new formulations of Peanut Butter to reduce its viscosity, and it seems to work.
+
+Equipment:
+-Enrober - we must increase the flow of chocolate/peanut butter flowing down the enrober Cesar suggested to turn the enrober’s container into a sort of funnel. That would address the current problem of the product not flowing out of the enrober fast and homogeneously  enough (because of the not flat floor of the button part of the enrober’s container which causes the coating to flow inconsistently)
+-Pool - not enough coverture touching the bottom part of the fruit. Kby already gave instructions to order a new metal piece
+-Temperature inside the Hoods - the cold temperature is lost from the sides of the conveyor belt. We need to cover these sides to allow the cold temperature to stay inside the hoods. I also suggested a thermometer placed in the hood itself to be aware of the actual temperature inside.
+
+All those modifications would allow to move the belt faster.
+
+-Bagger -  3 hoppers are not working. We need to call the supplier for parts. In the meantime, we need to create a barrier to prevent the product from falling into those hoppers (this is generating unnecessary waste)
+
+-Mauro Petrini is working on a system to track digitally the Maintenance Work Orders. This will create accountability for the Maintenance Department and improve the prioritization of the tasks 
+
+04/20/2026
+HR was communicated  the content of the Complain Box (our anonymous complaint channel). Some comments express concern about how the pressure to reach goals are perceived as exploitation by some employees, the necessity to improve the rotation policy and to clarify the break policy.
+
+04/30/2026
+
+A case of Sexual Harrassment has been reported by Dousander who saw a warehouse worker asking a production worker to turn around and commenting of her physicality. The worker was immediately reprehended by the HR and a warning letter was issue.
+
+Corrective Action: a new official document (RKF 15K) has been issued to reiterate the company policy and procedures about Harassment and the no tolerance policy. In the week starting on 05/11/2026 a training on the topic will be held with all the employees. During the meeting it will be also discussed the difference between harassment and strict management and reiterate the already established break policy.
+
+New Hires April 
+
+Production Line:
+Karel Sobres Gonzalez ( Rehire)
+Marta Valles
+Daineleys Fernandez
+Sandra Morales Chorque (Rehire)
+Donald Jean Baptiste
+
+Mechanic:
+Miguel Perez Ortiz
+
+Warehouse:
+Alfonso Jack
+
+Quality Assurance:
+Dexis Rodriguez
+
+Terminated April
+
+Production:
+Marcoleonis Fernandez
+Jorge Figueredo
+
+Warehouse/Logistics:
+Zairo Rodriguez
+
+Mechanic:
+Moises Benitez
+
+
+Reportable Injuries according to OSHA rule
+
+Kauan Rufino scratched his fingers in the conveyor belt of the bagger and went to MDNow to make sure the wound was not infected.
+
+Corrective Action: The Mecanics built a protection to prevent somebody mistakingly gets with the hand too close to the belt
+
+Alba Perez-While walking and passing below the bagger she hit her head on the corner of the screen of the bagger.
+
+Corrective Action: The mechanics with cover the pointy corner of the screen
+
+No other Issues relevant to safety emerged in April
+

@@ -62,8 +62,8 @@ app = FastAPI(title="Antigravity Meta App Factory API", version="3.0")
 # ── CORS ──────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:5174", "http://localhost:3000"],
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -207,6 +207,23 @@ async def get_sentinel_log():
     except Exception as e:
         logger.error(f"Error fetching sentinel logs: {e}")
         return {"log": []}
+
+@app.post("/api/archiver/run")
+def run_personnel_archiver():
+    try:
+        script_path = os.path.join(SCRIPT_DIR, "agents", "personnel_archiver", "main.py")
+        if not os.path.exists(script_path):
+            return JSONResponse(status_code=404, content={"error": "Archiver script not found"})
+        
+        import subprocess
+        result = subprocess.run([sys.executable, script_path], capture_output=True, text=True)
+        if result.returncode != 0:
+            return JSONResponse(status_code=500, content={"error": result.stderr or "Archiver execution failed", "output": result.stdout})
+        
+        return {"status": "success", "message": "Archiver executed successfully", "output": result.stdout}
+    except Exception as e:
+        logger.error(f"Archiver Error: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
 # ── AETHER COMMAND SUITE ENDPOINTS ────────────────────────────
 class ExplainRequest(BaseModel):
