@@ -1,257 +1,357 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import TechCompletionModal from './TechCompletionModal';
+import TechMWODetailModal from './TechMWODetailModal';
 import TechConsumePartModal from './TechConsumePartModal';
+import { useAuth } from '../context/AuthContext';
 
 const TechDashboard = () => {
+  const { userRole, jwtPayload } = useAuth();
   const [workOrders, setWorkOrders] = useState([]);
   const [status, setStatus] = useState({ type: 'loading', message: 'Loading Assigned Work Orders...' });
-  const [selectedMWO, setSelectedMWO] = useState(null);
-  const [page, setPage] = useState(0);
-  const [isDownloading, setIsDownloading] = useState(false);
+  const [actuatingMwo, setActuatingMwo] = useState({});
+  const [offlineLedger, setOfflineLedger] = useState([]);
+  
+  // Modals
+  const [selectedDetailMWO, setSelectedDetailMWO] = useState(null);
   const [consumeMwoId, setConsumeMwoId] = useState(null);
+  const techId = jwtPayload?.sub || 'Unknown Tech';
+  const [technicianRoster, setTechnicianRoster] = useState([]);
+  const [targetTech, setTargetTech] = useState('');
+  const navigate = useNavigate();
 
-  const executeArchiveRetrieval = async (mwoId) => {
-    if (isDownloading) return; // Prevent race conditions
-    
+  const fetchRoster = async () => {
     try {
-      setIsDownloading(true);
-      
-      // 1. Authenticated Blob Hydration
-      const response = await api.get(`/mwo/${mwoId}/archive`, {
-        responseType: 'blob' // CRITICAL: Bypass JSON parsing
-      });
-
-      // 2. Dynamic Memory Mount
-      const blob = new Blob([response.data], { type: 'application/pdf' });
-      const downloadUrl = window.URL.createObjectURL(blob);
-
-      // 3. Phantom DOM Actuation
-      const phantomLink = document.createElement('a');
-      phantomLink.href = downloadUrl;
-      phantomLink.setAttribute('download', `ARCHIVE_${mwoId}.pdf`);
-      document.body.appendChild(phantomLink);
-      phantomLink.click();
-
-      // 4. Synchronous Teardown & Memory Purge
-      phantomLink.remove();
-      window.URL.revokeObjectURL(downloadUrl);
-
-    } catch (error) {
-      console.error("Archive Retrieval Execution Error:", error);
-      alert("Failed to retrieve structural archive. Verify RBAC clearance and file integrity.");
-    } finally {
-      setIsDownloading(false);
-    }
-  };
-
-  const fetchAssignedMWO = async () => {
-    try {
-      const response = await api.get(`/mwo/assigned?limit=50&offset=${page * 50}`);
-      const dbPayload = response.data.data || response.data;
-      setWorkOrders(Array.isArray(dbPayload) ? dbPayload : []);
-      setStatus({ type: 'success', message: '' });
+      const response = await api.get('/mwo/technicians');
+      setTechnicianRoster(response.data.data || response.data || []);
     } catch (err) {
-      console.warn("Network fragmentation detected.", err);
-      setStatus({ type: 'error', message: 'Failed to connect to backend' });
+      console.warn("Failed to fetch roster", err);
     }
   };
 
   useEffect(() => {
+    if (['ADMINISTRATOR', 'ADMIN', 'HM'].includes(userRole)) {
+      fetchRoster();
+    }
+  }, [userRole]);
+
+  const syncLedgerState = useCallback(() => {
+    const queue = JSON.parse(localStorage.getItem('mwoExecutionQueue') || '[]');
+    setOfflineLedger(queue);
+  }, []);
+
+  const fetchAssignedMWO = useCallback(async () => {
+    try {
+      const url = targetTech ? `/mwo/assigned?limit=50&offset=0&target_tech=${encodeURIComponent(targetTech)}` : `/mwo/assigned?limit=50&offset=0`;
+      const response = await api.get(url);
+      const dbPayload = response.data.data || response.data;
+      const rawOrders = Array.isArray(dbPayload) ? dbPayload : [];
+      setWorkOrders(rawOrders.filter(o => o.status !== 'COMPLETED'));
+      setStatus({ type: 'success', message: '' });
+    } catch (err) {
+      console.warn("Network fragmentation detected.", err);
+      if (workOrders.length === 0) {
+        setStatus({ type: 'error', message: 'Offline Mode: Waiting for connection...' });
+      }
+    }
+  }, [targetTech, workOrders.length]);
+
+  const flushQueue = useCallback(async () => {
+    if (!navigator.onLine) return;
+    const queue = JSON.parse(localStorage.getItem('mwoExecutionQueue') || '[]');
+    if (queue.length === 0) return;
+    
+    let newQueue = [...queue];
+    let didChange = false;
+
+    for (let i = 0; i < queue.length; i++) {
+      const item = queue[i];
+      if (item.errorMsg) continue; // Skip items requiring manual resolution
+
+      try {
+        await api.patch(`/mwo/${item.mwo_id}/execute`, item.payload);
+        newQueue = newQueue.filter(q => q.id !== item.id);
+        didChange = true;
+      } catch (err) {
+        if (!err.response || err.code === 'ERR_NETWORK' || err.response?.status === 504 || err.response?.status === 502) {
+           break; // Stop automated flush on physical network partition
+        } else {
+           // Permanent Backend Rejection -> Shift to SYNC_FAILED
+           const failedIndex = newQueue.findIndex(q => q.id === item.id);
+           if (failedIndex > -1) {
+             newQueue[failedIndex].errorMsg = err.response.data.detail || "Backend rejection error.";
+             didChange = true;
+           }
+        }
+      }
+    }
+    
+    if (didChange) {
+      localStorage.setItem('mwoExecutionQueue', JSON.stringify(newQueue));
+      syncLedgerState();
+      fetchAssignedMWO(); 
+    }
+  }, [fetchAssignedMWO, syncLedgerState]);
+
+  useEffect(() => {
+    syncLedgerState();
     fetchAssignedMWO();
-  }, [page]);
+    window.addEventListener('online', flushQueue);
+    const interval = setInterval(flushQueue, 5000); // 5 sec background watchdog
+    
+    return () => {
+      window.removeEventListener('online', flushQueue);
+      clearInterval(interval);
+    };
+  }, [fetchAssignedMWO, flushQueue, syncLedgerState]);
 
-  const handleExecute = (mwo) => {
-    setSelectedMWO(mwo);
+  // Keep the modal's state completely synchronized with the latest ledger representation
+  useEffect(() => {
+    if (selectedDetailMWO) {
+      const updatedMWO = workOrders.find(m => m.mwo_id === selectedDetailMWO.mwo_id);
+      if (updatedMWO && updatedMWO.status !== selectedDetailMWO.status) {
+        setSelectedDetailMWO(updatedMWO);
+      }
+    }
+  }, [workOrders, selectedDetailMWO]);
+
+  const executeAction = async (mwo_id, action, additionalPayload = {}) => {
+    setActuatingMwo(prev => ({ ...prev, [mwo_id]: true }));
+    const payload = { action, ...additionalPayload };
+    
+    try {
+      await api.patch(`/mwo/${mwo_id}/execute`, payload);
+      await fetchAssignedMWO();
+      if (action === 'COMPLETE') {
+        setSelectedDetailMWO(null);
+      }
+    } catch (err) {
+      if (!err.response || err.code === 'ERR_NETWORK' || err.response?.status === 504 || err.response?.status === 502) {
+        const queue = JSON.parse(localStorage.getItem('mwoExecutionQueue') || '[]');
+        queue.push({
+          id: Date.now().toString() + Math.random().toString(36).substring(2, 5),
+          mwo_id,
+          payload,
+          timestamp: Date.now()
+        });
+        localStorage.setItem('mwoExecutionQueue', JSON.stringify(queue));
+        syncLedgerState(); // Triggers SYNC_PENDING overlay natively
+      } else {
+        alert(err.response?.data?.detail || "Execution conflict detected.");
+      }
+    } finally {
+      setActuatingMwo(prev => ({ ...prev, [mwo_id]: false }));
+    }
   };
 
-  const closeModal = () => {
-    setSelectedMWO(null);
+  const retrySync = (ledgerItem) => {
+    const queue = JSON.parse(localStorage.getItem('mwoExecutionQueue') || '[]');
+    const idx = queue.findIndex(q => q.id === ledgerItem.id);
+    if (idx > -1) {
+      delete queue[idx].errorMsg;
+      localStorage.setItem('mwoExecutionQueue', JSON.stringify(queue));
+      syncLedgerState();
+      flushQueue(); 
+    }
   };
 
-  const executeCompletion = async (mwo_id, payload) => {
-    await api.patch(`/mwo/${mwo_id}/complete`, payload);
-    await fetchAssignedMWO();
+  const discardSync = (ledgerItem) => {
+    const queue = JSON.parse(localStorage.getItem('mwoExecutionQueue') || '[]');
+    const newQueue = queue.filter(q => q.id !== ledgerItem.id);
+    localStorage.setItem('mwoExecutionQueue', JSON.stringify(newQueue));
+    syncLedgerState();
   };
 
-  if (status.type === 'loading') return <div className="erp-status-message loading">{status.message}</div>;
-  if (status.type === 'error') return <div className="erp-status-message error">{status.message}</div>;
+  if (status.type === 'loading') return <div style={{ color: '#94a3b8', padding: '2rem' }}>{status.message}</div>;
 
   return (
-    <div style={{ background: 'var(--bg-card, rgba(15, 23, 42, 0.85))', border: '1px solid var(--border, rgba(16, 185, 129, 0.15))', borderRadius: '12px', padding: '1.5rem', backdropFilter: 'blur(8px)', fontFamily: "var(--font, Inter)" }}>
-      <style>{`
-        .btn-execute {
-          background: rgba(16, 185, 129, 0.15);
-          color: #34d399;
-          border: 1px solid rgba(16, 185, 129, 0.3);
-          padding: 0.4rem 0.8rem;
-          border-radius: 6px;
-          cursor: pointer;
-          font-size: 0.7rem;
-          font-weight: 600;
-          transition: all 0.2s;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-        }
-        .btn-execute:hover {
-          background: var(--accent-green, #10b981);
-          color: #fff;
-        }
-        
-        .responsive-matrix {
-          width: 100%;
-          text-align: left;
-          border-collapse: collapse;
-          font-size: 0.82rem;
-        }
-        .responsive-matrix th {
-          padding: 0.8rem 1rem;
-          font-weight: 600;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-          font-size: 0.7rem;
-        }
-        .responsive-matrix td {
-          padding: 1rem 1.2rem;
-        }
-        .responsive-matrix tr {
-          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        }
-        
-        @media (max-width: 900px) {
-          .responsive-matrix, .responsive-matrix thead, .responsive-matrix tbody, .responsive-matrix th, .responsive-matrix td, .responsive-matrix tr { 
-            display: block; 
-            width: 100%; 
-          }
-          .responsive-matrix thead tr { 
-            position: absolute; top: -9999px; left: -9999px; 
-          }
-          .responsive-matrix tr {
-            margin-bottom: 1.5rem;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 12px;
-            background: rgba(255, 255, 255, 0.02);
-            padding: 1rem;
-          }
-          .responsive-matrix td {
-            border: none;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            position: relative;
-            padding: 0.8rem 0 0.8rem 45% !important;
-            text-align: right;
-            min-height: 40px;
-            display: flex;
-            justify-content: flex-end;
-            align-items: center;
-          }
-          .responsive-matrix td:last-child { border-bottom: 0; }
-          .responsive-matrix td::before {
-            content: attr(data-label);
-            position: absolute;
-            left: 0;
-            width: 40%;
-            text-align: left;
-            font-weight: 600;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            color: #94a3b8;
-          }
-        }
-      `}</style>
-      
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem' }}>
-        <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary, #e2e8f0)', margin: 0 }}>My Active Assignments</h3>
+    <div className="erp-dashboard-container">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid var(--border, rgba(56, 189, 248, 0.2))', paddingBottom: '1rem' }}>
+        <h2 style={{ color: 'var(--text-primary, #e2e8f0)', fontSize: '1.25rem', fontWeight: 600, margin: 0 }}>
+          Technician Execution
+        </h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          {['ADMINISTRATOR', 'ADMIN', 'HM'].includes(userRole) && (
+            <select 
+              value={targetTech} 
+              onChange={(e) => setTargetTech(e.target.value)}
+              style={{
+                background: 'rgba(15, 23, 42, 0.8)', color: '#38bdf8',
+                border: '1px solid rgba(56, 189, 248, 0.3)', padding: '0.4rem 0.8rem',
+                borderRadius: '6px', fontWeight: 600, fontSize: '0.85rem', outline: 'none'
+              }}
+            >
+              <option value="">-- Impersonate Tech --</option>
+              {technicianRoster.map(tech => (
+                <option key={tech.user_id} value={tech.user_id}>{tech.user_id} ({tech.name})</option>
+              ))}
+            </select>
+          )}
+          <button type="button" onClick={() => navigate('/archive')} style={{ background: 'rgba(99, 102, 241, 0.15)', border: '1px solid rgba(99, 102, 241, 0.3)', padding: '0.4rem 0.8rem', borderRadius: '6px', color: '#818cf8', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.2s' }}>
+            VIEW ARCHIVES
+          </button>
+          <div style={{ background: 'rgba(56, 189, 248, 0.1)', border: '1px solid rgba(56, 189, 248, 0.3)', padding: '0.4rem 0.8rem', borderRadius: '6px', color: '#38bdf8', fontWeight: 600, fontSize: '0.85rem' }}>
+            Tech ID: {targetTech || techId}
+          </div>
+        </div>
       </div>
       
-      <div style={{ overflowX: 'auto', borderRadius: '8px', border: '1px solid var(--border, rgba(16, 185, 129, 0.15))', background: 'rgba(10, 14, 23, 0.5)' }}>
-        <table className="responsive-matrix">
-          <thead>
-            <tr style={{ background: 'rgba(16, 185, 129, 0.1)', borderBottom: '1px solid var(--border, rgba(16, 185, 129, 0.15))', color: 'var(--text-secondary, #94a3b8)' }}>
-              <th>MWO ID</th>
-              <th>Status</th>
-              <th>Equipment</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {workOrders.length === 0 ? (
-              <tr>
-                <td colSpan="4" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted, #64748b)' }}>No active assignments found.</td>
-              </tr>
-            ) : (
-              workOrders.map((order) => (
-                <tr key={order.mwo_id}>
-                  <td data-label="MWO ID" style={{ color: '#34d399', fontWeight: 500 }}>
-                    {order.mwo_id}
-                  </td>
-                  <td data-label="STATUS">
-                    <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 600, background: 'rgba(16, 185, 129, 0.15)', color: '#10b981' }}>
-                      {order.status}
-                    </span>
-                  </td>
-                  <td data-label="EQUIPMENT" style={{ color: '#e2e8f0' }}>
-                    {order.equipment_id}
-                  </td>
-                  <td data-label="ACTION">
-                    {order.status === 'COMPLETED' ? (
+      <h2 style={{ color: '#e2e8f0', marginBottom: '1.5rem', fontSize: '1.4rem' }}>
+        {!navigator.onLine && <span style={{ marginLeft: '1rem', fontSize: '0.8rem', color: '#fbbf24', background: 'rgba(245,158,11,0.2)', padding: '4px 8px', borderRadius: '4px' }}>OFFLINE - SYNC QUEUED</span>}
+      </h2>
+      
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        {workOrders.length === 0 ? (
+          <div style={{ padding: '3rem', textAlign: 'center', background: 'rgba(15, 23, 42, 0.6)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', color: '#64748b' }}>
+            No pending execution targets.
+          </div>
+        ) : (
+          workOrders.filter(mwo => mwo != null).map(mwo => {
+            const isActuating = actuatingMwo[mwo.mwo_id];
+            const ledgerItem = (offlineLedger || []).find(q => q && q.mwo_id === mwo.mwo_id);
+            const isSyncPending = ledgerItem && !ledgerItem.errorMsg;
+            const isSyncFailed = ledgerItem && ledgerItem.errorMsg;
+            
+            return (
+              <div key={mwo.mwo_id} style={{
+                position: 'relative',
+                background: 'var(--bg-card, #0f172a)',
+                border: mwo.status === 'IN_PROGRESS' ? '2px solid #10b981' : '2px solid rgba(148, 163, 184, 0.2)',
+                borderRadius: '16px',
+                padding: '1.5rem',
+                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.3)',
+                overflow: 'hidden'
+              }}>
+                {/* SYNC_FAILED Overlay (Red) */}
+                {isSyncFailed && (
+                  <div style={{
+                    position: 'absolute', inset: 0, background: 'rgba(239, 68, 68, 0.9)', backdropFilter: 'blur(8px)',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 20,
+                    color: '#fff', padding: '2rem', textAlign: 'center'
+                  }}>
+                    <div style={{ fontWeight: 800, fontSize: '1.2rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '0.5rem' }}>
+                      SYNC FAILED
+                    </div>
+                    <div style={{ fontSize: '0.9rem', marginBottom: '1.5rem', maxWidth: '80%' }}>
+                      {ledgerItem.errorMsg}
+                    </div>
+                    <div style={{ display: 'flex', gap: '1rem', width: '100%', maxWidth: '300px' }}>
+                      <button onClick={() => retrySync(ledgerItem)} style={{
+                        flex: 1, minHeight: '48px', background: '#fff', color: '#ef4444', border: 'none', borderRadius: '8px',
+                        fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer'
+                      }}>RETRY</button>
+                      <button onClick={() => discardSync(ledgerItem)} style={{
+                        flex: 1, minHeight: '48px', background: 'transparent', color: '#fff', border: '2px solid rgba(255,255,255,0.5)', borderRadius: '8px',
+                        fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer'
+                      }}>DISCARD</button>
+                    </div>
+                  </div>
+                )}
+
+                {/* SYNC_PENDING Overlay (Amber) */}
+                {isSyncPending && !isSyncFailed && (
+                  <div style={{
+                    position: 'absolute', inset: 0, background: 'rgba(245, 158, 11, 0.85)', backdropFilter: 'blur(6px)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 15,
+                    color: '#fff', fontWeight: 800, fontSize: '1.2rem', textTransform: 'uppercase', letterSpacing: '2px'
+                  }}>
+                    SYNC PENDING...
+                  </div>
+                )}
+
+                {/* Actuating Overlay */}
+                {isActuating && !ledgerItem && (
+                  <div style={{
+                    position: 'absolute', inset: 0, background: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(4px)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10,
+                    color: '#34d399', fontWeight: 800, fontSize: '1.2rem', textTransform: 'uppercase', letterSpacing: '2px'
+                  }}>
+                    Actuating...
+                  </div>
+                )}
+                
+                {/* Card Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                  <div>
+                    <h3 style={{ margin: 0, color: '#f8fafc', fontSize: '1.2rem' }}>{mwo.mwo_id}</h3>
+                    <p style={{ margin: '0.3rem 0 0 0', color: '#94a3b8', fontSize: '0.9rem' }}>{mwo.equipment_nomenclature || mwo.equipment_id} • {mwo.location_nomenclature || mwo.location_id || 'Zone Alpha'}</p>
+                  </div>
+                  <span style={{
+                    padding: '6px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 800,
+                    background: mwo.status === 'IN_PROGRESS' ? 'rgba(16, 185, 129, 0.2)' : mwo.status === 'PAUSED' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(148, 163, 184, 0.1)',
+                    color: mwo.status === 'IN_PROGRESS' ? '#10b981' : mwo.status === 'PAUSED' ? '#fbbf24' : '#94a3b8'
+                  }}>
+                    {mwo.status}
+                  </span>
+                </div>
+                
+                {/* Description */}
+                <div style={{ marginBottom: '1.5rem', background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '8px', color: '#cbd5e1', fontSize: '0.95rem', lineHeight: '1.5' }}>
+                  {mwo.description}
+                </div>
+
+                {/* Actuation Matrix (Touch-Optimized) */}
+                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  {(mwo.status === 'ASSIGNED' || mwo.status === 'PAUSED') && (
+                    <button 
+                      onClick={() => executeAction(mwo.mwo_id, 'START')}
+                      disabled={isActuating || !!ledgerItem}
+                      style={{
+                        flex: 1, minHeight: '48px', minWidth: '120px',
+                        background: '#10b981', color: '#fff', border: 'none', borderRadius: '8px',
+                        fontWeight: 800, fontSize: '1rem', textTransform: 'uppercase',
+                        boxShadow: '0 4px 14px 0 rgba(16, 185, 129, 0.39)', cursor: (isActuating || !!ledgerItem) ? 'not-allowed' : 'pointer',
+                        opacity: (isActuating || !!ledgerItem) ? 0.5 : 1
+                      }}
+                    >
+                      START
+                    </button>
+                  )}
+                  
+                  {mwo.status === 'IN_PROGRESS' && (
                       <button 
-                        className="btn-execute" 
-                        onClick={() => executeArchiveRetrieval(order.mwo_id)}
-                        disabled={isDownloading}
-                        style={{ background: isDownloading ? 'rgba(148, 163, 184, 0.15)' : 'rgba(99, 102, 241, 0.15)', color: isDownloading ? '#94a3b8' : '#818cf8', borderColor: isDownloading ? 'transparent' : 'rgba(99, 102, 241, 0.3)' }}
+                        onClick={() => executeAction(mwo.mwo_id, 'PAUSE')}
+                        disabled={isActuating || !!ledgerItem}
+                        style={{
+                          flex: 1, minHeight: '48px', minWidth: '120px',
+                          background: '#fbbf24', color: '#1e293b', border: 'none', borderRadius: '8px',
+                          fontWeight: 800, fontSize: '1rem', textTransform: 'uppercase',
+                          boxShadow: '0 4px 14px 0 rgba(245, 158, 11, 0.39)', cursor: (isActuating || !!ledgerItem) ? 'not-allowed' : 'pointer',
+                          opacity: (isActuating || !!ledgerItem) ? 0.5 : 1
+                        }}
                       >
-                        {isDownloading ? 'EXTRACTING...' : 'DOWNLOAD ARCHIVE'}
+                        PAUSE
                       </button>
-                    ) : (
-                      <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                        <button 
-                          className="btn-execute" 
-                          onClick={() => handleExecute(order)}
-                        >
-                          Execute
-                        </button>
-                        <button 
-                          className="btn-execute" 
-                          onClick={() => setConsumeMwoId(order.mwo_id)}
-                          style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#fbbf24', borderColor: 'rgba(245, 158, 11, 0.3)' }}
-                        >
-                          Consume Part
-                        </button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+                  )}
+
+                  <button 
+                    onClick={() => setSelectedDetailMWO(mwo)}
+                    disabled={isActuating || !!ledgerItem}
+                    style={{
+                      flex: 2, minHeight: '48px', minWidth: '160px',
+                      background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.3)', borderRadius: '8px',
+                      fontWeight: 800, fontSize: '0.9rem', textTransform: 'uppercase', cursor: (isActuating || !!ledgerItem) ? 'not-allowed' : 'pointer',
+                      opacity: (isActuating || !!ledgerItem) ? 0.5 : 1
+                    }}
+                  >
+                    OPEN MWO DETAILS
+                  </button>
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
-        <button 
-          onClick={() => setPage(p => Math.max(0, p - 1))}
-          disabled={page === 0}
-          style={{ padding: '0.5rem 1rem', background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '6px', cursor: page === 0 ? 'not-allowed' : 'pointer', opacity: page === 0 ? 0.5 : 1, transition: 'all 0.2s', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase' }}
-        >
-          Previous
-        </button>
-        <span style={{ color: '#94a3b8', fontSize: '0.85rem', alignSelf: 'center', fontWeight: 600 }}>Page {page + 1}</span>
-        <button 
-          onClick={() => setPage(p => p + 1)}
-          disabled={workOrders.length < 50}
-          style={{ padding: '0.5rem 1rem', background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '6px', cursor: workOrders.length < 50 ? 'not-allowed' : 'pointer', opacity: workOrders.length < 50 ? 0.5 : 1, transition: 'all 0.2s', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase' }}
-        >
-          Next
-        </button>
-      </div>
-
-      {selectedMWO && (
-        <TechCompletionModal 
-          selectedMWO={selectedMWO} 
-          closeModal={closeModal} 
-          executeCompletion={executeCompletion}
-        />
-      )}
+      <TechMWODetailModal
+        mwo={selectedDetailMWO}
+        closeModal={() => setSelectedDetailMWO(null)}
+        executeAction={executeAction}
+        isActuating={selectedDetailMWO ? actuatingMwo[selectedDetailMWO.mwo_id] : false}
+        isSyncPending={selectedDetailMWO ? !!(offlineLedger || []).find(q => q && q.mwo_id === selectedDetailMWO.mwo_id && !q.errorMsg) : false}
+        ledgerItem={selectedDetailMWO ? (offlineLedger || []).find(q => q && q.mwo_id === selectedDetailMWO.mwo_id) : null}
+        setConsumeMwoId={setConsumeMwoId}
+      />
 
       <TechConsumePartModal
         isOpen={!!consumeMwoId}

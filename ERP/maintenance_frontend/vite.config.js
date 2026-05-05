@@ -8,6 +8,16 @@ export default defineConfig({
     host: true,
     port: 5175,
     proxy: {
+      '/api/v1/auth': {
+        target: 'http://localhost:9000',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/api/v1/taxonomy': {
+        target: 'http://localhost:9000',
+        changeOrigin: true,
+        secure: false,
+      },
       '/api': {
         target: 'http://localhost:8000',
         changeOrigin: true,

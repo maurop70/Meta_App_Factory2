@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import './EnterpriseDataMatrix.css';
-import EquipmentDetailModal from './EquipmentDetailModal';
+import EquipmentActuationModal from './EquipmentActuationModal';
+import EquipmentIngestionModal from './EquipmentIngestionModal';
 
 const EquipmentMatrix = () => {
   const [equipment, setEquipment] = useState([]);
@@ -14,6 +15,7 @@ const EquipmentMatrix = () => {
   
   // Modal State
   const [selectedEquipment, setSelectedEquipment] = useState(null);
+  const [showIngestModal, setShowIngestModal] = useState(false);
 
   const fetchEquipment = async () => {
     let isMounted = true;
@@ -56,7 +58,29 @@ const EquipmentMatrix = () => {
 
   return (
     <div className="equipment-matrix-container">
-      <h2>Enterprise Equipment Matrix</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <h2 style={{ margin: 0 }}>Enterprise Equipment Matrix</h2>
+        <button
+          id="btn-ingest-equipment"
+          onClick={() => setShowIngestModal(true)}
+          style={{
+            padding: '0.6rem 1.2rem',
+            background: 'linear-gradient(135deg, #10b981, #059669)',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontWeight: 700,
+            fontSize: '0.8rem',
+            textTransform: 'uppercase',
+            letterSpacing: '0.04em',
+            boxShadow: '0 4px 15px rgba(16, 185, 129, 0.25)',
+            transition: 'all 0.2s'
+          }}
+        >
+          + Ingest New Equipment
+        </button>
+      </div>
       
       {error && <div className="matrix-error-msg">{error}</div>}
       
@@ -131,12 +155,18 @@ const EquipmentMatrix = () => {
         </>
       )}
 
-      {selectedEquipment && (
-        <EquipmentDetailModal 
-          equipment={selectedEquipment} 
-          onClose={handleModalClose} 
-        />
-      )}
+      <EquipmentActuationModal
+        isOpen={!!selectedEquipment}
+        onClose={(wasUpdated) => handleModalClose(wasUpdated)}
+        equipment={selectedEquipment}
+        onActuateSuccess={() => fetchEquipment()}
+      />
+
+      <EquipmentIngestionModal
+        isOpen={showIngestModal}
+        onClose={() => setShowIngestModal(false)}
+        onIngestSuccess={() => fetchEquipment()}
+      />
     </div>
   );
 };

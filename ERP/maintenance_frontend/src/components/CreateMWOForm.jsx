@@ -1,37 +1,47 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
-
-// Mock Dictionary for Relational Mapping
-const EQUIPMENT_MAP = {
-  "HVAC Roof Unit": "EQ-HVAC-01",
-  "Breakroom Sink": "EQ-PLM-02",
-  "Forklift A": "EQ-FL-01",
-  "Server Rack Cooling": "EQ-IT-05"
-};
+import { useAuth } from '../context/AuthContext';
 
 const CreateMWOForm = ({ onMWOCreated }) => {
-  const [mwoId, setMwoId] = useState('');
   const [description, setDescription] = useState('');
-  const [equipmentDesc, setEquipmentDesc] = useState('');
+  const [equipmentId, setEquipmentId] = useState('');
   const [location, setLocation] = useState('');
   const [urgency, setUrgency] = useState('Normal');
   const [statusMsg, setStatusMsg] = useState('');
+  const [equipments, setEquipments] = useState([]);
+  const [locations, setLocations] = useState([]);
 
-  // Auto-ID Generation on mount
+  const { userRole, jwtPayload } = useAuth();
+  const currentUserId = jwtPayload?.sub || 'Unknown DM';
+
+  const navigate = useNavigate();
+
+  // Auto-ID Generation and Data Fetching on mount
   useEffect(() => {
-    const month = String(new Date().getMonth() + 1).padStart(2, '0');
-    const randomSeq = String(Math.floor(Math.random() * 999) + 1).padStart(3, '0');
-    setMwoId(`RFK26-MWO-${month}-${randomSeq}`);
+    const fetchLookups = async () => {
+      try {
+        const [eqRes, locRes] = await Promise.all([
+          api.get('/admin/equipment'),
+          api.get('/admin/lookups/locations')
+        ]);
+        setEquipments(eqRes.data.data || []);
+        setLocations(locRes.data.data || []);
+      } catch (err) {
+        console.error("Failed to load dynamic dropdowns", err);
+      }
+    };
+
+    fetchLookups();
   }, []);
 
-  const equipmentId = EQUIPMENT_MAP[equipmentDesc] || '';
+  // Auto-ID Generation and Data Fetching on mount
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setStatusMsg('Submitting...');
     try {
       await api.post('/mwo', {
-        mwo_id: mwoId,
         description: description,
         equipment_id: equipmentId,
         location_id: location,
@@ -40,12 +50,9 @@ const CreateMWOForm = ({ onMWOCreated }) => {
       });
       setStatusMsg('Work Order created successfully.');
       
-      // Reset logic & generate new ID
-      const month = String(new Date().getMonth() + 1).padStart(2, '0');
-      const randomSeq = String(Math.floor(Math.random() * 999) + 1).padStart(3, '0');
-      setMwoId(`RFK26-MWO-${month}-${randomSeq}`);
+      // Reset logic
       setDescription('');
-      setEquipmentDesc('');
+      setEquipmentId('');
       setLocation('');
       setUrgency('Normal');
       
@@ -97,13 +104,13 @@ const CreateMWOForm = ({ onMWOCreated }) => {
         }
       `}</style>
 
-      <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.5rem' }}>Create Maintenance Work Order (DM)</h3>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+        <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#ffffff', margin: 0 }}>Create Maintenance Work Order (DM)</h3>
+      </div>
       
       {/* Metadata Bar */}
       <div style={{ display: 'flex', gap: '1rem', color: '#94a3b8', fontSize: '0.8rem', borderBottom: '1px solid var(--border, rgba(99, 102, 241, 0.15))', paddingBottom: '1.5rem', marginBottom: '1.5rem', fontWeight: '500' }}>
-        <span>[ID: {mwoId}]</span>
-        <span>|</span>
-        <span>[Requester: DM-Alpha]</span>
+        <span>[Requester: {currentUserId}]</span>
         <span>|</span>
         <span>[Dept: Operations]</span>
       </div>
@@ -114,18 +121,27 @@ const CreateMWOForm = ({ onMWOCreated }) => {
         <div className="responsive-grid">
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '0.4rem' }}>
-              <label style={{ ...labelStyle, marginBottom: 0, whiteSpace: 'nowrap' }}>Equipment Description</label>
+              <label style={{ ...labelStyle, marginBottom: 0, whiteSpace: 'nowrap' }}>Equipment</label>
               {equipmentId && <span style={{ fontSize: '0.65rem', color: '#818cf8', background: 'rgba(99, 102, 241, 0.15)', padding: '0.2rem 0.6rem', borderRadius: '12px', fontWeight: '600', whiteSpace: 'nowrap' }}>{equipmentId}</span>}
             </div>
             <select 
-              value={equipmentDesc} 
-              onChange={(e) => setEquipmentDesc(e.target.value)}
+              value={equipmentId} 
+              onChange={(e) => {
+                const selectedEqId = e.target.value;
+                setEquipmentId(selectedEqId);
+                const selectedEq = equipments.find(eq => eq.equipment_id === selectedEqId);
+                if (selectedEq && selectedEq.location_id) {
+                  setLocation(selectedEq.location_id);
+                }
+              }}
               className="modern-input"
               required
             >
               <option value="" disabled>Select Equipment...</option>
-              {Object.keys(EQUIPMENT_MAP).map(desc => (
-                <option key={desc} value={desc}>{desc}</option>
+              {equipments.map(eq => (
+                <option key={eq.equipment_id} value={eq.equipment_id}>
+                  {eq.nomenclature} (Loc: {eq.location_name || 'N/A'})
+                </option>
               ))}
             </select>
           </div>
@@ -139,9 +155,9 @@ const CreateMWOForm = ({ onMWOCreated }) => {
               required
             >
               <option value="" disabled>Select Location...</option>
-              <option value="LOC-A">LOC-A (Main Floor)</option>
-              <option value="LOC-B">LOC-B (Warehouse)</option>
-              <option value="LOC-C">LOC-C (Rooftop)</option>
+              {locations.map(loc => (
+                <option key={loc.id} value={loc.id}>{loc.name}</option>
+              ))}
             </select>
           </div>
 
@@ -179,6 +195,11 @@ const CreateMWOForm = ({ onMWOCreated }) => {
           <button type="submit" style={{ padding: '0.7rem 2rem', background: 'linear-gradient(145deg, #6366f1, #4338ca)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem', transition: 'all 0.2s', boxShadow: '0 4px 6px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255, 255, 255, 0.3)' }}>
             Submit MWO
           </button>
+          
+          <button type="button" onClick={() => navigate('/archive')} style={{ padding: '0.7rem 2rem', background: 'rgba(99, 102, 241, 0.15)', color: '#818cf8', border: '1px solid rgba(99, 102, 241, 0.3)', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem', transition: 'all 0.2s' }}>
+            View Archives
+          </button>
+
           {statusMsg && (
             <span style={{ fontSize: '0.85rem', fontWeight: 600, color: statusMsg.includes('Failed') ? 'var(--danger, #ef4444)' : 'var(--success, #10b981)' }}>{statusMsg}</span>
           )}

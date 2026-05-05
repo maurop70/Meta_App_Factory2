@@ -1,13 +1,38 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import HMAssignmentModal from './HMAssignmentModal';
+import HMReviewModal from './HMReviewModal';
+import { useAuth } from '../context/AuthContext';
 
 const HMDashboard = () => {
+  const { userRole, jwtPayload } = useAuth();
+  const hmId = jwtPayload?.sub || 'Unknown HM';
   const [workOrders, setWorkOrders] = useState([]);
   const [status, setStatus] = useState({ type: 'loading', message: 'Loading Work Orders...' });
   const [selectedMWO, setSelectedMWO] = useState(null);
+  const [reviewMWO, setReviewMWO] = useState(null);
   const [technicianRoster, setTechnicianRoster] = useState([]);
   const [page, setPage] = useState(0);
+  
+  const navigate = useNavigate();
+
+  // Filter States
+  const [filterTech, setFilterTech] = useState('');
+  const [filterEquipment, setFilterEquipment] = useState('');
+  const [filterLocation, setFilterLocation] = useState('');
+  
+  const [hmRoster, setHmRoster] = useState([]);
+  const [targetHm, setTargetHm] = useState('');
+
+  const fetchHms = async () => {
+    try {
+      const response = await api.get('/mwo/hms');
+      setHmRoster(response.data.data || response.data || []);
+    } catch (err) {
+      console.warn("Failed to fetch HM roster.", err);
+    }
+  };
 
   const fetchTechnicians = async () => {
     try {
@@ -20,11 +45,13 @@ const HMDashboard = () => {
 
   const fetchMWO = async () => {
     try {
-      const response = await api.get(`/mwo?limit=50&offset=${page * 50}`);
+      const activeHm = targetHm || hmId;
+      const response = await api.get(`/mwo?limit=50&offset=${page * 50}&target_hm=${activeHm}`);
       const dbPayload = response.data.data || response.data;
       
-      // Strict Data Isolation: HM inbound queue only displays UNASSIGNED
-      const filtered = (Array.isArray(dbPayload) ? dbPayload : []).filter(order => order.status === 'UNASSIGNED');
+      // Strict Data Isolation: HM inbound queue processes UNASSIGNED, ASSIGNED, and PENDING_REVIEW
+      const rawOrders = Array.isArray(dbPayload) ? dbPayload : [];
+      const filtered = rawOrders.filter(order => order.status === 'UNASSIGNED' || order.status === 'ASSIGNED' || order.status === 'PENDING_REVIEW');
       
       setWorkOrders(filtered);
       setStatus({ type: 'success', message: '' });
@@ -36,11 +63,14 @@ const HMDashboard = () => {
 
   useEffect(() => {
     fetchTechnicians();
-  }, []);
+    if (['ADMINISTRATOR', 'ADMIN'].includes(userRole)) {
+      fetchHms();
+    }
+  }, [userRole]);
 
   useEffect(() => {
     fetchMWO();
-  }, [page]);
+  }, [page, targetHm, hmId]);
 
   const handleInspect = (mwo) => {
     setSelectedMWO(mwo);
@@ -48,6 +78,7 @@ const HMDashboard = () => {
 
   const closeModal = () => {
     setSelectedMWO(null);
+    setReviewMWO(null);
   };
 
   const executeAssignment = async (mwo_id, assigned_tech) => {
@@ -55,6 +86,26 @@ const HMDashboard = () => {
     // After successful assignment, immediately fetch the latest state
     await fetchMWO();
   };
+
+  const executeApproval = async (mwo_id) => {
+    await api.patch(`/mwo/${mwo_id}`, { status: 'COMPLETED' });
+    await fetchMWO();
+  };
+
+  const applyFilters = (order) => {
+    const matchTech = filterTech === '' || (order.assigned_tech || '').toLowerCase().includes(filterTech.toLowerCase());
+    const matchEquip = filterEquipment === '' || (order.equipment_id || '').toLowerCase().includes(filterEquipment.toLowerCase());
+    const matchLoc = filterLocation === '' || (order.location_id || '').toLowerCase().includes(filterLocation.toLowerCase());
+    return matchTech && matchEquip && matchLoc;
+  };
+
+  const unassignedOrders = workOrders
+    .filter(o => o.status === 'UNASSIGNED' || o.status === 'ASSIGNED')
+    .filter(applyFilters);
+    
+  const reviewOrders = workOrders
+    .filter(o => o.status === 'PENDING_REVIEW')
+    .filter(applyFilters);
 
   if (status.type === 'loading') {
     return <div className="erp-status-message loading">{status.message}</div>;
@@ -148,8 +199,78 @@ const HMDashboard = () => {
         }
       `}</style>
       
+      <style>{`
+        .filter-input {
+          padding: 0.5rem 0.8rem;
+          border-radius: 6px;
+          border: 1px solid rgba(56, 189, 248, 0.3);
+          background: rgba(15, 23, 42, 0.6);
+          color: #e2e8f0;
+          flex: 1;
+          min-width: 150px;
+          font-family: inherit;
+          font-size: 0.85rem;
+          outline: none;
+          transition: border-color 0.2s;
+        }
+        .filter-input:focus {
+          border-color: #38bdf8;
+          box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+        }
+      `}</style>
+      
+      {/* Global Filters */}
+      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap', background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', alignItems: 'center' }}>
+        <input 
+          type="text" 
+          placeholder="Filter by Technician..." 
+          value={filterTech} 
+          onChange={e => setFilterTech(e.target.value)} 
+          className="filter-input"
+        />
+        <input 
+          type="text" 
+          placeholder="Filter by Equipment..." 
+          value={filterEquipment} 
+          onChange={e => setFilterEquipment(e.target.value)} 
+          className="filter-input"
+        />
+        <input 
+          type="text" 
+          placeholder="Filter by Location..." 
+          value={filterLocation} 
+          onChange={e => setFilterLocation(e.target.value)} 
+          className="filter-input"
+        />
+        <button type="button" onClick={() => navigate('/archive')} style={{ padding: '0.5rem 1.5rem', background: 'rgba(99, 102, 241, 0.15)', color: '#818cf8', border: '1px solid rgba(99, 102, 241, 0.3)', borderRadius: '6px', cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem', transition: 'all 0.2s', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          View Archives
+        </button>
+      </div>
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem' }}>
         <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary, #e2e8f0)', margin: 0 }}>Inbound MWO Queue - HM</h3>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          {['ADMINISTRATOR', 'ADMIN'].includes(userRole) && (
+            <select 
+              value={targetHm} 
+              onChange={(e) => setTargetHm(e.target.value)}
+              style={{
+                background: 'rgba(15, 23, 42, 0.8)', color: '#38bdf8',
+                border: '1px solid rgba(56, 189, 248, 0.3)', padding: '0.4rem 0.8rem',
+                borderRadius: '6px', fontWeight: 600, fontSize: '0.85rem', outline: 'none'
+              }}
+            >
+              <option value="">-- Impersonate HM --</option>
+              {hmRoster.map(hm => (
+                <option key={hm.user_id} value={hm.user_id}>{hm.user_id} ({hm.name})</option>
+              ))}
+            </select>
+          )}
+          <div style={{ background: 'rgba(56, 189, 248, 0.1)', border: '1px solid rgba(56, 189, 248, 0.3)', padding: '0.4rem 0.8rem', borderRadius: '6px', color: '#38bdf8', fontWeight: 600, fontSize: '0.85rem' }}>
+            HM ID: {targetHm || hmId}
+          </div>
+        </div>
       </div>
       
       <div style={{ overflowX: 'auto', borderRadius: '8px', border: '1px solid var(--border, rgba(99, 102, 241, 0.15))', background: 'rgba(10, 14, 23, 0.5)' }}>
@@ -160,22 +281,27 @@ const HMDashboard = () => {
               <th>Status</th>
               <th>DM Urgency</th>
               <th>Equipment</th>
+              <th>Assigned Tech</th>
               <th>Action</th>
             </tr>
           </thead>
           <tbody>
-            {workOrders.length === 0 ? (
+            {unassignedOrders.length === 0 ? (
               <tr>
-                <td colSpan="5" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted, #64748b)' }}>No unassigned work orders in queue.</td>
+                <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted, #64748b)' }}>No active work orders in queue.</td>
               </tr>
             ) : (
-              workOrders.map((order) => (
+              unassignedOrders.map((order) => (
                 <tr key={order.mwo_id}>
                   <td data-label="MWO ID" style={{ color: '#818cf8', fontWeight: 500 }}>
                     {order.mwo_id}
                   </td>
                   <td data-label="STATUS">
-                    <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 600, background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444' }}>
+                    <span style={{ 
+                      padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 600, 
+                      background: order.status === 'ASSIGNED' ? 'rgba(56, 189, 248, 0.15)' : 'rgba(239, 68, 68, 0.15)', 
+                      color: order.status === 'ASSIGNED' ? '#38bdf8' : '#ef4444' 
+                    }}>
                       {order.status}
                     </span>
                   </td>
@@ -185,7 +311,10 @@ const HMDashboard = () => {
                     </span>
                   </td>
                   <td data-label="EQUIPMENT" style={{ color: '#e2e8f0' }}>
-                    {order.equipment_id}
+                    {order.equipment_nomenclature || order.equipment_id}
+                  </td>
+                  <td data-label="ASSIGNED TECH" style={{ color: '#94a3b8' }}>
+                    {order.assigned_tech || 'Unassigned'}
                   </td>
                   <td data-label="ACTION">
                     {/* Mandatory Review Isolation - No inline assignments */}
@@ -193,7 +322,7 @@ const HMDashboard = () => {
                       className="btn-inspect" 
                       onClick={() => handleInspect(order)}
                     >
-                      Inspect
+                      {order.status === 'ASSIGNED' ? 'Re-Assign' : 'Inspect'}
                     </button>
                   </td>
                 </tr>
@@ -202,6 +331,58 @@ const HMDashboard = () => {
           </tbody>
         </table>
       </div>
+
+      {reviewOrders.length > 0 && (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '2rem 0 1.2rem 0' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary, #e2e8f0)', margin: 0 }}>Pending Review Queue - HM</h3>
+          </div>
+          
+          <div style={{ overflowX: 'auto', borderRadius: '8px', border: '1px solid var(--border, rgba(16, 185, 129, 0.15))', background: 'rgba(10, 14, 23, 0.5)' }}>
+            <table className="responsive-matrix">
+              <thead>
+                <tr style={{ background: 'rgba(16, 185, 129, 0.1)', borderBottom: '1px solid var(--border, rgba(16, 185, 129, 0.15))', color: 'var(--text-secondary, #94a3b8)' }}>
+                  <th>MWO ID</th>
+                  <th>Status</th>
+                  <th>Tech</th>
+                  <th>Labor (Hrs)</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reviewOrders.map((order) => (
+                  <tr key={order.mwo_id}>
+                    <td data-label="MWO ID" style={{ color: '#10b981', fontWeight: 500 }}>
+                      {order.mwo_id}
+                    </td>
+                    <td data-label="STATUS">
+                      <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 600, background: 'rgba(245, 158, 11, 0.15)', color: '#fbbf24' }}>
+                        {order.status}
+                      </span>
+                    </td>
+                    <td data-label="TECH" style={{ color: '#e2e8f0' }}>
+                      {order.assigned_tech}
+                    </td>
+                    <td data-label="LABOR (HRS)" style={{ color: '#e2e8f0' }}>
+                      {order.labor_hours ? order.labor_hours.toFixed(2) : 'N/A'}
+                    </td>
+                    <td data-label="ACTION">
+                      <button 
+                        className="btn-inspect" 
+                        onClick={() => setReviewMWO(order)}
+                        style={{ color: '#10b981', borderColor: 'rgba(16, 185, 129, 0.3)', background: 'rgba(16, 185, 129, 0.15)' }}
+                      >
+                        Review
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
 
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
         <button 
@@ -228,6 +409,14 @@ const HMDashboard = () => {
           closeModal={closeModal} 
           executeAssignment={executeAssignment}
           technicianRoster={technicianRoster}
+        />
+      )}
+
+      {reviewMWO && (
+        <HMReviewModal
+          selectedMWO={reviewMWO}
+          closeModal={closeModal}
+          executeApproval={executeApproval}
         />
       )}
     </div>

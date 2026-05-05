@@ -9,6 +9,7 @@ import AdminConsole from './pages/AdminConsole';
 import Login from './pages/Login';
 import HMDashboard from './components/HMDashboard'; // HM Feed
 import CreateMWOForm from './components/CreateMWOForm'; // DM Submission
+import ArchiveDashboard from './components/ArchiveDashboard'; // Unified Archive
 
 // Strict Role-Gating Security Component
 const ProtectedRoute = ({ allowedRoles, children }) => {
@@ -113,6 +114,16 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={['TECHNICIAN', 'TECH']}>
                   <TechDashboard />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Unified Archive Dashboard */}
+            <Route
+              path="/archive"
+              element={
+                <ProtectedRoute allowedRoles={['DM', 'HM', 'TECH', 'TECHNICIAN', 'ADMIN', 'ADMINISTRATOR']}>
+                  <ArchiveDashboard />
                 </ProtectedRoute>
               }
             />

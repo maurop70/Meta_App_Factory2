@@ -35,3 +35,5 @@ STRICT PAGINATION BOUNDARIES: Unbounded data fetching (e.g., SELECT * FROM table
 
 [MANDATORY MEMORY INJECTION]
 AXIOS PREFIX TRUNCATION: When utilizing a centralized frontend HTTP client (e.g., Axios) pre-configured with a baseURL (e.g., /api), all downstream component API calls must strictly omit the root prefix. Writing api.get('/api/resource') triggers a fatal double-prefix routing exception (/api/api/resource). Routes must be strictly truncated to api.get('/resource').
+
+AUTONOMOUS SATURATION DOCTRINE: The AI Orchestrator must independently monitor its own context window and operational saturation limits. When a major architectural milestone is physically verified and closed, the AI must autonomously halt further development within the same session. It must generate a dense, structured continuity payload summarizing the active ecosystem state, the verified routing matrices, and the next logical objective. Finally, it must explicitly instruct the human operator to copy the payload, terminate the saturated session, and inject the payload into a pristine chat context to prevent token exhaustion and environmental hallucination.

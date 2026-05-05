@@ -55,18 +55,34 @@ def init_tables():
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_auth_rate_limits_emp ON auth_rate_limits(employee_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_auth_rate_limits_time ON auth_rate_limits(attempt_timestamp)")
         
+        # [PHASE 35.1] Lookup Tables
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS erp_categories (
+                id   TEXT PRIMARY KEY,
+                name TEXT UNIQUE NOT NULL
+            )
+        ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS erp_departments (
+                id   TEXT PRIMARY KEY,
+                name TEXT UNIQUE NOT NULL
+            )
+        ''')
+
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS erp_equipment (
                 equipment_id TEXT PRIMARY KEY,
                 nomenclature TEXT NOT NULL,
-                category TEXT NOT NULL,
-                status TEXT NOT NULL CHECK(status IN ('ACTIVE', 'DEGRADED', 'OFFLINE')),
-                department TEXT NOT NULL,
+                category_id TEXT NOT NULL,
+                status TEXT NOT NULL CHECK(status IN ('ACTIVE', 'DEGRADED', 'OFFLINE', 'RETIRED')),
+                department_id TEXT NOT NULL,
                 assigned_tech_id TEXT,
+                FOREIGN KEY(category_id) REFERENCES erp_categories(id),
+                FOREIGN KEY(department_id) REFERENCES erp_departments(id),
                 FOREIGN KEY(assigned_tech_id) REFERENCES erp_employees(id)
             )
         ''')
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_equipment_dept_status ON erp_equipment(department, status)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_equipment_dept_status ON erp_equipment(department_id, status)")
         
         # [PHASE 34.9] Master Parts Catalog
         cursor.execute('''
