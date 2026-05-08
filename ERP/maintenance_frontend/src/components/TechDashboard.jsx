@@ -23,7 +23,8 @@ const TechDashboard = () => {
   const fetchRoster = async () => {
     try {
       const response = await api.get('/mwo/technicians');
-      setTechnicianRoster(response.data.data || response.data || []);
+      const payload = response.data?.data || response.data;
+      setTechnicianRoster(Array.isArray(payload) ? payload : []);
     } catch (err) {
       console.warn("Failed to fetch roster", err);
     }
@@ -182,7 +183,7 @@ const TechDashboard = () => {
               }}
             >
               <option value="">-- Impersonate Tech --</option>
-              {technicianRoster.map(tech => (
+              {(Array.isArray(technicianRoster) ? technicianRoster : []).map(tech => (
                 <option key={tech.user_id} value={tech.user_id}>{tech.user_id} ({tech.name})</option>
               ))}
             </select>
@@ -206,7 +207,7 @@ const TechDashboard = () => {
             No pending execution targets.
           </div>
         ) : (
-          workOrders.filter(mwo => mwo != null).map(mwo => {
+          (Array.isArray(workOrders) ? workOrders : []).filter(mwo => mwo != null).map(mwo => {
             const isActuating = actuatingMwo[mwo.mwo_id];
             const ledgerItem = (offlineLedger || []).find(q => q && q.mwo_id === mwo.mwo_id);
             const isSyncPending = ledgerItem && !ledgerItem.errorMsg;

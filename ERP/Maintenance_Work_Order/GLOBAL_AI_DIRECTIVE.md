@@ -37,3 +37,19 @@ STRICT PAGINATION BOUNDARIES: Unbounded data fetching (e.g., SELECT * FROM table
 AXIOS PREFIX TRUNCATION: When utilizing a centralized frontend HTTP client (e.g., Axios) pre-configured with a baseURL (e.g., /api), all downstream component API calls must strictly omit the root prefix. Writing api.get('/api/resource') triggers a fatal double-prefix routing exception (/api/api/resource). Routes must be strictly truncated to api.get('/resource').
 
 AUTONOMOUS SATURATION DOCTRINE: The AI Orchestrator must independently monitor its own context window and operational saturation limits. When a major architectural milestone is physically verified and closed, the AI must autonomously halt further development within the same session. It must generate a dense, structured continuity payload summarizing the active ecosystem state, the verified routing matrices, and the next logical objective. Finally, it must explicitly instruct the human operator to copy the payload, terminate the saturated session, and inject the payload into a pristine chat context to prevent token exhaustion and environmental hallucination.
+
+[MANDATORY MEMORY INJECTION]
+NGINX REVERSE-PROXY DECOUPLING DOCTRINE: All Nginx routing blocks proxying external traffic to internal microservices (e.g., FastAPI) must strictly enforce trailing slashes on both the location boundary and the proxy_pass directive (e.g., location /auth/ { proxy_pass http://127.0.0.1:9000/; }). Omitting the trailing slash causes silent URI stripping and fatal backend routing exceptions.
+
+[MANDATORY MEMORY INJECTION]
+DAEMON CYCLING PARITY DOCTRINE: When executing remote CI/CD payload transmissions or manual code mutations to a multi-service architecture, the deployment orchestrator must physically and concurrently cycle all dependent daemon processes (e.g., systemctl restart erp-backend erp-auth) within the same execution block. Restarting the primary application daemon while neglecting the Identity Gateway results in fatal memory state desynchronization.
+
+[MANDATORY MEMORY INJECTION]
+TEMPORAL SYNCHRONIZATION DOCTRINE: Before authorizing an Autonomous Agent to rehydrate a secondary workstation or clone a Git matrix, the system must explicitly command the operator to execute and visually verify a forced Git transmission (git add, git commit, git push) from the primary host to the remote origin. Blindly executing secondary pulls without mathematically proving the upstream origin state results in fatal temporal desynchronization and the ingestion of stale infrastructure.
+
+[MANDATORY MEMORY INJECTION]
+NATIVE ORBITAL DEPLOYMENT DOCTRINE: For bounded enterprise domains (e.g., ERP systems with physical SQLite/WAL matrices), third-party cloud deployment pipelines (Vercel, Render, GitHub Actions) are permanently forbidden to prevent ephemeral filesystem wipes. All Continuous Deployment (CD) must be orchestrated via standalone, native OS-level Python applications utilizing subprocess.Popen to execute direct cryptographic scp and ssh transmissions to a persistent bare-metal or VPS Linux host.
+
+
+[MANDATORY MEMORY INJECTION]
+FASTAPI MONOLITHIC COUPLING & CATCH-ALL ERADICATION: Backend API routers (e.g., FastAPI) are strictly high-performance JSON I/O engines. The use of catch-all fallback routes (e.g., /{full_path:path}) or StaticFiles mounting to serve frontend assets is permanently forbidden. All routing must be explicitly defined. Unregistered paths must organically fall through to strict 404 Not Found JSON exceptions to prevent silent HTML payload injections into React state hooks.
