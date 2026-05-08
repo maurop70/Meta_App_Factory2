@@ -11,6 +11,7 @@ const EnterpriseDataMatrix = () => {
   // Enforce baseline pagination state
   const [page, setPage] = useState(1);
   const [limit] = useState(50); 
+  const [totalRecords, setTotalRecords] = useState(0);
   
   const [inspectUserId, setInspectUserId] = useState(null);
   const [refreshTick, setRefreshTick] = useState(0); // Orchestration trigger
@@ -21,9 +22,10 @@ const EnterpriseDataMatrix = () => {
     
     const fetchEnterpriseData = async () => {
       try {
-        const response = await api.get(`/admin/users?page=${page}&limit=${limit}`);
+        const response = await api.get(`/users?limit=${limit}&offset=${(page - 1) * limit}`);
         if (isMounted) {
-          setUsers(response.data);
+          setUsers(Array.isArray(response.data.items) ? response.data.items : []);
+          setTotalRecords(response.data.total || 0);
           setLoading(false);
         }
       } catch (err) {
@@ -105,8 +107,8 @@ const EnterpriseDataMatrix = () => {
       {/* Pagination Controls must be implemented here */}
       <div className="matrix-pagination">
          <button disabled={page === 1} onClick={() => setPage(p => p - 1)}>Previous</button>
-         <span>Page {page}</span>
-         <button disabled={users.length < limit} onClick={() => setPage(p => p + 1)}>Next</button>
+         <span>Page {page} (Total: {totalRecords})</span>
+         <button disabled={page * limit >= totalRecords} onClick={() => setPage(p => p + 1)}>Next</button>
       </div>
 
       {inspectUserId && (

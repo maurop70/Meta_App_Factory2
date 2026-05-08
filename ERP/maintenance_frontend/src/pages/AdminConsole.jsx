@@ -6,6 +6,7 @@ import AdminDataIngestion from '../components/AdminDataIngestion';
 import EnterpriseDataMatrix from '../components/EnterpriseDataMatrix';
 import EquipmentMatrix from '../components/EquipmentMatrix';
 import PartsMatrix from '../components/PartsMatrix';
+import SkuLedger from '../components/SkuLedger';
 import ProcurementMatrix from '../components/ProcurementMatrix';
 import DispatchQueueTable from '../components/DispatchQueueTable';
 import TechDashboard from '../components/TechDashboard';
@@ -90,6 +91,12 @@ const AdminConsole = () => {
             >
               PARTS SCHEMA
             </button>
+            <button 
+              onClick={() => setIngestionTab('SKU')}
+              style={{ padding: '0.5rem 1rem', background: ingestionTab === 'SKU' ? 'rgba(99, 102, 241, 0.15)' : 'transparent', color: ingestionTab === 'SKU' ? '#818cf8' : '#94a3b8', border: '1px solid', borderColor: ingestionTab === 'SKU' ? 'rgba(99, 102, 241, 0.5)' : 'transparent', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, transition: 'all 0.2s' }}
+            >
+              SKU SCHEMA
+            </button>
           </div>
 
           {/* PERSONNEL ISOLATION BOUNDARY */}
@@ -111,6 +118,13 @@ const AdminConsole = () => {
           {ingestionTab === 'PARTS' && (
             <div className="parts-view-layer">
               <PartsMatrix />
+            </div>
+          )}
+
+          {/* SKU ISOLATION BOUNDARY */}
+          {ingestionTab === 'SKU' && (
+            <div className="sku-view-layer">
+              <SkuLedger />
             </div>
           )}
 
