@@ -134,18 +134,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Maintenance Work Order API - Global ERP Connected", lifespan=lifespan)
 
-# Serve frontend — index.html lives alongside this backend file
-_frontend_dir = os.path.join(_erp, "maintenance_frontend", "dist")
-
-@app.get("/", include_in_schema=False)
-async def serve_index():
-    index_path = os.path.join(_frontend_dir, "index.html")
-    if os.path.exists(index_path):
-        return FileResponse(index_path)
-    return {"status": "ok", "message": "MWO Backend API Active. Frontend must be built and placed in maintenance_frontend/dist to be served from root."}
-
-if os.path.exists(_frontend_dir):
-    app.mount("/static", StaticFiles(directory=_frontend_dir), name="static")
+# Serve frontend is deprecated due to NGINX Reverse-Proxy Decoupling Doctrine
 
 # CORS: Decoupled frontend access
 app.add_middleware(
@@ -268,6 +257,24 @@ class PartIngestionRecord(BaseModel):
 class PartConsumptionPayload(BaseModel):
     part_id: str = Field(..., description="Unique Part Identifier")
     quantity_consumed: int = Field(..., gt=0, description="Amount to deduct and allocate")
+
+class SKUCreate(BaseModel):
+    sku_id: str
+    nomenclature: str
+    unit_cost: float
+    reorder_threshold: int
+
+class InventoryMutation(BaseModel):
+    sku_id: str
+    mutation_type: str = Field(..., description="IN or OUT")
+    quantity: int
+
+    @field_validator('mutation_type')
+    @classmethod
+    def validate_mutation(cls, v):
+        if str(v).upper() not in ["IN", "OUT"]:
+            raise ValueError("mutation_type must be IN or OUT")
+        return str(v).upper()
 
 class ProcurementActuation(BaseModel):
     status: str = Field(..., description="Target state: APPROVED, REJECTED, or FULFILLED")
@@ -3093,15 +3100,118 @@ async def bulk_ingest_part(file: UploadFile = File(...), jwt_payload: dict = Dep
     finally:
         conn.close()
 
-@app.get("/{full_path:path}")
-async def serve_frontend(full_path: str):
-    if full_path.startswith("api/"):
-        raise HTTPException(status_code=404, detail="API Route Not Found")
+# --- PHASE 44 SKU INGESTION & LEDGER ---
+@app.post("/inventory/skus", status_code=201)
+def ingest_sku(payload: SKUCreate, jwt_payload: dict = Depends(verify_jwt_token)):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        # Ensure the matrix exists or gracefully fail
+        cursor.execute(
+            """
+            INSERT INTO erp_skus (sku_id, nomenclature, unit_cost, reorder_threshold, quantity_on_hand)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (payload.sku_id, payload.nomenclature, payload.unit_cost, payload.reorder_threshold, 0)
+        )
+        conn.commit()
+        return {"status": "success", "message": f"SKU {payload.sku_id} ingested."}
+    except sqlite3.IntegrityError:
+        conn.rollback()
+        raise HTTPException(status_code=409, detail="SKU already exists.")
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Database insertion failed: {e}")
+    finally:
+        conn.close()
+
+@app.get("/inventory/skus")
+def get_skus(
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    jwt_payload: dict = Depends(verify_jwt_token)
+):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT sku_id, nomenclature, unit_cost, reorder_threshold, quantity_on_hand FROM erp_skus LIMIT ? OFFSET ?", (limit, offset))
+        rows = [dict(row) for row in cursor.fetchall()]
+        return {"status": "success", "data": rows}
+    except Exception as e:
+        logger.error(f"SKU Ledger fetch failed: {e}")
+        raise HTTPException(status_code=500, detail="Matrix synchronization failed.")
+    finally:
+        conn.close()
+
+@app.post("/inventory/mutate")
+def mutate_inventory(payload: InventoryMutation, jwt_payload: dict = Depends(verify_jwt_token)):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("BEGIN TRANSACTION")
         
-    path = os.path.join(frontend_dist_path, full_path)
-    if full_path and os.path.isfile(path):
-        return FileResponse(path)
+        cursor.execute("SELECT quantity_on_hand FROM erp_skus WHERE sku_id = ?", (payload.sku_id,))
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="SKU not found.")
+            
+        current_qty = row["quantity_on_hand"]
+        if payload.mutation_type == "IN":
+            new_qty = current_qty + payload.quantity
+        else:
+            if current_qty < payload.quantity:
+                raise HTTPException(status_code=400, detail="Insufficient quantity_on_hand for OUT mutation.")
+            new_qty = current_qty - payload.quantity
+            
+        cursor.execute("UPDATE erp_skus SET quantity_on_hand = ? WHERE sku_id = ?", (new_qty, payload.sku_id))
+        conn.commit()
+        return {"status": "success", "quantity_on_hand": new_qty}
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Mutation error: {e}")
+        raise HTTPException(status_code=500, detail="Internal Execution Error.")
+    finally:
+        conn.close()
+
+@app.get("/users")
+def get_paginated_users(
+    limit: int = Query(50, ge=1, le=100, description="Strict pagination limit"),
+    offset: int = Query(0, ge=0, description="Strict pagination offset"),
+    jwt_payload: dict = Depends(verify_jwt_token)
+):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
         
-    return FileResponse(os.path.join(frontend_dist_path, "index.html"))
+        # 1. Execute COUNT() for envelope
+        cursor.execute("SELECT COUNT(*) FROM erp_employees")
+        total = cursor.fetchone()[0]
+        
+        # 2. Execute LIMIT/OFFSET extraction
+        cursor.execute(
+            """
+            SELECT id as user_id, name, role, department_id as department, reports_to_hm_id
+            FROM erp_employees
+            LIMIT ? OFFSET ?
+            """,
+            (limit, offset)
+        )
+        rows = [dict(row) for row in cursor.fetchall()]
+        
+        # 3. Return explicit pagination envelope
+        return {
+            "items": rows,
+            "total": total,
+            "limit": limit,
+            "offset": offset
+        }
+    except Exception as e:
+        logger.error(f"Failed to fetch users: {e}")
+        raise HTTPException(status_code=500, detail="Matrix synchronization failed.")
+    finally:
+        conn.close()
 
 

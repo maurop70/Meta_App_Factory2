@@ -305,5 +305,60 @@
     "generated_at": "2026-04-26T02:24:27.353592",
     "status": "PENDING_REVIEW",
     "tags": []
+  },
+  {
+    "id": "1t5fahq",
+    "source": "Reddit/r/SaaS",
+    "original_title": "What am I doing wrong?",
+    "original_url": "https://reddit.com/r/SaaS/comments/1t5fahq/what_am_i_doing_wrong/",
+    "score": 85,
+    "rationale": "The core idea of an AI receptionist for a high-value vertical like dentistry is strong and validated by existing competitors. The proposed Python stack (FastAPI/Gemini) is modern, scalable, and well-suited for the task. The primary business challenges are not technical but strategic: the current model of building 'custom-tailored' solutions is a service business, not a scalable SaaS. The go-to-market struggle with cold-calling is a symptom of this unscalable model. The main technical hurdle will be integrating with a fragmented landscape of Dental Practice Management Systems (PMS), which is a standard challenge in vertical SaaS, not a fundamental technology gap.",
+    "pitch": {
+      "problem": "Dental practices lose significant revenue from missed after-hours calls and suffer from operational inefficiency. Overworked receptionists are burdened with repetitive scheduling tasks, leading to patient-facing burnout and preventing them from focusing on high-value in-person interactions.",
+      "proposed_solution": "A B2B SaaS platform powered by a Python (FastAPI/Gemini) backend. Our AI receptionist operates 24/7, handling inbound calls to intelligently book, reschedule, and confirm appointments, answer FAQs, and qualify new patients. It integrates seamlessly with the clinic's existing Practice Management System (PMS), reducing staff workload and capturing previously lost revenue.",
+      "target_audience": "Small to medium-sized dental clinics and private practices that want to improve operational efficiency, increase new patient acquisition, and enhance the overall patient experience.",
+      "pricing_model": "Tiered monthly subscription (SaaS). Tiers should be based on call volume, number of practitioners, and advanced features (e.g., automated patient reminders, insurance pre-verification). Pivot from a 'custom-tailored' service to a standardized, configurable product to ensure scalability.",
+      "market_saturation": "Medium"
+    },
+    "market_audit": {
+      "saturation": "Medium",
+      "competitors": [
+        "Gabbi (by RevenueWell)",
+        "Smith.ai",
+        "Hyro"
+      ],
+      "blue_ocean_verdict": false
+    },
+    "generated_at": "2026-05-06T14:10:56.946569",
+    "status": "PENDING_REVIEW",
+    "tags": []
+  },
+  {
+    "id": "1t1h1p7",
+    "source": "Reddit/r/Entrepreneur",
+    "original_title": "Struggling with pricing strategy",
+    "original_url": "https://reddit.com/r/Entrepreneur/comments/1t1h1p7/struggling_with_pricing_strategy/",
+    "score": 90,
+    "rationale": "The user has identified a high-value, widespread problem: the 'last-mile' integration of generic enterprise AI. Large companies are paying for powerful tools like Microsoft Copilot but lack the expertise to customize them for specific, high-ROI workflows. This creates a significant market opportunity for a productized service. The proposed solution is technically sound, the target market has a clear budget, and the value proposition (saving 400-1,200 hours/month) is compelling. The primary risks are in sales execution and defining scalable, auditable pricing models, not in technical feasibility.",
+    "pitch": {
+      "problem": "Enterprises are investing heavily in generic AI assistants like Microsoft Copilot but fail to see significant ROI due to unreliable outputs for their specialized, internal workflows.",
+      "proposed_solution": "We will develop a backend-as-a-service using Python (FastAPI + Gemini) that powers custom Microsoft Copilot extensions. These extensions will be fine-tuned to a client's specific data and processes, transforming the generic Copilot into a highly accurate, reliable assistant for their unique tasks.",
+      "target_audience": "Mid-to-large enterprises, particularly in professional services (accounting, legal, consulting), that have already invested in an enterprise AI platform but are struggling with adoption and workflow automation.",
+      "pricing_model": "A hybrid B2B SaaS model is recommended over pure value-sharing for scalability and predictability. This would include: 1) A one-time setup/implementation fee (e.g., $10k-$25k) to build and deploy the custom agent. 2) A recurring monthly subscription fee (e.g., $50-$100 per user/month) for API access, maintenance, and support.",
+      "market_saturation": "Low"
+    },
+    "market_audit": {
+      "saturation": "Medium",
+      "competitors": [
+        "Microsoft Copilot Studio",
+        "Cloud AI Platforms (Azure OpenAI Service, GCP AI Platform, AWS SageMaker)",
+        "Custom LLM Development Platforms (Databricks, Hugging Face Enterprise)",
+        "Specialized Vertical AI Solutions (e.g., Casetext CoCounsel for Legal)"
+      ],
+      "blue_ocean_verdict": true
+    },
+    "generated_at": "2026-05-06T14:11:36.776923",
+    "status": "PENDING_REVIEW",
+    "tags": []
   }
 ]

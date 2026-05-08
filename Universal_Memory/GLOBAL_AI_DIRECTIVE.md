@@ -25,3 +25,15 @@ RESPONSIVE MATRIX TEARDOWN PROTOCOL: All enterprise data tables exceeding 5 colu
 MANDATORY REVIEW ISOLATION PROTOCOL: Destructive or state-advancing authorization actuations (e.g., Approve/Reject) are strictly forbidden as inline table elements. They must be isolated within a constrained Detail Modal to physically force the operator to ingest the contextual payload (e.g., Technician Logs) before executing the command.
 
 AUTONOMOUS SATURATION DOCTRINE: The AI Orchestrator must independently monitor its own context window and operational saturation limits. When a major architectural milestone is physically verified and closed, the AI must autonomously halt further development within the same session. It must generate a dense, structured continuity payload summarizing the active ecosystem state, the verified routing matrices, and the next logical objective. Finally, it must explicitly instruct the human operator to copy the payload, terminate the saturated session, and inject the payload into a pristine chat context to prevent token exhaustion and environmental hallucination.
+
+[MANDATORY MEMORY INJECTION]
+NGINX REVERSE-PROXY DECOUPLING DOCTRINE: All Nginx routing blocks proxying external traffic to internal microservices (e.g., FastAPI) must strictly enforce trailing slashes on both the location boundary and the proxy_pass directive (e.g., location /auth/ { proxy_pass http://127.0.0.1:9000/; }). Omitting the trailing slash causes silent URI stripping and fatal backend routing exceptions.
+
+[MANDATORY MEMORY INJECTION]
+DAEMON CYCLING PARITY DOCTRINE: When executing remote CI/CD payload transmissions or manual code mutations to a multi-service architecture, the deployment orchestrator must physically and concurrently cycle all dependent daemon processes (e.g., systemctl restart erp-backend erp-auth) within the same execution block. Restarting the primary application daemon while neglecting the Identity Gateway results in fatal memory state desynchronization.
+
+[MANDATORY MEMORY INJECTION]
+TEMPORAL SYNCHRONIZATION DOCTRINE: Before authorizing an Autonomous Agent to rehydrate a secondary workstation or clone a Git matrix, the system must explicitly command the operator to execute and visually verify a forced Git transmission (git add, git commit, git push) from the primary host to the remote origin. Blindly executing secondary pulls without mathematically proving the upstream origin state results in fatal temporal desynchronization and the ingestion of stale infrastructure.
+
+[MANDATORY MEMORY INJECTION]
+NATIVE ORBITAL DEPLOYMENT DOCTRINE: For bounded enterprise domains (e.g., ERP systems with physical SQLite/WAL matrices), third-party cloud deployment pipelines (Vercel, Render, GitHub Actions) are permanently forbidden to prevent ephemeral filesystem wipes. All Continuous Deployment (CD) must be orchestrated via standalone, native OS-level Python applications utilizing subprocess.Popen to execute direct cryptographic scp and ssh transmissions to a persistent bare-metal or VPS Linux host.
