@@ -18,31 +18,31 @@ export default defineConfig({
         changeOrigin: true,
       },
       '/api/qa': {
-        target: 'http://localhost:5030',
+        target: 'http://127.0.0.1:5030',
         changeOrigin: true,
       },
       '/api/test': {
-        target: 'http://localhost:5030',
+        target: 'http://127.0.0.1:5030',
         changeOrigin: true,
       },
       '/api/pulse': {
-        target: 'http://localhost:5030',
+        target: 'http://127.0.0.1:5030',
         changeOrigin: true,
       },
       '/api/reports': {
-        target: 'http://localhost:5030',
+        target: 'http://127.0.0.1:5030',
         changeOrigin: true,
       },
       '/api/dashboard': {
-        target: 'http://localhost:5030',
+        target: 'http://127.0.0.1:5030',
         changeOrigin: true,
       },
       '/api/repairs': {
-        target: 'http://localhost:5030',
+        target: 'http://127.0.0.1:5030',
         changeOrigin: true,
       },
       '/api/ghost-stream': {
-        target: 'http://localhost:5030',
+        target: 'http://127.0.0.1:5030',
         changeOrigin: true,
       },
       '/api': {

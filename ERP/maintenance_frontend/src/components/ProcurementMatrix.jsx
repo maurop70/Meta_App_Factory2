@@ -11,11 +11,11 @@ const ProcurementMatrix = () => {
 
     const fetchProcurements = async () => {
         setIsLoading(true);
-        setError('');
+        setError(null);
         try {
             // Strict Pagination Transit
             const response = await api.get('/admin/procurement?limit=50&offset=0');
-            setProcurements(response.data.data || []);
+            setProcurements(response.data.items || response.data.data || []);
         } catch (err) {
             console.error('Matrix extraction failed:', err);
             setError('Failed to synchronize procurement ledger.');
@@ -64,7 +64,7 @@ const ProcurementMatrix = () => {
             )}
 
             <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+                <table className="erp-data-matrix">
                     <thead>
                         <tr className="bg-[#151925] text-xs uppercase tracking-wider text-gray-500 border-b border-gray-800">
                             <th className="p-4 font-medium">Triggered At</th>
@@ -83,35 +83,34 @@ const ProcurementMatrix = () => {
                         ) : (
                             procurements.map((proc) => (
                                 <tr key={proc.procurement_id} className="hover:bg-[#1E2538] transition-colors group">
-                                    <td className="p-4 text-gray-400">
+                                    <td data-label="Triggered At" className="p-4 text-gray-400">
                                         {new Date(proc.triggered_at).toLocaleString()}
                                     </td>
-                                    <td className="p-4">
+                                    <td data-label="Part ID / Nomenclature" className="p-4">
                                         <div className="font-medium text-gray-200">{proc.nomenclature}</div>
                                         <div className="text-xs text-gray-500 mt-0.5">{proc.part_id}</div>
                                     </td>
-                                    <td className="p-4 text-right">
+                                    <td data-label="QOH / Threshold" className="p-4 text-right">
                                         <span className={`font-mono ${proc.quantity_on_hand <= proc.reorder_threshold ? 'text-red-400 font-bold' : 'text-gray-300'}`}>
                                             {proc.quantity_on_hand}
                                         </span>
                                         <span className="text-gray-600 mx-1">/</span>
                                         <span className="text-gray-500 font-mono">{proc.reorder_threshold}</span>
                                     </td>
-                                    <td className="p-4 text-right font-mono text-emerald-400">
+                                    <td data-label="Unit Cost" className="p-4 text-right font-mono text-emerald-400">
                                         ${proc.unit_cost.toFixed(2)}
                                     </td>
-                                    <td className="p-4 text-center">
+                                    <td data-label="Status" className="p-4 text-center">
                                         <span className={`px-2 py-1 rounded text-xs font-semibold tracking-wider ${getStatusStyle(proc.status)}`}>
                                             {proc.status}
                                         </span>
                                     </td>
-                                    <td className="p-4 text-center">
+                                    <td data-label="Actuation" className="p-4 text-center">
                                         <button
                                             onClick={() => setActiveProcurement(proc)}
-                                            disabled={proc.status === 'REJECTED' || proc.status === 'FULFILLED'}
-                                            className="px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 rounded transition-colors text-xs font-medium border border-indigo-500/20 disabled:opacity-30 disabled:cursor-not-allowed uppercase tracking-wider"
+                                            className="px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 rounded transition-colors text-xs font-medium border border-indigo-500/20 uppercase tracking-wider"
                                         >
-                                            Actuate
+                                            View Payload
                                         </button>
                                     </td>
                                 </tr>

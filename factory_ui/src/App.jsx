@@ -191,12 +191,34 @@ function TelemetryBar({ streaming }) {
     const handleForceActive = () => setTelemetryStatus('ONLINE');
     window.addEventListener('force-telemetry-active', handleForceActive);
 
-    const es = new EventSource('http://localhost:5030/api/qa/stream');
-    es.onopen = () => setTelemetryStatus('ONLINE');
-    es.onerror = () => setTelemetryStatus('OFFLINE');
+    let es = null;
+    let reconnectTimer = null;
+    let attempt = 0;
+
+    const connectSSE = () => {
+      es = new EventSource('/api/qa/stream');
+      
+      es.onopen = () => {
+        setTelemetryStatus('ONLINE');
+        attempt = 0; // Exponential backoff reset
+      };
+      
+      es.onerror = () => {
+        setTelemetryStatus('OFFLINE');
+        if (es) es.close();
+        
+        // Exponential backoff bounds: 1s to 10s max
+        const backoffDelay = Math.min(1000 * Math.pow(2, attempt), 10000);
+        attempt++;
+        reconnectTimer = setTimeout(connectSSE, backoffDelay);
+      };
+    };
+
+    connectSSE();
 
     return () => {
-      es.close();
+      if (es) es.close();
+      if (reconnectTimer) clearTimeout(reconnectTimer);
       window.removeEventListener('force-telemetry-active', handleForceActive);
     };
   }, []);
@@ -1957,8 +1979,7 @@ function App() {
         </div>
         <div className="header-status">
           <span><span className="status-dot" /> Backend Online</span>
-          <span>LangSmith: Active</span>
-          <span>Supabase: Connected</span>
+          <span>SQLite: Active</span>
         </div>
       </header>
 

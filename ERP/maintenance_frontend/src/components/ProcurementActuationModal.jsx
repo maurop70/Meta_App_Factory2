@@ -4,7 +4,10 @@ import api from '../services/api';
 
 const ProcurementActuationModal = ({ procurement, onClose, onSuccess }) => {
     const [isProcessing, setIsProcessing] = useState(false);
+    const [isSuccess, setIsSuccess] = useState(false);
     const [error, setError] = useState('');
+    
+    const isLocked = isProcessing || isSuccess;
     
     const [targetStatus, setTargetStatus] = useState('');
     const [authorizedQuantity, setAuthorizedQuantity] = useState('');
@@ -23,6 +26,17 @@ const ProcurementActuationModal = ({ procurement, onClose, onSuccess }) => {
             setTargetStatus(availableTransitions[0]);
         }
     }, []);
+
+    // Portal Isolation Lockdown: Intercept Escape Key
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape' && !isLocked) {
+                onClose();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isLocked, onClose]);
 
     const totalExpenditure = targetStatus === 'APPROVED' && authorizedQuantity 
         ? (parseInt(authorizedQuantity) * procurement.unit_cost).toFixed(2)
@@ -46,7 +60,13 @@ const ProcurementActuationModal = ({ procurement, onClose, onSuccess }) => {
             }
             
             await api.put(`/admin/procurement/${procurement.procurement_id}/actuate`, payload);
-            onSuccess();
+            setIsProcessing(false);
+            setIsSuccess(true);
+            
+            // Successful actuation transition delay
+            setTimeout(() => {
+                onSuccess();
+            }, 1500);
         } catch (err) {
             console.error("Actuation Error:", err);
             setError(err.response?.data?.detail || "Fatal execution error during transit.");
@@ -55,7 +75,14 @@ const ProcurementActuationModal = ({ procurement, onClose, onSuccess }) => {
     };
 
     return ReactDOM.createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
+        <div 
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in"
+            onClick={(e) => {
+                if (e.target === e.currentTarget && !isLocked) {
+                    onClose();
+                }
+            }}
+        >
             <div className="bg-[#151925] border border-gray-800 rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col scale-100 transition-transform duration-200">
                 {/* Header */}
                 <div className="p-5 border-b border-gray-800 bg-gradient-to-r from-[#1A1F2E] to-[#151925]">
@@ -163,18 +190,18 @@ const ProcurementActuationModal = ({ procurement, onClose, onSuccess }) => {
                 {/* Footer Controls */}
                 <div className="p-5 border-t border-gray-800 bg-[#1A1F2E] flex justify-end gap-3">
                     <button
-                        onClick={() => !isProcessing && onClose()}
-                        disabled={isProcessing}
+                        onClick={() => !isLocked && onClose()}
+                        disabled={isLocked}
                         className="px-4 py-2 bg-transparent text-gray-400 hover:text-gray-200 rounded-lg font-medium transition-colors disabled:opacity-50"
                     >
                         ABORT TRANSIT
                     </button>
                     <button
                         onClick={handleActuation}
-                        disabled={isProcessing || !targetStatus}
+                        disabled={isLocked || !targetStatus}
                         className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 flex items-center gap-2"
                     >
-                        {isProcessing ? 'ACTUATING...' : 'EXECUTE STATE SHIFT'}
+                        {isProcessing ? 'ACTUATING...' : isSuccess ? 'RESOLVING...' : 'EXECUTE STATE SHIFT'}
                     </button>
                 </div>
             </div>

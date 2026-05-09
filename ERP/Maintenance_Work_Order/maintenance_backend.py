@@ -3318,9 +3318,7 @@ def get_procurement_ledger(
             FROM 
                 erp_procurement_queue p
             JOIN 
-                erp_parts ep ON p.part_id = ep.part_id
-            JOIN 
-                erp_skus s ON ep.sku_id = s.sku_id
+                erp_skus s ON p.part_id = s.sku_id
             ORDER BY 
                 p.triggered_at DESC
             LIMIT ? OFFSET ?
@@ -3340,3 +3338,212 @@ def get_procurement_ledger(
         raise HTTPException(status_code=500, detail=f"Database execution anomaly: {str(e)}")
     finally:
         conn.close()
+
+
+# ==========================================
+# PHASE 48: MASTER DATA HYDRATION ROUTES
+# ==========================================
+# Pydantic Models for deterministic Master Data ingestion.
+# All models accept an optional client-side `id` to support
+# scripted hydration with deterministic primary keys.
+
+class LocationCreate(BaseModel):
+    id: Optional[str] = None
+    name: str = Field(..., min_length=2, description="Physical location name")
+
+class DepartmentCreate(BaseModel):
+    id: Optional[str] = None
+    name: str = Field(..., min_length=2, description="Operational department name")
+
+class CategoryCreate(BaseModel):
+    id: Optional[str] = None
+    name: str = Field(..., min_length=2, description="Equipment/SKU category name")
+
+class Phase48EmployeeCreate(BaseModel):
+    id: Optional[str] = None
+    name: str = Field(..., min_length=2)
+    role: str = Field(..., description="ADMINISTRATOR, ADMIN, HM, TECH")
+    pin_code: str = Field(..., min_length=4)
+    department_id: str = Field(..., description="FK to erp_departments.id")
+    reports_to_hm_id: Optional[str] = None
+
+class Phase48SkuCreate(BaseModel):
+    id: Optional[str] = None
+    nomenclature: str = Field(..., min_length=2)
+    category_id: str = Field(..., description="FK to erp_categories.id")
+    unit_cost: float = Field(..., ge=0.0)
+    reorder_threshold: int = Field(..., ge=0)
+
+class Phase48EquipmentCreate(BaseModel):
+    id: Optional[str] = None
+    nomenclature: str = Field(..., min_length=2)
+    category_id: str = Field(..., description="FK to erp_categories.id")
+    department_id: str = Field(..., description="FK to erp_departments.id")
+    location_id: str = Field(..., description="FK to erp_locations.id")
+    assigned_hm_id: str = Field(..., description="FK to erp_employees.id")
+    status: str = Field(default="ACTIVE")
+
+
+# --- LEVEL 0 ROUTES ---
+
+@app.post("/locations", status_code=201)
+def hydrate_location(payload: LocationCreate, jwt_payload: dict = Depends(verify_jwt_token)):
+    role = jwt_payload.get("role")
+    if role not in ["ADMINISTRATOR", "ADMIN"]:
+        raise HTTPException(status_code=403, detail="RBAC Violation: Administrative clearance required.")
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("BEGIN IMMEDIATE TRANSACTION")
+        loc_id = payload.id if payload.id else f"LOC-{uuid.uuid4().hex[:6].upper()}"
+        cursor.execute("INSERT INTO erp_locations (id, name) VALUES (?, ?)", (loc_id, payload.name))
+        conn.commit()
+        return {"detail": "Record successfully ingested."}
+    except sqlite3.IntegrityError as e:
+        conn.rollback()
+        logger.error(f"Location IntegrityError: {e}")
+        raise HTTPException(status_code=400, detail=f"Structural Violation: {e}")
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Location Ingestion Error: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal Execution Error: {e}")
+    finally:
+        conn.close()
+
+@app.post("/departments", status_code=201)
+def hydrate_department(payload: DepartmentCreate, jwt_payload: dict = Depends(verify_jwt_token)):
+    role = jwt_payload.get("role")
+    if role not in ["ADMINISTRATOR", "ADMIN"]:
+        raise HTTPException(status_code=403, detail="RBAC Violation: Administrative clearance required.")
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("BEGIN IMMEDIATE TRANSACTION")
+        dep_id = payload.id if payload.id else f"DEP-{uuid.uuid4().hex[:6].upper()}"
+        cursor.execute("INSERT INTO erp_departments (id, name) VALUES (?, ?)", (dep_id, payload.name))
+        conn.commit()
+        return {"detail": "Record successfully ingested."}
+    except sqlite3.IntegrityError as e:
+        conn.rollback()
+        logger.error(f"Department IntegrityError: {e}")
+        raise HTTPException(status_code=400, detail=f"Structural Violation: {e}")
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Department Ingestion Error: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal Execution Error: {e}")
+    finally:
+        conn.close()
+
+@app.post("/categories", status_code=201)
+def hydrate_category(payload: CategoryCreate, jwt_payload: dict = Depends(verify_jwt_token)):
+    role = jwt_payload.get("role")
+    if role not in ["ADMINISTRATOR", "ADMIN"]:
+        raise HTTPException(status_code=403, detail="RBAC Violation: Administrative clearance required.")
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("BEGIN IMMEDIATE TRANSACTION")
+        cat_id = payload.id if payload.id else f"CAT-{uuid.uuid4().hex[:6].upper()}"
+        cursor.execute("INSERT INTO erp_categories (id, name) VALUES (?, ?)", (cat_id, payload.name))
+        conn.commit()
+        return {"detail": "Record successfully ingested."}
+    except sqlite3.IntegrityError as e:
+        conn.rollback()
+        logger.error(f"Category IntegrityError: {e}")
+        raise HTTPException(status_code=400, detail=f"Structural Violation: {e}")
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Category Ingestion Error: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal Execution Error: {e}")
+    finally:
+        conn.close()
+
+
+# --- LEVEL 1 ROUTES ---
+
+@app.post("/employees", status_code=201)
+def hydrate_employee(payload: Phase48EmployeeCreate, jwt_payload: dict = Depends(verify_jwt_token)):
+    role = jwt_payload.get("role")
+    if role not in ["ADMINISTRATOR", "ADMIN"]:
+        raise HTTPException(status_code=403, detail="RBAC Violation: Administrative clearance required.")
+    conn = get_db_connection()
+    try:
+        import bcrypt
+        cursor = conn.cursor()
+        cursor.execute("BEGIN IMMEDIATE TRANSACTION")
+        emp_id = payload.id if payload.id else f"U-{uuid.uuid4().hex[:6].upper()}"
+        pin_hash = bcrypt.hashpw(payload.pin_code.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        cursor.execute(
+            "INSERT INTO erp_employees (id, name, role, pin_hash, is_active, department_id, reports_to_hm_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (emp_id, payload.name, payload.role, pin_hash, 1, payload.department_id, payload.reports_to_hm_id)
+        )
+        conn.commit()
+        return {"detail": "Record successfully ingested."}
+    except sqlite3.IntegrityError as e:
+        conn.rollback()
+        logger.error(f"Employee IntegrityError: {e}")
+        raise HTTPException(status_code=400, detail=f"Structural Violation: {e}")
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Employee Ingestion Error: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal Execution Error: {e}")
+    finally:
+        conn.close()
+
+@app.post("/skus", status_code=201)
+def hydrate_sku(payload: Phase48SkuCreate, jwt_payload: dict = Depends(verify_jwt_token)):
+    role = jwt_payload.get("role")
+    if role not in ["ADMINISTRATOR", "ADMIN"]:
+        raise HTTPException(status_code=403, detail="RBAC Violation: Administrative clearance required.")
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("BEGIN IMMEDIATE TRANSACTION")
+        sku_id = payload.id if payload.id else f"SKU-{uuid.uuid4().hex[:6].upper()}"
+        cursor.execute(
+            "INSERT INTO erp_skus (sku_id, nomenclature, unit_cost, reorder_threshold, quantity_on_hand) VALUES (?, ?, ?, ?, ?)",
+            (sku_id, payload.nomenclature, payload.unit_cost, payload.reorder_threshold, 0)
+        )
+        conn.commit()
+        return {"detail": "Record successfully ingested."}
+    except sqlite3.IntegrityError as e:
+        conn.rollback()
+        logger.error(f"SKU IntegrityError: {e}")
+        raise HTTPException(status_code=400, detail=f"Structural Violation: {e}")
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"SKU Ingestion Error: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal Execution Error: {e}")
+    finally:
+        conn.close()
+
+
+# --- LEVEL 2 ROUTES ---
+
+@app.post("/equipment", status_code=201)
+def hydrate_equipment(payload: Phase48EquipmentCreate, jwt_payload: dict = Depends(verify_jwt_token)):
+    role = jwt_payload.get("role")
+    if role not in ["ADMINISTRATOR", "ADMIN"]:
+        raise HTTPException(status_code=403, detail="RBAC Violation: Administrative clearance required.")
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("BEGIN IMMEDIATE TRANSACTION")
+        eq_id = payload.id if payload.id else f"EQ-{uuid.uuid4().hex[:6].upper()}"
+        cursor.execute(
+            "INSERT INTO erp_equipment (equipment_id, nomenclature, category_id, status, department_id, location_id, assigned_hm_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (eq_id, payload.nomenclature, payload.category_id, payload.status, payload.department_id, payload.location_id, payload.assigned_hm_id)
+        )
+        conn.commit()
+        return {"detail": "Record successfully ingested."}
+    except sqlite3.IntegrityError as e:
+        conn.rollback()
+        logger.error(f"Equipment IntegrityError: {e}")
+        raise HTTPException(status_code=400, detail=f"Structural Violation: {e}")
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Equipment Ingestion Error: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal Execution Error: {e}")
+    finally:
+        conn.close()
+
