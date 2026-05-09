@@ -1,0 +1,23 @@
+﻿{
+    "verdict":  "PASS",
+    "score":  100,
+    "audit_mode":  "mathematical",
+    "target_url":  "http://localhost:5041",
+    "file_link":  "C:\\Users\\mpetr\\My Drive\\Antigravity-AI Agents\\Meta_App_Factory\\CFO_Agent\\reports\\CFO_Fragility_Report_20260328_213348.xlsx",
+    "run_id":  11,
+    "total_tests":  1,
+    "passed":  1,
+    "failed":  0,
+    "findings":  [
+                     {
+                         "test_name":  "404 handling",
+                         "passed":  true,
+                         "details":  "Got 404 (correct 404)"
+                     }
+                 ],
+    "timestamp":  "2026-03-28T21:34:21.363614",
+    "duration_seconds":  0.3,
+    "source":  "CFO_Execution_Controller",
+    "file_name":  "WarRoom_CFO_Report_20260328_213348.xlsx",
+    "blocked":  false
+}

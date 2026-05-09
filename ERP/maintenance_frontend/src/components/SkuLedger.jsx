@@ -5,6 +5,7 @@ import SkuCreationModal from './SkuCreationModal';
 
 const SkuLedger = () => {
   const [skus, setSkus] = useState([]);
+  const [totalRecords, setTotalRecords] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showIngestionModal, setShowIngestionModal] = useState(false);
@@ -16,7 +17,8 @@ const SkuLedger = () => {
       setError(null);
       const response = await api.get('/inventory/skus');
       if (isMounted) {
-        setSkus(response.data.data || []);
+        setSkus(Array.isArray(response.data.items) ? response.data.items : []);
+        setTotalRecords(response.data.total || 0);
       }
     } catch (err) {
       if (isMounted) {
