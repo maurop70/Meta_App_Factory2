@@ -1,225 +1,30 @@
-"""
-memory_engine.py — Supabase Long-Term Memory for Alpha V2 Genesis
-═════════════════════════════════════════════════════════════════════
-Stores and retrieves conversation history from a Supabase `chat_history`
-table for persistent, cross-session memory.
-
-Security: Credentials fetched from vault_client at runtime.
-
-Table schema (create in Supabase SQL editor):
-    CREATE TABLE chat_history (
-      id          bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-      session_id  text    NOT NULL,
-      role        text    NOT NULL,     -- 'user' or 'assistant'
-      content     text    NOT NULL,
-      created_at  timestamptz DEFAULT now()
-    );
-    CREATE INDEX idx_chat_session ON chat_history (session_id, created_at DESC);
-"""
-
-# ── V3.0 Resilience Integration ──────────────────────────
-import os as _os, sys as _sys
-_FACTORY_DIR = _os.path.normpath(_os.path.join(_os.path.dirname(_os.path.abspath(__file__)), ".."))
-_sys.path.insert(0, _FACTORY_DIR)
-try:
-    from factory import safe_post
-    from local_state_manager import StateManager as _StateManager
-    _v3_sm = _StateManager()
-    _V3_AVAILABLE = True
-except ImportError:
-    _V3_AVAILABLE = False
-# ── End V3 Integration ──────────────────────────────────
-
-from auto_heal import healed_post, auto_heal, diagnose
-
-def _v3_preflight():
-    """V3: Ping Resonance_Watchdog_V3 before execution."""
-    if not _V3_AVAILABLE:
-        return True
-    try:
-        import json as _j
-        _cfg_path = _os.path.join(_FACTORY_DIR, "resilience_config.json")
-        if not _os.path.exists(_cfg_path):
-            return True
-        with open(_cfg_path) as _f:
-            _cfg = _j.load(_f)
-        _url = _cfg.get("cloud_health", {}).get("watchdog_url", "")
-        if not _url:
-            return True
-        import requests as _rq
-        _r = _rq.get(_url, timeout=5)
-        return _r.status_code == 200
-    except Exception:
-        return False
-
-
-import os
-import sys
-import logging
-import threading
-from datetime import datetime
-
-logger = logging.getLogger("MemoryEngine")
-
-# ── Vault Integration ────────────────────────────────────────
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, SCRIPT_DIR)
-
-try:
-    from vault_client import get_secret
-except ImportError:
-    def get_secret(key, default="", **kw):
-        return os.getenv(key, default)
-
-# ── Supabase Client (lazy singleton) ─────────────────────────
-_client = None
-_client_lock = threading.Lock()
-
-
-def _get_client():
-    """Lazy-init Supabase REST client. Returns None on failure (graceful degradation)."""
-    global _client
-    if _client is not None:
-        return _client
-
-    with _client_lock:
-        if _client is not None:
-            return _client
-
-        url = get_secret("SUPABASE_URL")
-        key = get_secret("SUPABASE_KEY")
-
-        if not url or not key:
-            logger.warning("Supabase credentials not found in vault. Memory engine disabled.")
-            return None
-
-        try:
-            from postgrest import SyncPostgrestClient
-            rest_url = f"{url.rstrip('/')}/rest/v1"
-            _client = SyncPostgrestClient(
-                base_url=rest_url,
-                headers={
-                    "apikey": key,
-                    "Authorization": f"Bearer {key}",
-                }
+async def fetch_history(session_id: str, limit: int = 50, offset: int = 0) -> dict:
+    """Async read operation for fetching chat history with strict pagination bounds."""
+    await _init_db()
+    
+    def execute_read():
+        with sqlite3.connect(DB_PATH, timeout=5.0) as conn:
+            conn.row_factory = sqlite3.Row
+            
+            # Parallel execution (mathematically bounded)
+            count_cursor = conn.execute(
+                "SELECT COUNT(*) as total FROM chat_history WHERE session_id = ?",
+                (session_id,)
             )
-            logger.info("Supabase memory engine connected (postgrest).")
-            return _client
-        except ImportError:
-            logger.warning("postgrest package not installed. Run: pip install postgrest")
-            return None
-        except Exception as e:
-            logger.error(f"Supabase connection failed: {e}")
-            return None
-
-
-# ── Public API ────────────────────────────────────────────────
-
-def save_message(session_id: str, role: str, content: str) -> bool:
-    """
-    Inserts a message into the chat_history table.
-
-    Args:
-        session_id: Conversation session identifier (e.g., "alpha-stream")
-        role:       "user" or "assistant"
-        content:    Message text
-
-    Returns:
-        True on success, False on failure (never raises)
-    """
-    client = _get_client()
-    if not client:
-        return False
-
-    try:
-        client.table("chat_history").insert({
-            "session_id": session_id,
-            "role": role,
-            "content": content,
-        }).execute()
-        return True
-    except Exception as e:
-        logger.error(f"save_message failed: {e}")
-        return False
-
-
-def save_message_async(session_id: str, role: str, content: str):
-    """Fire-and-forget version of save_message for non-blocking writes."""
-    thread = threading.Thread(
-        target=save_message,
-        args=(session_id, role, content),
-        daemon=True,
-    )
-    thread.start()
-
-
-def get_history(session_id: str, limit: int = 10) -> list[dict]:
-    """
-    Retrieves the last N messages for a session, ordered oldest-first.
-
-    Args:
-        session_id: Conversation session identifier
-        limit:      Max number of messages to retrieve (default 10)
-
-    Returns:
-        List of dicts: [{"role": "user", "content": "..."}, ...]
-        Returns empty list on failure (never raises)
-    """
-    client = _get_client()
-    if not client:
-        return []
-
-    try:
-        response = (
-            client.table("chat_history")
-            .select("role, content")
-            .eq("session_id", session_id)
-            .order("created_at", desc=True)
-            .limit(limit)
-            .execute()
-        )
-        # Reverse so oldest is first (natural conversation order)
-        messages = list(reversed(response.data)) if response.data else []
-        return messages
-    except Exception as e:
-        logger.error(f"get_history failed: {e}")
-        return []
-
-
-def format_history_for_llm(session_id: str, limit: int = 10) -> str:
-    """
-    Retrieves history and formats it as a context string for the LLM.
-
-    Returns:
-        Formatted string like:
-        --- CONVERSATION HISTORY ---
-        USER: Hello
-        ASSISTANT: Hi there
-        ----------------------------
-    """
-    history = get_history(session_id, limit)
-    if not history:
-        return ""
-
-    lines = ["--- CONVERSATION HISTORY ---"]
-    for msg in history:
-        role = msg["role"].upper()
-        lines.append(f"{role}: {msg['content']}")
-    lines.append("----------------------------")
-    return "\n".join(lines)
-
-
-def clear_history(session_id: str) -> bool:
-    """Deletes all messages for a given session."""
-    client = _get_client()
-    if not client:
-        return False
-
-    try:
-        client.table("chat_history").delete().eq("session_id", session_id).execute()
-        logger.info(f"Cleared history for session: {session_id}")
-        return True
-    except Exception as e:
-        logger.error(f"clear_history failed: {e}")
-        return False
-# V3 AUTO-HEAL ACTIVE
+            total = count_cursor.fetchone()["total"]
+            
+            # Enforced limit and offset natively at the SQLite execution layer
+            cursor = conn.execute(
+                "SELECT role, content, created_at FROM chat_history WHERE session_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?", 
+                (session_id, limit, offset)
+            )
+            items = [dict(row) for row in cursor.fetchall()]
+            
+            return {
+                "items": items,
+                "total": total,
+                "limit": limit,
+                "offset": offset
+            }
+            
+    return await asyncio.to_thread(execute_read)

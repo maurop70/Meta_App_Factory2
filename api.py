@@ -49,7 +49,7 @@ from warroom_protocol import (
 )
 from wisdom_vault import get_wisdom_vault
 
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, UploadFile, File, Form, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse, FileResponse
 from pydantic import BaseModel
@@ -57,7 +57,32 @@ from pydantic import BaseModel
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(message)s")
 logger = logging.getLogger("FactoryAPI")
 
-app = FastAPI(title="Antigravity Meta App Factory API", version="3.0")
+# Global Import Hoisting
+try:
+    from Alpha_V2_Genesis.memory_engine import fetch_history
+except ImportError:
+    pass
+
+# ── Paths ─────────────────────────────────────────────────────
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+from contextlib import asynccontextmanager
+
+# ── Memory Engine Lifespan Binding ──
+sys.path.insert(0, os.path.join(SCRIPT_DIR, "Alpha_V2_Genesis"))
+try:
+    from memory_engine import start_memory_engine, stop_memory_engine
+except ImportError:
+    async def start_memory_engine(): pass
+    async def stop_memory_engine(): pass
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await start_memory_engine()
+    yield
+    await stop_memory_engine()
+
+app = FastAPI(title="Antigravity Meta App Factory API", version="3.0", lifespan=lifespan)
 
 # ── CORS ──────────────────────────────────────────────────────
 app.add_middleware(
@@ -68,8 +93,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── Paths ─────────────────────────────────────────────────────
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 REGISTRY_PATH = os.path.join(SCRIPT_DIR, "registry.json")
 
 # ── Load .env so GEMINI_API_KEY and all secrets are available to every thread ──
@@ -818,19 +841,28 @@ def clear_chat():
         clear_stream_history()
     return {"status": "ok", "message": "Chat history cleared."}
 
-
 @app.get("/api/chat/history")
-def get_chat_history(limit: int = 20):
-    """Retrieve conversation history from Supabase for session recovery."""
-    if not HISTORY_RETRIEVAL:
-        return {"messages": [], "source": "unavailable"}
+async def get_chat_history(
+    session_id: str = Query(..., description="The unique session identifier for the chat"),
+    limit: int = Query(50, ge=1, le=100, description="Strict upper bound to prevent serialization bloat"),
+    offset: int = Query(0, ge=0, description="Zero-indexed structural offset")
+):
+    """
+    Secure endpoint enforcing unified I/O serialization for chat history.
+    Strictly forbids fragmented returns and enforces native SQLite bounds.
+    """
     try:
-        raw = supa_get_history(STREAM_SESSION, limit=limit)
-        messages = [{"role": m["role"], "text": m["content"]} for m in raw]
-        return {"messages": messages, "source": "supabase"}
+        # Execution of the bounded fetch
+        payload = await fetch_history(session_id=session_id, limit=limit, offset=offset)
+        
+        # The payload natively resolves to the mathematically uniform JSON envelope:
+        # { "items": [...], "total": <int>, "limit": <int>, "offset": <int> }
+        return payload
+        
     except Exception as e:
-        logger.warning(f"History retrieval failed: {e}")
-        return {"messages": [], "source": "error", "error": str(e)}
+        logger.error(f"Bounded execution failure in fetch_history: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error retrieving memory matrix.")
+
 
 
 # ── Document Parser Upload ────────────────────────────────────

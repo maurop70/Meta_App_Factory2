@@ -16,9 +16,9 @@ const PartsMatrix = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.get(`/admin/parts?limit=${LIMIT}&offset=${page * LIMIT}`);
+      const response = await api.get(`/inventory/parts?limit=${LIMIT}&offset=${page * LIMIT}`);
       if (isMounted) {
-        setParts(response.data.data || []);
+        setParts(response.data.items || []);
       }
     } catch (err) {
       if (isMounted) {
@@ -39,11 +39,7 @@ const PartsMatrix = () => {
   const handleNextPage = () => setPage(p => p + 1);
   const handlePrevPage = () => setPage(p => Math.max(0, p - 1));
 
-  const getStockBadge = (qty, threshold) => {
-    if (qty <= 0) return { bg: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', label: 'OUT OF STOCK' };
-    if (qty <= threshold) return { bg: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', label: 'LOW STOCK' };
-    return { bg: 'rgba(16, 185, 129, 0.15)', color: '#10b981', label: 'IN STOCK' };
-  };
+
 
   return (
     <div className="parts-matrix-container">
@@ -73,10 +69,8 @@ const PartsMatrix = () => {
               <tr>
                 <th>Part ID</th>
                 <th>Nomenclature</th>
-                <th>Category</th>
-                <th>Qty On Hand</th>
-                <th>Reorder Threshold</th>
-                <th>Unit Cost</th>
+                <th>Serial Number</th>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody>
@@ -86,22 +80,16 @@ const PartsMatrix = () => {
                 </tr>
               ) : (
                 parts.map((part) => {
-                  const stock = getStockBadge(part.quantity_on_hand, part.reorder_threshold);
                   return (
                     <tr key={part.part_id}>
                       <td data-label="Part ID"><span className="badge badge-role">{part.part_id}</span></td>
                       <td data-label="Nomenclature">{part.nomenclature}</td>
-                      <td data-label="Category">{part.category}</td>
-                      <td data-label="Qty On Hand">
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <strong style={{ color: '#e2e8f0' }}>{part.quantity_on_hand}</strong>
-                          <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '0.65rem', fontWeight: 600, background: stock.bg, color: stock.color }}>
-                            {stock.label}
-                          </span>
+                      <td data-label="Serial Number">{part.serial_number || <span style={{color: '#64748b', fontStyle: 'italic'}}>N/A</span>}</td>
+                      <td data-label="Status">
+                        <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '0.65rem', fontWeight: 600, background: 'rgba(16, 185, 129, 0.15)', color: '#10b981' }}>
+                          {part.status}
                         </span>
                       </td>
-                      <td data-label="Reorder Threshold">{part.reorder_threshold}</td>
-                      <td data-label="Unit Cost">${part.unit_cost.toFixed(2)}</td>
                     </tr>
                   );
                 })
@@ -119,8 +107,9 @@ const PartsMatrix = () => {
 
       {showIngestionModal && (
         <PartIngestionModal
-          closeModal={() => setShowIngestionModal(false)}
-          onIngestionSuccess={() => fetchParts()}
+          isOpen={showIngestionModal}
+          onClose={() => setShowIngestionModal(false)}
+          onPartIngested={() => fetchParts()}
         />
       )}
     </div>

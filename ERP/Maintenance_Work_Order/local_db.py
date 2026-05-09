@@ -12,8 +12,10 @@ def get_db_connection() -> sqlite3.Connection:
     """
     Returns a thread-safe connection object with strict concurrency pragmas.
     Connects to the LOCAL copy outside Google Drive to prevent file lock deadlocks.
+    isolation_level=None forces autocommit mode, empowering routes to explicitly
+    declare BEGIN IMMEDIATE TRANSACTION boundaries for concurrency locking.
     """
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False, timeout=10)
+    conn = sqlite3.connect(DB_PATH, check_same_thread=False, timeout=10, isolation_level=None)
     
     # Return dictionary-like rows to mimic JSON responses from the previous API
     conn.row_factory = sqlite3.Row

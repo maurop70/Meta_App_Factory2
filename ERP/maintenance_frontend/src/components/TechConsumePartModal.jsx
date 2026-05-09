@@ -5,13 +5,12 @@ import api from '../services/api';
 const TechConsumePartModal = ({ isOpen, onClose, mwoId, onConsumeSuccess }) => {
   const [catalog, setCatalog] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [formData, setFormData] = useState({ part_id: '', quantity_consumed: 1 });
+  const [selectedParts, setSelectedParts] = useState([]);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
     if (isOpen) {
-      // Truncated API call with bounded pagination & zero-stock exclusion
       api.get('/inventory/available?limit=50&offset=0')
         .then(res => {
           if (isMounted) setCatalog(res.data.data || []);
@@ -46,14 +45,11 @@ const TechConsumePartModal = ({ isOpen, onClose, mwoId, onConsumeSuccess }) => {
       setError(null);
 
       // 1. Atomic Mutation Dispatch
-      await api.post(`/mwo/${mwoId}/consume_part`, {
-        part_id: formData.part_id,
-        quantity_consumed: parseInt(formData.quantity_consumed, 10)
+      await api.post(`/work-orders/${mwoId}/consume`, {
+        part_ids: selectedParts
       });
 
       // 2. Success Resolution Phase — Transit Lockout HELD
-      // All closure vectors (Escape, backdrop, buttons) remain disabled
-      // because isProcessing is still true.
       await onConsumeSuccess();
 
       // 3. Post-resolution teardown — safe to release
@@ -63,6 +59,12 @@ const TechConsumePartModal = ({ isOpen, onClose, mwoId, onConsumeSuccess }) => {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const togglePartSelection = (partId) => {
+    setSelectedParts(prev => 
+      prev.includes(partId) ? prev.filter(id => id !== partId) : [...prev, partId]
+    );
   };
 
   const inputStyle = {
@@ -87,7 +89,7 @@ const TechConsumePartModal = ({ isOpen, onClose, mwoId, onConsumeSuccess }) => {
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
           <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#e2e8f0', margin: 0 }}>
-            Consume Part
+            Consume Parts
           </h3>
           <button
             onClick={onClose}
@@ -110,35 +112,32 @@ const TechConsumePartModal = ({ isOpen, onClose, mwoId, onConsumeSuccess }) => {
         )}
 
         <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={labelStyle}>Select Consumable</label>
-            <select
-              required
-              value={formData.part_id}
-              onChange={e => setFormData({ ...formData, part_id: e.target.value })}
-              disabled={isProcessing}
-              style={{ ...inputStyle, cursor: isProcessing ? 'not-allowed' : 'pointer' }}
-            >
-              <option value="">-- Select Part from Inventory --</option>
-              {catalog.map(part => (
-                <option key={part.part_id} value={part.part_id}>
-                  {part.part_id} — {part.nomenclature} (Avail: {part.quantity_on_hand})
-                </option>
-              ))}
-            </select>
-          </div>
-
           <div style={{ marginBottom: '1.5rem' }}>
-            <label style={labelStyle}>Quantity to Consume</label>
-            <input
-              type="number"
-              min="1"
-              required
-              value={formData.quantity_consumed}
-              onChange={e => setFormData({ ...formData, quantity_consumed: e.target.value })}
-              disabled={isProcessing}
-              style={{ ...inputStyle, cursor: isProcessing ? 'not-allowed' : 'text' }}
-            />
+            <label style={labelStyle}>Select Consumable Parts</label>
+            <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid rgba(16, 185, 129, 0.2)', borderRadius: '6px', background: 'rgba(10, 14, 23, 0.6)' }}>
+              {catalog.length === 0 ? (
+                <div style={{ padding: '1rem', color: '#94a3b8', fontSize: '0.85rem', textAlign: 'center' }}>No parts available in inventory.</div>
+              ) : (
+                catalog.map(part => (
+                  <label key={part.part_id} style={{ display: 'flex', alignItems: 'center', padding: '0.6rem 0.8rem', borderBottom: '1px solid rgba(255,255,255,0.05)', cursor: isProcessing ? 'not-allowed' : 'pointer', transition: 'background 0.2s' }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedParts.includes(part.part_id)}
+                      onChange={() => togglePartSelection(part.part_id)}
+                      disabled={isProcessing}
+                      style={{ marginRight: '0.8rem', cursor: isProcessing ? 'not-allowed' : 'pointer' }}
+                    />
+                    <div>
+                      <div style={{ color: '#e2e8f0', fontSize: '0.85rem', fontWeight: 500 }}>{part.nomenclature}</div>
+                      <div style={{ color: '#34d399', fontSize: '0.7rem', fontFamily: 'monospace' }}>{part.part_id}</div>
+                    </div>
+                  </label>
+                ))
+              )}
+            </div>
+            <div style={{ color: '#94a3b8', fontSize: '0.75rem', marginTop: '0.5rem', textAlign: 'right' }}>
+              Selected: <span style={{ color: '#34d399', fontWeight: 700 }}>{selectedParts.length}</span> parts
+            </div>
           </div>
 
           <div style={{ display: 'flex', gap: '1rem' }}>
@@ -152,10 +151,10 @@ const TechConsumePartModal = ({ isOpen, onClose, mwoId, onConsumeSuccess }) => {
             </button>
             <button
               type="submit"
-              disabled={isProcessing || !formData.part_id}
-              style={{ flex: 1, padding: '0.7rem', background: isProcessing || !formData.part_id ? 'rgba(16, 185, 129, 0.2)' : 'linear-gradient(135deg, #10b981, #059669)', color: isProcessing || !formData.part_id ? '#94a3b8' : '#fff', border: 'none', borderRadius: '8px', cursor: isProcessing || !formData.part_id ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '0.85rem', transition: 'all 0.2s', boxShadow: isProcessing || !formData.part_id ? 'none' : '0 4px 15px rgba(16, 185, 129, 0.25)' }}
+              disabled={isProcessing || selectedParts.length === 0}
+              style={{ flex: 1, padding: '0.7rem', background: isProcessing || selectedParts.length === 0 ? 'rgba(16, 185, 129, 0.2)' : 'linear-gradient(135deg, #10b981, #059669)', color: isProcessing || selectedParts.length === 0 ? '#94a3b8' : '#fff', border: 'none', borderRadius: '8px', cursor: isProcessing || selectedParts.length === 0 ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '0.85rem', transition: 'all 0.2s', boxShadow: isProcessing || selectedParts.length === 0 ? 'none' : '0 4px 15px rgba(16, 185, 129, 0.25)' }}
             >
-              {isProcessing ? 'ALLOCATING...' : 'CONSUME PART'}
+              {isProcessing ? 'ALLOCATING...' : 'CONSUME PARTS'}
             </button>
           </div>
         </form>
