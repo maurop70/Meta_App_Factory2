@@ -337,6 +337,7 @@ def quarantine_service(payload: QuarantinePayload):
 def get_manifest():
     """Parses sync_manifest.json dynamically and serves it as the active C-Suite array."""
     import json
+    import os
     
     factory_dir = os.path.dirname(os.path.abspath(__file__))
     root_dir = os.path.dirname(factory_dir)
@@ -346,20 +347,57 @@ def get_manifest():
         with open(manifest_path, "r", encoding="utf-8") as f:
             data = json.load(f)
             
-            # If it's already a standardized array, just return it
             if isinstance(data, list):
-                return data
+                dirty = False
+                valid_apps = []
+                for app in data:
+                    app_path = app.get("path") or app.get("cwd") or app.get("name")
+                    if app_path:
+                        full_path = os.path.abspath(os.path.join(root_dir, app_path.lstrip("/\\")))
+                        if not os.path.exists(full_path):
+                            logger.warning(f"[AUTO-PURGE] Eradicating ghost node from manifest: {app.get('name')}")
+                            dirty = True
+                            continue
+                    valid_apps.append(app)
+                if dirty:
+                    with open(manifest_path, "w", encoding="utf-8") as fw:
+                        json.dump(valid_apps, fw, indent=2)
+                return valid_apps
                 
             apps_array = []
+            dirty = False
+            valid_dict = {}
+            valid_projects = {}
             
-            # Map top-level items into array objects for the frontend
             for key, val in data.items():
                 if isinstance(val, dict) and key not in ["projects", "drive_structure"]:
+                    app_path = val.get("path") or val.get("cwd") or key
+                    full_path = os.path.abspath(os.path.join(root_dir, app_path.lstrip("/\\")))
+                    if not os.path.exists(full_path):
+                        logger.warning(f"[AUTO-PURGE] Eradicating ghost node from manifest: {key}")
+                        dirty = True
+                        continue
+                    valid_dict[key] = val
                     apps_array.append({"name": key, "status": val.get("status", "active"), **val})
+                else:
+                    if key != "projects":
+                        valid_dict[key] = val
                     
             for proj_name, proj_data in data.get("projects", {}).items():
+                app_path = proj_data.get("path") or proj_data.get("cwd") or proj_name
+                full_path = os.path.abspath(os.path.join(root_dir, app_path.lstrip("/\\")))
+                if not os.path.exists(full_path):
+                    logger.warning(f"[AUTO-PURGE] Eradicating ghost node from manifest projects: {proj_name}")
+                    dirty = True
+                    continue
+                valid_projects[proj_name] = proj_data
                 apps_array.append({"name": proj_name, "status": proj_data.get("status", "active"), **proj_data})
                 
+            if dirty:
+                valid_dict["projects"] = valid_projects
+                with open(manifest_path, "w", encoding="utf-8") as fw:
+                    json.dump(valid_dict, fw, indent=2)
+                    
             return apps_array
     except Exception as e:
         logger.error(f"[Operator] Failed to read sync_manifest.json: {e}")

@@ -11,4 +11,6 @@ google-auth-httplib2
 beautifulsoup4
 python-multipart
 xhtml2pdf
+httpx
 jinja2
+anthropic

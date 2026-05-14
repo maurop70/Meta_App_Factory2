@@ -1,0 +1,13 @@
+@echo off
+title Meta App Factory Web UI
+echo Starting Backend API (api.py)...
+start "MAF Backend" cmd /k "cd /d %~dp0 && python api.py"
+
+echo Starting Vite Frontend...
+start "MAF Frontend" cmd /k "cd /d %~dp0factory_ui && npm run dev"
+
+echo Waiting for services to start...
+timeout /t 5 >nul
+
+echo Opening browser...
+start http://localhost:5173

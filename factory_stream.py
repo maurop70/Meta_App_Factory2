@@ -157,7 +157,20 @@ BASE_SYSTEM_PROMPT = (
     "### INTERACTION STYLE PREFERENCE\n"
     "The user can choose how they want to engage with you. Check the 'interactionMode' in the factory state:\n"
     "1. Socratic Mode (interactionMode='socratic'): (Default) Engage in the Persona-Driven Socratic Interrogation. Ask one question at a time to build the blueprint.\n"
-    "2. Solution Mode (interactionMode='solution'): Do NOT interrogate. Instead, instantly propose a complete solution or Master Blueprint based on the user's initial prompt. The user will then provide feedback and iterate.\n"
+    "2. Solution Mode (interactionMode='solution'): Do NOT interrogate. Instead, instantly propose a complete solution or Master Blueprint based on the user's initial prompt. The user will then provide feedback and iterate.\n\n"
+    "### [MANDATORY MEMORY INJECTIONS]\n"
+    "1. FASTAPI ROUTING RESTRICTION DOCTRINE\n"
+    "Backend API routers are strictly high-performance JSON I/O engines. The use of catch-all fallback routes (e.g., /{full_path:path}) or StaticFiles mounting to serve frontend assets is permanently forbidden. All routing must be explicitly defined. Unregistered paths must organically fall through to strict 404 Not Found JSON exceptions to prevent silent HTML payload injections into React state hooks.\n\n"
+    "2. UNIFIED I/O & PAGINATION DOCTRINE\n"
+    "Unbounded data fetching (e.g., SELECT * FROM table) is permanently forbidden. Any backend GET route querying a collection must natively ingest and enforce limit and offset query parameters. Furthermore, all paginated collection routes must strictly return a mathematically uniform JSON envelope: {\"items\": [...], \"total\": <int>, \"limit\": <int>, \"offset\": <int>}. Fragmented serialization structures are fatal violations.\n\n"
+    "3. CPU & I/O ISOLATION DOCTRINE\n"
+    "All file ingestion (CSV/Data payloads) and CPU-bound generation tasks (PDF/Reporting) are strictly forbidden from executing on the primary FastAPI application thread. They must be decoupled via asynchronous background workers. External data payloads must pass rigorous Pydantic schema validation prior to database interaction.\n\n"
+    "4. STRICT EXCEPTION ESCALATION DOCTRINE\n"
+    "Autonomous agents are permanently forbidden from silently mutating architectural parameters, taxonomies, or data models to bypass engine-level exceptions (e.g., SQLite CHECK constraints). If an execution mandate conflicts with the established physical schema, the agent must immediately halt execution and output the raw physical exception for architectural resolution. Forging compliance diffs is a fatal system violation.\n\n"
+    "HIGH-PERFORMANCE I/O SERIALIZATION DOCTRINE: The generative Architect (Triad) is permanently forbidden from introducing REST anti-patterns. All FastAPI route synthesis must strictly enforce:\n"
+    "Zero Typing Degradation: Never use Dict[str, Any] to mask response models. Route decorators must natively declare the strict Pydantic response_model.\n"
+    "Zero Redundant HTTP State Strings: Never inject legacy {\"status\": \"success\"} wrappers. Rely natively on ASGI HTTP status codes.\n"
+    "Zero Manual Serialization: Never manually call .dict() or .model_dump() on return objects. Return the initialized Pydantic model directly and allow FastAPI's core engine to autonomously serialize the matrix.\n"
 )
 
 
@@ -339,3 +352,55 @@ def stream_chat(prompt, project_name="Factory", dashboard_context=None):
 
 # V3 MIGRATION COMPLETE
 # V3 AUTO-HEAL ACTIVE
+
+
+# ── Sub-Atomic Re-Stitching Protocol ─────────────────────────
+import re
+
+def extract_search_block(llm_response: str) -> str:
+    match = re.search(r'<<<<<<<\s*SEARCH\r?\n(.*?)\r?\n?=======\r?\n', llm_response, re.DOTALL)
+    if not match:
+        raise ValueError("[FATAL] Missing SEARCH block in mutation payload.")
+    return match.group(1)
+
+def extract_replace_block(llm_response: str) -> str:
+    match = re.search(r'=======\r?\n(.*?)>>>>>>>\s*REPLACE', llm_response, re.DOTALL)
+    if not match:
+        raise ValueError("[FATAL] Missing REPLACE block in mutation payload.")
+    return match.group(1)
+
+import aiofiles
+
+async def sub_atomic_restitch(target_path: str, llm_response: str) -> str:
+    async with aiofiles.open(target_path, 'r', encoding='utf-8') as f:
+        file_lines = await f.readlines()
+        
+    search_block = extract_search_block(llm_response)
+    replace_block = extract_replace_block(llm_response)
+    
+    search_lines = [line.rstrip() for line in search_block.split('\n')]
+    if search_lines and search_lines[-1] == '':
+        search_lines.pop()
+
+    file_lines_normalized = [line.rstrip() for line in file_lines]
+    
+    match_idx = -1
+    match_count = 0
+    search_len = len(search_lines)
+    
+    for i in range(len(file_lines_normalized) - search_len + 1):
+        if file_lines_normalized[i:i+search_len] == search_lines:
+            match_idx = i
+            match_count += 1
+            
+    if match_count != 1:
+        raise ValueError(f"[FATAL] Sub-Atomic Re-Stitch Failed: Found {match_count} normalized matches for search block.")
+        
+    prefix = "".join(file_lines[:match_idx])
+    suffix = "".join(file_lines[match_idx+search_len:])
+    
+    if replace_block and not replace_block.endswith('\n'):
+        replace_block += '\n'
+        
+    stitched_memory_string = prefix + replace_block + suffix
+    return stitched_memory_string

@@ -8,6 +8,7 @@ from typing import Optional, List, Dict, Any
 from forge_rollback_manager import ForgeRollbackManager
 from qa_architect import QAArchitect
 import model_router
+from socratic_challenger import evaluate_payload
 
 logger = logging.getLogger("ForgeOrchestrator")
 logging.basicConfig(level=logging.INFO)
@@ -41,6 +42,10 @@ def _push_forge_event(agent: str, message: str, status: str,
 
 class ExecutiveForkTriggered(Exception):
     """Raised when an ambiguous architectural choice halts the autonomous loop."""
+    pass
+
+class FatalEscalation(Exception):
+    """Raised when the Circuit Breaker trips after exceeding MAX_RETRIES."""
     pass
 
 class ForgeOrchestrator:
@@ -136,7 +141,22 @@ class ForgeOrchestrator:
         staging_path = os.path.join(FACTORY_DIR, "staging_environment", staging_filename)
 
         for attempt in range(1, max_heal_attempts + 1):
-            result = self.qa.execute_staging_script(staging_filename, attempt=attempt)
+            # ── 1. AST Doctrine Enforcement via Routing Gateway ──
+            envelope = {
+                "staging_filepath": staging_path,
+                "metadata": {"filename": staging_filename}
+            }
+            gatekeeper_result = evaluate_payload(envelope)
+            
+            if gatekeeper_result.get("status") == "AST_VIOLATION":
+                logger.error(f"[ForgeOrchestrator] AST violations found in {staging_filename}")
+                result = {"status": "ast_violation", "error": "\n".join(gatekeeper_result["violations"])}
+            elif gatekeeper_result.get("status") == "FATAL_ERROR":
+                logger.error(f"[ForgeOrchestrator] Gatekeeper FATAL ERROR: {gatekeeper_result.get('message')}")
+                return {"status": "error", "error": gatekeeper_result.get("message")}
+            else:
+                # ── 2. Runtime Execution QA (Diagnostic Node) ──
+                result = self.qa.execute_staging_script(staging_filename, attempt=attempt)
 
             if result["status"] == "pass":
                 _push_forge_event(
@@ -170,13 +190,36 @@ class ForgeOrchestrator:
                     attempt=attempt,
                 )
 
-                heal_prompt = (
-                    f"You are the CTO Auto-Heal Agent. A sandboxed Python script failed QA.\n\n"
-                    f"Script: {staging_filename}\n"
-                    f"Failure reason:\n{err_summary}\n\n"
-                    f"Read the script, identify the bug, and return ONLY the corrected, "
-                    f"complete Python source. No explanation, no markdown — raw Python only."
-                )
+                if gatekeeper_result.get("status") == "AST_VIOLATION":
+                    heal_prompt = (
+                        f"SYSTEM DIRECTIVE: PHYSICAL DOCTRINE VIOLATION\n"
+                        f"You are the CTO Auto-Heal Agent. The script '{staging_filename}' failed the strict AST structural audit.\n\n"
+                        f"AST VIOLATIONS DETECTED:\n{err_summary}\n\n"
+                        f"Read the script, identify the AST violations on the specified lines, and return ONLY the corrected, "
+                        f"complete Python source. Do not use catch-all routes, enforce pagination parameters explicitly, and ensure CPU-bound operations are isolated. No explanation, no markdown — raw Python only."
+                    )
+                elif result.get("status") == "pytest_failure":
+                    heal_prompt = (
+                        f"SYSTEM DIRECTIVE: DIAGNOSTIC BACKEND FAILURE\n"
+                        f"You are the CTO Auto-Heal Agent. The staging payload '{staging_filename}' failed pytest execution.\n\n"
+                        f"TRACEBACK:\n{result.get('traceback', err_summary)}\n\n"
+                        f"Resolve the logic fracture and return ONLY the complete patched file. No explanation, no markdown — raw Python only."
+                    )
+                elif result.get("status") == "playwright_failure":
+                    heal_prompt = (
+                        f"SYSTEM DIRECTIVE: DIAGNOSTIC DOM FRACTURE\n"
+                        f"You are the CTO Auto-Heal Agent. The React payload '{staging_filename}' failed headless mounting.\n\n"
+                        f"JS CONSOLE ERROR:\n{result.get('console_error', err_summary)}\n\n"
+                        f"Resolve the frontend crash and return ONLY the complete patched file. No explanation, no markdown — raw code only."
+                    )
+                else:
+                    heal_prompt = (
+                        f"You are the CTO Auto-Heal Agent. A sandboxed script failed QA.\n\n"
+                        f"Script: {staging_filename}\n"
+                        f"Failure reason:\n{err_summary}\n\n"
+                        f"Read the script, identify the bug, and return ONLY the corrected, "
+                        f"complete source. No explanation, no markdown — raw code only."
+                    )
                 try:
                     # Read current source to include in context
                     with open(staging_path, "r", encoding="utf-8") as f:
@@ -210,13 +253,24 @@ class ForgeOrchestrator:
                     )
                     return result  # give up — can't write the heal
             else:
-                # Final attempt exhausted
+                # Final attempt exhausted - Circuit Breaker Tripped
+                err_summary = result.get("stderr", "")[:500] or result.get("error", "Unknown error")
+                if "violations" in gatekeeper_result.get("status", ""):
+                    err_summary = "\n".join(gatekeeper_result.get("violations", []))
+                
                 _push_forge_event(
                     "FORGE_ORCHESTRATOR",
-                    f"❌ Auto-Heal EXHAUSTED after {max_heal_attempts} attempts. {staging_filename} remains FAIL.",
+                    f"❌ FATAL ESCALATION: Auto-Heal EXHAUSTED after {max_heal_attempts} attempts. {staging_filename} remains FAIL.",
                     "HEAL_FAIL",
                     filename=staging_filename,
                     attempt=attempt,
+                )
+                
+                # Demand biological intervention
+                raise FatalEscalation(
+                    f"FATAL ESCALATION: Payload {staging_filename} failed Audit/Diagnostic constraints 3 times.\n"
+                    f"Final Traceback/Violations:\n{err_summary}\n"
+                    f"Biological intervention required from @Operator."
                 )
 
         return result

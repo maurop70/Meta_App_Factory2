@@ -133,47 +133,6 @@ MEMO_PATH = os.path.join(script_dir, 'market_memo.md')
 # Initialize Loki Pattern
 loki_engine = Loki(portfolio_path=PORTFOLIO_PATH) if Loki else None
 
-def self_heal_n8n(new_url):
-    """
-    Antigravity Logic: Reprograms the n8n node with the new tunnel URL.
-    Filters 'settings' to only include API-supported keys to avoid validation errors.
-    """
-    url = f"https://humanresource.app.n8n.cloud/api/v1/workflows/{N8N_WORKFLOW_ID}"
-    headers = {"X-N8N-API-KEY": N8N_API_KEY, "Content-Type": "application/json"}
-    SUPPORTED_SETTINGS = {
-        "saveExecutionProgress", "saveManualExecutions", "saveDataErrorExecution",
-        "saveDataSuccessExecution", "executionTimeout", "errorWorkflow",
-        "timezone", "executionOrder"
-    }
-    try:
-        res = requests.get(url, headers=headers)
-        if res.status_code == 200:
-            workflow = res.json()
-            for node in workflow.get('nodes', []):
-                if node.get('name') == N8N_NODE_NAME:
-                    node['parameters']['url'] = f"{new_url}/api/hot_update"
-                    node['parameters']['sendHeaders'] = True
-                    node['parameters']['headerParametersUi'] = {
-                        "parameter": [{"name": "Content-Type", "value": "application/json"}]
-                    }
-            raw_settings   = workflow.get("settings", {})
-            clean_settings = {k: v for k, v in raw_settings.items() if k in SUPPORTED_SETTINGS}
-            payload = {
-                "name": workflow.get("name"), "nodes": workflow.get("nodes"),
-                "connections": workflow.get("connections"),
-                "settings": clean_settings, "staticData": workflow.get("staticData")
-            }
-            update_res = requests.put(url, headers=headers, json=payload)
-            if update_res.status_code == 200:
-                print(f"✅ Antigravity: n8n Workflow '{workflow.get('name')}' successfully synced.")
-            else:
-                print(f"❌ Failed to push update: {update_res.text}")
-        else:
-            print(f"❌ Failed to reach n8n: {res.status_code}. Verify API Key.")
-    except Exception as e:
-        print(f"⚠️ Antigravity Critical Error: {e}")
-
-
 def heal_ledger_cron(new_url):
     """
     Self-Healing for the Alpha Ledger Daily Cron workflow.
@@ -423,7 +382,12 @@ def sync_to_portfolio(entry):
         
         if entry.get('action') == 'CLOSE':
             # Find matching OPEN trade in journal and update it with close data
-            close_amount = float(re.findall(r"[\d.]+", entry.get('credit_debit', '0'))[0] or 0)
+            # POLARITY ENFORCEMENT: Preserve negative signs — debit paid to close is negative
+            raw_val = entry.get('credit_debit', '0')
+            _pol_match = re.search(r"-?[\d.]+", raw_val)
+            close_amount = float(_pol_match.group(0)) if _pol_match else 0.0
+            # CONTRACT QUANTITY: default 1 contract if not supplied
+            qty = float(entry.get('quantity', 1))
             matched = False
 
             # ── Robust matching helpers ──────────────────────────────
@@ -473,21 +437,29 @@ def sync_to_portfolio(entry):
                 )
 
                 if strategy_match or strike_match:
-                    j['close_date'] = datetime.now().strftime("%Y-%m-%d")
+                    close_date_str = datetime.now().strftime("%Y-%m-%d")
+                    j['close_date'] = close_date_str
                     j['closes_at'] = datetime.now().isoformat()
                     j['entry_rating'] = 'CLOSED'
                     j['close_mark'] = close_amount
-                    credit = j.get('credit_received', 0)
-                    j['realized_pnl'] = round(credit - close_amount, 2)
-                    j['realized_pnl_pct'] = round((j['realized_pnl'] / credit) * 100, 1) if credit else 0
+                    credit = float(j.get('credit_received', 0))
+
+                    # FORMULA OVERRIDE: P&L = (Initial Credit + Close Debit) * 100 * Qty
+                    # credit is positive (received), close_amount is negative (debit paid)
+                    j['realized_pnl'] = round((credit + close_amount) * 100 * qty, 2)
+                    j['realized_pnl_pct'] = round(((credit + close_amount) / credit) * 100, 1) if credit else 0
+
+                    # TEMPORAL PARADOX FIX: delta between entry_date and physical close_date
+                    # datetime.now() is permanently forbidden for closed ledger entries
                     try:
                         open_date = datetime.strptime(j.get('entry_date', ''), '%Y-%m-%d')
-                        j['days_held'] = (datetime.now() - open_date).days
+                        close_date_obj = datetime.strptime(close_date_str, '%Y-%m-%d')
+                        j['days_held'] = max((close_date_obj - open_date).days, 0)
                     except:
                         j['days_held'] = 0
                     matched = True
                     pnl_sign = '+' if j['realized_pnl'] >= 0 else ''
-                    print(f"✅ Trade Journal: Closed {j.get('trade_id')} — P&L: {pnl_sign}${j['realized_pnl']} ({j['realized_pnl_pct']}%)")
+                    print(f"✅ Trade Journal: Closed {j.get('trade_id')} — P&L: {pnl_sign}${j['realized_pnl']} ({j['realized_pnl_pct']}%) | {j['days_held']}d held")
                     break
             if not matched:
                 # No matching open trade — create a standalone close entry
@@ -1228,82 +1200,12 @@ def warm_up_system():
     else:
         print("⚠️ Warm-up Skipped: Loki Engine not found.")
 
-# ── N8N Workflow Health Guard ─────────────────────────────────
-# Critical Alpha workflow IDs that must be active for intelligence
-ALPHA_N8N_WORKFLOWS = {
-    "Q36ImsxRy4by47kw": "Alpha Architect - Genesis (v3)",
-    "S8KVkRMA56B21MXs": "Alpha Architect - Research (v2 Robust)",
-    "VkE0dmwynRPMIyjdmiONL": "Alpha_V2_Macro_Event_Tracker",
-    "tbQnSD6n9JHHvZ3D": "Alpha Ledger Daily Cron",
-}
-
-def ensure_n8n_workflows_active():
-    """Auto-activates any deactivated Alpha N8N workflows on startup."""
-    if not N8N_API_KEY:
-        print("⚠️ N8N Health Guard: No API key — skipping workflow check.")
-        return
-    
-    headers = {"X-N8N-API-KEY": N8N_API_KEY}
-    base = "https://humanresource.app.n8n.cloud/api/v1"
-    activated = 0
-    already_ok = 0
-    failed = 0
-    
-    for wid, name in ALPHA_N8N_WORKFLOWS.items():
-        try:
-            # Check current status
-            r = requests.get(f"{base}/workflows/{wid}", headers=headers, timeout=10)
-            if r.status_code != 200:
-                print(f"  [N8N Guard] Could not check {name}: HTTP {r.status_code}")
-                failed += 1
-                continue
-            
-            wf = r.json()
-            if wf.get("active"):
-                already_ok += 1
-                continue
-            
-            # Activate it
-            r = requests.post(f"{base}/workflows/{wid}/activate", headers=headers, timeout=10)
-            if r.status_code == 200:
-                print(f"  [N8N Guard] Re-activated: {name}")
-                activated += 1
-            else:
-                print(f"  [N8N Guard] Failed to activate {name}: {r.status_code}")
-                failed += 1
-        except Exception as e:
-            print(f"  [N8N Guard] Error checking {name}: {e}")
-            failed += 1
-    
-    if activated > 0:
-        print(f"🛡️ N8N Health Guard: {activated} workflow(s) re-activated, {already_ok} already online, {failed} failed.")
-    else:
-        print(f"🛡️ N8N Health Guard: All {already_ok} Alpha workflows online.")
 
 
-if __name__ == '__main__':
-    public_url = None
-
-    print("🚀 Ngrok & N8N Webhook Sync Disabled for Stability (LOCAL-ONLY mode).")
-    
-    # CHECK N8N WORKFLOW HEALTH (auto-activate any offline workflows)
-    ensure_n8n_workflows_active()
-
-    # PERFORM WARM-UP (runs regardless of ngrok status)
+if __name__ == "__main__":
     import threading
-    threading.Thread(target=warm_up_system, daemon=True).start()
-
-    # Register graceful shutdown hook (deactivates N8N even on force-close)
-    try:
-        from n8n_lifecycle import register_shutdown_hook
-        register_shutdown_hook('alpha')
-    except Exception as e:
-        print(f"⚠️ Shutdown hook registration failed: {e}")
-
-    # Run Server
-    print(f"🤖 Alpha Server listening on Port {PORT}...")
-    app.run(host='0.0.0.0', port=PORT, use_reloader=False)
-
-
-# V3 MIGRATION COMPLETE
-# V3 AUTO-HEAL ACTIVE
+    # Wait briefly then warm up
+    threading.Timer(2.0, warm_up_system).start()
+    
+    # Run server
+    app.run(host="0.0.0.0", port=5008, debug=False)

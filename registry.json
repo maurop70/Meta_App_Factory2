@@ -6,50 +6,44 @@
         "Venture_Scout": {
             "status": "online",
             "type": "Autonomous Ideation Engine",
-            "capabilities": ["Market Hunting", "Pitch Generation", "Signal Filtration"],
-            "version": "1.0.0"
-        },
-        "CIO_Agent": {
-            "status": "online",
-            "type": "Technical Strategy & Capability Upgrades",
-            "capabilities": ["Library Research", "Integration Blueprinting", "Security Auditing"],
-            "version": "1.0.0"
-        },
-        "Venture_Architect_Agent": {
-            "status": "online",
-            "type": "Financial Projections & Business Strategy",
-            "capabilities": ["Unit Economics", "Cap Table Modeling", "Valuation"],
-            "version": "1.0.0"
-        }
-    },
-    "apps": {
-        "Venture_Scout": {
-            "status": "active",
-            "type": "Autonomous Ideation Engine",
-            "port": 5001,
-            "blueprint": "scout_v1",
             "capabilities": [
                 "Market Hunting",
                 "Pitch Generation",
                 "Signal Filtration"
             ],
-            "last_build": "2026-04-17T03:00:00"
+            "version": "1.0.0"
         },
+        "CIO_Agent": {
+            "status": "online",
+            "type": "Technical Strategy & Capability Upgrades",
+            "capabilities": [
+                "Library Research",
+                "Integration Blueprinting",
+                "Security Auditing"
+            ],
+            "version": "1.0.0"
+        },
+        "Venture_Architect_Agent": {
+            "status": "online",
+            "type": "Financial Projections & Business Strategy",
+            "capabilities": [
+                "Unit Economics",
+                "Cap Table Modeling",
+                "Valuation"
+            ],
+            "version": "1.0.0"
+        }
+    },
+    "apps": {
         "CIO_Agent": {
             "status": "active",
             "type": "Technical Strategy & Capability Upgrades",
             "port": 5090,
             "blueprint": "CIO_Agent",
-            "capabilities": ["Library Research", "Integration Blueprinting"],
-            "last_build": "2026-04-18T00:00:00"
-        },
-        "CMO_Agent": {
-            "status": "active",
-            "type": "Market Intelligence & Brand Resonance",
-            "port": 5020,
-            "path": "../CMO_Elite_Agent",
-            "blueprint": "CMO_Agent",
-            "capabilities": ["Signal Collection", "Trend Analysis"],
+            "capabilities": [
+                "Library Research",
+                "Integration Blueprinting"
+            ],
             "last_build": "2026-04-18T00:00:00"
         },
         "CFO_Agent": {
@@ -57,27 +51,11 @@
             "type": "Financial Fragility & Budget Gatekeeping",
             "port": 5070,
             "blueprint": "CFO_Agent",
-            "capabilities": ["Fragility Analysis", "Ledger Auditing"],
+            "capabilities": [
+                "Fragility Analysis",
+                "Ledger Auditing"
+            ],
             "last_build": "2026-04-18T00:00:00"
-        },
-        "Venture_Architect_Agent": {
-            "status": "active",
-            "type": "Financial Projections & Business Strategy",
-            "port": 5110,
-            "path": "../Venture_Architect_Agent",
-            "blueprint": "Venture_Architect",
-            "capabilities": ["Unit Economics", "Cap Table Modeling", "Valuation"],
-            "last_build": "2026-04-19T23:55:00"
-        },
-        "timeout_test": {
-            "status": "active",
-            "type": "Autonomous Forge Deployment \u2014 QA-validated and deployed 2026-04-13 21:27",
-            "port": null,
-            "blueprint": "autonomous_forge",
-            "capabilities": [],
-            "last_build": "2026-04-14T01:27:34.079956+00:00",
-            "deployed_by": "Autonomous_Forge_Phase11",
-            "staging_source": "timeout_test.py"
         },
         "Maintenance_Work_Order": {
             "status": "active",
