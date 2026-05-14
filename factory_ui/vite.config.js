@@ -10,47 +10,51 @@ export default defineConfig({
     strictPort: true,
     proxy: {
       '/api/operator': {
-        target: 'http://localhost:5100',
+        target: 'http://127.0.0.1:8000',
         changeOrigin: true,
       },
       '/api/builder': {
-        target: 'http://localhost:5100',
+        target: 'http://127.0.0.1:8000',
         changeOrigin: true,
       },
       '/api/qa': {
-        target: 'http://127.0.0.1:5030',
+        target: 'http://127.0.0.1:8000',
         changeOrigin: true,
       },
       '/api/test': {
-        target: 'http://127.0.0.1:5030',
+        target: 'http://127.0.0.1:8000',
         changeOrigin: true,
       },
       '/api/pulse': {
-        target: 'http://127.0.0.1:5030',
+        target: 'http://127.0.0.1:8000',
         changeOrigin: true,
       },
       '/api/reports': {
-        target: 'http://127.0.0.1:5030',
+        target: 'http://127.0.0.1:8000',
         changeOrigin: true,
       },
       '/api/dashboard': {
-        target: 'http://127.0.0.1:5030',
+        target: 'http://127.0.0.1:8000',
         changeOrigin: true,
       },
       '/api/repairs': {
-        target: 'http://127.0.0.1:5030',
+        target: 'http://127.0.0.1:8000',
         changeOrigin: true,
       },
       '/api/ghost-stream': {
-        target: 'http://127.0.0.1:5030',
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
+      '/api/v1/architect': {
+        target: 'http://127.0.0.1:5060',
         changeOrigin: true,
       },
       '/api': {
-        target: 'http://localhost:5000',
+        target: 'http://127.0.0.1:8000',
         changeOrigin: true,
       },
       '/ws': {
-        target: 'http://localhost:5000',
+        target: 'ws://127.0.0.1:8000',
         ws: true,
       }
     }

@@ -1,0 +1,4 @@
+{
+    "status":  "PASSED",
+    "trace":  "============================= test session starts =============================\r\nplatform win32 -- Python 3.14.2, pytest-9.0.3, pluggy-1.6.0\r\nrootdir: C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\r\nplugins: anyio-4.12.1, langsmith-0.7.9, base-url-2.1.0, playwright-0.7.2\r\ncollected 1 item\r\n\r\n__tests__\\test_mwo_teardown.py .                                         [100%]\r\n\r\n============================== 1 passed in 8.27s ==============================\r\n"
+}

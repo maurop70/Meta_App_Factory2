@@ -1,0 +1,14 @@
+[Unit]
+Description=Meta App Factory Core Engine (FastAPI)
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/meta_app_factory/backend
+Environment="PATH=/var/www/meta_app_factory/backend/venv/bin"
+ExecStart=/var/www/meta_app_factory/backend/venv/bin/uvicorn api:app --host 127.0.0.1 --port 8000
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

@@ -2,10 +2,14 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import './App.css'
 import WarRoom from './WarRoom'
 import CommandCenter from './CommandCenter'
-import SupportFAB from './SupportFAB'
+
 import ModeSelectionScreen from './ModeSelectionScreen'
 import VentureSuite from './VentureSuite'
 import PhantomQA from './PhantomQA'
+import Atomizer from './components/Atomizer.jsx'
+import BuilderChat from './components/BuilderChat';
+import ExecutiveCommand from './components/ExecutiveCommand';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // ═══════════════════════════════════════════════════════════
 //  META APP FACTORY — BUILDER DASHBOARD (Full Feature Parity)
@@ -78,7 +82,7 @@ function AgentStatusPanel() {
     setStatus(initial);
 
     // Watchdog Streaming Telemetry (Native Port 5030)
-    const es = new EventSource('http://localhost:5030/api/qa/stream');
+    const es = new EventSource('/api/qa/stream');
     
     es.onopen = () => {
         // Connected to stream, mark active nodes online
@@ -362,574 +366,6 @@ function ConstructionTracker({ messages, streaming, building }) {
   );
 }
 
-// ── BUILDER CHAT ───────────────────────────────────────────
-function BuilderChat({ registry, onAtomizerUpdate, externalCommand, onBuildComplete, onQaGate, mode, profile }) {
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState('');
-  const [streaming, setStreaming] = useState(false);
-  const [building, setBuilding] = useState(false);
-  const [lastPrompt, setLastPrompt] = useState('');
-  const [audienceDetected, setAudienceDetected] = useState(null);
-  const [generatingProfile, setGeneratingProfile] = useState(false);
-  const [interactionMode, setInteractionMode] = useState(() => localStorage.getItem('interactionMode') || 'socratic');
-  const [confidence, setConfidence] = useState(null);
-  const [chatMode, setChatMode] = useState(() => localStorage.getItem('chatMode') || null);
-  
-  useEffect(() => {
-    if (chatMode) localStorage.setItem('chatMode', chatMode);
-    else localStorage.removeItem('chatMode');
-  }, [chatMode]);
-
-  useEffect(() => {
-    localStorage.setItem('interactionMode', interactionMode);
-  }, [interactionMode]);
-
-  const scrollRef = useRef(null);
-  const inputRef = useRef(null);
-  const fileRef = useRef(null);
-  const audienceTimerRef = useRef(null);
-
-  // ── Audience Detection ──────────────────────────────────
-  const checkAudienceIntent = async (text) => {
-    try {
-      const res = await fetch(`/api/audience/detect`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
-      });
-      const data = await res.json();
-      if (data.detected && data.confidence >= 0.7) {
-        setAudienceDetected(data);
-        if (audienceTimerRef.current) clearTimeout(audienceTimerRef.current);
-        audienceTimerRef.current = setTimeout(() => setAudienceDetected(null), 15000);
-      }
-    } catch { /* silent */ }
-  };
-
-  const researchProfile = async () => {
-    if (!audienceDetected?.audience_hint || generatingProfile) return;
-    setGeneratingProfile(true);
-    setAudienceDetected(null);
-    setMessages(prev => [...prev, { role: 'system', text: `🔬 Researching audience profile: "${audienceDetected.audience_hint}"...` }]);
-    try {
-      const res = await fetch(`/api/audience/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          audience_description: audienceDetected.audience_hint,
-          context: 'Building an application in the Meta App Factory',
-        }),
-      });
-      const data = await res.json();
-      if (data.status === 'ok' && data.profile) {
-        const p = data.profile;
-        const profileCard =
-          `✅ **Audience Profile Generated: ${p.name}**\n` +
-          `📊 Age Range: ${p.age_range}\n` +
-          `📝 ${p.description}\n\n` +
-          `🎯 Interests: ${p.interests.join(', ')}\n` +
-          `🗣️ Tone: ${p.tone_keywords.join(', ')}\n` +
-          `🚫 Deal-breakers: ${p.deal_breakers.slice(0, 3).join('; ')}\n\n` +
-          `Profile saved as "${p.id}" — use \`python factory.py validate <app> --profile ${p.id}\` to score your app.`;
-        setMessages(prev => [...prev, { role: 'assistant', text: profileCard }]);
-      } else {
-        setMessages(prev => [...prev, { role: 'assistant', text: `⚠️ Profile generation failed: ${data.message || 'Unknown error'}` }]);
-      }
-    } catch (err) {
-      setMessages(prev => [...prev, { role: 'assistant', text: `❌ Profile research error: ${err.message}` }]);
-    } finally {
-      setGeneratingProfile(false);
-    }
-  };
-
-  const triggerBuild = async (appName, blueprint = 'multi_agent_core', description = '', systemPrompt = null) => {
-    setBuilding(true);
-    setMessages(prev => [...prev, { role: 'system', text: `🏗️ BUILD STARTED: ${appName} [${blueprint}] (Mode: ${mode}, Profile: ${profile})` }]);
-    setMessages(prev => [...prev, { role: 'assistant', text: '' }]);
-
-    try {
-      const dashboard_context = getContext();
-      const res = await fetch(`/api/build/stream`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ app_name: appName, blueprint, description, system_prompt: systemPrompt, dashboard_context }),
-      });
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          try {
-            const event = JSON.parse(line.slice(6));
-            if (event.done) break;
-            // UPGRADE 3: Detect GATE_BLOCKED event
-            if (event.step === 'GATE_BLOCKED' && onQaGate) {
-              onQaGate({ app_name: event.app_name, score: event.score });
-            }
-            if (event.text) {
-              setMessages(prev => {
-                const copy = [...prev];
-                copy[copy.length - 1] = {
-                  role: 'assistant',
-                  text: copy[copy.length - 1].text + event.text + '\n',
-                };
-                return copy;
-              });
-            }
-          } catch { /* skip */ }
-        }
-      }
-    } catch (err) {
-      setMessages(prev => [...prev, { role: 'assistant', text: `❌ Build error: ${err.message}` }]);
-    } finally {
-      setBuilding(false);
-      if (onBuildComplete) onBuildComplete();
-    }
-  };
-
-  useEffect(() => {
-    scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  // Handle external commands from the Command Palette
-  useEffect(() => {
-    if (externalCommand) {
-      executePrompt(externalCommand.text, externalCommand.isTriad);
-    }
-  }, [externalCommand]);
-
-  const getContext = () => {
-    const ctx = {};
-    if (registry?.length) {
-      ctx.registered_apps = registry.map(a => ({ name: a.name, status: a.status, type: a.type }));
-    }
-    ctx.factory_mode = mode;
-    ctx.userProfile = profile;
-    ctx.chatMode = chatMode;
-    ctx.interactionMode = interactionMode;
-    ctx.timestamp = new Date().toISOString();
-    return ctx;
-  };
-
-  const executePrompt = async (promptText, isTriad = false) => {
-    const prompt = promptText.trim();
-    if (!prompt || streaming) return;
-
-    // Handle /refine command
-    if (prompt === '/refine' || prompt.startsWith('/refine ')) {
-      const appName = prompt === '/refine'
-        ? window.prompt('Which app do you want to refine?', 'Resonance')
-        : prompt.split('/refine ')[1].split(':')[0].trim();
-      if (!appName) return;
-
-      const feedback = prompt.includes(':')
-        ? prompt.split(':').slice(1).join(':').trim()
-        : window.prompt(`What feedback do you have for ${appName}?`, '');
-      if (!feedback) return;
-
-      setInput('');
-      setMessages(prev => [...prev, { role: 'user', text: `🔄 Refine ${appName}: ${feedback}` }]);
-      setStreaming(true);
-      setMessages(prev => [...prev, { role: 'assistant', text: '' }]);
-
-      try {
-        const res = await fetch(`/api/refine`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ app_name: appName, feedback }),
-        });
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
-          for (const line of lines) {
-            if (!line.startsWith('data: ')) continue;
-            try {
-              const event = JSON.parse(line.slice(6));
-              if (event.done) break;
-              if (event.text) {
-                setMessages(prev => {
-                  const copy = [...prev];
-                  copy[copy.length - 1] = { role: 'assistant', text: copy[copy.length - 1].text + event.text };
-                  return copy;
-                });
-              }
-            } catch { /* skip */ }
-          }
-        }
-      } catch (err) {
-        setMessages(prev => [...prev, { role: 'assistant', text: `❌ Refine error: ${err.message}` }]);
-      } finally {
-        setStreaming(false);
-      }
-      return;
-    }
-
-    setLastPrompt(prompt);
-    setInput('');
-    setConfidence(null);
-    setMessages(prev => [...prev, { role: 'user', text: prompt }]);
-    setStreaming(true);
-
-    // Audience detection (async, non-blocking)
-    checkAudienceIntent(prompt);
-    setMessages(prev => [...prev, { role: 'assistant', text: '' }]);
-
-    try {
-      const dashboard_context = getContext();
-      const res = await fetch(`/api/chat/stream`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, dashboard_context }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-        setMessages(prev => {
-          const copy = [...prev];
-          copy[copy.length - 1] = { role: 'assistant', text: `❌ ${err.error || 'Server error'}` };
-          return copy;
-        });
-        setStreaming(false);
-        return;
-      }
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          try {
-            const event = JSON.parse(line.slice(6));
-            if (event.confidence) {
-              setConfidence(event.confidence);
-            }
-            if (event.error) {
-              setMessages(prev => {
-                const copy = [...prev];
-                copy[copy.length - 1] = { role: 'assistant', text: `❌ ${event.error}` };
-                return copy;
-              });
-              break;
-            }
-            if (event.done) break;
-            if (event.text) {
-              setMessages(prev => {
-                const copy = [...prev];
-                copy[copy.length - 1] = {
-                  role: 'assistant',
-                  text: copy[copy.length - 1].text + event.text,
-                };
-                return copy;
-              });
-            }
-          } catch { /* skip */ }
-        }
-      }
-    } catch (err) {
-      setMessages(prev => {
-        const copy = [...prev];
-        copy[copy.length - 1] = { role: 'assistant', text: `❌ Connection failed: ${err.message}` };
-        return copy;
-      });
-    } finally {
-      setStreaming(false);
-    }
-  };
-
-  const sendMessage = () => executePrompt(input);
-
-  const clearChat = async () => {
-    setMessages([]);
-    setChatMode(null);
-    try { await fetch(`/api/chat/clear`, { method: 'POST' }); } catch { }
-  };
-
-  const [recovering, setRecovering] = useState(false);
-
-  const recoverSession = async () => {
-    setRecovering(true);
-    try {
-      const res = await fetch(`/api/chat/history?limit=20`);
-      const data = await res.json();
-      if (data.messages && data.messages.length > 0) {
-        setMessages(data.messages);
-      } else if (lastPrompt) {
-        setInput(lastPrompt);
-        inputRef.current?.focus();
-      }
-    } catch {
-      // Fallback to local last prompt
-      if (lastPrompt) {
-        setInput(lastPrompt);
-        inputRef.current?.focus();
-      }
-    } finally {
-      setRecovering(false);
-    }
-  };
-
-  const [parseResult, setParseResult] = useState(null);
-
-  const handleFileUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = '';
-
-    // POST to DocumentParserService
-    const fd = new FormData();
-    fd.append('file', file);
-    setParseResult({ loading: true, file: file.name });
-
-    try {
-      const res = await fetch(`/api/documents/upload`, { method: 'POST', body: fd });
-      const data = await res.json();
-      setParseResult(data);
-
-      // Also inject summary into chat input for context
-      const summary = data.extracted?.summary || data.category || 'Parsed';
-      const routed = data.routing?.destination || 'index only';
-      setInput(prev => prev + `\n\n--- 📄 Parsed: ${file.name} ---\nCategory: ${data.category} (${(data.confidence * 100).toFixed(0)}%)\nRouted to: ${routed}\nSummary: ${summary}`);
-      inputRef.current?.focus();
-
-      // Auto-dismiss after 8s
-      setTimeout(() => setParseResult(null), 8000);
-    } catch (err) {
-      setParseResult({ error: err.message });
-      setTimeout(() => setParseResult(null), 5000);
-    }
-  };
-
-  return (
-    <div className="builder-chat">
-      <div className="chat-header">
-        <h2>
-          🏗️ Builder Chat
-          <span className="stream-badge">SSE STREAM</span>
-          {confidence !== null && (
-            <span className={`confidence-badge ${confidence < 70 ? 'critical' : confidence < 90 ? 'low' : ''}`} title="Prompt Confidence Score">
-              🎯 {confidence}% CONFIDENCE
-            </span>
-          )}
-        </h2>
-        <div className="chat-header-actions">
-          <div className="interaction-toggle">
-            <button 
-              className={`interaction-btn ${interactionMode === 'socratic' ? 'active' : ''}`}
-              onClick={() => setInteractionMode('socratic')}
-              title="Socratic Mode: AI asks questions to build blueprint"
-            >
-              🗣️ Socratic
-            </button>
-            <button 
-              className={`interaction-btn ${interactionMode === 'solution' ? 'active' : ''}`}
-              onClick={() => setInteractionMode('solution')}
-              title="Solution Mode: AI instantly proposes a solution"
-            >
-              ⚡ Solution
-            </button>
-          </div>
-          <button className="action-btn recover" onClick={recoverSession} title="Recover session from Supabase" disabled={recovering}>
-            {recovering ? '⏳ Loading...' : '⏪ Recover'}
-          </button>
-          <button
-            className="action-btn deploy"
-            onClick={() => {
-              const name = prompt('Enter app name to build:', 'Resonance');
-              if (name) triggerBuild(name, 'multi_agent_core', 'Multi-agent educational app', input || lastPrompt || null);
-            }}
-            disabled={building || streaming}
-            title="Deploy app via Factory Pipeline"
-            style={{ background: building ? '#f59e0b' : '#10b981', color: '#fff', border: 'none' }}
-          >
-            {building ? '⚙️ Building...' : '🚀 Deploy'}
-          </button>
-          <button className="action-btn upload" onClick={() => fileRef.current?.click()} title="Upload & Parse Document">
-            📎 Upload
-          </button>
-          <input ref={fileRef} type="file" accept=".pdf,.docx,.txt,.csv,.md" style={{ display: 'none' }} onChange={handleFileUpload} />
-          <button className="action-btn clear" onClick={clearChat}>Clear</button>
-        </div>
-      </div>
-
-      {parseResult && (
-        <div style={{ padding: '0.6rem 1rem', fontSize: '0.8rem', borderBottom: '1px solid rgba(99,102,241,0.15)', background: parseResult.loading ? 'rgba(99,102,241,0.08)' : parseResult.error ? 'rgba(239,68,68,0.08)' : 'rgba(34,197,94,0.08)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          {parseResult.loading ? (
-            <span>⏳ Parsing <strong>{parseResult.file}</strong>...</span>
-          ) : parseResult.error ? (
-            <span>❌ {parseResult.error}</span>
-          ) : (
-            <>
-              <span>✅ <strong>{parseResult.category}</strong> ({(parseResult.confidence * 100).toFixed(0)}%)</span>
-              <span style={{ color: '#64748b' }}>→ {parseResult.routing?.destination || 'index'}</span>
-              <span style={{ flex: 1 }} />
-              <button onClick={() => setParseResult(null)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.9rem' }}>✕</button>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* ── CONSTRUCTION TRACKER ── */}
-      <ConstructionTracker messages={messages} streaming={streaming} building={building} />
-
-      <div className="chat-messages">
-        {messages.length === 0 && !chatMode ? (
-          <div className="welcome-msg venture-selection">
-            <div className="icon-big">🧠</div>
-            <h3>Select Operating Mode</h3>
-            <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', justifyContent: 'center' }}>
-              <button 
-                className="mode-btn standard-btn"
-                onClick={() => setChatMode('standard')}
-                style={{
-                  padding: '12px 24px', background: '#3b82f6', color: '#fff', 
-                  border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold'
-                }}
-              >
-                🛠️ Standard App Development
-              </button>
-              <button 
-                className="mode-btn venture-btn"
-                onClick={() => {
-                  setChatMode('venture');
-                  setMessages([
-                    { role: 'assistant', text: "Venture Orchestration Mode Active. Please describe your new venture idea." }
-                  ]);
-                }}
-                style={{
-                  padding: '12px 24px', background: '#8b5cf6', color: '#fff', 
-                  border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold'
-                }}
-              >
-                🚀 Launch Venture (C-Suite Orchestration)
-              </button>
-            </div>
-          </div>
-        ) : messages.length === 0 && chatMode === 'standard' && (
-          <div className="welcome-msg">
-            <div className="icon-big">🧠</div>
-            <h3>Factory Intelligence Online</h3>
-            <p>Ask me to build apps, analyze architectures, or plan new features. Use the Command Palette to launch preset actions.</p>
-          </div>
-        )}
-        {messages.map((msg, i) => msg.hidden ? null : (
-          <div key={i} className={`msg ${msg.role}`}>
-            {msg.role === 'assistant' ? (
-              msg.text.split('```').map((part, index) => {
-                if (index % 2 === 0) {
-                  return <span key={index} style={{ whiteSpace: 'pre-wrap' }}>{maskSecrets(part)}</span>;
-                } else {
-                  const firstLineBreak = part.indexOf('\n');
-                  const rawCode = firstLineBreak !== -1 ? part.substring(firstLineBreak + 1) : part;
-                  return (
-                    <div key={index} className="code-block-container" style={{ position: 'relative', marginTop: '8px', marginBottom: '8px' }}>
-                      <pre style={{ background: '#1e1e1e', padding: '10px', borderRadius: '4px', overflowX: 'auto', margin: 0, color: '#d4d4d4' }}>
-                        <code>{maskSecrets(rawCode)}</code>
-                      </pre>
-                      <button 
-                        className="execute-write-btn"
-                        onClick={async () => {
-                          const filePath = window.prompt("Enter destination file path (e.g., Meta_App_Factory/server.py):");
-                          if (!filePath) return;
-                          try {
-                            const res = await fetch('/api/builder/write-file', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ file_path: filePath, content: rawCode })
-                            });
-                            if (res.ok) alert(`File written successfully to ${filePath}`);
-                            else alert("Failed to write file");
-                          } catch (e) {
-                            alert("Error writing file: " + e.message);
-                          }
-                        }}
-                        style={{
-                          display: 'block',
-                          marginTop: '4px',
-                          background: '#10b981',
-                          padding: '4px 8px',
-                          border: 'none',
-                          borderRadius: '4px',
-                          color: '#fff',
-                          cursor: 'pointer',
-                          fontSize: '0.8rem',
-                          fontWeight: 'bold'
-                        }}
-                      >
-                        💾 Execute Write
-                      </button>
-                    </div>
-                  );
-                }
-              })
-            ) : (
-              <span style={{ whiteSpace: 'pre-wrap' }}>{maskSecrets(msg.text)}</span>
-            )}
-            {msg.role === 'assistant' && streaming && i === messages.length - 1 && (
-              <span className="cursor" />
-            )}
-          </div>
-        ))}
-        <div ref={scrollRef} />
-      </div>
-
-      {/* Audience Detection Chip */}
-      {audienceDetected && (
-        <div className="audience-detect-chip">
-          <span className="detect-icon">🔬</span>
-          <span className="detect-text">
-            Audience detected: <strong>{audienceDetected.audience_hint}</strong>
-          </span>
-          <button
-            className="detect-research-btn"
-            onClick={researchProfile}
-            disabled={generatingProfile}
-          >
-            {generatingProfile ? '⏳ Researching...' : '📊 Research Profile'}
-          </button>
-          <button className="detect-dismiss" onClick={() => setAudienceDetected(null)}>✕</button>
-        </div>
-      )}
-
-      <div className="chat-input-bar">
-        <textarea
-          ref={inputRef}
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) sendMessage(); }}
-          placeholder={streaming ? 'Streaming...' : 'Ask the Factory AI anything... (Ctrl+Enter to send)'}
-          disabled={streaming}
-          rows={3}
-        />
-        <button className="send-btn" onClick={sendMessage} disabled={streaming || !input.trim()}>
-          ↑
-        </button>
-      </div>
-    </div>
-  );
-}
 
 // ── REFINE APP — PROGRESS BAR ──────────────────────────────
 const REFINE_PHASES = [
@@ -1772,6 +1208,7 @@ function App() {
   }
 
   const [activeView, setActiveView] = useState('systemmap');
+  const [isExecOpen, setIsExecOpen] = useState(false);
   const [builderMode, setBuilderMode] = useState(null); // 'technical' | 'venture' | null
   const [builderProfile, setBuilderProfile] = useState('executive'); // 'executive' | 'copilot'
   const [registry, setRegistry] = useState([]);
@@ -1868,7 +1305,7 @@ function App() {
 
     const load = () => {
       if (cancelled) return;
-      fetch(`http://localhost:5100/api/operator/manifest`)
+      fetch(`/api/operator/manifest`)
         .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
         .then(data => {
           if (cancelled) return;
@@ -1896,7 +1333,7 @@ function App() {
 
   // ── Operator Scout polling: Unregistered Agent Discovery ─
   const loadScout = () => {
-    fetch(`http://localhost:5100/api/operator/scout`)
+    fetch(`/api/operator/scout`)
       .then(r => r.json())
       .then(data => {
         if (Array.isArray(data)) setAnomalies(data);
@@ -1924,7 +1361,7 @@ function App() {
     };
 
     try {
-      const res = await fetch(`http://localhost:5100/api/operator/promote`, {
+      const res = await fetch(`/api/operator/promote`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -2120,17 +1557,19 @@ function App() {
               }}
             />
           ) : (
-            <BuilderChat
-              registry={registry}
-              onAtomizerUpdate={(c, p) => { setAtomizerChunks(c); setAtomizerProgress(p); }}
-              externalCommand={externalCommand}
-              onBuildComplete={() => {
-                fetch(`/api/registry`).then(r => r.json()).then(data => setRegistry(data.apps || [])).catch(() => { });
-              }}
-              onQaGate={setQaGate}
-              mode={builderMode}
-              profile={builderProfile}
-            />
+            <ErrorBoundary>
+              <BuilderChat
+                registry={registry}
+                onAtomizerUpdate={(c, p) => { setAtomizerChunks(c); setAtomizerProgress(p); }}
+                externalCommand={externalCommand}
+                onBuildComplete={() => {
+                  fetch(`/api/registry`).then(r => r.json()).then(data => setRegistry(data.apps || [])).catch(() => { });
+                }}
+                onQaGate={setQaGate}
+                mode={builderMode}
+                profile={builderProfile}
+              />
+            </ErrorBoundary>
           )
         )}
 
@@ -2253,11 +1692,11 @@ function App() {
 
         {/* Atomizer */}
         {activeView === 'atomizer' && (
-          <AtomizerPanel chunks={atomizerChunks} progress={atomizerProgress} total={atomizerChunks.length} />
+          <Atomizer />
         )}
 
         {/* QA Command Center */}
-        {activeView === 'qa' && <PhantomQA />}
+        {activeView === 'qa' && <PhantomQA setActiveView={setActiveView} />}
 
         {/* Telemetry */}
         {activeView === 'telemetry' && (
@@ -2275,10 +1714,46 @@ function App() {
       {/* ── TELEMETRY BAR (bottom) ── */}
       <TelemetryBar streaming={streaming} />
 
-      {/* ── SCOPED SUPPORT FAB ── */}
-      <SupportFAB
-        activeApp={selectedApp || 'Factory'}
-        themeColor={APP_THEME_COLORS[selectedApp] || '#818cf8'}
+      {/* ── EXECUTIVE ARCHITECT FAB ── */}
+      <button
+        id="executive-fab-trigger"
+        onClick={() => setIsExecOpen(prev => !prev)}
+        title="Executive Architect — Intent Gateway"
+        style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          width: '52px',
+          height: '52px',
+          borderRadius: '50%',
+          background: isExecOpen
+            ? 'linear-gradient(135deg, #5b21b6, #4338ca)'
+            : 'linear-gradient(135deg, #7c3aed, #6366f1)',
+          border: '2px solid rgba(167,139,250,0.4)',
+          boxShadow: isExecOpen
+            ? '0 0 24px rgba(124,58,237,0.7)'
+            : '0 0 16px rgba(124,58,237,0.4)',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '1.3rem',
+          zIndex: 9997,
+          transition: 'all 0.2s ease',
+        }}
+      >
+        {isExecOpen ? '✕' : '🧠'}
+      </button>
+
+      <ExecutiveCommand
+        isOpen={isExecOpen}
+        onClose={() => setIsExecOpen(false)}
+        onNavigateBuilder={() => {
+          setBuilderMode('technical');
+          setActiveView('builder');
+          const handoff = localStorage.getItem('mode_a_handoff_prompt');
+          if (handoff) setExternalCommand({ text: handoff, isTriad: false, ts: Date.now() });
+        }}
       />
 
       {/* ── UPGRADE 3: QA Gate Approval Modal ── */}

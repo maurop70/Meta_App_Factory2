@@ -38,7 +38,6 @@ from skills.risk.risk import RiskAgent
 from skills.macro.macro import MacroAgent
 from skills.watchdog.watchdog_v2 import WatchdogAgent
 from skills.sentiment.sentiment import SentimentAgent
-from skills.n8n_pusher import push_decision
 import logging
 import json
 import os
@@ -255,190 +254,10 @@ class Loki:
         # No hardcoded fallback - data must be live
         raise Exception("Market data fetch failed (SPX/VIX unavailable). Verify API/Internet connection.")
 
-    def fetch_external_commentary(self):
-        """
-        Polls the cloud N8N workflow (Genesis v3 + SPX Polling) for AI-generated market research.
-        Uses the inherited Meta_App_Factory bridge for connectivity.
-        """
-        try:
-            # Import Heritage Bridge
-            from utils.n8n_bridge import N8NBridge
-            
-            # BUDGET GUARD: Limit N8N executions to Mon-Fri, 9am-4pm
-            import datetime
-            now = datetime.datetime.now()
-            is_window = (now.weekday() < 5) and (9 <= now.hour < 16)
-            
-            if not is_window:
-                logger.info("Outside N8N Window (Mon-Fri, 9am-4pm). Shifting to Gemini Direct (Priority 6).")
-                # Priority 6 Fallback is 0 N8N executions, so it's safe to run anytime.
-                return self._gemini_direct_fallback(snapshot)
-
-            # Step 1: Strategic Forecast (N8N Genesis Brain)
-            # PRIMARY: Genesis v3 (structured JSON, self-healing, dynamic dates)
-            # FALLBACK: Research v2 Robust (proven, raw text parsing)
-            
-            # 1. Gather Context
-            snapshot = self.get_market_snapshot()
-            logger.info(f"Polling N8N for Commentary (Context: SPX={snapshot['spx']})...")
-            
-            genesis_response = None
-            
-            # 2a. Try Genesis v3 (Primary)
-            try:
-                logger.info("Trying Genesis v3 (Primary)...")
-                v3_bridge = N8NBridge(webhook_url="https://humanresource.app.n8n.cloud/webhook/alpha-research-v3")
-                genesis_response = v3_bridge.execute_workflow(payload=snapshot)
-                
-                # Genesis v3 returns structured JSON directly (no 'text' wrapping needed)
-                # But handle edge case where it still wraps in 'text'
-                if genesis_response and isinstance(genesis_response, dict) and 'text' in genesis_response and 'forecast' not in genesis_response:
-                    try:
-                        raw_text = genesis_response['text']
-                        json_match = re.search(r'\{.*\}', raw_text.replace('\n', ' '), re.DOTALL)
-                        if json_match:
-                            parsed = json.loads(json_match.group(0))
-                            genesis_response.update(parsed)
-                    except Exception as e:
-                        logger.warning(f"Genesis v3 text parse failed: {e}")
-                
-                # Validate response has required fields
-                if genesis_response and isinstance(genesis_response, dict) and 'forecast' in genesis_response:
-                    genesis_response['n8n_live'] = True
-                    genesis_response['n8n_source'] = 'Genesis v3'
-                    logger.info("Genesis v3 SUCCESS — using structured intelligence.")
-                else:
-                    logger.warning("Genesis v3 returned incomplete data. Falling back to Research v2...")
-                    genesis_response = None
-                    
-            except Exception as e:
-                logger.warning(f"Genesis v3 failed: {e}. Falling back to Research v2...")
-                genesis_response = None
-            
-            # 2b. Fallback to Research v2 Robust
-            if not genesis_response or not isinstance(genesis_response, dict) or 'forecast' not in genesis_response:
-                try:
-                    logger.info("Trying Research v2 Robust (Fallback)...")
-                    v2_bridge = N8NBridge(webhook_url="https://humanresource.app.n8n.cloud/webhook/alpha-research-v2")
-                    genesis_response = v2_bridge.execute_workflow(payload=snapshot)
-                    
-                    # Research v2 returns raw text — parse it
-                    if genesis_response and isinstance(genesis_response, dict) and 'text' in genesis_response:
-                        try:
-                            raw_text = genesis_response['text']
-                            json_match = re.search(r'\{.*\}', raw_text.replace('\n', ' '), re.DOTALL)
-                            if json_match:
-                                parsed = json.loads(json_match.group(0))
-                                genesis_response.update(parsed)
-                        except Exception as e:
-                            logger.warning(f"Research v2 text parse failed: {e}")
-                    
-                    if genesis_response and isinstance(genesis_response, dict):
-                        genesis_response['n8n_live'] = True
-                        genesis_response['n8n_source'] = 'Research v2 (Fallback)'
-                        logger.info("Research v2 SUCCESS — using fallback intelligence.")
-                    
-                except Exception as e:
-                    logger.error(f"Research v2 also failed: {e}")
-                    genesis_response = None
-
-            # ── Priority 6: Gemini Direct API Fallback ───────────────────
-            # Both N8N paths failed. Instead of returning a dumb OFFLINE stub,
-            # call Gemini 2.0 Flash directly with the market context.
-            # 0 N8N executions consumed. Completely offline-proof.
-            if not genesis_response or not isinstance(genesis_response, dict):
-                genesis_response = self._gemini_direct_fallback(snapshot)
-
-            elif 'n8n_live' not in genesis_response:
-                genesis_response['n8n_live'] = True
-                logger.info("Received Genesis Intelligence (LIVE).")
-
-            # 3. SPX Event Poll (Independent of Genesis Research)
-            # We call the secondary workflow for specific event data
-            if not genesis_response.get('events') or len(genesis_response.get('events', [])) == 0:
-                logger.info("Fetching SPX Events from dedicated micro-service...")
-                
-                # Dynamic Date Range Logic
-                import datetime
-                today = datetime.date.today()
-                next_week = today + datetime.timedelta(days=7)
-                date_query = f"SPX events {today.strftime('%b %d')} to {next_week.strftime('%b %d')} {today.year}"
-                
-                macro_url = "https://humanresource.app.n8n.cloud/webhook/alpha-macro-poll"
-                spx_bridge = N8NBridge(webhook_url=macro_url)
-                spx_events = spx_bridge.execute_workflow(payload={"query": date_query})
-                
-                if not spx_events:
-                    # Fallback to test URL
-                    logger.warning("Production macro webhook failed. Trying test webhook...")
-                    test_url = macro_url.replace("/webhook/", "/webhook-test/")
-                    spx_bridge = N8NBridge(webhook_url=test_url)
-                    spx_events = spx_bridge.execute_workflow(payload={"query": date_query})
-                
-                # Robust Parsing for spx_events (Micro-service can also return 'text')
-                if spx_events and isinstance(spx_events, dict) and 'text' in spx_events:
-                    try:
-                        raw_text = spx_events['text']
-                        # Handle markdown and nested lists in text
-                        json_match = re.search(r'\[.*\]', raw_text.replace('\n', ' '), re.DOTALL)
-                        if json_match:
-                            parsed_list = json.loads(json_match.group(0))
-                            spx_events = parsed_list
-                    except Exception as e:
-                        logger.warning(f"Failed to parse micro-service text payload: {e}")
-
-                if spx_events and isinstance(spx_events, list):
-                    # Normalization: Map event_name -> event, impact_level -> impact
-                    normalized = []
-                    for e in spx_events:
-                        normalized.append({
-                            "event": e.get('event') or e.get('event_name') or "Unknown Event",
-                            "impact": (e.get('impact') or e.get('impact_level') or "MED").upper(),
-                            "days_until": e.get('days_until', 1) # Default to tomorrow if missing
-                        })
-                    genesis_response['events'] = normalized
-                    logger.info(f"Merged {len(normalized)} normalized SPX events.")
-                elif spx_events and isinstance(spx_events, dict) and 'events' in spx_events:
-                    genesis_response['events'] = spx_events['events']
-                    logger.info(f"Merged {len(spx_events['events'])} SPX events from dict.")
-                if not genesis_response.get('events'):
-                    logger.warning("Failed to retrieve SPX events from both Prod and Test. Attempting local cache fallback...")
-                    try:
-                        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-                        event_file = os.path.join(project_root, "Alpha_Data", "upcoming_events.json")
-                        if os.path.exists(event_file):
-                            with open(event_file, 'r') as f:
-                                cached_events = json.load(f)
-                            if isinstance(cached_events, list):
-                                # Re-normalize just in case
-                                normalized = []
-                                for e in cached_events:
-                                    normalized.append({
-                                        "event": e.get('event') or e.get('event_name') or "Unknown Event",
-                                        "impact": (e.get('impact') or e.get('impact_level') or "MED").upper(),
-                                        "days_until": e.get('days_until', 1)
-                                    })
-                                genesis_response['events'] = normalized
-                                logger.info(f"Successfully recovered {len(normalized)} events from local cache.")
-                    except Exception as cache_err:
-                        logger.error(f"Local cache fallback failed: {cache_err}")
-
-            return genesis_response
-                
-        except Exception as e:
-            logger.error(f"External Commentary Fetch Failed: {e}")
-            # Ensure we return something structured to avoid crashing the pipeline
-            return {
-                "forecast": "NEUTRAL",
-                "commentary": f"System Error: {str(e)}",
-                "risk_mode": "REDUCE_RISK",
-                "events": []
-            }
-
     # ══════════════════════════════════════════════════════════════════
     # Priority 6 — Gemini Direct API Fallback
     # ══════════════════════════════════════════════════════════════════
-    def _gemini_direct_fallback(self, snapshot: dict) -> dict:
+    def _generate_native_intelligence(self, snapshot: dict) -> dict:
         """
         When BOTH N8N paths fail, calls Gemini 2.0 Flash directly via
         the Google AI Studio REST API.
@@ -502,10 +321,9 @@ class Loki:
         }
 
         try:
-            logger.info("Priority 6: Calling Gemini 2.0 Flash directly (N8N bypass)...")
-            _v3_status = healed_post(url, payload)
-
-            resp = type("Resp", (), {"status_code": 200 if _v3_status == "sent" else 503, "ok": _v3_status == "sent", "text": _v3_status, "json": lambda: {"status": _v3_status}})()
+            logger.info("Generating Native Intelligence via Gemini 2.5 Flash...")
+            import requests
+            resp = requests.post(url, json=payload)
 
             if resp.status_code != 200:
                 logger.warning(f"Gemini API returned {resp.status_code}: {resp.text[:200]}")
@@ -1076,7 +894,7 @@ class Loki:
         
         # 1. N8N Forecast (The Brain) - FETCH FIRST
         logger.info("Asking N8N for Strategic Forecast...")
-        n8n_result = self.fetch_external_commentary()
+        n8n_result = self._generate_native_intelligence(snapshot)
 
         # 2. Gather Opinions 
         # By passing no arguments, we force the Native Intelligence Sentiment Engine to spin up yfinance + Gemini
@@ -1581,16 +1399,10 @@ class Loki:
             "risk_check": risk_check,
             "hot_update_widgets": n8n_result.get('hot_update_widgets', []) if n8n_result else [],
             "final_action": verdict if risk_check['approved'] else "WAIT",
-            "intelligence_source": "NATIVE" if sent_result.get('cache_status') == 'FRESH' else "CACHED",
+            "intelligence_source": "NATIVE",
             "markdown_report": f"# System Report\n\n**Verdict**: {verdict}\n\n**Rationale**: {rationale}\n\n## System Intelligence\n- **SPX Risk Score**: {derived_risk_score}/100\n- **Risk Mode**: {n8n_result.get('risk_mode', 'N/A') if n8n_result else 'N/A'}\n- **Forecast**: {n8n_result.get('forecast', 'NEUTRAL') if n8n_result else 'NEUTRAL'}\n\n## Defense Logic\n- Hold Value: ${hold_value}\n- Roll Value: ${roll_value}\n- Net Impact: ${round(roll_value - hold_value, 2)}\n\n## Risk Check\n- Status: {'APPROVED' if risk_check['approved'] else 'VETOED'}\n- Reasons: {', '.join(risk_check.get('reasons', []))}{n8n_report_section}"
         }
 
-        # 5. Push to n8n (Phase 4)
-        logger.info("Pushing decision to Cloud...")
-        try:
-            push_decision(final_decision)
-        except Exception as e:
-            logger.error(f"Failed to push decision to N8N: {e}")
         
         # 6. Update Local Memo
         self.generate_analyst_memo(final_decision)

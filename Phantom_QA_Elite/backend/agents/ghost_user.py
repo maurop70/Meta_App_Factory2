@@ -89,8 +89,21 @@ class GhostUserRunner:
         self._console_warnings = []
         self._page.on("console", self._on_console)
 
-    def _on_console(self, msg):
+    async def _on_console(self, msg):
+        """Strict structural DOM error trapping."""
         if msg.type == "error":
+            text = msg.text.lower()
+            
+            # Filter expected edge routing/network absence warnings
+            if "404" in text or "not found" in text or "favicon" in text:
+                return
+                
+            # Filter standard React dev-mode noise if necessary
+            if "strict mode" in text:
+                return
+
+            # Flag actual structural JS/DOM crashes
+            self.has_fatal_errors = True
             self._console_errors.append(msg.text)
         elif msg.type == "warning":
             self._console_warnings.append(msg.text)

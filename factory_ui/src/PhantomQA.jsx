@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-
-// ═══════════════════════════════════════════════════════════
+import axios from 'axios';// ═══════════════════════════════════════════════════════════
 //  PHANTOM QA ELITE — Quality Assurance Command Center
 //  Sub-views: Dashboard | Runner | Pulse
 //  Backend: http://localhost:5030
@@ -185,13 +184,14 @@ function DashboardTab() {
 //  TAB 2: RUNNER — Full Test Bench Trigger + SSE Progress
 // ═══════════════════════════════════════════════════════════
 
-function RunnerTab() {
+function RunnerTab({ setActiveView }) {
   const [targetUrl, setTargetUrl] = useState('http://localhost:5070');
   const [appName, setAppName] = useState('');
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState(null);
   const [events, setEvents] = useState([]);
   const [phase, setPhase] = useState(null);
+  const [latestFailure, setLatestFailure] = useState(null);
   const logRef = useRef(null);
   const esRef = useRef(null);
 
@@ -234,28 +234,52 @@ function RunnerTab() {
   const runFullTest = async () => {
     setRunning(true);
     setResult(null);
-    setEvents([]);
-    setPhase('architect');
+    setEvents([{ status: 'INFO', message: 'IGNITING MODE C...', timestamp: Date.now(), agent: 'ORCHESTRATOR' }]);
+    setPhase('ghost');
 
     try {
-      const res = await fetch('/api/test/full', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          target_url: targetUrl,
-          app_name: appName || targetUrl.split('://').pop().split('/')[0],
-          skip_ghost: false,
-        }),
-      });
-      const data = await res.json();
-      setResult(data);
-      setPhase('complete');
+        const response = await axios.post('/api/v1/qa/orchestrator/execute', {
+            target_url: targetUrl || "http://localhost:5070",
+            app_name: appName || "Auto-detect"
+        });
+        
+        const traceResult = `STATUS: ${response.data.status}\n\n${response.data.trace}`;
+        console.log("[ORCHESTRATOR TRACE]", traceResult);
+        
+        setEvents(prev => [...prev, { status: response.data.status, message: `Trace: ${response.data.trace.substring(0, 200)}...`, timestamp: Date.now(), agent: 'GHOST' }]);
+        setResult({ verdict: response.data.status === 'PASSED' ? 'PASS' : 'FAIL', score: response.data.status === 'PASSED' ? 100 : 0, error: response.data.error });
+        
+        if (response.data.status === 'FAILED') {
+            setLatestFailure({
+                cause: response.data.cause,
+                rawTrace: response.data.trace,
+                url: targetUrl || "http://localhost:5070",
+                culpritFile: response.data.culprit_file
+            });
+        }
     } catch (err) {
-      setResult({ verdict: 'FAIL', score: 0, error: err.message });
-      setPhase('complete');
+        console.error("[ORCHESTRATOR FRACTURE]", err);
+        setEvents(prev => [...prev, { status: 'FAIL', message: err.message, timestamp: Date.now(), agent: 'ORCHESTRATOR' }]);
+        setResult({ verdict: 'FAIL', score: 0, error: err.message });
     } finally {
-      setRunning(false);
+        setPhase('complete');
+        setRunning(false);
     }
+  };
+
+  const authorizeModeAHandoff = () => {
+      if (!latestFailure) return;
+      
+      const payload = `TARGET MATRIX FRACTURE:\nThe Mode C dynamic E2E Interrogator failed on route: ${latestFailure.url}.\n\nTrace Exception:\n${latestFailure.cause}\n\nStrictly refactor this matrix to eliminate the failure trace. Output ONLY the raw refactored code.`;
+      
+      localStorage.setItem('mode_a_target_matrix', latestFailure.culpritFile || "Unknown");
+      localStorage.setItem('mode_a_handoff_prompt', payload);
+      
+      if (setActiveView) {
+          setActiveView('builder');
+      } else {
+          window.location.href = '/builder-chat';
+      }
   };
 
   const phases = [
@@ -387,6 +411,25 @@ function RunnerTab() {
             {result.error && <div style={{ marginTop: '8px', fontSize: '12px', color: '#ef4444' }}>Error: {result.error}</div>}
           </div>
         </div>
+      )}
+
+      {/* Culprit Block */}
+      {latestFailure && (
+          <div style={{ marginTop: '20px', padding: '15px', backgroundColor: '#450a0a', border: '1px solid #ef4444', borderRadius: '4px' }}>
+              <h4 style={{ color: '#fca5a5', margin: '0 0 10px 0' }}>⚠️ CRITICAL FAILURE CAUSE DETECTED</h4>
+              <p style={{ color: '#fee2e2', fontFamily: 'monospace', fontSize: '0.9em', marginBottom: '10px' }}>
+                  {latestFailure.cause}
+              </p>
+              <p style={{ color: '#fbbf24', fontSize: '0.85em', marginBottom: '15px', fontWeight: 'bold' }}>
+                  🎯 DIAGNOSTIC TARGET: {latestFailure.culpritFile}
+              </p>
+              <button 
+                  onClick={authorizeModeAHandoff}
+                  style={{ padding: '10px 20px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+              >
+                  🔧 AUTHORIZE MODE A REPAIR
+              </button>
+          </div>
       )}
 
       {/* SSE Event Log */}
@@ -572,7 +615,7 @@ const TABS = [
   { id: 'pulse', icon: '💓', label: 'System Pulse' },
 ];
 
-export default function PhantomQA() {
+export default function PhantomQA({ setActiveView }) {
   const [activeTab, setActiveTab] = useState('dashboard');
 
   return (
@@ -640,7 +683,7 @@ export default function PhantomQA() {
 
       {/* Tab Content */}
       {activeTab === 'dashboard' && <DashboardTab />}
-      {activeTab === 'runner' && <RunnerTab />}
+      {activeTab === 'runner' && <RunnerTab setActiveView={setActiveView} />}
       {activeTab === 'pulse' && <PulseTab />}
     </div>
   );

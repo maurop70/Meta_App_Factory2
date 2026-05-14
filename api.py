@@ -79,10 +79,29 @@ except ImportError:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await start_memory_engine()
+    # Phase 1: Eradicate zombie OCR/processing tasks orphaned by prior engine crash
+    sweep_zombie_jobs()
     yield
     await stop_memory_engine()
 
+from llm_router import router as builder_router
+from api_qa_telemetry import qa_router
+from api_atomizer_bridge import atomizer_router
+from api_phantom_qa import qa_router as engine_qa_router
+from api_venture_architect import venture_router
+from api_playwright_bridge import playwright_router
+from api_qa_orchestrator import orchestrator_router
+from api_alpha_genesis import router as alpha_router, sweep_zombie_jobs
+
 app = FastAPI(title="Antigravity Meta App Factory API", version="3.0", lifespan=lifespan)
+app.include_router(builder_router, prefix="/api/v1")
+app.include_router(qa_router)
+app.include_router(atomizer_router)
+app.include_router(engine_qa_router)
+app.include_router(venture_router)
+app.include_router(playwright_router)
+app.include_router(orchestrator_router)
+app.include_router(alpha_router)
 
 # ── CORS ──────────────────────────────────────────────────────
 app.add_middleware(
@@ -751,10 +770,26 @@ def get_registry():
         with open(REGISTRY_PATH, "r", encoding="utf-8-sig") as f:
             data = json.load(f)
 
+        dirty = False
         apps = []
+        valid_apps = {}
         for name, info in data.get("apps", {}).items():
             if not isinstance(info, dict):
                 continue
+                
+            # OS Synchronization Gate
+            rel_path = info.get("path")
+            if rel_path:
+                app_path = os.path.abspath(os.path.join(SCRIPT_DIR, rel_path.lstrip("/\\")))
+            else:
+                app_path = os.path.join(SCRIPT_DIR, name)
+                
+            if not os.path.exists(app_path):
+                logger.warning(f"[AUTO-PURGE] Eradicating ghost node from registry: {name}")
+                dirty = True
+                continue
+                
+            valid_apps[name] = info
             apps.append({
                 "name": name,
                 "status": info.get("status", "unknown"),
@@ -763,6 +798,12 @@ def get_registry():
                 "path": info.get("path", ""),
                 "form_url": info.get("form_url"),
             })
+            
+        if dirty:
+            data["apps"] = valid_apps
+            with open(REGISTRY_PATH, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=4)
+
         return {"apps": apps}
     except Exception as e:
         logger.error(f"Registry read failed: {e}")
@@ -6142,9 +6183,121 @@ async def _startup_watcher():
     else:
         logger.info("CIO Agent already running on port 5090 — skipping launch.")
 
+# ── Atomizer Endpoints ────────────────────────────────────────────────────────
+from pydantic import BaseModel, Field, field_validator
+from typing import Optional, Dict
+import json
+from fastapi import HTTPException
+
+class AtomizerPayload(BaseModel):
+    child_app_id: str = Field(..., pattern=r"^[a-zA-Z0-9_]+$")
+    atom_type: str
+    relative_path: str = Field(..., pattern=r"^[a-zA-Z0-9_\-\./]+$")
+    directive: str
+    token_boundary: Optional[Dict[str, int]] = None
+
+    @field_validator('relative_path')
+    @classmethod
+    def prevent_path_traversal(cls, v: str) -> str:
+        if ".." in v:
+            raise ValueError("[FATAL] Directory traversal ('..') is mathematically forbidden.")
+        return v
+
+def _resolve_app_base_dir(app_name: str, factory_dir: str) -> str:
+    registry_path = os.path.join(factory_dir, "registry.json")
+    if os.path.exists(registry_path):
+        try:
+            with open(registry_path, "r", encoding="utf-8-sig") as f:
+                registry = json.load(f)
+            app_info = registry.get("apps", {}).get(app_name, {})
+            app_path = app_info.get("path", "")
+            
+            # CRITICAL FIX: If app_path starts with ../, we must resolve it. But we should also verify it exists.
+            if app_path:
+                resolved = os.path.abspath(os.path.join(factory_dir, app_path))
+                if os.path.exists(resolved):
+                    return resolved
+        except Exception:
+            pass
+            
+    # Fallbacks if path is empty or registry resolution failed
+    if os.path.exists(os.path.join(factory_dir, "ERP", app_name)):
+        return os.path.join(factory_dir, "ERP", app_name)
+    elif os.path.exists(os.path.join(factory_dir, app_name)):
+        return os.path.join(factory_dir, app_name)
+        
+    return os.path.join(factory_dir, "children", app_name)
+
+@app.get("/api/atomizer/files/{app_name}")
+async def atomizer_files(app_name: str):
+    FACTORY_DIR = os.path.dirname(os.path.abspath(__file__))
+    base_dir = _resolve_app_base_dir(app_name, FACTORY_DIR)
+    
+    valid_exts = {".py", ".js", ".jsx", ".html", ".css", ".json"}
+    files = []
+    
+    if not os.path.exists(base_dir):
+        return {"files": []}
+        
+    for root, _, filenames in os.walk(base_dir):
+        # skip ignored directories
+        if any(ignored in root for ignored in ["node_modules", "__pycache__", ".git", "venv", "dist", "certs"]):
+            continue
+        for filename in filenames:
+            ext = os.path.splitext(filename)[1].lower()
+            if ext in valid_exts:
+                full_path = os.path.join(root, filename)
+                rel_path = os.path.relpath(full_path, base_dir)
+                files.append(rel_path.replace("\\", "/"))
+                
+    return {"files": sorted(files)}
+
+@app.get("/api/atomizer/file-content")
+async def atomizer_file_content(app_name: str, relative_path: str):
+    if ".." in relative_path:
+        raise HTTPException(status_code=403, detail="Path traversal forbidden.")
+        
+    FACTORY_DIR = os.path.dirname(os.path.abspath(__file__))
+    base_dir = _resolve_app_base_dir(app_name, FACTORY_DIR)
+    
+    target_file = os.path.abspath(os.path.join(base_dir, relative_path))
+    if not target_file.startswith(os.path.abspath(base_dir)):
+         raise HTTPException(status_code=403, detail="Path traversal forbidden.")
+         
+    if not os.path.exists(target_file):
+        raise HTTPException(status_code=404, detail="File not found")
+        
+    try:
+        with open(target_file, "r", encoding="utf-8") as f:
+            content = f.read()
+        return {"content": content}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/atomizer/ingest")
+async def atomizer_ingest(payload: AtomizerPayload):
+    FACTORY_DIR = os.path.dirname(os.path.abspath(__file__))
+    base_dir = _resolve_app_base_dir(payload.child_app_id, FACTORY_DIR)
+    
+    target_path = os.path.abspath(os.path.join(base_dir, payload.relative_path))
+    
+    if not target_path.startswith(os.path.abspath(base_dir)):
+        raise HTTPException(status_code=403, detail="[FATAL] Directory Traversal Violation Detected.")
+        
+    if not os.path.exists(target_path):
+        raise HTTPException(status_code=404, detail="Atom coordinate does not exist.")
+        
+    if payload.token_boundary:
+        start_line = payload.token_boundary.get("start_line", 1)
+        end_line = payload.token_boundary.get("end_line", start_line)
+        if (end_line - start_line) > 500:
+            raise HTTPException(status_code=400, detail="[FATAL] Token Boundary Exceeds MAX_ATOM_LINES. Attention matrix degradation imminent.")
+        
+    return {"status": "success", "target": target_path}
+
 if __name__ == "__main__":
     import uvicorn
     # AETHER-NATIVE: Lock to port 5000 to act as Central Brain
-    uvicorn.run(app, host="0.0.0.0", port=5000)
+    uvicorn.run(app, host="0.0.0.0", port=8000)
 
 # V3 MIGRATION COMPLETE

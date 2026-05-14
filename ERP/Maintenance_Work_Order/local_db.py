@@ -57,6 +57,13 @@ def init_tables():
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_auth_rate_limits_emp ON auth_rate_limits(employee_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_auth_rate_limits_time ON auth_rate_limits(attempt_timestamp)")
         
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS revoked_tokens (
+                jti TEXT PRIMARY KEY,
+                revoked_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
         # [PHASE 35.1] Lookup Tables
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS erp_categories (

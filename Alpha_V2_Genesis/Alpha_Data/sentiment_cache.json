@@ -1,10 +1,10 @@
 {
-    "timestamp": "2026-04-17T11:51:32.136373",
+    "timestamp": "2026-05-14T17:44:48.362159",
     "data": {
         "bias": "BULLISH",
         "score": 0.95,
         "volatility_multiplier": 1.0,
-        "narrative": "The S&P 500 exhibits a strong bullish bias, consistently achieving record highs and showing higher equity futures. This positive momentum is driven by favorable geopolitical developments, including the Israel-Lebanon ceasefire and optimism surrounding an Iran deal, alongside positive corporate earnings sentiment.",
+        "narrative": "The S&P 500 is displaying strong BULLISH momentum, consistently achieving new record highs. This upward trend is primarily driven by significant gains in the technology sector and positive risk sentiment across equity markets, with futures also advancing.",
         "cache_status": "FRESH"
     }
 }
