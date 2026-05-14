@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import ReactDOM from 'react-dom';
 
 export default function AetherCommandSuite({ appName }) {
   const [loadingExplain, setLoadingExplain] = useState(false);
@@ -48,7 +49,7 @@ export default function AetherCommandSuite({ appName }) {
     }
   };
 
-  return (
+  return ReactDOM.createPortal(
     <div style={{
       position: 'fixed',
       bottom: '20px',
@@ -111,6 +112,7 @@ export default function AetherCommandSuite({ appName }) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

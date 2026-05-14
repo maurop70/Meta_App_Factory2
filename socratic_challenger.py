@@ -422,6 +422,194 @@ def get_challenger() -> SocraticChallenger:
     return _challenger
 
 
+import ast
+from typing import List
+
+class DoctrineEnforcer(ast.NodeVisitor):
+    def __init__(self):
+        self.violations: List[str] = []
+        self.current_function = None
+
+    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef):
+        self.current_function = node.name
+        self._audit_route_decorator(node)
+        self._audit_cpu_isolation(node)
+        self._audit_pagination_boundary(node)
+        self._audit_runtime_imports(node)
+        self.generic_visit(node)
+        self.current_function = None
+
+    def visit_FunctionDef(self, node: ast.FunctionDef):
+        self.current_function = node.name
+        self._audit_route_decorator(node)
+        self._audit_runtime_imports(node)
+        self.generic_visit(node)
+        self.current_function = None
+
+    def _audit_runtime_imports(self, node):
+        """Rule 4: Eradicate Inline Runtime Imports"""
+        for stmt in node.body:
+            for child in ast.walk(stmt):
+                if isinstance(child, (ast.Import, ast.ImportFrom)):
+                    self.violations.append(
+                        f"[FATAL] Line {child.lineno}: Inline import '{child.names[0].name}' detected inside '{self.current_function}'. All dependencies must be resolved at the global module level."
+                    )
+
+    def _audit_route_decorator(self, node):
+        """Rule 3: Eradicate Catch-All Fallback Routes"""
+        for decorator in node.decorator_list:
+            if isinstance(decorator, ast.Call) and isinstance(decorator.func, ast.Attribute):
+                if decorator.func.attr in ['get', 'post', 'put', 'delete']:
+                    if decorator.args and isinstance(decorator.args[0], ast.Constant):
+                        route_path = decorator.args[0].value
+                        if "{full_path:path}" in str(route_path):
+                            self.violations.append(
+                                f"[FATAL] Line {node.lineno}: Catch-all fallback route '{route_path}' detected in '{self.current_function}'. Static HTML mounting is permanently forbidden."
+                            )
+            # Check StaticFiles in decorators or body
+        for stmt in node.body:
+            for child in ast.walk(stmt):
+                if isinstance(child, ast.Call) and isinstance(child.func, ast.Name):
+                    if child.func.id == 'StaticFiles':
+                        self.violations.append(f"[FATAL] Line {child.lineno}: StaticFiles invocation detected in '{self.current_function}'. Static mounting forbidden.")
+
+    def _audit_cpu_isolation(self, node):
+        """Rule 2: CPU-Bound Thread Isolation"""
+        for stmt in node.body:
+            for child in ast.walk(stmt):
+                if isinstance(child, ast.Call) and getattr(child.func, 'id', None) in ['FPDF', 'generate_pdf', 'csv_writer']:
+                    self.violations.append(
+                        f"[FATAL] Line {node.lineno}: CPU-bound I/O operation '{child.func.id}' detected on primary async thread in '{self.current_function}'. Must decouple via background worker."
+                    )
+                # Also check attribute calls like fpdf2 maneuvers
+                if isinstance(child, ast.Call) and isinstance(child.func, ast.Attribute):
+                    if child.func.attr in ['output', 'write'] and 'pdf' in str(getattr(child.func.value, 'id', '')).lower():
+                        self.violations.append(
+                            f"[FATAL] Line {node.lineno}: CPU-bound fpdf2 maneuver detected in '{self.current_function}'. Must decouple via background worker."
+                        )
+
+    def _audit_pagination_boundary(self, node):
+        """Rule 1: Pagination Boundary Enforcement"""
+        is_get_route = False
+        for decorator in node.decorator_list:
+            if isinstance(decorator, ast.Call) and isinstance(decorator.func, ast.Attribute):
+                if decorator.func.attr == 'get':
+                    is_get_route = True
+                    break
+        
+        if not is_get_route:
+            return
+
+        arg_names = [arg.arg for arg in node.args.args] + [arg.arg for arg in node.args.kwonlyargs]
+        has_pagination_args = ('limit' in arg_names and 'offset' in arg_names)
+        
+        for stmt in node.body:
+            for child in ast.walk(stmt):
+                if isinstance(child, ast.Return) and isinstance(child.value, ast.Dict):
+                    keys = [k.value for k in child.value.keys if isinstance(k, ast.Constant)]
+                    if 'items' in keys:
+                        if not has_pagination_args:
+                            self.violations.append(f"[FATAL] Line {node.lineno}: @router.get route '{self.current_function}' returns a collection ('items') but lacks 'limit' and 'offset' arguments.")
+                        
+                        required_keys = {'items', 'total', 'limit', 'offset'}
+                        
+                        # ── STRICT MATCH SET DIFFERENCE ──
+                        unauthorized_keys = set(keys) - required_keys
+                        for illegal_key in unauthorized_keys:
+                            self.violations.append(f"[FATAL] Unauthorized key '{illegal_key}' detected in I/O serialization envelope. Strict match required.")
+                            
+                        missing = required_keys - set(keys)
+                        if missing:
+                            self.violations.append(f"[FATAL] Line {child.lineno}: Return statement in '{self.current_function}' violates Pagination Boundary. Missing keys: {missing}")
+
+def audit_staging_payload(filepath: str) -> List[str]:
+    """Ingests the STAGING file and returns physical doctrine violations."""
+    if not os.path.exists(filepath):
+        return [f"[SYSTEM ERROR] Staging payload not found at {filepath}"]
+        
+    with open(filepath, 'r', encoding='utf-8') as file:
+        source_code = file.read()
+        
+    try:
+        tree = ast.parse(source_code)
+    except SyntaxError as e:
+        return [f"[FATAL SYNTAX ERROR] Cannot parse AST: {e.msg} at line {e.lineno}"]
+        
+    enforcer = DoctrineEnforcer()
+    enforcer.visit(tree)
+    return enforcer.violations
+
+from typing import Dict, Any
+
+def evaluate_payload(envelope: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    The Central Adversarial Gatekeeper.
+    Physically routes payloads based on strict structural verification, overriding upstream intent.
+    """
+    payload_type = envelope.get("payload_type", "STRATEGIC_DOCUMENT")
+    content_format = envelope.get("content_format", "markdown").lower()
+    metadata = envelope.get("metadata", {})
+    filename = metadata.get("filename", "").lower()
+    staging_filepath = envelope.get("staging_filepath", "")
+    
+    # ── 1. ZERO-TRUST EXTENSION OVERRIDE ──
+    # Mathematical enforcement: check metadata, format, AND the physical target path
+    if (filename.endswith(".py") or 
+        content_format == "python" or 
+        staging_filepath.lower().endswith(".py")):
+        payload_type = "EXECUTABLE_CODE"
+        
+    # ── 2. AST / MATHEMATICAL ROUTE ──
+    if payload_type == "EXECUTABLE_CODE":
+        staging_filepath = envelope.get("staging_filepath")
+        
+        if not staging_filepath or not os.path.exists(staging_filepath):
+            return {
+                "status": "FATAL_ERROR",
+                "verdict": "REJECTED",
+                "message": f"[FATAL] EXECUTABLE_CODE payload requires a physical path."
+            }
+            
+        # ── LANGUAGE BIFURCATION ──
+        if staging_filepath.lower().endswith(".py"):
+            # Execute strict Python doctrine enforcement
+            violations = audit_staging_payload(staging_filepath)
+            if violations:
+                return {
+                    "status": "AST_VIOLATION",
+                    "verdict": "REJECTED",
+                    "message": "Physical doctrine violations detected. Atomic swap blocked.",
+                    "violations": violations
+                }
+        elif staging_filepath.lower().endswith((".jsx", ".js", ".tsx", ".ts")):
+            # Bypass Python AST; delegate to Playwright Diagnostic Node
+            pass 
+        else:
+            return {
+                "status": "UNSUPPORTED_LANGUAGE",
+                "verdict": "REJECTED",
+                "message": f"Unsupported executable format for AST parsing: {staging_filepath}"
+            }
+
+        return {
+            "status": "APPROVED",
+            "verdict": "VERIFIED",
+            "message": "Payload passed structural pre-flight. Proceed to Diagnostic Node."
+        }
+            
+    # ── 4. STRATEGIC ROUTING (MODE B) ──
+    else:
+        # Safe to use raw string content for lexical analysis
+        content = envelope.get("content", "")
+        critic_score = metadata.get("critic_score", 5.0)
+        
+        # Instantiate the lexical SocraticChallenger engine
+        challenger = get_challenger()
+        result = challenger.evaluate(proposal=content, critic_score=critic_score)
+        
+        # Result contains PAUSED status, weaknesses, allowing the Persuasion Loop
+        return result
+
 # ── CLI ──────────────────────────────────────────────────
 if __name__ == "__main__":
     import argparse

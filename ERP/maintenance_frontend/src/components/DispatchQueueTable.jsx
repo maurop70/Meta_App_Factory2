@@ -134,6 +134,73 @@ const DispatchQueueTable = () => {
                                 )}
                             </tbody>
                         </table>
+
+                        <div className="mobile-kv-card-container">
+                            {queue.length === 0 ? (
+                                <div className="mobile-kv-card" style={{ opacity: 0.7 }}>
+                                    <div className="mobile-kv-row">
+                                        <span className="mobile-kv-label">Queue Status</span>
+                                        <span className="mobile-kv-value" style={{ color: '#64748b' }}>No unassigned work orders in queue.</span>
+                                    </div>
+                                    <div className="mobile-kv-row" style={{ marginTop: '0.5rem' }}>
+                                        <button className="dispatch-btn" style={{ width: '100%', padding: '0.75rem' }} disabled>
+                                            Manage Dispatch
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                queue.map(order => (
+                                    <div key={order.mwo_id} className="mobile-kv-card">
+                                        <div className="mobile-kv-row">
+                                            <span className="mobile-kv-label">MWO ID</span>
+                                            <span className="mobile-kv-value" style={{ color: '#818cf8', fontWeight: 600 }}>{order.mwo_id}</span>
+                                        </div>
+                                        <div className="mobile-kv-row">
+                                            <span className="mobile-kv-label">Status</span>
+                                            <span className="mobile-kv-value">
+                                                <span style={{ 
+                                                    padding: '4px 10px', borderRadius: '12px', fontSize: '0.7rem', 
+                                                    fontWeight: 600, background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444',
+                                                    textTransform: 'uppercase'
+                                                }}>
+                                                    {order.status}
+                                                </span>
+                                            </span>
+                                        </div>
+                                        <div className="mobile-kv-row">
+                                            <span className="mobile-kv-label">Urgency</span>
+                                            <span className="mobile-kv-value">
+                                                <span style={{ 
+                                                    padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', 
+                                                    fontWeight: 600, color: order.dm_urgency === 'High' || order.dm_urgency === 'Critical' ? '#fbbf24' : '#94a3b8' 
+                                                }}>
+                                                    {order.dm_urgency}
+                                                </span>
+                                            </span>
+                                        </div>
+                                        <div className="mobile-kv-row">
+                                            <span className="mobile-kv-label">Equipment</span>
+                                            <span className="mobile-kv-value" style={{ color: '#cbd5e1' }}>{order.equipment_id}</span>
+                                        </div>
+                                        <div className="mobile-kv-row">
+                                            <span className="mobile-kv-label">Created</span>
+                                            <span className="mobile-kv-value" style={{ color: '#cbd5e1', fontSize: '0.8rem' }}>
+                                                {new Date(order.created_at).toLocaleDateString()}
+                                            </span>
+                                        </div>
+                                        <div className="mobile-kv-row" style={{ marginTop: '0.5rem' }}>
+                                            <button 
+                                                className="dispatch-btn"
+                                                style={{ width: '100%', padding: '0.75rem' }}
+                                                onClick={() => setSelectedMwo(order)}
+                                            >
+                                                Manage Dispatch
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
                     </div>
 
                     <div className="dispatch-pagination">

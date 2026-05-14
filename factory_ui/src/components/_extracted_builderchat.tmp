@@ -1,0 +1,624 @@
+﻿function BuilderChat({ registry, onAtomizerUpdate, externalCommand, onBuildComplete, onQaGate, mode, profile }) {
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+  const [streaming, setStreaming] = useState(false);
+  const [building, setBuilding] = useState(false);
+  const [lastPrompt, setLastPrompt] = useState('');
+  const [fileTree, setFileTree] = useState([]);
+  const [selectedPath, setSelectedPath] = useState(null);
+  const [audienceDetected, setAudienceDetected] = useState(null);
+  const [generatingProfile, setGeneratingProfile] = useState(false);
+  const [interactionMode, setInteractionMode] = useState(() => localStorage.getItem('interactionMode') || 'socratic');
+  const [confidence, setConfidence] = useState(null);
+  const [chatMode, setChatMode] = useState(() => localStorage.getItem('chatMode') || null);
+  
+  useEffect(() => {
+    if (chatMode) localStorage.setItem('chatMode', chatMode);
+    else localStorage.removeItem('chatMode');
+  }, [chatMode]);
+
+  useEffect(() => {
+    localStorage.setItem('interactionMode', interactionMode);
+  }, [interactionMode]);
+
+  // â”€â”€ Atomizer Physical Map â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  useEffect(() => {
+    fetch('/api/v1/atomizer/map?target_directory=apps')
+      .then(r => r.json())
+      .then(data => { if (data.tree) setFileTree(data.tree); })
+      .catch(err => console.error('[ATOMIZER] Map fracture:', err));
+  }, []);
+
+  const renderTree = (nodes) => {
+    return nodes.map((node, idx) => (
+      <div key={idx} style={{ paddingLeft: '12px', marginTop: '3px' }}>
+        {node.type === 'directory' ? (
+          <details>
+            <summary style={{ cursor: 'pointer', fontWeight: 'bold', color: '#818cf8', fontSize: '0.85em' }}>ðŸ“ {node.name}</summary>
+            {node.children && renderTree(node.children)}
+          </details>
+        ) : (
+          <div
+            style={{
+              cursor: 'pointer',
+              fontSize: '0.82em',
+              padding: '2px 4px',
+              borderRadius: '3px',
+              color: selectedPath === node.path ? '#10b981' : '#cbd5e1',
+              fontWeight: selectedPath === node.path ? 'bold' : 'normal',
+              background: selectedPath === node.path ? 'rgba(16,185,129,0.1)' : 'transparent'
+            }}
+            onClick={() => setSelectedPath(node.path)}
+          >
+            ðŸ“„ {node.name}
+          </div>
+        )}
+      </div>
+    ));
+  };
+
+  const scrollRef = useRef(null);
+  const inputRef = useRef(null);
+  const fileRef = useRef(null);
+  const audienceTimerRef = useRef(null);
+
+  // â”€â”€ Audience Detection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  const checkAudienceIntent = async (text) => {
+    try {
+      const res = await fetch(`/api/audience/detect`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      const data = await res.json();
+      if (data.detected && data.confidence >= 0.7) {
+        setAudienceDetected(data);
+        if (audienceTimerRef.current) clearTimeout(audienceTimerRef.current);
+        audienceTimerRef.current = setTimeout(() => setAudienceDetected(null), 15000);
+      }
+    } catch { /* silent */ }
+  };
+
+  const researchProfile = async () => {
+    if (!audienceDetected?.audience_hint || generatingProfile) return;
+    setGeneratingProfile(true);
+    setAudienceDetected(null);
+    setMessages(prev => [...prev, { role: 'system', text: `ðŸ”¬ Researching audience profile: "${audienceDetected.audience_hint}"...` }]);
+    try {
+      const res = await fetch(`/api/audience/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          audience_description: audienceDetected.audience_hint,
+          context: 'Building an application in the Meta App Factory',
+        }),
+      });
+      const data = await res.json();
+      if (data.status === 'ok' && data.profile) {
+        const p = data.profile;
+        const profileCard =
+          `âœ… **Audience Profile Generated: ${p.name}**\n` +
+          `ðŸ“Š Age Range: ${p.age_range}\n` +
+          `ðŸ“ ${p.description}\n\n` +
+          `ðŸŽ¯ Interests: ${p.interests.join(', ')}\n` +
+          `ðŸ—£ï¸ Tone: ${p.tone_keywords.join(', ')}\n` +
+          `ðŸš« Deal-breakers: ${p.deal_breakers.slice(0, 3).join('; ')}\n\n` +
+          `Profile saved as "${p.id}" â€” use \`python factory.py validate <app> --profile ${p.id}\` to score your app.`;
+        setMessages(prev => [...prev, { role: 'assistant', text: profileCard }]);
+      } else {
+        setMessages(prev => [...prev, { role: 'assistant', text: `âš ï¸ Profile generation failed: ${data.message || 'Unknown error'}` }]);
+      }
+    } catch (err) {
+      setMessages(prev => [...prev, { role: 'assistant', text: `âŒ Profile research error: ${err.message}` }]);
+    } finally {
+      setGeneratingProfile(false);
+    }
+  };
+
+  const triggerBuild = async (appName, blueprint = 'multi_agent_core', description = '', systemPrompt = null) => {
+    setBuilding(true);
+    setMessages(prev => [...prev, { role: 'system', text: `ðŸ—ï¸ BUILD STARTED: ${appName} [${blueprint}] (Mode: ${mode}, Profile: ${profile})` }]);
+    setMessages(prev => [...prev, { role: 'assistant', text: '' }]);
+
+    try {
+      const dashboard_context = getContext();
+      const res = await fetch(`/api/build/stream`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ app_name: appName, blueprint, description, system_prompt: systemPrompt, dashboard_context }),
+      });
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const event = JSON.parse(line.slice(6));
+            if (event.done) break;
+            // UPGRADE 3: Detect GATE_BLOCKED event
+            if (event.step === 'GATE_BLOCKED' && onQaGate) {
+              onQaGate({ app_name: event.app_name, score: event.score });
+            }
+            if (event.text) {
+              setMessages(prev => {
+                const copy = [...prev];
+                copy[copy.length - 1] = {
+                  role: 'assistant',
+                  text: copy[copy.length - 1].text + event.text + '\n',
+                };
+                return copy;
+              });
+            }
+          } catch { /* skip */ }
+        }
+      }
+    } catch (err) {
+      setMessages(prev => [...prev, { role: 'assistant', text: `âŒ Build error: ${err.message}` }]);
+    } finally {
+      setBuilding(false);
+      if (onBuildComplete) onBuildComplete();
+    }
+  };
+
+  useEffect(() => {
+    scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // Handle external commands from the Command Palette
+  useEffect(() => {
+    if (externalCommand) {
+      executePrompt(externalCommand.text, externalCommand.isTriad);
+    }
+  }, [externalCommand]);
+
+  const getContext = () => {
+    const ctx = {};
+    if (registry?.length) {
+      ctx.registered_apps = registry.map(a => ({ name: a.name, status: a.status, type: a.type }));
+    }
+    ctx.factory_mode = mode;
+    ctx.userProfile = profile;
+    ctx.chatMode = chatMode;
+    ctx.interactionMode = interactionMode;
+    ctx.timestamp = new Date().toISOString();
+    return ctx;
+  };
+
+  const executePrompt = async (promptText, isTriad = false) => {
+    const prompt = promptText.trim();
+    if (!prompt || streaming) return;
+
+    // Handle /refine command
+    if (prompt === '/refine' || prompt.startsWith('/refine ')) {
+      const appName = prompt === '/refine'
+        ? window.prompt('Which app do you want to refine?', 'Resonance')
+        : prompt.split('/refine ')[1].split(':')[0].trim();
+      if (!appName) return;
+
+      const feedback = prompt.includes(':')
+        ? prompt.split(':').slice(1).join(':').trim()
+        : window.prompt(`What feedback do you have for ${appName}?`, '');
+      if (!feedback) return;
+
+      setInput('');
+      setMessages(prev => [...prev, { role: 'user', text: `ðŸ”„ Refine ${appName}: ${feedback}` }]);
+      setStreaming(true);
+      setMessages(prev => [...prev, { role: 'assistant', text: '' }]);
+
+      try {
+        const res = await fetch(`/api/refine`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ app_name: appName, feedback }),
+        });
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            try {
+              const event = JSON.parse(line.slice(6));
+              if (event.done) break;
+              if (event.text) {
+                setMessages(prev => {
+                  const copy = [...prev];
+                  copy[copy.length - 1] = { role: 'assistant', text: copy[copy.length - 1].text + event.text };
+                  return copy;
+                });
+              }
+            } catch { /* skip */ }
+          }
+        }
+      } catch (err) {
+        setMessages(prev => [...prev, { role: 'assistant', text: `âŒ Refine error: ${err.message}` }]);
+      } finally {
+        setStreaming(false);
+      }
+      return;
+    }
+
+    setLastPrompt(prompt);
+    setInput('');
+    setConfidence(null);
+    // Inject TARGET MATRIX binding if a file is selected from the Atomizer map
+    const displayPrompt = selectedPath ? `ðŸŽ¯ TARGET: ${selectedPath}\n${prompt}` : prompt;
+    setMessages(prev => [...prev, { role: 'user', text: displayPrompt }]);
+    setStreaming(true);
+
+    // Audience detection (async, non-blocking)
+    checkAudienceIntent(prompt);
+    setMessages(prev => [...prev, { role: 'assistant', text: '' }]);
+
+    try {
+      const dashboard_context = getContext();
+      const res = await fetch(`/api/chat/stream`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, dashboard_context }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        setMessages(prev => {
+          const copy = [...prev];
+          copy[copy.length - 1] = { role: 'assistant', text: `âŒ ${err.error || 'Server error'}` };
+          return copy;
+        });
+        setStreaming(false);
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const event = JSON.parse(line.slice(6));
+            if (event.confidence) {
+              setConfidence(event.confidence);
+            }
+            if (event.error) {
+              setMessages(prev => {
+                const copy = [...prev];
+                copy[copy.length - 1] = { role: 'assistant', text: `âŒ ${event.error}` };
+                return copy;
+              });
+              break;
+            }
+            if (event.done) break;
+            if (event.text) {
+              setMessages(prev => {
+                const copy = [...prev];
+                copy[copy.length - 1] = {
+                  role: 'assistant',
+                  text: copy[copy.length - 1].text + event.text,
+                };
+                return copy;
+              });
+            }
+          } catch { /* skip */ }
+        }
+      }
+    } catch (err) {
+      setMessages(prev => {
+        const copy = [...prev];
+        copy[copy.length - 1] = { role: 'assistant', text: `âŒ Connection failed: ${err.message}` };
+        return copy;
+      });
+    } finally {
+      setStreaming(false);
+    }
+  };
+
+  const sendMessage = () => executePrompt(input);
+
+  const clearChat = async () => {
+    setMessages([]);
+    setChatMode(null);
+    try { await fetch(`/api/chat/clear`, { method: 'POST' }); } catch { }
+  };
+
+  const [recovering, setRecovering] = useState(false);
+
+  const recoverSession = async () => {
+    setRecovering(true);
+    try {
+      const res = await fetch(`/api/chat/history?limit=20`);
+      const data = await res.json();
+      if (data.messages && data.messages.length > 0) {
+        setMessages(data.messages);
+      } else if (lastPrompt) {
+        setInput(lastPrompt);
+        inputRef.current?.focus();
+      }
+    } catch {
+      // Fallback to local last prompt
+      if (lastPrompt) {
+        setInput(lastPrompt);
+        inputRef.current?.focus();
+      }
+    } finally {
+      setRecovering(false);
+    }
+  };
+
+  const [parseResult, setParseResult] = useState(null);
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+
+    // POST to DocumentParserService
+    const fd = new FormData();
+    fd.append('file', file);
+    setParseResult({ loading: true, file: file.name });
+
+    try {
+      const res = await fetch(`/api/documents/upload`, { method: 'POST', body: fd });
+      const data = await res.json();
+      setParseResult(data);
+
+      // Also inject summary into chat input for context
+      const summary = data.extracted?.summary || data.category || 'Parsed';
+      const routed = data.routing?.destination || 'index only';
+      setInput(prev => prev + `\n\n--- ðŸ“„ Parsed: ${file.name} ---\nCategory: ${data.category} (${(data.confidence * 100).toFixed(0)}%)\nRouted to: ${routed}\nSummary: ${summary}`);
+      inputRef.current?.focus();
+
+      // Auto-dismiss after 8s
+      setTimeout(() => setParseResult(null), 8000);
+    } catch (err) {
+      setParseResult({ error: err.message });
+      setTimeout(() => setParseResult(null), 5000);
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', height: '100%' }}>
+      {/* â”€â”€ ATOMIZER FILE MAP SIDEBAR â”€â”€ */}
+      <div style={{ width: '280px', minWidth: '280px', borderRight: '1px solid rgba(99,102,241,0.15)', padding: '12px', overflowY: 'auto', background: 'rgba(15,23,42,0.5)', flexShrink: 0 }}>
+        <h4 style={{ margin: '0 0 8px 0', fontSize: '0.85rem', color: '#e2e8f0', borderBottom: '1px solid rgba(99,102,241,0.15)', paddingBottom: '8px' }}>âš›ï¸ ATOMIZER MAP</h4>
+        {selectedPath && (
+          <div style={{ padding: '6px 8px', marginBottom: '8px', backgroundColor: 'rgba(16,185,129,0.12)', borderRadius: '4px', fontSize: '0.75em', color: '#6ee7b7', wordBreak: 'break-all', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>ðŸŽ¯ {selectedPath}</span>
+            <button onClick={() => setSelectedPath(null)} style={{ background: 'none', border: 'none', color: '#6ee7b7', cursor: 'pointer', fontSize: '0.9rem', padding: 0 }}>âœ•</button>
+          </div>
+        )}
+        <div style={{ fontSize: '0.85em' }}>
+          {fileTree.length > 0 ? renderTree(fileTree) : (
+            <div style={{ color: '#64748b', fontStyle: 'italic', fontSize: '0.8em' }}>Loading physical map...</div>
+          )}
+        </div>
+      </div>
+    <div className="builder-chat" style={{ flex: 1, minWidth: 0 }}>
+      <div className="chat-header">
+        <h2>
+          ðŸ—ï¸ Builder Chat
+          <span className="stream-badge">SSE STREAM</span>
+          {confidence !== null && (
+            <span className={`confidence-badge ${confidence < 70 ? 'critical' : confidence < 90 ? 'low' : ''}`} title="Prompt Confidence Score">
+              ðŸŽ¯ {confidence}% CONFIDENCE
+            </span>
+          )}
+        </h2>
+        <div className="chat-header-actions">
+          <div className="interaction-toggle">
+            <button 
+              className={`interaction-btn ${interactionMode === 'socratic' ? 'active' : ''}`}
+              onClick={() => setInteractionMode('socratic')}
+              title="Socratic Mode: AI asks questions to build blueprint"
+            >
+              ðŸ—£ï¸ Socratic
+            </button>
+            <button 
+              className={`interaction-btn ${interactionMode === 'solution' ? 'active' : ''}`}
+              onClick={() => setInteractionMode('solution')}
+              title="Solution Mode: AI instantly proposes a solution"
+            >
+              âš¡ Solution
+            </button>
+          </div>
+          <button className="action-btn recover" onClick={recoverSession} title="Recover session from Supabase" disabled={recovering}>
+            {recovering ? 'â³ Loading...' : 'âª Recover'}
+          </button>
+          <button
+            className="action-btn deploy"
+            onClick={() => {
+              const name = prompt('Enter app name to build:', 'Resonance');
+              if (name) triggerBuild(name, 'multi_agent_core', 'Multi-agent educational app', input || lastPrompt || null);
+            }}
+            disabled={building || streaming}
+            title="Deploy app via Factory Pipeline"
+            style={{ background: building ? '#f59e0b' : '#10b981', color: '#fff', border: 'none' }}
+          >
+            {building ? 'âš™ï¸ Building...' : 'ðŸš€ Deploy'}
+          </button>
+          <button className="action-btn upload" onClick={() => fileRef.current?.click()} title="Upload & Parse Document">
+            ðŸ“Ž Upload
+          </button>
+          <input ref={fileRef} type="file" accept=".pdf,.docx,.txt,.csv,.md" style={{ display: 'none' }} onChange={handleFileUpload} />
+          <button className="action-btn clear" onClick={clearChat}>Clear</button>
+        </div>
+      </div>
+
+      {parseResult && (
+        <div style={{ padding: '0.6rem 1rem', fontSize: '0.8rem', borderBottom: '1px solid rgba(99,102,241,0.15)', background: parseResult.loading ? 'rgba(99,102,241,0.08)' : parseResult.error ? 'rgba(239,68,68,0.08)' : 'rgba(34,197,94,0.08)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          {parseResult.loading ? (
+            <span>â³ Parsing <strong>{parseResult.file}</strong>...</span>
+          ) : parseResult.error ? (
+            <span>âŒ {parseResult.error}</span>
+          ) : (
+            <>
+              <span>âœ… <strong>{parseResult.category}</strong> ({(parseResult.confidence * 100).toFixed(0)}%)</span>
+              <span style={{ color: '#64748b' }}>â†’ {parseResult.routing?.destination || 'index'}</span>
+              <span style={{ flex: 1 }} />
+              <button onClick={() => setParseResult(null)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.9rem' }}>âœ•</button>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* â”€â”€ CONSTRUCTION TRACKER â”€â”€ */}
+      <ConstructionTracker messages={messages} streaming={streaming} building={building} />
+
+      <div className="chat-messages">
+        {messages.length === 0 && !chatMode ? (
+          <div className="welcome-msg venture-selection">
+            <div className="icon-big">ðŸ§ </div>
+            <h3>Select Operating Mode</h3>
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', justifyContent: 'center' }}>
+              <button 
+                className="mode-btn standard-btn"
+                onClick={() => setChatMode('standard')}
+                style={{
+                  padding: '12px 24px', background: '#3b82f6', color: '#fff', 
+                  border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold'
+                }}
+              >
+                ðŸ› ï¸ Standard App Development
+              </button>
+              <button 
+                className="mode-btn venture-btn"
+                onClick={() => {
+                  setChatMode('venture');
+                  setMessages([
+                    { role: 'assistant', text: "Venture Orchestration Mode Active. Please describe your new venture idea." }
+                  ]);
+                }}
+                style={{
+                  padding: '12px 24px', background: '#8b5cf6', color: '#fff', 
+                  border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold'
+                }}
+              >
+                ðŸš€ Launch Venture (C-Suite Orchestration)
+              </button>
+            </div>
+          </div>
+        ) : messages.length === 0 && chatMode === 'standard' && (
+          <div className="welcome-msg">
+            <div className="icon-big">ðŸ§ </div>
+            <h3>Factory Intelligence Online</h3>
+            <p>Ask me to build apps, analyze architectures, or plan new features. Use the Command Palette to launch preset actions.</p>
+          </div>
+        )}
+        {messages.map((msg, i) => msg.hidden ? null : (
+          <div key={i} className={`msg ${msg.role}`}>
+            {msg.role === 'assistant' ? (
+              msg.text.split('```').map((part, index) => {
+                if (index % 2 === 0) {
+                  return <span key={index} style={{ whiteSpace: 'pre-wrap' }}>{maskSecrets(part)}</span>;
+                } else {
+                  const firstLineBreak = part.indexOf('\n');
+                  const rawCode = firstLineBreak !== -1 ? part.substring(firstLineBreak + 1) : part;
+                  return (
+                    <div key={index} className="code-block-container" style={{ position: 'relative', marginTop: '8px', marginBottom: '8px' }}>
+                      <pre style={{ background: '#1e1e1e', padding: '10px', borderRadius: '4px', overflowX: 'auto', margin: 0, color: '#d4d4d4' }}>
+                        <code>{maskSecrets(rawCode)}</code>
+                      </pre>
+                      <button 
+                        className="execute-write-btn"
+                        onClick={async () => {
+                          const filePath = window.prompt("Enter destination file path (e.g., Meta_App_Factory/server.py):");
+                          if (!filePath) return;
+                          try {
+                            const res = await fetch('/api/builder/write-file', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ file_path: filePath, content: rawCode })
+                            });
+                            if (res.ok) alert(`File written successfully to ${filePath}`);
+                            else alert("Failed to write file");
+                          } catch (e) {
+                            alert("Error writing file: " + e.message);
+                          }
+                        }}
+                        style={{
+                          display: 'block',
+                          marginTop: '4px',
+                          background: '#10b981',
+                          padding: '4px 8px',
+                          border: 'none',
+                          borderRadius: '4px',
+                          color: '#fff',
+                          cursor: 'pointer',
+                          fontSize: '0.8rem',
+                          fontWeight: 'bold'
+                        }}
+                      >
+                        ðŸ’¾ Execute Write
+                      </button>
+                    </div>
+                  );
+                }
+              })
+            ) : (
+              <span style={{ whiteSpace: 'pre-wrap' }}>{maskSecrets(msg.text)}</span>
+            )}
+            {msg.role === 'assistant' && streaming && i === messages.length - 1 && (
+              <span className="cursor" />
+            )}
+          </div>
+        ))}
+        <div ref={scrollRef} />
+      </div>
+
+      {/* Audience Detection Chip */}
+      {audienceDetected && (
+        <div className="audience-detect-chip">
+          <span className="detect-icon">ðŸ”¬</span>
+          <span className="detect-text">
+            Audience detected: <strong>{audienceDetected.audience_hint}</strong>
+          </span>
+          <button
+            className="detect-research-btn"
+            onClick={researchProfile}
+            disabled={generatingProfile}
+          >
+            {generatingProfile ? 'â³ Researching...' : 'ðŸ“Š Research Profile'}
+          </button>
+          <button className="detect-dismiss" onClick={() => setAudienceDetected(null)}>âœ•</button>
+        </div>
+      )}
+
+      <div className="chat-input-bar">
+        <textarea
+          ref={inputRef}
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) sendMessage(); }}
+          placeholder={streaming ? 'Streaming...' : 'Ask the Factory AI anything... (Ctrl+Enter to send)'}
+          disabled={streaming}
+          rows={3}
+        />
+        <button className="send-btn" onClick={sendMessage} disabled={streaming || !input.trim()}>
+          â†‘
+        </button>
+      </div>
+    </div>
+    </div>
+  );
+}

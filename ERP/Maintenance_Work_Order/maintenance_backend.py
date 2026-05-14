@@ -55,53 +55,9 @@ if not os.environ.get("JWT_PRIVATE_KEY_B64"):
 
 
 # --- CRYPTOGRAPHIC CONFIGURATION ---
-import urllib.request
-import json
-import time
+import httpx
+import asyncio
 
-PUBLIC_KEY = None
-ALGORITHM = "RS256"
-
-def fetch_public_key():
-    global PUBLIC_KEY
-    url = "http://127.0.0.1:9000/api/v1/auth/public-key"
-    max_retries = 5
-    for attempt in range(max_retries):
-        try:
-            req = urllib.request.Request(url)
-            with urllib.request.urlopen(req) as response:
-                data = json.loads(response.read().decode())
-                PUBLIC_KEY = data["public_key"]
-                logger.info("Successfully fetched Public Key from Module 0 Gateway.")
-                break
-        except Exception as e:
-            logger.warning(f"Failed to fetch public key from Gateway (attempt {attempt+1}/{max_retries}): {e}")
-            if attempt < max_retries - 1:
-                time.sleep(2)
-            else:
-                raise RuntimeError("FATAL: Could not retrieve PUBLIC_KEY from Module 0 Gateway.")
-
-fetch_public_key()
-
-# --- IN-MEMORY JTI BLACKLIST ---
-REVOKED_JTIS = set()
-security = HTTPBearer()
-
-# Token Minting is now fully delegated to Module 0 Gateway.
-# Only validation occurs here.
-
-def verify_jwt_token(credentials: HTTPAuthorizationCredentials = Security(security)) -> dict:
-    token = credentials.credentials
-    try:
-        payload = jwt.decode(token, PUBLIC_KEY, algorithms=[ALGORITHM])
-        if payload.get("jti") in REVOKED_JTIS:
-            raise HTTPException(status_code=401, detail="Token Revoked (JTI Blacklisted).")
-        return payload
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token Expired.")
-    except jwt.InvalidTokenError as e:
-        logger.error(f"JWT Verification Error: {str(e)}")
-        raise HTTPException(status_code=403, detail="Cryptographic Verification Failed.")
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, field_validator
 from contextlib import asynccontextmanager
@@ -112,13 +68,20 @@ import openpyxl
 from openpyxl.worksheet.datavalidation import DataValidation
 from fpdf import FPDF
 
+ALGORITHM = "RS256"
+PUBLIC_KEY = None
+security = HTTPBearer()
 
 # Ingestion Logic for Orchestration Boundary
 GLOBAL_AI_DIRECTIVE_CONTEXT = ""
 
+# STRUCTURAL PATCH: Asynchronous boot context to prevent thread-locking
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global PUBLIC_KEY
     global GLOBAL_AI_DIRECTIVE_CONTEXT
+    
+    # Load Orchestration Boundary
     directive_path = os.path.join(_here, "GLOBAL_AI_DIRECTIVE.md")
     try:
         if os.path.exists(directive_path):
@@ -129,10 +92,59 @@ async def lifespan(app: FastAPI):
             logger.warning("Orchestration Boundary Warning: GLOBAL_AI_DIRECTIVE.md not found at /app/GLOBAL_AI_DIRECTIVE.md.")
     except Exception as e:
         logger.error(f"Failed to ingest GLOBAL_AI_DIRECTIVE.md: {e}")
+
+    # NGINX DOCTRINE: Trailing slash strictly enforced
+    url = "http://127.0.0.1:9000/api/v1/auth/public-key/" 
+    
+    async with httpx.AsyncClient() as client:
+        max_retries = 5
+        for attempt in range(max_retries):
+            try:
+                response = await client.get(url, timeout=5.0)
+                response.raise_for_status()
+                PUBLIC_KEY = response.json()["public_key"]
+                logger.info("[SECURITY] Successfully fetched RS256 Public Key from Module 0 Gateway.")
+                break
+            except Exception as e:
+                logger.warning(f"[SECURITY] Gateway fetch failed (attempt {attempt+1}/{max_retries}): {e}")
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(2)
+                else:
+                    raise RuntimeError("FATAL: Could not retrieve PUBLIC_KEY from Module 0 Gateway.")
     yield
-    # Shutdown logic clears memory
+    # Application teardown logic executes here
 
 app = FastAPI(title="Maintenance Work Order API - Global ERP Connected", lifespan=lifespan)
+
+def is_jti_revoked(jti: str) -> bool:
+    conn = get_db_connection()
+    try:
+        row = conn.execute("SELECT 1 FROM revoked_tokens WHERE jti = ?", (jti,)).fetchone()
+        return row is not None
+    except Exception as e:
+        logger.error(f"Failed to check JTI status: {e}")
+        return False
+    finally:
+        conn.close()
+
+def verify_jwt_token(credentials: HTTPAuthorizationCredentials = Security(security)) -> dict:
+    if not PUBLIC_KEY:
+        raise HTTPException(status_code=503, detail="Cryptographic Gateway Unavailable.")
+        
+    token = credentials.credentials
+    try:
+        payload = jwt.decode(token, PUBLIC_KEY, algorithms=[ALGORITHM])
+        
+        # JTI check routed to persistent storage
+        if is_jti_revoked(payload.get("jti")):
+            raise HTTPException(status_code=401, detail="Token Revoked (JTI Blacklisted).")
+            
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token Expired.")
+    except jwt.InvalidTokenError as e:
+        logger.error(f"JWT Verification Error: {str(e)}")
+        raise HTTPException(status_code=403, detail="Cryptographic Verification Failed.")
 
 # Serve frontend is deprecated due to NGINX Reverse-Proxy Decoupling Doctrine
 
@@ -398,55 +410,41 @@ def verify_rbac_pipeline(
     updates = payload.model_dump(exclude_unset=True)
     if not updates:
         return current_mwo
-
+        
     role = jwt_payload.get("role")
-    user_id = jwt_payload.get("sub")
-
     current_status = current_mwo.get("status")
     new_status = updates.get("status", current_status)
-
+    
     if role == "ADMINISTRATOR":
         return current_mwo
-
+        
     if role == "DM":
-        allowed_keys = {"dm_urgency"}
-        invalid_keys = set(updates.keys()) - allowed_keys
-        if invalid_keys:
-            raise HTTPException(status_code=403, detail=f"RBAC / Pipeline Violation for DM {user_id}")
+        if not set(updates.keys()).issubset({"dm_urgency"}):
+            raise HTTPException(status_code=403, detail="RBAC Violation: DM unauthorized mutation.")
         return current_mwo
-
+        
     if role == "TECHNICIAN":
-        allowed_keys = {"status", "manual_log"}
-        invalid_keys = set(updates.keys()) - allowed_keys
-        if invalid_keys:
-            raise HTTPException(status_code=403, detail="RBAC / Pipeline Violation: Unauthorized mutation.")
-
-        if "status" in updates and new_status != current_status:
-            is_valid_transition = (
-                (current_status == "ASSIGNED" and new_status == "IN_PROGRESS") or
-                (current_status == "IN_PROGRESS" and new_status == "PENDING_REVIEW")
-            )
-            if not is_valid_transition:
-                raise HTTPException(status_code=403, detail="RBAC / Pipeline Violation: Unauthorized mutation.")
+        if not set(updates.keys()).issubset({"status", "manual_log"}):
+            raise HTTPException(status_code=403, detail="RBAC Violation: Technician unauthorized mutation.")
+            
+        if new_status != current_status:
+            if not ((current_status == "ASSIGNED" and new_status == "IN_PROGRESS") or
+                    (current_status == "IN_PROGRESS" and new_status == "PENDING_REVIEW")):
+                raise HTTPException(status_code=403, detail="RBAC Violation: Invalid pipeline transition.")
         return current_mwo
-
+        
     if role == "HM":
-        allowed_keys = {"assigned_tech", "hm_priority", "status", "manual_log"} 
-        invalid_keys = set(updates.keys()) - allowed_keys
-        if invalid_keys:
-            raise HTTPException(status_code=403, detail="RBAC / Pipeline Violation: Unauthorized mutation.")
-
-        if "status" in updates and new_status != current_status:
-            is_valid_transition = (
-                (current_status == "UNASSIGNED" and new_status == "ASSIGNED") or
-                (current_status == "PENDING_REVIEW" and new_status == "COMPLETED") or
-                (new_status == "UNASSIGNED")
-            )
-            if not is_valid_transition:
-                raise HTTPException(status_code=403, detail="RBAC / Pipeline Violation: Unauthorized mutation.")
+        if not set(updates.keys()).issubset({"assigned_tech", "hm_priority", "status", "manual_log"}):
+            raise HTTPException(status_code=403, detail="RBAC Violation: HM unauthorized mutation.")
+            
+        if new_status != current_status:
+            if not ((current_status == "UNASSIGNED" and new_status == "ASSIGNED") or
+                    (current_status == "PENDING_REVIEW" and new_status == "COMPLETED") or
+                    (new_status == "UNASSIGNED")):
+                raise HTTPException(status_code=403, detail="RBAC Violation: Invalid pipeline transition.")
         return current_mwo
-
-    raise HTTPException(status_code=403, detail="RBAC / Pipeline Violation: Unauthorized mutation.")
+        
+    raise HTTPException(status_code=403, detail="RBAC / Pipeline Violation: Unrecognized role.")
 
 
 # --- ENDPOINTS ---

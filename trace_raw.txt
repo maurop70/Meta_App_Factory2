@@ -1,0 +1,69 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.14.2, pytest-9.0.3, pluggy-1.6.0
+rootdir: C:\Dev\Antigravity_AI_Agents\Meta_App_Factory
+plugins: anyio-4.12.1, langsmith-0.7.9, base-url-2.1.0, playwright-0.7.2
+collected 1 item
+
+__tests__\test_mwo_teardown.py F                                         [100%]
+
+================================== FAILURES ===================================
+___________________ test_mwo_responsive_teardown[chromium] ____________________
+
+page = <Page url='http://localhost:5173/login'>
+
+    def test_mwo_responsive_teardown(page: Page):
+        """
+        TDD RED PHASE: Strict mathematical assertion of the Responsive Matrix Teardown Doctrine.
+        Forces failure if legacy tables persist on mobile viewports.
+        """
+        # 1. Force a strict mobile viewport (< 900px boundary)
+        page.set_viewport_size({"width": 414, "height": 896})
+    
+        # [BIOLOGICAL OVERRIDE] Execute Authentication to reach the target matrix
+        page.goto("http://localhost:5173/login")
+>       page.fill("input[name='mwo_operator_id']", "ERP-1000")
+
+__tests__\test_mwo_teardown.py:14: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+C:\Users\mpetr\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\playwright\sync_api\_generated.py:10177: in fill
+    self._sync(
+C:\Users\mpetr\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\playwright\_impl\_page.py:893: in fill
+    return await self._main_frame.fill(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\mpetr\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\playwright\_impl\_frame.py:607: in fill
+    await self._fill(**locals_to_params(locals()))
+C:\Users\mpetr\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\playwright\_impl\_frame.py:619: in _fill
+    await self._channel.send("fill", self._timeout, locals_to_params(locals()))
+C:\Users\mpetr\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\playwright\_impl\_connection.py:69: in send
+    return await self._connection.wrap_api_call(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <playwright._impl._connection.Connection object at 0x0000025304C670E0>
+cb = <function Channel.send.<locals>.<lambda> at 0x0000025304D937F0>
+is_internal = False, title = None
+
+    async def wrap_api_call(
+        self, cb: Callable[[], Any], is_internal: bool = False, title: str = None
+    ) -> Any:
+        if self._api_zone.get():
+            return await cb()
+        task = asyncio.current_task(self._loop)
+        st: List[inspect.FrameInfo] = getattr(
+            task, "__pw_stack__", None
+        ) or inspect.stack(0)
+    
+        parsed_st = _extract_stack_trace_information_from_stack(st, is_internal, title)
+        self._api_zone.set(parsed_st)
+        try:
+            return await cb()
+        except Exception as error:
+>           raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+E           playwright._impl._errors.TimeoutError: Page.fill: Timeout 30000ms exceeded.
+E           Call log:
+E             - waiting for locator("input[name='mwo_operator_id']")
+
+C:\Users\mpetr\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\playwright\_impl\_connection.py:559: TimeoutError
+=========================== short test summary info ===========================
+FAILED __tests__/test_mwo_teardown.py::test_mwo_responsive_teardown[chromium]
+============================= 1 failed in 38.33s ==============================
+
