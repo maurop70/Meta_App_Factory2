@@ -1,7 +1,14 @@
 [
     {
-        "event": "Upcoming Economic Data Releases",
+        "event": "Weekly Jobless Claims",
+        "date": "2026-05-15",
         "impact": "MEDIUM",
-        "days_until": 1
+        "spx_impact": "Indication of labor market health, could influence sentiment and economic outlook."
+    },
+    {
+        "event": "FOMC Minutes Release",
+        "date": "2026-05-21",
+        "impact": "HIGH",
+        "spx_impact": "Potential for significant market reaction based on insights into future monetary policy and rate expectations."
     }
 ]
