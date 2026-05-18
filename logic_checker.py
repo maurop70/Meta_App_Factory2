@@ -53,6 +53,17 @@ def evaluate_logic(ceo_synthesis: str, agent_provenance_block: dict = None) -> d
             }
 
     # ─────────────────────────────────────────────────────────────────────────
+    # LAYER 1.5 — HARDENED FAILURE HEURISTICS
+    # ─────────────────────────────────────────────────────────────────────────
+    synthesis_lower = ceo_synthesis.lower()
+    if any(kw in synthesis_lower for kw in ["failure", "nothing", "halt"]):
+        return {
+            "status": "FAIL",
+            "errors": ["Hardened QA Gate triggered: CEO Synthesis contains critical failure keywords."],
+            "gate_triggered": "hardened_keyword_gate",
+        }
+
+    # ─────────────────────────────────────────────────────────────────────────
     # LAYER 2 — CEO STRATEGY GATE (Gemini semantic evaluation)
     # ─────────────────────────────────────────────────────────────────────────
     prompt = f"""You are the Critic (QA Agent) for the Aether C-Suite War Room.

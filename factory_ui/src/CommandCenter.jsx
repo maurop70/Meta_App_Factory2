@@ -36,7 +36,7 @@ export default function CommandCenter({ projectName = "Aether" }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          commander_intent: operatorCmd.trim(),
+          message: operatorCmd.trim(),
           project_id: projectName || 'AntigravityWorkspace_Q3',
           strategy_mode: 'operator_directive'
         })
@@ -117,14 +117,23 @@ export default function CommandCenter({ projectName = "Aether" }) {
   const triggerUnifiedExecution = async () => {
       setIsExecuting(true);
       setIsReady(false);
-      setSequenceState({});
+      setSequenceState({
+          CMO_STRATEGY: 'WAITING',
+          CTO_FEASIBILITY: 'WAITING',
+          CFO_FINANCIAL_MODEL: 'WAITING',
+          PHANTOM_STRESS_TEST: 'WAITING',
+          COMMERCIALLY_READY: 'WAITING'
+      });
       setLogs([{ time: new Date().toLocaleTimeString(), agent: 'COMMANDER', message: `Initiating Aether-Native Execution for ${projectName}...` }]);
       
       try {
           await fetch(`/api/warroom/execute`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ project_id: projectName })
+              body: JSON.stringify({ 
+                  project_id: projectName,
+                  intent: operatorCmd.trim() || "Genesis" 
+              })
           });
       } catch (error) {
           setLogs(prev => [...prev, { time: new Date().toLocaleTimeString(), agent: 'SYSTEM', message: `Execution failed to start: ${error.message}`, isError: true }]);
