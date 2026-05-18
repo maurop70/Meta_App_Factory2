@@ -52,6 +52,10 @@ def validate_report(report: dict, agent: str) -> dict:
     validated = framework.validate_payload(report, agent)
     
     # Custom boardroom extensions (not yet in core)
+    # If the node was organically bypassed, skip rigid schema enforcement
+    if validated.get("status") == "BYPASSED":
+        return validated
+
     if agent == "CMO" and "error" not in validated:
         if not all(k in validated for k in ["perspective", "data_points"]):
             return {"error": "Validation Shield: CMO missing narrative", "raw": report}
