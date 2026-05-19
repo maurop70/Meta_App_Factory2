@@ -94,13 +94,13 @@ async def lifespan(app: FastAPI):
         logger.error(f"Failed to ingest GLOBAL_AI_DIRECTIVE.md: {e}")
 
     # NGINX DOCTRINE: Trailing slash strictly enforced
-    url = "http://127.0.0.1:9000/api/v1/auth/public-key/" 
+    url = "http://127.0.0.1:9000/api/v1/auth/public-key" 
     
     async with httpx.AsyncClient() as client:
         max_retries = 5
         for attempt in range(max_retries):
             try:
-                response = await client.get(url, timeout=5.0)
+                response = await client.get(url, timeout=5.0, follow_redirects=True)
                 response.raise_for_status()
                 PUBLIC_KEY = response.json()["public_key"]
                 logger.info("[SECURITY] Successfully fetched RS256 Public Key from Module 0 Gateway.")

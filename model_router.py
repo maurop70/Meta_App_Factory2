@@ -50,27 +50,16 @@ TASK_ROUTING = {
 
 
 def _get_gemini_key():
-    """Retrieve Gemini API key from vault or env."""
-    try:
-        from vault import get_secret
-        key = get_secret("GEMINI_API_KEY")
-        if key:
-            return key
-    except Exception:
-        pass
+    """Retrieve Gemini API key from env."""
     return os.getenv("GEMINI_API_KEY", "")
 
 
 def _get_anthropic_key():
-    """Retrieve Anthropic API key from vault or env."""
-    try:
-        from vault import get_secret
-        key = get_secret("ANTHROPIC_API_KEY")
-        if key:
-            return key
-    except Exception:
-        pass
-    return os.getenv("ANTHROPIC_API_KEY", "")
+    """Retrieve Anthropic API key from env."""
+    key = os.getenv("ANTHROPIC_API_KEY", "")
+    if not key:
+        logger.warning("[ModelRouter] WARNING: ANTHROPIC_API_KEY missing from .env. Forcing degraded Gemini fallback for Claude-designated nodes.")
+    return key
 
 
 def _call_gemini(prompt: str, system_prompt: str = "", api_key: str = "", model_name: str = GEMINI_FLASH) -> str:
@@ -152,7 +141,7 @@ def route(task_type: str, prompt: str, system_prompt: str = "") -> str:
         response = _call_claude(prompt, system_prompt)
         if response:
             return f"🧠 [Claude] {response[:2000]}"
-        logger.info(f"[ModelRouter] Claude unavailable for '{task_type}', falling back to Gemini")
+        logger.warning(f"[ModelRouter] Claude unavailable for '{task_type}', falling back to Gemini")
         response = _call_gemini(prompt, system_prompt, model_name=GEMINI_FLASH)
         if response:
             return f"🤖 [Gemini] {response[:2000]}"
@@ -161,7 +150,7 @@ def route(task_type: str, prompt: str, system_prompt: str = "") -> str:
         response = _call_gemini(prompt, system_prompt, model_name=preferred)
         if response:
             return f"🤖 [Gemini] {response[:2000]}"
-        logger.info(f"[ModelRouter] Gemini unavailable for '{task_type}', falling back to Claude")
+        logger.warning(f"[ModelRouter] Gemini unavailable for '{task_type}', falling back to Claude")
         response = _call_claude(prompt, system_prompt)
         if response:
             return f"🧠 [Claude] {response[:2000]}"

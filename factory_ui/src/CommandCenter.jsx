@@ -146,7 +146,13 @@ export default function CommandCenter({ projectName = "Aether" }) {
   };
 
   const viewFinancials = () => {
-      window.open(`file://C:/Users/mpetr/.gemini/antigravity/projects/${projectName}/artifacts/cfo_reports/business_plan.xlsx`, '_blank');
+      const a = document.createElement('a');
+      a.href = `/api/warroom/financials/download/${encodeURIComponent(projectName)}`;
+      a.download = 'business_plan.xlsx';
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
   };
 
   return (

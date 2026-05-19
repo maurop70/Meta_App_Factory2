@@ -28,10 +28,9 @@ for p in [str(FACTORY_ROOT), str(CIO_DIR)]:
 
 # ── Load .env ──────────────────────────────────────────────────────────────
 from dotenv import load_dotenv
-for env in [FACTORY_ROOT / ".env", CIO_DIR / ".env"]:
+for env in [FACTORY_ROOT.parent / ".env", FACTORY_ROOT / ".env", CIO_DIR / ".env"]:
     if env.exists():
         load_dotenv(env)
-        break
 
 # ── Validate GEMINI_API_KEY ────────────────────────────────────────────────
 if not os.environ.get("GEMINI_API_KEY"):
