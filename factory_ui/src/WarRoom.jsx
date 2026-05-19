@@ -421,6 +421,16 @@ export default function WarRoom({ ventureMode = false, onHandoff }) {
       .catch(e => console.error("COO fetch failed", e));
   }, [projectName]);
 
+  const viewFinancials = () => {
+    const a = document.createElement('a');
+    a.href = `/api/warroom/financials/download/${encodeURIComponent(projectName)}`;
+    a.download = 'business_plan.xlsx';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
   // ── Auto-scroll (smart: only scrolls if Commander is near bottom) ──────────
   useEffect(() => {
     const container = feedScrollRef.current;
@@ -743,7 +753,7 @@ export default function WarRoom({ ventureMode = false, onHandoff }) {
           </div>
         </div>
         <div style={styles.headerRight}>
-          <button onClick={() => window.open(`file://C:/Users/mpetr/.gemini/antigravity/projects/${projectName}/artifacts/cfo_reports/business_plan.xlsx`, '_blank')}
+          <button onClick={viewFinancials}
             style={{ padding: '6px 14px', borderRadius: '6px', background: '#334155', color: '#f8fafc', border: '1px solid #475569', cursor: 'pointer', fontWeight: 'bold', marginRight: '8px', fontSize: '11px', fontFamily: 'Inter, sans-serif' }}>
             📊 View Financials
           </button>

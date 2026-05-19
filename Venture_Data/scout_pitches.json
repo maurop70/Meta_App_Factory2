@@ -14,7 +14,7 @@
       "market_saturation": "Medium"
     },
     "generated_at": "2026-04-16T23:01:49.018806",
-    "status": "PENDING_REVIEW",
+    "status": "PENDING",
     "tags": []
   },
   {
@@ -32,7 +32,7 @@
       "market_saturation": "High"
     },
     "generated_at": "2026-04-16T23:02:12.473813",
-    "status": "PENDING_REVIEW",
+    "status": "APPROVED",
     "tags": []
   },
   {
@@ -50,7 +50,7 @@
       "market_saturation": "Low"
     },
     "generated_at": "2026-04-16T23:02:34.082178",
-    "status": "PENDING_REVIEW",
+    "status": "PENDING",
     "tags": []
   },
   {
@@ -68,7 +68,7 @@
       "market_saturation": "Low. While some features exist within large ERP or CPQ platforms, a dedicated, lightweight, and integration-first solution focused specifically on automating payment terms approval is not a saturated market."
     },
     "generated_at": "2026-04-16T23:02:57.092837",
-    "status": "PENDING_REVIEW",
+    "status": "PENDING",
     "tags": []
   },
   {
@@ -86,7 +86,7 @@
       "market_saturation": "Medium"
     },
     "generated_at": "2026-04-16T23:03:23.583642",
-    "status": "PENDING_REVIEW",
+    "status": "APPROVED",
     "tags": [
       "REQUIRES_UPGRADE",
       "CIO_UPGRADED"
@@ -144,7 +144,7 @@
       "blue_ocean_verdict": true
     },
     "generated_at": "2026-04-22T03:40:52.519898",
-    "status": "PENDING_REVIEW",
+    "status": "PENDING",
     "tags": [
       "REQUIRES_UPGRADE",
       "CIO_UPGRADED"
@@ -200,7 +200,7 @@
       "blue_ocean_verdict": false
     },
     "generated_at": "2026-04-26T02:22:27.725653",
-    "status": "PENDING_REVIEW",
+    "status": "PENDING",
     "tags": []
   },
   {
@@ -226,7 +226,7 @@
       "blue_ocean_verdict": false
     },
     "generated_at": "2026-04-26T02:22:54.520233",
-    "status": "PENDING_REVIEW",
+    "status": "PENDING",
     "tags": []
   },
   {
@@ -249,7 +249,7 @@
       "blue_ocean_verdict": true
     },
     "generated_at": "2026-04-26T02:23:24.151836",
-    "status": "PENDING_REVIEW",
+    "status": "PENDING",
     "tags": []
   },
   {
@@ -275,7 +275,7 @@
       "blue_ocean_verdict": false
     },
     "generated_at": "2026-04-26T02:24:01.427022",
-    "status": "PENDING_REVIEW",
+    "status": "PENDING",
     "tags": []
   },
   {
@@ -303,7 +303,7 @@
       "blue_ocean_verdict": false
     },
     "generated_at": "2026-04-26T02:24:27.353592",
-    "status": "PENDING_REVIEW",
+    "status": "PENDING",
     "tags": []
   },
   {
@@ -330,7 +330,7 @@
       "blue_ocean_verdict": false
     },
     "generated_at": "2026-05-06T14:10:56.946569",
-    "status": "PENDING_REVIEW",
+    "status": "PENDING",
     "tags": []
   },
   {
@@ -358,7 +358,7 @@
       "blue_ocean_verdict": true
     },
     "generated_at": "2026-05-06T14:11:36.776923",
-    "status": "PENDING_REVIEW",
+    "status": "PENDING",
     "tags": []
   },
   {
@@ -385,7 +385,7 @@
       "blue_ocean_verdict": true
     },
     "generated_at": "2026-05-09T00:08:27.449577",
-    "status": "PENDING_REVIEW",
+    "status": "PENDING",
     "tags": []
   },
   {
@@ -411,7 +411,7 @@
       "blue_ocean_verdict": false
     },
     "generated_at": "2026-05-09T00:10:35.842708",
-    "status": "PENDING_REVIEW",
+    "status": "PENDING",
     "tags": [
       "REQUIRES_UPGRADE",
       "CIO_UPGRADED"

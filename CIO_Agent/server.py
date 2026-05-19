@@ -59,6 +59,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(message
 logger = logging.getLogger("CIO_Agent")
 
 sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(FACTORY_ROOT))
 from cio_engine import run_full_sweep, list_memos, read_memo
 
 # ═══════════════════════════════════════════════════════════
@@ -180,6 +181,9 @@ class CIOProcessRequest(BaseModel):
 class AuthorizeUpgradeRequest(BaseModel):
     memo_filename: str = Field(..., description="Filename of the memo to authorize")
     directive: str = Field(..., description="User's authorization text / instructions for the Master Architect")
+
+class DeepResearchRequest(BaseModel):
+    query: str = Field(..., description="Query to search the live internet sensor matrix for")
 
 
 # ═══════════════════════════════════════════════════════════
@@ -665,6 +669,20 @@ async def process_sweep(req: CIOProcessRequest = CIOProcessRequest()):
         return JSONResponse(status_code=500, content={"error": str(e)})
     finally:
         sweep_state["is_running"] = False
+
+
+# ── Deep Research (Live Internet Sensor Matrix) ───────────
+@app.post("/api/cio/deep_research")
+async def process_deep_research(req: DeepResearchRequest):
+    """Pre-flight live internet crawling for the War Room."""
+    logger.info(f"Triggering Deep Research Sensor Matrix for: '{req.query}'")
+    try:
+        from shared_modules.deep_research_crawler import deep_research
+        result = await deep_research(req.query)
+        return result
+    except Exception as e:
+        logger.error(f"Deep Research failed: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
 
 # ── List Memos ────────────────────────────────────────────

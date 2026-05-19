@@ -156,10 +156,29 @@ class AetherNativeWatchdog:
             self._telemetry["status"] = "healthy"
 
     def _auto_restart_port(self, port, service, cmd):
-        """Attempts a single automatic restart of a failed service via the Operator Agent."""
+        """Attempts a single automatic restart of a failed service via the Operator Agent with direct subprocess fallback."""
+        import requests
+        
+        # If the failed service is the Operator Agent itself (port 5100), we MUST start it directly!
+        if port == 5100:
+            logger.info("AUTO-RESTART: Direct local spawn initiated for Operator Agent (Port 5100)...")
+            try:
+                factory_dir = os.path.dirname(os.path.abspath(__file__))
+                subprocess.Popen(cmd, shell=True, cwd=factory_dir)
+                _log_heal_event(
+                    "NativeWatchdog",
+                    "Direct Local Spawn: Operator Agent (Port 5100)",
+                    {"port": port, "service": service, "consecutive_fails": self._port_failures.get(port, 0)},
+                    "AUTO_RESTART"
+                )
+                logger.info("AUTO-RESTART: Operator Agent successfully spawned directly.")
+                return
+            except Exception as direct_err:
+                logger.error(f"AUTO-RESTART: Direct local spawn of Operator Agent failed: {direct_err}")
+                return
+
         logger.info(f"AUTO-RESTART: Dispatching restart for {service} via Operator Agent...")
         try:
-            import requests
             # Delegate restart to Operator Agent
             response = requests.post("http://localhost:5100/api/operator/restart-service", json={"service_name": service}, timeout=5)
             
@@ -171,8 +190,8 @@ class AetherNativeWatchdog:
             }
             try:
                 requests.post("http://localhost:5030/api/qa/ingest", json=event_payload, timeout=2)
-            except Exception as e:
-                logger.warning(f"Failed to broadcast AUTO_RECOVERING to Phantom QA: {e}")
+            except Exception:
+                pass
 
             _log_heal_event(
                 "NativeWatchdog",
@@ -182,17 +201,46 @@ class AetherNativeWatchdog:
             )
             logger.info(f"AUTO-RESTART: {service} restart command successfully delegated to Operator.")
         except Exception as e:
-            logger.error(f"AUTO-RESTART FAILED to reach Operator for {service}: {e}")
+            logger.warning(f"AUTO-RESTART: Failed to reach Operator to restart {service} ({e}). Falling back to direct spawn...")
+            try:
+                factory_dir = os.path.dirname(os.path.abspath(__file__))
+                subprocess.Popen(cmd, shell=True, cwd=factory_dir)
+                _log_heal_event(
+                    "NativeWatchdog",
+                    f"Direct Local Spawn (Fallback): {service} (Port {port})",
+                    {"port": port, "service": service, "consecutive_fails": self._port_failures.get(port, 0)},
+                    "AUTO_RESTART"
+                )
+                logger.info(f"AUTO-RESTART: {service} successfully spawned directly (fallback).")
+            except Exception as fallback_err:
+                logger.error(f"AUTO-RESTART FALLBACK FAILED for {service}: {fallback_err}")
 
     def _quarantine_app(self, service: str):
-        """Dispatches an explicit QUARANTINE action to the Operator, blocking future starts until user intervention."""
+        """Dispatches an explicit QUARANTINE action to the Operator, with offline local manifest fallback."""
         logger.warning(f"QUARANTINE DISPATCH: Shifting {service} to Quarantined manifest status...")
         try:
             import requests
             requests.post("http://localhost:5100/api/operator/quarantine", json={"service_name": service}, timeout=5)
             logger.warning(f"{service} successfully QUARANTINED.")
         except Exception as e:
-            logger.error(f"Failed to quarantine {service}: {e}")
+            logger.warning(f"Failed to reach Operator to quarantine {service} ({e}). Performing offline local manifest fallback...")
+            try:
+                import json
+                factory_dir = os.path.dirname(os.path.abspath(__file__))
+                root_dir = os.path.dirname(factory_dir)
+                manifest_path = os.path.join(root_dir, "sync_manifest.json")
+                if os.path.exists(manifest_path):
+                    with open(manifest_path, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    if isinstance(data, list):
+                        for app in data:
+                            if app.get("name") == service:
+                                app["status"] = "QUARANTINED"
+                        with open(manifest_path, "w", encoding="utf-8") as f:
+                            json.dump(data, f, indent=2)
+                        logger.warning(f"[OFFLINE FALLBACK] {service} successfully QUARANTINED in manifest.")
+            except Exception as local_err:
+                logger.error(f"Failed offline manifest quarantine fallback for {service}: {local_err}")
 
     def _trigger_v3_recovery(self):
         """Fires when internal components fail to respond to 3 pings."""

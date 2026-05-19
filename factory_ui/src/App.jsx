@@ -1028,7 +1028,7 @@ function BrandStudioPanel({ registry }) {
 }
 
 // ── VENTURE SCOUT DASHBOARD ───────────────────────────────
-function VentureScoutDashboard({ setActiveView }) {
+function VentureScoutDashboard({ setActiveView, selectedApp, setSelectedApp }) {
   const [pitches, setPitches] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -1044,8 +1044,38 @@ function VentureScoutDashboard({ setActiveView }) {
 
   useEffect(() => { fetchPitches(); }, []);
 
-  const approve = async (id) => {
-    await fetch(`/api/scout/approve?pitch_id=${id}`, { method: 'POST' });
+  const approve = async (p) => {
+    // 1. Mark as approved locally
+    await fetch(`/api/scout/approve?pitch_id=${p.id}`, { method: 'POST' });
+    
+    // 2. Hybrid Slugification of pitch title
+    const titleSource = p.original_title || p.title || 'pitch';
+    const cleanAlphanumeric = titleSource.replace(/[^a-zA-Z0-9\s]/g, '');
+    const slug = cleanAlphanumeric.trim().replace(/\s+/g, '_').substring(0, 30) || 'pitch';
+    const newProjectId = `${slug}_${p.id}`;
+    
+    if (setSelectedApp) {
+      setSelectedApp(newProjectId);
+      localStorage.setItem('last_active_project', newProjectId);
+    }
+    
+    // 3. Transmit to WarRoom execution matrix
+    const intent = `@Operator Directive: Implement the following venture pitch.\n\nProblem: ${p.pitch.problem}\n\nSolution: ${p.pitch.proposed_solution}`;
+    
+    try {
+      await fetch('/api/warroom/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project_id: newProjectId, intent: intent })
+      });
+      // 4. Force Viewport to War Room
+      if (setActiveView) {
+        setActiveView('warroom');
+      }
+    } catch (err) {
+      console.error('WarRoom Execution Failed:', err);
+    }
+    
     fetchPitches();
   };
 
@@ -1082,7 +1112,7 @@ function VentureScoutDashboard({ setActiveView }) {
               <div className="card-actions" style={{ display: 'flex', gap: '10px' }}>
                 <a href={p.original_url} target="_blank" className="view-btn" style={{ flex: 1, textAlign: 'center', padding: '10px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', color: '#fff', textDecoration: 'none', fontSize: '0.85rem' }}>View Original</a>
                 {p.status !== 'APPROVED' && (
-                  <button onClick={() => approve(p.id)} className="approve-btn" style={{ flex: 1, padding: '10px', borderRadius: '8px', background: 'linear-gradient(135deg, #00FFFF, #0ea5e9)', color: '#000', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem' }}>Approve Idea</button>
+                  <button onClick={() => approve(p)} className="approve-btn" style={{ flex: 1, padding: '10px', borderRadius: '8px', background: 'linear-gradient(135deg, #00FFFF, #0ea5e9)', color: '#000', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem' }}>Approve Idea</button>
                 )}
                 {p.status === 'APPROVED' && (
                   <div style={{ flex: 1, textAlign: 'center', padding: '10px', color: '#00FF00', fontWeight: 'bold', fontSize: '0.85rem' }}>✅ APPROVED</div>
@@ -1526,7 +1556,7 @@ function App() {
         {activeView === 'systemmap' && (
           <div style={{ width: '100%', height: 'calc(100vh - 140px)', borderRadius: '12px', overflow: 'hidden', background: '#0a0e17' }}>
             <iframe
-              src={`/system_map.html`}
+              src={`http://127.0.0.1:5000/system_map`}
               style={{ width: '100%', height: '100%', border: 'none' }}
               title="V3 System Map"
             />
@@ -1664,7 +1694,7 @@ function App() {
 
         {/* ── VENTURE SCOUT DASHBOARD (Phase 1) ── */}
         {activeView === 'scout' && (
-          <VentureScoutDashboard setActiveView={setActiveView} />
+          <VentureScoutDashboard setActiveView={setActiveView} selectedApp={selectedApp} setSelectedApp={setSelectedApp} />
         )}
 
         {/* ── CIO INTELLIGENCE DASHBOARD (Phase 1) ── */}

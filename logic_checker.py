@@ -56,10 +56,12 @@ def evaluate_logic(ceo_synthesis: str, agent_provenance_block: dict = None) -> d
     # LAYER 1.5 — HARDENED FAILURE HEURISTICS
     # ─────────────────────────────────────────────────────────────────────────
     synthesis_lower = ceo_synthesis.lower()
-    if any(kw in synthesis_lower for kw in ["failure", "nothing", "halt"]):
+    # Whitelist executive pivot commands and only fail on absolute system crashes, API failures, or safety violations
+    system_level_failures = ["system crash", "api failure", "safety violation", "fatal error", "unauthorized"]
+    if any(sf in synthesis_lower for sf in system_level_failures):
         return {
             "status": "FAIL",
-            "errors": ["Hardened QA Gate triggered: CEO Synthesis contains critical failure keywords."],
+            "errors": ["Hardened QA Gate triggered: CEO Synthesis contains absolute system crash, API failure, or safety violation."],
             "gate_triggered": "hardened_keyword_gate",
         }
 

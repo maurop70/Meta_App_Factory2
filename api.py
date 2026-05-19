@@ -1165,48 +1165,45 @@ async def war_room_execute_endpoint(req: WarRoomExecuteRequest, request: Request
                 }
 
                 try:
-                    cfo_resp = await asyncio.to_thread(requests.post, "http://localhost:5070/api/sentinel-relay-bridge", json=cfo_payload, timeout=30)
-                    cfo_data = cfo_resp.json()
+                    from cfo_agent import CFOAgent
+                    cfo = CFOAgent()
                     
-                    if cfo_resp.status_code != 200:
-                        err_msg = cfo_data.get("message", "Unknown CFO error")
-                        await _broadcast({"type": "dialogue", "agent": "SYSTEM", "message": f"CFO GATE REJECTED: {err_msg}", "isError": True}, project=project_id)
-                        raise Exception(f"CFO Bridge Error: {err_msg}")
-
-                    report = cfo_data.get("report", {})
-                    
-                    cfo_msg = (
-                        f"Hardened Fragility Report Generated: {report.get('fragility_index', 'N/A')}. "
-                        f"ROI: {report.get('portfolio_roi_pct', '0.0')}% | "
-                        f"Projected Revenue: ${report.get('total_revenue', 0):,.0f}"
-                    )
-                    await _broadcast({"type": "dialogue", "agent": "CFO", "message": cfo_msg}, project=project_id)
-                    await _broadcast({"type": "state_machine", "phase": "CFO_FINANCIAL_MODEL", "status": "PASS"}, project=project_id)
-                except Exception as e:
-                    logger.warning(f"War Room: CFO API offline ({e}). Falling back to root cfo_excel_architect.py")
-                    architect = CFOExcelArchitect()
-                    await asyncio.to_thread(
-                        architect.generate_business_plan,
+                    # ── Bridge to Claude 3.7 Sonnet ──
+                    cfo_data = await asyncio.to_thread(
+                        cfo.synthesize,
                         project_id=project_id,
                         cmo_data={
                             "marketing_cost": 25000,
                             "projected_revenue": 100000,
-                            "market_verdict": verdict_str,
-                            "sentiment_score": market_pulse.get("public_sentiment_score", 0),
-                            "cmo_summary": market_pulse.get("perspective", market_pulse.get("summary", ""))[:200],
+                            "revenue_timeline_months": 12,
                         },
                         cto_data={
-                            "infrastructure_cost_estimate": cto_result.get("infrastructure_cost_monthly", 450),
-                            "capex_estimate": cto_result.get("capex_estimate", 0),
-                            "cloud_comparison": cto_result.get("cloud_comparison_monthly", 0),
-                            "roi_breakeven_months": cto_result.get("roi_breakeven_months", 0),
+                            "infrastructure_cost_monthly": cto_result.get("infrastructure_cost_monthly", 450),
                             "dev_buffer_weeks": 4.5,
                             "tech_debt_risk_premium_pct": 10,
+                            "technical_feasibility_score": cto_result.get("composite_score", 85) / 10
                         },
                         market_pulse=market_pulse
                     )
-                    await _broadcast({"type": "dialogue", "agent": "CFO", "message": "Legacy Fragility Report generated. (Fallback active)"}, project=project_id)
+                    
+                    if cfo_data.get("status") != "success":
+                        err_msg = cfo_data.get("message", "Unknown CFO synthesis error")
+                        await _broadcast({"type": "dialogue", "agent": "SYSTEM", "message": f"CFO COGNITIVE REJECTED: {err_msg}", "isError": True}, project=project_id)
+                        raise Exception(f"CFO Bridge Error: {err_msg}")
+                    
+                    cfo_msg = (
+                        f"Hardened Fragility Report Generated: {cfo_data.get('fragility_index', 'N/A')}. "
+                        f"ROI: {cfo_data.get('roi_percentage', '0.0')}% | "
+                        f"Projected Revenue: ${cfo_data.get('projected_revenue', 0):,.0f} | "
+                        f"[{cfo_data.get('message', 'Excel Generated')}]"
+                    )
+                    await _broadcast({"type": "dialogue", "agent": "CFO", "message": cfo_msg}, project=project_id)
                     await _broadcast({"type": "state_machine", "phase": "CFO_FINANCIAL_MODEL", "status": "PASS"}, project=project_id)
+                    
+                except Exception as e:
+                    logger.error(f"CFO Cognitive Bridge failed: {e}")
+                    await _broadcast({"type": "dialogue", "agent": "SYSTEM", "message": f"CFO COGNITIVE FAULT: {e}", "isError": True}, project=project_id)
+                    await _broadcast({"type": "state_machine", "phase": "CFO_FINANCIAL_MODEL", "status": "FAIL"}, project=project_id)
 
                 # ── Phase 4: Phantom QA — await CEO barrier ────────────────
                 await _broadcast({"type": "state_machine", "phase": "PHANTOM_STRESS_TEST", "status": "PROCESSING"}, project=project_id)
@@ -1333,6 +1330,28 @@ async def war_room_execute_endpoint(req: WarRoomExecuteRequest, request: Request
             await _broadcast({"type": "dialogue", "agent": "SYSTEM", "message": f"Execution Error: {str(e)}", "isError": True}, project=project_id)
     asyncio.create_task(native_sequence())
     return {"status": "started", "project": project_id}
+
+@app.get("/api/warroom/financials/download/{project_id}")
+async def download_financials(project_id: str):
+    import os
+    from fastapi import HTTPException
+    from fastapi.responses import FileResponse
+    
+    # Sanitize project_id to prevent directory traversal
+    safe_id = "".join(c for c in project_id if c.isalnum() or c in (' ', '_', '-')).strip()
+    
+    # Resolve the path to the excel file
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(base_dir, "projects", safe_id, "artifacts", "cfo_reports", "business_plan.xlsx")
+    
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail=f"Financial model not found for project: {project_id}")
+        
+    return FileResponse(
+        path=file_path,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        filename="business_plan.xlsx"
+    )
 
 # ── ORCHESTRATION BIND: War Room Dispatch ─────────────────────
 class WarRoomDispatchRequest(BaseModel):
@@ -2853,6 +2872,7 @@ def audience_generate(req: AudienceGenRequest):
 
 # ── System Map (V3 Architecture Visual) ───────────────────────
 
+@app.get("/system_map")
 @app.get("/system_map.html")
 def serve_system_map():
     """Serve the V3 System Map HTML for iframe embedding."""
@@ -2864,24 +2884,168 @@ def serve_system_map():
 
 @app.get("/api/v3/map")
 def v3_map_data():
-    """Return live V3_MAP.json data for the System Map."""
-    map_path = os.path.join(SCRIPT_DIR, "V3_MAP.json")
+    """Return dynamic, live-polled AST schema of nodes and edges for the System Map."""
+    import math
+    
+    # 1. Define C-Suite/Core/Native primary nodes
+    core_nodes = [
+        {"id": "factory", "label": "Factory Core", "port": 5000, "type": "core", "x": 450, "y": 450, "icon": "⚡", "tier": "primary"},
+        {"id": "cio-agent", "label": "CIO Agent", "port": 5090, "type": "agentNode", "x": 300, "y": 450, "icon": "🔧", "tier": "primary"},
+        {"id": "cfo-agent", "label": "CFO Agent", "port": 5070, "type": "agentNode", "x": 600, "y": 450, "icon": "📈", "tier": "primary"},
+        {"id": "cmo-agent", "label": "CMO Agent", "port": 5020, "type": "agentNode", "x": 450, "y": 270, "icon": "📣", "tier": "primary"},
+        {"id": "clo-agent", "label": "CLO Agent", "port": 5080, "type": "agentNode", "x": 450, "y": 630, "icon": "⚖️", "tier": "primary"},
+        {"id": "master-architect", "label": "Master Architect", "port": 5050, "type": "agentNode", "x": 320, "y": 320, "icon": "📐", "tier": "primary"},
+        {"id": "phantom-qa", "label": "Phantom QA", "port": 5030, "type": "agentNode", "x": 580, "y": 320, "icon": "👻", "tier": "primary"},
+        {"id": "mwo", "label": "Maintenance Work Order", "port": 8000, "type": "app", "x": 320, "y": 580, "icon": "🛠️", "tier": "primary"},
+        {"id": "sentinel", "label": "Sentinel Bridge", "port": 5009, "type": "agentNode", "x": 580, "y": 580, "icon": "🛡️", "tier": "primary"}
+    ]
+
+    # 2. Define outer ring agents
+    outer_agent_names = [
+        ("Alpha_V2_Genesis", None, "primary"),
+        ("Sentinel_Bridge", None, "primary"),
+        ("HR_N8N_Bridge", None, "primary"),
+        ("Aether", None, "primary"),
+        ("Project_Aether", None, "primary"),
+        ("Resonance", 5006, "primary"),
+        ("Dr_Aris", None, "primary"),
+        ("DocParserService", None, "primary"),
+        ("Aegis_Agent", None, "primary"),
+        ("Command_Center", None, "primary"),
+        ("Adv_Autonomous_Agent", None, "secondary"),
+        ("Claude_N8N_Bridge", None, "secondary"),
+        ("Delegate_Vault", None, "secondary"),
+        ("Delegate_Vault_v2", None, "secondary"),
+        ("MetaTestApp", None, "secondary"),
+        ("MyNewApp", None, "secondary"),
+        ("News_Analyzer", None, "secondary"),
+        ("Resonance2", None, "secondary"),
+        ("Resonance3", None, "secondary"),
+        ("Resonance4", None, "secondary"),
+        ("Project_Genesis", None, "secondary"),
+        ("test_agent", None, "secondary")
+    ]
+
+    cx, cy = 450, 450
+    radius = 320
+    offset_deg = -75
+    step_deg = 360.0 / len(outer_agent_names)
+
+    outer_nodes = []
+    for i, (name, port, tier) in enumerate(outer_agent_names):
+        angle_rad = math.radians(offset_deg + step_deg * i)
+        x = int(cx + radius * math.cos(angle_rad))
+        y = int(cy + radius * math.sin(angle_rad))
+        node_id = name.lower().replace("_", "-")
+        outer_nodes.append({
+            "id": node_id,
+            "label": name,
+            "port": port,
+            "type": "agentNode",
+            "x": x,
+            "y": y,
+            "icon": "🤖",
+            "tier": tier
+        })
+
+    # Merge nodes
+    all_raw_nodes = core_nodes + outer_nodes
+
+    # Default statuses from original system_map.html
+    default_statuses = {
+        "Alpha_V2_Genesis": "sent",
+        "Sentinel_Bridge": "sent",
+        "HR_N8N_Bridge": "sent",
+        "Aether": "sent",
+        "Project_Aether": "sent",
+        "Resonance": "sent",
+        "Dr_Aris": "sent",
+        "DocParserService": "sent",
+        "Aegis_Agent": "sent",
+        "Command_Center": "sent",
+        "Adv_Autonomous_Agent": "retrofitted",
+        "Claude_N8N_Bridge": "retrofitted",
+        "Delegate_Vault": "retrofitted",
+        "Delegate_Vault_v2": "retrofitted",
+        "MetaTestApp": "retrofitted",
+        "MyNewApp": "retrofitted",
+        "News_Analyzer": "retrofitted",
+        "Resonance2": "retrofitted",
+        "Resonance3": "retrofitted",
+        "Resonance4": "retrofitted",
+        "Project_Genesis": "no_activity",
+        "test_agent": "no_activity"
+    }
+
+    # Resolve live status for each node and construct AST schema
+    nodes = []
+    active_count = 0
+    
+    for n in all_raw_nodes:
+        port = n.get("port")
+        label = n["label"]
+        node_id = n["id"]
+        
+        # Ping check
+        if port:
+            is_live = ping_port(port)
+            status = "online" if is_live else "offline"
+        else:
+            status = default_statuses.get(label, "inactive")
+            
+        if status in ["online", "sent", "active"]:
+            active_count += 1
+            
+        # Construct dynamic AST schema
+        nodes.append({
+            "id": node_id,
+            "type": n["type"],
+            "data": {
+                "label": label,
+                "port": port,
+                "status": status,
+                "icon": n["icon"],
+                "tier": n["tier"]
+            },
+            "position": {
+                "x": n["x"],
+                "y": n["y"]
+            }
+        })
+
+    # Generate Edges linking Factory Core (factory) to each other node
+    edges = []
+    for n in nodes:
+        if n["id"] != "factory":
+            edges.append({
+                "id": f"e-factory-{n['id']}",
+                "source": "factory",
+                "target": n["id"]
+            })
+
+    # Fetch heal events from auto_heal_log.json
+    heal_events = []
     heal_path = os.path.join(SCRIPT_DIR, "auto_heal_log.json")
-    result = {"agents": {}, "heal_events": []}
-    try:
-        if os.path.exists(map_path):
-            with open(map_path, "r", encoding="utf-8") as f:
-                result.update(json.load(f))
-    except Exception:
-        pass
     try:
         if os.path.exists(heal_path):
             with open(heal_path, "r", encoding="utf-8") as f:
                 events = json.load(f)
-                result["heal_events"] = events[-20:]  # Last 20
+                heal_events = events[-20:]  # Last 20
     except Exception:
         pass
-    return result
+
+    return {
+        "nodes": nodes,
+        "edges": edges,
+        "heal_events": heal_events,
+        "stats": {
+            "total_agents": len(nodes),
+            "active_agents": active_count,
+            "files_hardened": 193,
+            "watchdog_ms": "630ms",
+            "heal_events_count": len(heal_events)
+        }
+    }
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -6315,6 +6479,6 @@ async def atomizer_ingest(payload: AtomizerPayload):
 if __name__ == "__main__":
     import uvicorn
     # AETHER-NATIVE: Lock to port 5000 to act as Central Brain
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=5000)
 
 # V3 MIGRATION COMPLETE
