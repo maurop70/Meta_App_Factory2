@@ -1,258 +1,184 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState, useRef, useEffect } from 'react';
+
+const INGESTION_TEMPLATES = [
+  { title: "Inventory Stock Modal", desc: "Add a Detail Modal component to the React frontend utilizing ReactDOM.createPortal to adjust stock levels." },
+  { title: "FastAPI Pagination Router", desc: "Implement a native Python SQLite3 router for inventory tracking enforcing strict limit/offset pagination." },
+  { title: "Vite Proxy Splicing", desc: "Configure a strict proxy server block in vite.config.js to route /api/ traffic." }
+];
+
+// --- ARCHITECTURAL INJECTION: INTELLIGENCE PARSER ---
+const EvaluationScorecard = ({ data }) => {
+  if (!data || !data.verdict || !data.gate) return <div className="text-gray-400">Malformed intelligence payload.</div>;
+
+  const { verdict, gate } = data;
+  const isChallenged = gate.gate_result === 'CHALLENGED';
+  
+  return (
+    <div className="flex flex-col space-y-4 w-full mt-3">
+      {/* Top Deck: Mathematical Verdicts */}
+      <div className={`grid grid-cols-2 gap-4 p-4 border rounded-xl shadow-lg transition-all ${isChallenged ? 'bg-red-950/20 border-red-500/40' : 'bg-emerald-950/20 border-emerald-500/40'}`}>
+        <div className="flex flex-col">
+          <span className="text-xs font-mono uppercase tracking-wider text-slate-400">Gate Threshold Status</span>
+          <span className={`text-xl font-bold tracking-wide mt-1 ${isChallenged ? 'text-red-400 animate-pulse' : 'text-emerald-400'}`}>
+            {gate.gate_result} [{gate.status}]
+          </span>
+        </div>
+        <div className="flex flex-col items-end">
+          <span className="text-xs font-mono uppercase tracking-wider text-slate-400">Composite Matrix Score</span>
+          <span className={`text-3xl font-bold mt-1 ${verdict.composite_score < 80 ? 'text-orange-400' : 'text-emerald-400'}`}>
+            {verdict.composite_score}/100
+          </span>
+        </div>
+      </div>
+
+      {/* Bottom Deck: Vulnerability Matrix */}
+      {gate.weaknesses && gate.weaknesses.length > 0 && (
+        <div className="flex flex-col space-y-3 mt-4">
+          <span className="text-xs font-mono uppercase tracking-wider text-slate-400 border-b border-slate-700 pb-1">Identified Structural Vulnerabilities</span>
+          {gate.weaknesses.map((weakness, idx) => (
+            <div key={idx} className="p-4 bg-slate-900/90 border border-slate-700 hover:border-orange-500/50 rounded-lg transition-all shadow-md">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm font-bold text-orange-400 tracking-wide">{weakness.category}</span>
+                <span className="text-[10px] font-mono px-2 py-1 bg-orange-950/50 text-orange-300 rounded border border-orange-800/50 uppercase">{weakness.severity}</span>
+              </div>
+              <p className="text-sm text-slate-300 leading-relaxed font-mono">{weakness.challenge}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default function BuilderChat() {
-  const [fileTree, setFileTree] = useState([]);
-  const [selectedPath, setSelectedPath] = useState(null);
-  const [prompt, setPrompt] = useState("");
-  const [chatLog, setChatLog] = useState([]);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [chatHistory, setChatHistory] = useState([]);
+  const [input, setInput] = useState('');
+  const [isStreaming, setIsStreaming] = useState(false);
+  const terminalEndRef = useRef(null);
 
   useEffect(() => {
-    const poisonCheck = localStorage.getItem('mode_a_target_matrix');
-    if (poisonCheck === "Unknown/Manual Selection Required" || poisonCheck === "undefined") {
-      localStorage.removeItem('mode_a_target_matrix');
-      localStorage.removeItem('mode_a_handoff_prompt');
-      console.log("[AUTO-PURGE] Poisoned memory bridge severed.");
-    }
-  }, []);
+    terminalEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatHistory]);
 
-  useEffect(() => {
-    // OVERRIDE: Re-route the Atomizer scanner to the absolute CFO Agent path
-    const targetPath = encodeURIComponent('c:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\CFO_Agent');
-    axios.get(`/api/v1/atomizer/map?target_directory=${targetPath}`)
-      .then(res => setFileTree(res.data.tree))
-      .catch(err => console.error("[ATOMIZER] Map fracture:", err));
-  }, []);
-
-  useEffect(() => {
-    // Mode C Handoff Interception
-    const handoffPrompt = localStorage.getItem('mode_a_handoff_prompt');
-    const handoffTarget = localStorage.getItem('mode_a_target_matrix');
+  const handleSynthesize = async () => {
+    if (!input.trim() || isStreaming) return;
     
-    if (handoffPrompt) {
-        setPrompt(handoffPrompt);
-        localStorage.removeItem('mode_a_handoff_prompt'); 
-    }
-    
-    if (handoffTarget) {
-        setSelectedPath(handoffTarget); // Automatically lock the UI to the deduced file
-        localStorage.removeItem('mode_a_target_matrix');
-        console.log(`[BUILDER CHAT] Target Matrix auto-locked to: ${handoffTarget}`);
-    }
-  }, []);
-
-  const renderTree = (nodes) => {
-    return nodes.map((node, idx) => (
-      <div key={idx} style={{ paddingLeft: '15px', marginTop: '5px' }}>
-        {node.type === 'directory' ? (
-          <details>
-            <summary style={{ cursor: 'pointer', fontWeight: 'bold', color: '#818cf8' }}>📁 {node.name}</summary>
-            {renderTree(node.children)}
-          </details>
-        ) : (
-          <div 
-            style={{ 
-              cursor: 'pointer', fontSize: '0.9em', 
-              color: selectedPath === node.path ? '#10b981' : '#cbd5e1',
-              fontWeight: selectedPath === node.path ? 'bold' : 'normal'
-            }}
-            onClick={() => setSelectedPath(node.path)}
-          >
-            📄 {node.name}
-          </div>
-        )}
-      </div>
-    ));
-  };
-
-  const commitPayload = async (path, rawContent) => {
-    // Strip markdown code fences for the raw payload robustly
-    const cleanContent = rawContent.trim().replace(/^```[^\n]*\r?\n/, '').replace(/\r?\n```$/, '').trim();
+    const userMsg = input;
+    setChatHistory(prev => [...prev, { role: 'user', content: userMsg }]);
+    setInput('');
+    setIsStreaming(true);
     
     try {
-        // Phase 7: The Phantom QA Pre-Flight
-        const qaRes = await axios.post('/api/v1/qa/engine/pre-flight', { target_path: path, content: cleanContent });
-        
-        if (qaRes.data.status === 'REJECTED') {
-            alert("[SECURITY FATAL] Phantom QA rejected the payload:\n\n" + qaRes.data.violations.join("\n"));
-            return;
-        }
-
-        // Phase 6: The Atomizer Autonomous Write
-        const writeRes = await axios.post('/api/v1/atomizer/mutate', { relative_path: path, content: cleanContent });
-        alert(`[ATOMIZER SUCCESS] Matrix mutated. ${writeRes.data.bytes_written} bytes physically written to disk.`);
-    } catch (err) {
-        console.error("[ACTUATION FRACTURE]", err);
-        alert(`Fatal I/O Exception during commit sequence:\n${err.response?.data?.detail || err.message}`);
-    }
-  };
-
-  const executeTriad = async () => {
-    if (!prompt || prompt.trim() === '') { console.warn("Execution Denied: Empty Payload"); return; }
-    setIsGenerating(true);
-    
-    const fullPrompt = `TARGET MATRIX: ${selectedPath || 'UNKNOWN'}\n\nBIOLOGICAL DIRECTIVE:\n${prompt}`;
-    setChatLog(prev => [...prev, { agent: 'OPERATOR', text: fullPrompt }]);
-    
-    try {
-        // Corrected Schema: Matching the FastAPI Pydantic model ({ prompt: ... })
-        const initRes = await axios.post('/api/v1/builder/initiate-stream', { prompt: fullPrompt });
-        const sessionId = initRes.data.session_id;
-        
-        const response = await fetch(`/api/v1/builder/stream?session_id=${sessionId}`, {
-            method: 'GET',
-            headers: { 'Accept': 'text/event-stream' }
+      const response = await fetch('/api/review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: userMsg, prompt: userMsg })
+      });
+      
+      if (!response.body) throw new Error("No readable stream");
+      
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      
+      setChatHistory(prev => [...prev, { role: 'system', content: '' }]);
+      
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        setChatHistory(prev => {
+          const newHistory = [...prev];
+          newHistory[newHistory.length - 1].content += chunk;
+          return newHistory;
         });
-
-        if (!response.body) throw new Error("ReadableStream not supported by browser.");
-        
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder("utf-8");
-        let streamBuffer = "";
-        let currentArchitectMessage = "";
-
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) {
-                setIsGenerating(false);
-                break;
-            }
-            
-            streamBuffer += decoder.decode(value, { stream: true });
-            const lines = streamBuffer.split('\n');
-            streamBuffer = lines.pop(); // Keep the incomplete line in the buffer
-            
-            for (const line of lines) {
-                if (line.startsWith('data: ')) {
-                    const dataStr = line.replace('data: ', '').trim();
-                    if (dataStr === '[DONE]') {
-                        console.log("[STREAM COMPLETE]");
-                        setIsGenerating(false);
-                        return; // Graceful exit
-                    }
-                    try {
-                        const parsed = JSON.parse(dataStr);
-                        if (parsed.status === 'AST_COMPLETE' || parsed.status === 'FATAL' || parsed.status === 'COMPLETE') {
-                            console.log("[STREAM COMPLETE]");
-                            setIsGenerating(false);
-                            return; // Graceful exit
-                        }
-                        const newText = parsed.payload || parsed.chunk || parsed.text;
-                        if (newText) {
-                            currentArchitectMessage += newText;
-
-                            // ---- PHASE 2: AUTONOMOUS TARGET INTERCEPTION (PATCHED) ----
-                            const targetMatch = currentArchitectMessage.match(/\*\*TARGET MATRIX:\s*(.+?)\*\*/i);
-                            if (targetMatch && targetMatch[1]) {
-                                setSelectedPath(targetMatch[1].trim());
-                            }
-
-                            setChatLog((prevLog) => {
-                                if (prevLog.length === 0) return [{ agent: 'ARCHITECT', text: newText }];
-                                
-                                const updatedLog = [...prevLog];
-                                const lastIndex = updatedLog.length - 1;
-                                
-                                if (updatedLog[lastIndex].agent === 'ARCHITECT') {
-                                    // Create a new object reference for the mutated message
-                                    updatedLog[lastIndex] = {
-                                        ...updatedLog[lastIndex],
-                                        text: updatedLog[lastIndex].text + newText
-                                    };
-                                } else {
-                                    updatedLog.push({ agent: 'ARCHITECT', text: newText });
-                                }
-                                
-                                return updatedLog;
-                            });
-                        }
-                    } catch (parseError) {
-                        console.warn("[SSE PARSE SKIP] Fragmented JSON chunk:", dataStr);
-                    }
-                }
-            }
-        }
+      }
     } catch (error) {
-        console.error("[SSE FRACTURE] Stream consumed violently:", error);
-        setIsGenerating(false);
+      setChatHistory(prev => [...prev, { role: 'system', content: `[STREAM FRACTURE] ${error.message}` }]);
+    } finally {
+      setIsStreaming(false);
     }
-    setPrompt("");
   };
 
-  const renderMessage = (log) => {
-    // Automatically isolate markdown code blocks to expose the Actuator button
-    const safeContent = log?.text || "";
-    const codeBlockRegex = /(```[\w]*\n[\s\S]*?```)/g;
-    const parts = safeContent.split(codeBlockRegex);
-
-    return parts.map((part, idx) => {
-        if (part.startsWith('```')) {
-            // Only render the commit button when streaming is physically complete
-            return (
-                <div key={idx} style={{ backgroundColor: '#0f172a', padding: '15px', borderRadius: '4px', marginTop: '10px', border: '1px solid #3b82f6' }}>
-                    <pre style={{ margin: 0, color: '#38bdf8', overflowX: 'auto' }}>{part}</pre>
-                    {!isGenerating && log.agent === 'ARCHITECT' && (
-                        <button 
-                            onClick={() => commitPayload(selectedPath, part)}
-                            style={{ marginTop: '15px', padding: '10px 20px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
-                        >
-                            💾 EXECUTE WRITE TO {selectedPath.split('/').pop()}
-                        </button>
-                    )}
-                </div>
-            );
-        }
-        return <span key={idx}>{part}</span>;
-    });
+  // --- ARCHITECTURAL INJECTION: DYNAMIC RENDERER ---
+  const renderMessageContent = (content) => {
+    try {
+      const parsed = JSON.parse(content);
+      if (parsed.verdict && parsed.gate) {
+        return <EvaluationScorecard data={parsed} />;
+      }
+    } catch (e) {
+      // JSON parser will naturally fail while the SSE stream is active.
+      // Fallback to raw text rendering until the stream completes.
+    }
+    return <div className="whitespace-pre-wrap leading-relaxed">{content}</div>;
   };
 
   return (
-    <div style={{ display: 'flex', height: '100%', minHeight: '80vh', backgroundColor: '#0f172a', color: '#f8fafc', borderRadius: '8px', overflow: 'hidden' }}>
-        <div style={{ width: '300px', borderRight: '1px solid #334155', padding: '15px', overflowY: 'auto', backgroundColor: '#1e293b' }}>
-            <h3 style={{ borderBottom: '1px solid #334155', paddingBottom: '10px', fontSize: '1rem', color: '#e2e8f0' }}>ATOMIZER MAP</h3>
-            <div style={{ fontSize: '0.9em', marginTop: '10px' }}>{renderTree(fileTree)}</div>
+    <div className="flex flex-col h-full bg-slate-950 border border-cyan-500/30 rounded-xl overflow-hidden shadow-2xl">
+      
+      <div className="bg-slate-900 border-b border-cyan-500/30 p-4 flex justify-between items-center shadow-md">
+        <h2 className="text-lg font-semibold tracking-wide uppercase text-cyan-400" style={{fontFamily: "'Outfit', sans-serif"}}>App Synthesis Gateway</h2>
+        <div className="flex items-center space-x-2">
+          <span className="text-xs font-mono tracking-wider text-cyan-400">BUILDER PULSE: ACTIVE</span>
+          <span className="flex h-3 w-3 relative">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 bg-cyan-500"></span>
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-cyan-500"></span>
+          </span>
         </div>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '20px' }}>
-            <div style={{ flex: 1, overflowY: 'auto', marginBottom: '20px', backgroundColor: '#1e293b', padding: '20px', borderRadius: '8px', border: '1px solid #334155' }}>
-                {chatLog.map((log, idx) => (
-                    <div key={idx} style={{ marginBottom: '15px', borderBottom: '1px solid #334155', paddingBottom: '10px' }}>
-                        <strong style={{ color: log.agent === 'OPERATOR' ? '#10b981' : '#a855f7' }}>[{log.agent}]</strong>
-                        <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace', marginTop: '5px', color: '#e2e8f0' }}>
-                            {renderMessage(log)}
-                        </pre>
-                    </div>
-                ))}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border-b border-cyan-900/30 bg-slate-950">
+        {INGESTION_TEMPLATES.map((tpl, idx) => (
+          <button 
+            key={idx} 
+            type="button"
+            onClick={() => setInput(tpl.title)} 
+            className="appearance-none flex flex-col text-left p-4 bg-cyan-950/20 border border-cyan-500/30 hover:border-cyan-400 hover:bg-cyan-900/40 rounded-lg transition-all shadow-[0_0_15px_rgba(6,182,212,0.05)] group"
+          >
+            <span className="text-cyan-400 font-bold text-sm group-hover:text-cyan-300 transition-colors">{tpl.title}</span>
+            <span className="text-slate-400 text-xs mt-2 leading-relaxed">{tpl.desc}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-950 font-mono text-sm custom-scrollbar">
+        <div className="text-teal-500 font-semibold opacity-90">&gt; TERMINAL BOOT COMPLETED SUCCESSFULLY</div>
+        <div className="text-teal-500 font-semibold opacity-90">&gt; STREAM TRANSPORT: SSE EXECUTOR ACTIVATED</div>
+        {chatHistory.length === 0 && <div className="text-cyan-600 animate-pulse mt-4">&gt; AWAITING INGESTION DIRECTIVES...</div>}
+        
+        {chatHistory.map((msg, idx) => (
+          <div key={idx} className={`flex w-full ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div className={`max-w-[85%] p-4 rounded-lg shadow-lg ${msg.role === 'user' ? 'bg-cyan-900/40 border border-cyan-500/40 text-cyan-50' : 'bg-slate-800/80 border border-slate-700 text-slate-300'}`}>
+               <strong className={`block mb-2 text-xs uppercase tracking-wider ${msg.role === 'user' ? 'text-cyan-400' : 'text-teal-400'}`}>
+                  {msg.role === 'user' ? 'CO-PILOT' : 'MAF ORCHESTRATOR'}
+               </strong>
+               {renderMessageContent(msg.content)}
             </div>
-            <div style={{ paddingBottom: '10px' }}>
-                <input 
-                    type="text" 
-                    value={selectedPath || ''} 
-                    onChange={e => setSelectedPath(e.target.value)} 
-                    placeholder="Override target path manually..." 
-                    style={{ width: '100%', padding: '10px', backgroundColor: '#1e293b', border: '1px solid #475569', color: '#10b981', borderRadius: '4px', fontWeight: 'bold' }} 
-                />
-            </div>
-            <div style={{ display: 'flex', gap: '10px' }}>
-                <input 
-                    style={{ flex: 1, padding: '12px', backgroundColor: '#334155', border: '1px solid #475569', color: 'white', borderRadius: '4px' }}
-                    value={prompt} onChange={e => setPrompt(e.target.value)}
-                    onKeyDown={(e) => { 
-                        if (e.key === 'Enter' && !isGenerating) { 
-                            executeTriad(); 
-                        } 
-                    }}
-                    placeholder={selectedPath ? `Execute directive against ${selectedPath}...` : "Execute global directive..."}
-                    disabled={isGenerating}
-                />
-                <button 
-                    style={{ padding: '12px 24px', backgroundColor: isGenerating ? '#475569' : '#10b981', color: 'white', border: 'none', borderRadius: '4px', cursor: isGenerating ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}
-                    onClick={executeTriad} disabled={isGenerating}
-                >
-                    {isGenerating ? 'STREAMING...' : 'IGNITE TRIAD'}
-                </button>
-            </div>
+          </div>
+        ))}
+        <div ref={terminalEndRef} />
+      </div>
+
+      <div className="p-4 bg-slate-900 border-t border-cyan-500/30">
+        <div className="flex gap-2 relative">
+          <input 
+            type="text" 
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSynthesize()}
+            className="flex-1 bg-slate-950 border border-slate-700 focus:border-cyan-500 text-cyan-50 p-4 rounded-lg outline-none font-mono text-sm shadow-inner transition-colors" 
+            placeholder="___Enter system architectural brief___" 
+          />
+          <button 
+            type="button"
+            onClick={handleSynthesize}
+            disabled={isStreaming}
+            className={`px-8 font-bold tracking-wider rounded-lg transition-all ${isStreaming ? 'bg-slate-700 text-slate-500 cursor-not-allowed' : 'bg-cyan-700 hover:bg-cyan-600 text-white shadow-[0_0_15px_rgba(6,182,212,0.5)]'}`}
+          >
+            {isStreaming ? '[SYNTHESIZING...]' : '[SYNTHESIZE]'}
+          </button>
         </div>
+      </div>
     </div>
   );
 }

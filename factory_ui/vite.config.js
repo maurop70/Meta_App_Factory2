@@ -49,9 +49,17 @@ export default defineConfig({
         target: 'http://127.0.0.1:5060',
         changeOrigin: true,
       },
-      '/api': {
-        target: 'http://127.0.0.1:5000',
+      // 1. Route Inference traffic to Master Architect Engine
+      '/api/review': {
+        target: 'http://127.0.0.1:5050',
         changeOrigin: true,
+        secure: false
+      },
+      // 2. Route Enterprise/Inventory traffic to SQLite Engine
+      '/api': {
+        target: 'http://127.0.0.1:5005',
+        changeOrigin: true,
+        secure: false
       },
       '/ws': {
         target: 'ws://127.0.0.1:5000',
