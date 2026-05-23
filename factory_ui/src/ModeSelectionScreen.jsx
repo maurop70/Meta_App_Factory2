@@ -101,10 +101,9 @@ const styles = {
 
 export default function ModeSelectionScreen({ onSelectMode }) {
   const [hovered, setHovered] = useState(null);
-  const [userProfile, setUserProfile] = useState('executive');
 
   const resetEosAndSelect = (mode) => {
-    const profile = mode === 'technical' ? userProfile : 'executive';
+    const profile = 'copilot';
     fetch("/api/eos/reset", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -145,15 +144,6 @@ export default function ModeSelectionScreen({ onSelectMode }) {
           </div>
           <h3 style={styles.cardTitle}>Technical Architect</h3>
           <p style={styles.cardDesc}>App Only. Standard scaffolding, UI generation, and deployment.</p>
-          <div style={{ marginTop: '8px', fontSize: '12px', color: '#cbd5e1' }} onClick={e => e.stopPropagation()}>
-             <strong>User Profile:</strong><br/>
-             <label style={{ marginRight: '10px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                <input type="radio" checked={userProfile === 'executive'} onChange={() => setUserProfile('executive')} /> Executive (Non-Coder)
-             </label>
-             <label style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                <input type="radio" checked={userProfile === 'copilot'} onChange={() => setUserProfile('copilot')} /> Co-Pilot (Coder)
-             </label>
-          </div>
           <ul style={styles.featureList}>
             <li>✓ Codebase generation</li>
             <li>✓ UI/UX Scaffolding</li>
