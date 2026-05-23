@@ -198,6 +198,31 @@ sweep_state = {
 }
 
 
+def push_to_sentinel_queue(result):
+    """Pushes a completed CIO sweep/memo metadata and contents to Sentinel Queue."""
+    if not result or not result.get("memo_filename"):
+        return
+    
+    memo_filename = result["memo_filename"]
+    try:
+        from cio_engine import read_memo
+        memo_content = read_memo(memo_filename)
+        payload = {
+            "type": "cio_upgrade_memo",
+            "timestamp": datetime.now().isoformat(),
+            "memo_filename": memo_filename,
+            "external_sources_crawled": result.get("external_sources_crawled", 0),
+            "external_snippets_total": result.get("external_snippets_total", 0),
+            "content": memo_content
+        }
+        resp = sync_requests.post("http://localhost:5052/queue/brief", json=payload, timeout=5)
+        if resp.status_code == 200:
+            logger.info(f"CIO Agent: Successfully pushed memo '{memo_filename}' to Sentinel Queue.")
+        else:
+            logger.warning(f"CIO Agent: Failed to push memo '{memo_filename}' to Sentinel Queue: {resp.text}")
+    except Exception as e:
+        logger.error(f"CIO Agent: Error pushing memo to Sentinel Queue: {e}")
+
 # ═══════════════════════════════════════════════════════════
 #  24-HOUR SCHEDULED LOOP
 # ═══════════════════════════════════════════════════════════
@@ -216,6 +241,7 @@ async def scheduled_sweep_loop():
                 sweep_state["last_sweep"] = datetime.now().isoformat()
                 sweep_state["last_result"] = result
                 sweep_state["sweep_count"] += 1
+                asyncio.get_event_loop().run_in_executor(None, push_to_sentinel_queue, result)
                 logger.info(f"⏰ Scheduled sweep complete: {result.get('memo_filename', 'no memo')}")
             except Exception as e:
                 logger.error(f"Scheduled sweep failed: {e}")
@@ -656,6 +682,7 @@ async def process_sweep(req: CIOProcessRequest = CIOProcessRequest()):
         sweep_state["last_sweep"] = datetime.now().isoformat()
         sweep_state["last_result"] = result
         sweep_state["sweep_count"] += 1
+        loop.run_in_executor(None, push_to_sentinel_queue, result)
         
         asyncio.create_task(sse_broadcast(
             "PASS" if result.get('memo_generated') else "FAIL", 

@@ -82,5 +82,1247 @@
       "resolution": null,
       "round": 1
     }
+  },
+  {
+    "event": "challenge_issued",
+    "timestamp": "2026-05-19T21:25:04.825471",
+    "data": {
+      "gate_result": "CHALLENGED",
+      "challenge_id": "CHG-0001",
+      "status": "PAUSED",
+      "composite_score": 74,
+      "gap_from_threshold": 11,
+      "weaknesses": [
+        {
+          "id": 1,
+          "category": "Observability Gap",
+          "severity": "SIGNIFICANT",
+          "challenge": "No structured logging or telemetry for the new service. Failure reconstruction will be impossible.",
+          "required_evidence": "Provide data or reasoning addressing observability gap."
+        },
+        {
+          "id": 2,
+          "category": "Credential Surface Area",
+          "severity": "SIGNIFICANT",
+          "challenge": "API keys are loaded via os.getenv() without vault_client fallback \u2014 insecure on shared systems.",
+          "required_evidence": "Provide data or reasoning addressing credential surface area."
+        },
+        {
+          "id": 3,
+          "category": "Fallback Chain Completeness",
+          "severity": "SIGNIFICANT",
+          "challenge": "SSE stream has no heartbeat/keepalive. Silent connection drops will go undetected.",
+          "required_evidence": "Provide data or reasoning addressing fallback chain completeness."
+        }
+      ],
+      "options": [
+        "convince",
+        "force_proceed"
+      ],
+      "created_at": "2026-05-19T21:25:04.824801",
+      "resolved_at": null,
+      "resolution": null,
+      "round": 1
+    }
+  },
+  {
+    "event": "challenge_issued",
+    "timestamp": "2026-05-19T21:25:35.972887",
+    "data": {
+      "gate_result": "CHALLENGED",
+      "challenge_id": "CHG-0002",
+      "status": "PAUSED",
+      "composite_score": 74,
+      "gap_from_threshold": 11,
+      "weaknesses": [
+        {
+          "id": 1,
+          "category": "Fallback Chain Completeness",
+          "severity": "SIGNIFICANT",
+          "challenge": "SSE stream has no heartbeat/keepalive. Silent connection drops will go undetected.",
+          "required_evidence": "Provide data or reasoning addressing fallback chain completeness."
+        },
+        {
+          "id": 2,
+          "category": "Horizontal Scaling Barrier",
+          "severity": "SIGNIFICANT",
+          "challenge": "WebSocket session affinity is not addressed \u2014 load balancer will break connections.",
+          "required_evidence": "Provide data or reasoning addressing horizontal scaling barrier."
+        },
+        {
+          "id": 3,
+          "category": "Credential Surface Area",
+          "severity": "SIGNIFICANT",
+          "challenge": "API keys are loaded via os.getenv() without vault_client fallback \u2014 insecure on shared systems.",
+          "required_evidence": "Provide data or reasoning addressing credential surface area."
+        }
+      ],
+      "options": [
+        "convince",
+        "force_proceed"
+      ],
+      "created_at": "2026-05-19T21:25:35.972150",
+      "resolved_at": null,
+      "resolution": null,
+      "round": 1
+    }
+  },
+  {
+    "event": "challenge_issued",
+    "timestamp": "2026-05-19T21:27:15.430585",
+    "data": {
+      "gate_result": "CHALLENGED",
+      "challenge_id": "CHG-0003",
+      "status": "PAUSED",
+      "composite_score": 74,
+      "gap_from_threshold": 11,
+      "weaknesses": [
+        {
+          "id": 1,
+          "category": "Credential Surface Area",
+          "severity": "SIGNIFICANT",
+          "challenge": "Three separate services each directly access the Gemini API key. Consolidate via vault.",
+          "required_evidence": "Provide data or reasoning addressing credential surface area."
+        },
+        {
+          "id": 2,
+          "category": "Observability Gap",
+          "severity": "SIGNIFICANT",
+          "challenge": "No structured logging or telemetry for the new service. Failure reconstruction will be impossible.",
+          "required_evidence": "Provide data or reasoning addressing observability gap."
+        },
+        {
+          "id": 3,
+          "category": "Horizontal Scaling Barrier",
+          "severity": "SIGNIFICANT",
+          "challenge": "WebSocket session affinity is not addressed \u2014 load balancer will break connections.",
+          "required_evidence": "Provide data or reasoning addressing horizontal scaling barrier."
+        }
+      ],
+      "options": [
+        "convince",
+        "force_proceed"
+      ],
+      "created_at": "2026-05-19T21:27:15.429912",
+      "resolved_at": null,
+      "resolution": null,
+      "round": 1
+    }
+  },
+  {
+    "event": "challenge_issued",
+    "timestamp": "2026-05-19T21:28:03.847318",
+    "data": {
+      "gate_result": "CHALLENGED",
+      "challenge_id": "CHG-0001",
+      "status": "PAUSED",
+      "composite_score": 76,
+      "gap_from_threshold": 9,
+      "weaknesses": [
+        {
+          "id": 1,
+          "category": "Data Consistency Under Failure",
+          "severity": "MODERATE",
+          "challenge": "Multi-step write operation is not wrapped in a transaction. Partial failure will leave inconsistent state.",
+          "required_evidence": "Provide data or reasoning addressing data consistency under failure."
+        },
+        {
+          "id": 2,
+          "category": "Schema Migration Risk",
+          "severity": "MODERATE",
+          "challenge": "Foreign key constraint added to table with existing orphaned records will fail.",
+          "required_evidence": "Provide data or reasoning addressing schema migration risk."
+        },
+        {
+          "id": 3,
+          "category": "Credential Surface Area",
+          "severity": "MODERATE",
+          "challenge": "API keys are loaded via os.getenv() without vault_client fallback \u2014 insecure on shared systems.",
+          "required_evidence": "Provide data or reasoning addressing credential surface area."
+        }
+      ],
+      "options": [
+        "convince",
+        "force_proceed"
+      ],
+      "created_at": "2026-05-19T21:28:03.846650",
+      "resolved_at": null,
+      "resolution": null,
+      "round": 1
+    }
+  },
+  {
+    "event": "challenge_issued",
+    "timestamp": "2026-05-19T21:28:42.131065",
+    "data": {
+      "gate_result": "CHALLENGED",
+      "challenge_id": "CHG-0004",
+      "status": "PAUSED",
+      "composite_score": 74,
+      "gap_from_threshold": 11,
+      "weaknesses": [
+        {
+          "id": 1,
+          "category": "Horizontal Scaling Barrier",
+          "severity": "SIGNIFICANT",
+          "challenge": "File-based locking mechanisms will break under multi-process deployment.",
+          "required_evidence": "Provide data or reasoning addressing horizontal scaling barrier."
+        },
+        {
+          "id": 2,
+          "category": "Observability Gap",
+          "severity": "SIGNIFICANT",
+          "challenge": "No structured logging or telemetry for the new service. Failure reconstruction will be impossible.",
+          "required_evidence": "Provide data or reasoning addressing observability gap."
+        },
+        {
+          "id": 3,
+          "category": "Schema Migration Risk",
+          "severity": "SIGNIFICANT",
+          "challenge": "Foreign key constraint added to table with existing orphaned records will fail.",
+          "required_evidence": "Provide data or reasoning addressing schema migration risk."
+        }
+      ],
+      "options": [
+        "convince",
+        "force_proceed"
+      ],
+      "created_at": "2026-05-19T21:28:42.130260",
+      "resolved_at": null,
+      "resolution": null,
+      "round": 1
+    }
+  },
+  {
+    "event": "challenge_issued",
+    "timestamp": "2026-05-19T21:28:56.725868",
+    "data": {
+      "gate_result": "CHALLENGED",
+      "challenge_id": "CHG-0005",
+      "status": "PAUSED",
+      "composite_score": 74,
+      "gap_from_threshold": 11,
+      "weaknesses": [
+        {
+          "id": 1,
+          "category": "Observability Gap",
+          "severity": "SIGNIFICANT",
+          "challenge": "Error responses return generic messages \u2014 no correlation IDs for debugging.",
+          "required_evidence": "Provide data or reasoning addressing observability gap."
+        },
+        {
+          "id": 2,
+          "category": "Single Point of Failure",
+          "severity": "SIGNIFICANT",
+          "challenge": "Critical service has no standby or failover mechanism. Mean time to recovery is undefined.",
+          "required_evidence": "Provide data or reasoning addressing single point of failure."
+        },
+        {
+          "id": 3,
+          "category": "Credential Surface Area",
+          "severity": "SIGNIFICANT",
+          "challenge": "API keys are loaded via os.getenv() without vault_client fallback \u2014 insecure on shared systems.",
+          "required_evidence": "Provide data or reasoning addressing credential surface area."
+        }
+      ],
+      "options": [
+        "convince",
+        "force_proceed"
+      ],
+      "created_at": "2026-05-19T21:28:56.725049",
+      "resolved_at": null,
+      "resolution": null,
+      "round": 1
+    }
+  },
+  {
+    "event": "challenge_issued",
+    "timestamp": "2026-05-19T21:29:32.382618",
+    "data": {
+      "gate_result": "CHALLENGED",
+      "challenge_id": "CHG-0001",
+      "status": "PAUSED",
+      "composite_score": 74,
+      "gap_from_threshold": 11,
+      "weaknesses": [
+        {
+          "id": 1,
+          "category": "Fallback Chain Completeness",
+          "severity": "SIGNIFICANT",
+          "challenge": "Circuit breaker is configured but has no half-open probe \u2014 will never auto-recover.",
+          "required_evidence": "Provide data or reasoning addressing fallback chain completeness."
+        },
+        {
+          "id": 2,
+          "category": "State Coupling",
+          "severity": "SIGNIFICANT",
+          "challenge": "Global variables are used for cross-request state \u2014 will not survive process restart.",
+          "required_evidence": "Provide data or reasoning addressing state coupling."
+        },
+        {
+          "id": 3,
+          "category": "Credential Surface Area",
+          "severity": "SIGNIFICANT",
+          "challenge": "New service introduces a credential that is not covered by the rotation schedule.",
+          "required_evidence": "Provide data or reasoning addressing credential surface area."
+        }
+      ],
+      "options": [
+        "convince",
+        "force_proceed"
+      ],
+      "created_at": "2026-05-19T21:29:32.381666",
+      "resolved_at": null,
+      "resolution": null,
+      "round": 1
+    }
+  },
+  {
+    "event": "challenge_issued",
+    "timestamp": "2026-05-19T21:42:21.716177",
+    "data": {
+      "gate_result": "CHALLENGED",
+      "challenge_id": "CHG-0002",
+      "status": "PAUSED",
+      "composite_score": 74,
+      "gap_from_threshold": 11,
+      "weaknesses": [
+        {
+          "id": 1,
+          "category": "Data Consistency Under Failure",
+          "severity": "SIGNIFICANT",
+          "challenge": "Cache invalidation is not synchronized with the database write. Stale reads are possible.",
+          "required_evidence": "Provide data or reasoning addressing data consistency under failure."
+        },
+        {
+          "id": 2,
+          "category": "Credential Surface Area",
+          "severity": "SIGNIFICANT",
+          "challenge": "New service introduces a credential that is not covered by the rotation schedule.",
+          "required_evidence": "Provide data or reasoning addressing credential surface area."
+        },
+        {
+          "id": 3,
+          "category": "State Coupling",
+          "severity": "SIGNIFICANT",
+          "challenge": "Two services share a JSON file for state synchronization. This creates tight coupling and race conditions.",
+          "required_evidence": "Provide data or reasoning addressing state coupling."
+        }
+      ],
+      "options": [
+        "convince",
+        "force_proceed"
+      ],
+      "created_at": "2026-05-19T21:42:21.715040",
+      "resolved_at": null,
+      "resolution": null,
+      "round": 1
+    }
+  },
+  {
+    "event": "challenge_issued",
+    "timestamp": "2026-05-19T21:43:50.624438",
+    "data": {
+      "gate_result": "CHALLENGED",
+      "challenge_id": "CHG-0003",
+      "status": "PAUSED",
+      "composite_score": 74,
+      "gap_from_threshold": 11,
+      "weaknesses": [
+        {
+          "id": 1,
+          "category": "Schema Migration Risk",
+          "severity": "SIGNIFICANT",
+          "challenge": "Column rename without backward compatibility will break all existing queries.",
+          "required_evidence": "Provide data or reasoning addressing schema migration risk."
+        },
+        {
+          "id": 2,
+          "category": "Horizontal Scaling Barrier",
+          "severity": "SIGNIFICANT",
+          "challenge": "File-based locking mechanisms will break under multi-process deployment.",
+          "required_evidence": "Provide data or reasoning addressing horizontal scaling barrier."
+        },
+        {
+          "id": 3,
+          "category": "State Coupling",
+          "severity": "SIGNIFICANT",
+          "challenge": "In-memory state is shared across request boundaries without proper isolation.",
+          "required_evidence": "Provide data or reasoning addressing state coupling."
+        }
+      ],
+      "options": [
+        "convince",
+        "force_proceed"
+      ],
+      "created_at": "2026-05-19T21:43:50.623567",
+      "resolved_at": null,
+      "resolution": null,
+      "round": 1
+    }
+  },
+  {
+    "event": "challenge_issued",
+    "timestamp": "2026-05-19T21:45:08.963375",
+    "data": {
+      "gate_result": "CHALLENGED",
+      "challenge_id": "CHG-0004",
+      "status": "PAUSED",
+      "composite_score": 74,
+      "gap_from_threshold": 11,
+      "weaknesses": [
+        {
+          "id": 1,
+          "category": "Data Consistency Under Failure",
+          "severity": "SIGNIFICANT",
+          "challenge": "Event sourcing has no idempotency guard. Replayed events will create duplicates.",
+          "required_evidence": "Provide data or reasoning addressing data consistency under failure."
+        },
+        {
+          "id": 2,
+          "category": "Single Point of Failure",
+          "severity": "SIGNIFICANT",
+          "challenge": "No redundancy in the proposed data path. A single node failure will cause total service outage.",
+          "required_evidence": "Provide data or reasoning addressing single point of failure."
+        },
+        {
+          "id": 3,
+          "category": "Credential Surface Area",
+          "severity": "SIGNIFICANT",
+          "challenge": "API keys are loaded via os.getenv() without vault_client fallback \u2014 insecure on shared systems.",
+          "required_evidence": "Provide data or reasoning addressing credential surface area."
+        }
+      ],
+      "options": [
+        "convince",
+        "force_proceed"
+      ],
+      "created_at": "2026-05-19T21:45:08.962294",
+      "resolved_at": null,
+      "resolution": null,
+      "round": 1
+    }
+  },
+  {
+    "event": "challenge_issued",
+    "timestamp": "2026-05-19T21:47:32.825437",
+    "data": {
+      "gate_result": "CHALLENGED",
+      "challenge_id": "CHG-0005",
+      "status": "PAUSED",
+      "composite_score": 74,
+      "gap_from_threshold": 11,
+      "weaknesses": [
+        {
+          "id": 1,
+          "category": "Fallback Chain Completeness",
+          "severity": "SIGNIFICANT",
+          "challenge": "Primary AI provider failure has no fallback. Service will return errors during outage.",
+          "required_evidence": "Provide data or reasoning addressing fallback chain completeness."
+        },
+        {
+          "id": 2,
+          "category": "Data Consistency Under Failure",
+          "severity": "SIGNIFICANT",
+          "challenge": "Event sourcing has no idempotency guard. Replayed events will create duplicates.",
+          "required_evidence": "Provide data or reasoning addressing data consistency under failure."
+        },
+        {
+          "id": 3,
+          "category": "Single Point of Failure",
+          "severity": "SIGNIFICANT",
+          "challenge": "The architecture relies on a single database instance with no read replicas or backup.",
+          "required_evidence": "Provide data or reasoning addressing single point of failure."
+        }
+      ],
+      "options": [
+        "convince",
+        "force_proceed"
+      ],
+      "created_at": "2026-05-19T21:47:32.824494",
+      "resolved_at": null,
+      "resolution": null,
+      "round": 1
+    }
+  },
+  {
+    "event": "challenge_issued",
+    "timestamp": "2026-05-19T21:52:21.544290",
+    "data": {
+      "gate_result": "CHALLENGED",
+      "challenge_id": "CHG-0006",
+      "status": "PAUSED",
+      "composite_score": 74,
+      "gap_from_threshold": 11,
+      "weaknesses": [
+        {
+          "id": 1,
+          "category": "Observability Gap",
+          "severity": "SIGNIFICANT",
+          "challenge": "Error responses return generic messages \u2014 no correlation IDs for debugging.",
+          "required_evidence": "Provide data or reasoning addressing observability gap."
+        },
+        {
+          "id": 2,
+          "category": "Horizontal Scaling Barrier",
+          "severity": "SIGNIFICANT",
+          "challenge": "WebSocket session affinity is not addressed \u2014 load balancer will break connections.",
+          "required_evidence": "Provide data or reasoning addressing horizontal scaling barrier."
+        },
+        {
+          "id": 3,
+          "category": "Data Consistency Under Failure",
+          "severity": "SIGNIFICANT",
+          "challenge": "Event sourcing has no idempotency guard. Replayed events will create duplicates.",
+          "required_evidence": "Provide data or reasoning addressing data consistency under failure."
+        }
+      ],
+      "options": [
+        "convince",
+        "force_proceed"
+      ],
+      "created_at": "2026-05-19T21:52:21.543041",
+      "resolved_at": null,
+      "resolution": null,
+      "round": 1
+    }
+  },
+  {
+    "event": "challenge_issued",
+    "timestamp": "2026-05-19T21:57:17.385467",
+    "data": {
+      "gate_result": "CHALLENGED",
+      "challenge_id": "CHG-0007",
+      "status": "PAUSED",
+      "composite_score": 74,
+      "gap_from_threshold": 11,
+      "weaknesses": [
+        {
+          "id": 1,
+          "category": "Single Point of Failure",
+          "severity": "SIGNIFICANT",
+          "challenge": "No redundancy in the proposed data path. A single node failure will cause total service outage.",
+          "required_evidence": "Provide data or reasoning addressing single point of failure."
+        },
+        {
+          "id": 2,
+          "category": "Fallback Chain Completeness",
+          "severity": "SIGNIFICANT",
+          "challenge": "Primary AI provider failure has no fallback. Service will return errors during outage.",
+          "required_evidence": "Provide data or reasoning addressing fallback chain completeness."
+        },
+        {
+          "id": 3,
+          "category": "Credential Surface Area",
+          "severity": "SIGNIFICANT",
+          "challenge": "Three separate services each directly access the Gemini API key. Consolidate via vault.",
+          "required_evidence": "Provide data or reasoning addressing credential surface area."
+        }
+      ],
+      "options": [
+        "convince",
+        "force_proceed"
+      ],
+      "created_at": "2026-05-19T21:57:17.384448",
+      "resolved_at": null,
+      "resolution": null,
+      "round": 1
+    }
+  },
+  {
+    "event": "rejected",
+    "timestamp": "2026-05-19T22:00:52.529231",
+    "data": {
+      "gate_result": "REJECTED",
+      "composite_score": 27,
+      "message": "Architecture does not meet minimum standards (score 27/100).",
+      "concerns": [
+        "The proposed 'change' is a command to the AI, not a description of a software modification. No structural elements (schemas, APIs, data models) are provided for review.",
+        "The request includes sensitive information (local paths, credentials) which is inappropriate and insecure for an AI to process or access.",
+        "Without a clear description of the actual software changes, a structural engineering review cannot be performed.",
+        "Ambiguity of Change Scope: The description provides no details on *what* the proposed change entails, making it impossible to assess its impact on logic flows, routing, or system stability.",
+        "Credential Context: Referencing a vault path, key, and JWT without context for their intended use or modification raises security and access control concerns if not properly managed.",
+        "Unassessable Impact: Without a clear understanding of the change, a comprehensive review of n8n stability, agent dispatch, circuit breakers, and fallback chains is impossible."
+      ],
+      "recommendations": [
+        "Provide a detailed description of the proposed software change, including specific modifications to data models, API contracts, and system architecture.",
+        "Abstract or redact all sensitive information (paths, keys, tokens) from change descriptions. Focus on the structural impact.",
+        "Clearly outline the affected components and the nature of the change (e.g., new feature, refactor, bug fix) to enable a proper structural analysis.",
+        "Detailed Change Proposal: Submit a revised proposal clearly outlining the specific modifications to n8n workflows, agent routing logic, service integrations, and credential usage.",
+        "Affected Component Identification: Explicitly list all n8n workflows, agent types, FastAPI endpoints, and services directly impacted by the change.",
+        "Security Protocol Review: Detail how the referenced credentials ([REDACTED_SECRET], [REDACTED_JWT]) will be used, managed, and secured within the context of the proposed change."
+      ]
+    }
+  },
+  {
+    "event": "rejected",
+    "timestamp": "2026-05-19T22:01:40.345782",
+    "data": {
+      "gate_result": "REJECTED",
+      "composite_score": 27,
+      "message": "Architecture does not meet minimum standards (score 27/100).",
+      "concerns": [
+        "Input is a command to perform an action, not a description of a proposed structural change.",
+        "Cannot access external file paths or credentials for analysis due to security and capability limitations.",
+        "Lack of specific structural details (schemas, API contracts, data models) to review.",
+        "Lack of clear change description: The proposed change's scope and impact on logic flows are entirely undefined.",
+        "Potential for unmanaged credential exposure: Mention of vault path, key, and JWT without context raises security concerns if not handled within established n8n credential management.",
+        "Undetermined impact on existing logic flows: Without details, the stability and integrity of current agent orchestration, routing, and fallback chains cannot be assessed."
+      ],
+      "recommendations": [
+        "Provide explicit details of proposed structural changes (e.g., DDL for schemas, OpenAPI specs for APIs).",
+        "Abstract sensitive information and operational commands when requesting architectural review.",
+        "Clearly define the scope and nature of the change in terms of data models, APIs, or system structure.",
+        "Provide a detailed description of the proposed change, including specific modifications to n8n workflows, agent logic, and inter-service communication.",
+        "Clearly identify all affected n8n webhook URLs, credential references, agent types, routing rules, and any new or altered SSE/WebSocket connections.",
+        "Outline the expected changes to circuit breaker configurations (failure thresholds, cooldown periods) and the complete fallback chain (n8n -> Model Router -> Gemini-only -> cached) for the proposed feature."
+      ]
+    }
+  },
+  {
+    "event": "challenge_issued",
+    "timestamp": "2026-05-20T18:45:43.178040",
+    "data": {
+      "gate_result": "CHALLENGED",
+      "challenge_id": "CHG-0001",
+      "status": "PAUSED",
+      "composite_score": 72,
+      "gap_from_threshold": 13,
+      "weaknesses": [
+        {
+          "id": 1,
+          "category": "State Coupling",
+          "severity": "SIGNIFICANT",
+          "challenge": "Global variables are used for cross-request state \u2014 will not survive process restart.",
+          "required_evidence": "Provide data or reasoning addressing state coupling."
+        },
+        {
+          "id": 2,
+          "category": "Credential Surface Area",
+          "severity": "SIGNIFICANT",
+          "challenge": "API keys are loaded via os.getenv() without vault_client fallback \u2014 insecure on shared systems.",
+          "required_evidence": "Provide data or reasoning addressing credential surface area."
+        },
+        {
+          "id": 3,
+          "category": "Single Point of Failure",
+          "severity": "SIGNIFICANT",
+          "challenge": "No redundancy in the proposed data path. A single node failure will cause total service outage.",
+          "required_evidence": "Provide data or reasoning addressing single point of failure."
+        }
+      ],
+      "options": [
+        "convince",
+        "force_proceed"
+      ],
+      "created_at": "2026-05-20T18:45:43.176833",
+      "resolved_at": null,
+      "resolution": null,
+      "round": 1
+    }
+  },
+  {
+    "event": "challenge_issued",
+    "timestamp": "2026-05-20T18:49:02.134294",
+    "data": {
+      "gate_result": "CHALLENGED",
+      "challenge_id": "CHG-0002",
+      "status": "PAUSED",
+      "composite_score": 72,
+      "gap_from_threshold": 13,
+      "weaknesses": [
+        {
+          "id": 1,
+          "category": "Observability Gap",
+          "severity": "SIGNIFICANT",
+          "challenge": "No health check endpoint defined. The watchdog cannot monitor this service.",
+          "required_evidence": "Provide data or reasoning addressing observability gap."
+        },
+        {
+          "id": 2,
+          "category": "Horizontal Scaling Barrier",
+          "severity": "SIGNIFICANT",
+          "challenge": "WebSocket session affinity is not addressed \u2014 load balancer will break connections.",
+          "required_evidence": "Provide data or reasoning addressing horizontal scaling barrier."
+        },
+        {
+          "id": 3,
+          "category": "Schema Migration Risk",
+          "severity": "SIGNIFICANT",
+          "challenge": "Foreign key constraint added to table with existing orphaned records will fail.",
+          "required_evidence": "Provide data or reasoning addressing schema migration risk."
+        }
+      ],
+      "options": [
+        "convince",
+        "force_proceed"
+      ],
+      "created_at": "2026-05-20T18:49:02.133311",
+      "resolved_at": null,
+      "resolution": null,
+      "round": 1
+    }
+  },
+  {
+    "event": "challenge_issued",
+    "timestamp": "2026-05-20T18:50:33.703555",
+    "data": {
+      "gate_result": "CHALLENGED",
+      "challenge_id": "CHG-0003",
+      "status": "PAUSED",
+      "composite_score": 67,
+      "gap_from_threshold": 18,
+      "weaknesses": [
+        {
+          "id": 1,
+          "category": "Credential Surface Area",
+          "severity": "SIGNIFICANT",
+          "challenge": "Three separate services each directly access the Gemini API key. Consolidate via vault.",
+          "required_evidence": "Provide data or reasoning addressing credential surface area."
+        },
+        {
+          "id": 2,
+          "category": "Data Consistency Under Failure",
+          "severity": "SIGNIFICANT",
+          "challenge": "Cache invalidation is not synchronized with the database write. Stale reads are possible.",
+          "required_evidence": "Provide data or reasoning addressing data consistency under failure."
+        },
+        {
+          "id": 3,
+          "category": "Horizontal Scaling Barrier",
+          "severity": "SIGNIFICANT",
+          "challenge": "Shared mutable state between request handlers prevents adding more instances.",
+          "required_evidence": "Provide data or reasoning addressing horizontal scaling barrier."
+        }
+      ],
+      "options": [
+        "convince",
+        "force_proceed"
+      ],
+      "created_at": "2026-05-20T18:50:33.702460",
+      "resolved_at": null,
+      "resolution": null,
+      "round": 1
+    }
+  },
+  {
+    "event": "challenge_issued",
+    "timestamp": "2026-05-20T21:14:29.828481",
+    "data": {
+      "gate_result": "CHALLENGED",
+      "challenge_id": "CHG-0001",
+      "status": "PAUSED",
+      "composite_score": 79,
+      "gap_from_threshold": 6,
+      "weaknesses": [
+        {
+          "id": 1,
+          "category": "Horizontal Scaling Barrier",
+          "severity": "MODERATE",
+          "challenge": "Shared mutable state between request handlers prevents adding more instances.",
+          "required_evidence": "Provide data or reasoning addressing horizontal scaling barrier."
+        },
+        {
+          "id": 2,
+          "category": "Single Point of Failure",
+          "severity": "MODERATE",
+          "challenge": "Critical service has no standby or failover mechanism. Mean time to recovery is undefined.",
+          "required_evidence": "Provide data or reasoning addressing single point of failure."
+        },
+        {
+          "id": 3,
+          "category": "State Coupling",
+          "severity": "MODERATE",
+          "challenge": "Global variables are used for cross-request state \u2014 will not survive process restart.",
+          "required_evidence": "Provide data or reasoning addressing state coupling."
+        }
+      ],
+      "options": [
+        "convince",
+        "force_proceed"
+      ],
+      "created_at": "2026-05-20T21:14:29.827277",
+      "resolved_at": null,
+      "resolution": null,
+      "round": 1
+    }
+  },
+  {
+    "event": "challenge_issued",
+    "timestamp": "2026-05-20T21:18:11.792810",
+    "data": {
+      "gate_result": "CHALLENGED",
+      "challenge_id": "CHG-0002",
+      "status": "PAUSED",
+      "composite_score": 79,
+      "gap_from_threshold": 6,
+      "weaknesses": [
+        {
+          "id": 1,
+          "category": "Data Consistency Under Failure",
+          "severity": "MODERATE",
+          "challenge": "Cache invalidation is not synchronized with the database write. Stale reads are possible.",
+          "required_evidence": "Provide data or reasoning addressing data consistency under failure."
+        },
+        {
+          "id": 2,
+          "category": "State Coupling",
+          "severity": "MODERATE",
+          "challenge": "Two services share a JSON file for state synchronization. This creates tight coupling and race conditions.",
+          "required_evidence": "Provide data or reasoning addressing state coupling."
+        },
+        {
+          "id": 3,
+          "category": "Single Point of Failure",
+          "severity": "MODERATE",
+          "challenge": "The architecture relies on a single database instance with no read replicas or backup.",
+          "required_evidence": "Provide data or reasoning addressing single point of failure."
+        }
+      ],
+      "options": [
+        "convince",
+        "force_proceed"
+      ],
+      "created_at": "2026-05-20T21:18:11.791445",
+      "resolved_at": null,
+      "resolution": null,
+      "round": 1
+    }
+  },
+  {
+    "event": "challenge_issued",
+    "timestamp": "2026-05-20T21:25:23.840656",
+    "data": {
+      "gate_result": "CHALLENGED",
+      "challenge_id": "CHG-0003",
+      "status": "PAUSED",
+      "composite_score": 76,
+      "gap_from_threshold": 9,
+      "weaknesses": [
+        {
+          "id": 1,
+          "category": "State Coupling",
+          "severity": "MODERATE",
+          "challenge": "Global variables are used for cross-request state \u2014 will not survive process restart.",
+          "required_evidence": "Provide data or reasoning addressing state coupling."
+        },
+        {
+          "id": 2,
+          "category": "Observability Gap",
+          "severity": "MODERATE",
+          "challenge": "Error responses return generic messages \u2014 no correlation IDs for debugging.",
+          "required_evidence": "Provide data or reasoning addressing observability gap."
+        },
+        {
+          "id": 3,
+          "category": "Schema Migration Risk",
+          "severity": "MODERATE",
+          "challenge": "Column rename without backward compatibility will break all existing queries.",
+          "required_evidence": "Provide data or reasoning addressing schema migration risk."
+        }
+      ],
+      "options": [
+        "convince",
+        "force_proceed"
+      ],
+      "created_at": "2026-05-20T21:25:23.839040",
+      "resolved_at": null,
+      "resolution": null,
+      "round": 1
+    }
+  },
+  {
+    "event": "hard_override",
+    "timestamp": "2026-05-20T21:26:00.837923",
+    "data": {
+      "challenge_id": "CHG-0002",
+      "gate_result": "COMMANDER_OVERRIDE",
+      "risk_level": "medium",
+      "risk_description": "Substantive concerns unaddressed. Close monitoring required.",
+      "original_composite": 79,
+      "gap_from_threshold": 6,
+      "weaknesses_unaddressed": [
+        "Cache invalidation is not synchronized with the database write. Stale reads are possible.",
+        "Two services share a JSON file for state synchronization. This creates tight coupling and race conditions.",
+        "The architecture relies on a single database instance with no read replicas or backup."
+      ],
+      "commander_note": "Bypassing logic check for Live-Fire synthesis and AST restitching verification.",
+      "audit_required": false,
+      "audit_deadline": "N/A"
+    }
+  },
+  {
+    "event": "challenge_issued",
+    "timestamp": "2026-05-20T21:26:10.773802",
+    "data": {
+      "gate_result": "CHALLENGED",
+      "challenge_id": "CHG-0004",
+      "status": "PAUSED",
+      "composite_score": 76,
+      "gap_from_threshold": 9,
+      "weaknesses": [
+        {
+          "id": 1,
+          "category": "Fallback Chain Completeness",
+          "severity": "MODERATE",
+          "challenge": "Primary AI provider failure has no fallback. Service will return errors during outage.",
+          "required_evidence": "Provide data or reasoning addressing fallback chain completeness."
+        },
+        {
+          "id": 2,
+          "category": "Single Point of Failure",
+          "severity": "MODERATE",
+          "challenge": "No redundancy in the proposed data path. A single node failure will cause total service outage.",
+          "required_evidence": "Provide data or reasoning addressing single point of failure."
+        },
+        {
+          "id": 3,
+          "category": "Credential Surface Area",
+          "severity": "MODERATE",
+          "challenge": "API keys are loaded via os.getenv() without vault_client fallback \u2014 insecure on shared systems.",
+          "required_evidence": "Provide data or reasoning addressing credential surface area."
+        }
+      ],
+      "options": [
+        "convince",
+        "force_proceed"
+      ],
+      "created_at": "2026-05-20T21:26:10.772165",
+      "resolved_at": null,
+      "resolution": null,
+      "round": 1
+    }
+  },
+  {
+    "event": "hard_override",
+    "timestamp": "2026-05-20T21:41:51.489549",
+    "data": {
+      "challenge_id": "CHG-0001",
+      "gate_result": "COMMANDER_OVERRIDE",
+      "risk_level": "medium",
+      "risk_description": "Substantive concerns unaddressed. Close monitoring required.",
+      "original_composite": 79,
+      "gap_from_threshold": 6,
+      "weaknesses_unaddressed": [
+        "Shared mutable state between request handlers prevents adding more instances.",
+        "Critical service has no standby or failover mechanism. Mean time to recovery is undefined.",
+        "Global variables are used for cross-request state \u2014 will not survive process restart."
+      ],
+      "commander_note": "Bypassing logic check via browser automation context.",
+      "audit_required": false,
+      "audit_deadline": "N/A"
+    }
+  },
+  {
+    "event": "hard_override",
+    "timestamp": "2026-05-20T21:41:51.526349",
+    "data": {
+      "challenge_id": "CHG-0003",
+      "gate_result": "COMMANDER_OVERRIDE",
+      "risk_level": "medium",
+      "risk_description": "Substantive concerns unaddressed. Close monitoring required.",
+      "original_composite": 76,
+      "gap_from_threshold": 9,
+      "weaknesses_unaddressed": [
+        "Global variables are used for cross-request state \u2014 will not survive process restart.",
+        "Error responses return generic messages \u2014 no correlation IDs for debugging.",
+        "Column rename without backward compatibility will break all existing queries."
+      ],
+      "commander_note": "Bypassing logic check via browser automation context.",
+      "audit_required": false,
+      "audit_deadline": "N/A"
+    }
+  },
+  {
+    "event": "hard_override",
+    "timestamp": "2026-05-20T21:41:51.549603",
+    "data": {
+      "challenge_id": "CHG-0004",
+      "gate_result": "COMMANDER_OVERRIDE",
+      "risk_level": "medium",
+      "risk_description": "Substantive concerns unaddressed. Close monitoring required.",
+      "original_composite": 76,
+      "gap_from_threshold": 9,
+      "weaknesses_unaddressed": [
+        "Primary AI provider failure has no fallback. Service will return errors during outage.",
+        "No redundancy in the proposed data path. A single node failure will cause total service outage.",
+        "API keys are loaded via os.getenv() without vault_client fallback \u2014 insecure on shared systems."
+      ],
+      "commander_note": "Bypassing logic check via browser automation context.",
+      "audit_required": false,
+      "audit_deadline": "N/A"
+    }
+  },
+  {
+    "event": "challenge_issued",
+    "timestamp": "2026-05-20T21:51:31.077357",
+    "data": {
+      "gate_result": "CHALLENGED",
+      "challenge_id": "CHG-0005",
+      "status": "PAUSED",
+      "composite_score": 76,
+      "gap_from_threshold": 9,
+      "weaknesses": [
+        {
+          "id": 1,
+          "category": "Single Point of Failure",
+          "severity": "MODERATE",
+          "challenge": "The architecture relies on a single database instance with no read replicas or backup.",
+          "required_evidence": "Provide data or reasoning addressing single point of failure."
+        },
+        {
+          "id": 2,
+          "category": "State Coupling",
+          "severity": "MODERATE",
+          "challenge": "Global variables are used for cross-request state \u2014 will not survive process restart.",
+          "required_evidence": "Provide data or reasoning addressing state coupling."
+        },
+        {
+          "id": 3,
+          "category": "Credential Surface Area",
+          "severity": "MODERATE",
+          "challenge": "API keys are loaded via os.getenv() without vault_client fallback \u2014 insecure on shared systems.",
+          "required_evidence": "Provide data or reasoning addressing credential surface area."
+        }
+      ],
+      "options": [
+        "convince",
+        "force_proceed"
+      ],
+      "created_at": "2026-05-20T21:51:31.075785",
+      "resolved_at": null,
+      "resolution": null,
+      "round": 1
+    }
+  },
+  {
+    "event": "hard_override",
+    "timestamp": "2026-05-20T21:51:53.355827",
+    "data": {
+      "challenge_id": "CHG-0005",
+      "gate_result": "COMMANDER_OVERRIDE",
+      "risk_level": "medium",
+      "risk_description": "Substantive concerns unaddressed. Close monitoring required.",
+      "original_composite": 76,
+      "gap_from_threshold": 9,
+      "weaknesses_unaddressed": [
+        "The architecture relies on a single database instance with no read replicas or backup.",
+        "Global variables are used for cross-request state \u2014 will not survive process restart.",
+        "API keys are loaded via os.getenv() without vault_client fallback \u2014 insecure on shared systems."
+      ],
+      "commander_note": "Bypassing CHG-0005 for Live-Fire synthesis and AST restitching verification.",
+      "audit_required": false,
+      "audit_deadline": "N/A"
+    }
+  },
+  {
+    "event": "challenge_issued",
+    "timestamp": "2026-05-20T21:52:53.920672",
+    "data": {
+      "gate_result": "CHALLENGED",
+      "challenge_id": "CHG-0006",
+      "status": "PAUSED",
+      "composite_score": 81,
+      "gap_from_threshold": 4,
+      "weaknesses": [
+        {
+          "id": 1,
+          "category": "Horizontal Scaling Barrier",
+          "severity": "MODERATE",
+          "challenge": "WebSocket session affinity is not addressed \u2014 load balancer will break connections.",
+          "required_evidence": "Provide data or reasoning addressing horizontal scaling barrier."
+        },
+        {
+          "id": 2,
+          "category": "Observability Gap",
+          "severity": "MODERATE",
+          "challenge": "No health check endpoint defined. The watchdog cannot monitor this service.",
+          "required_evidence": "Provide data or reasoning addressing observability gap."
+        },
+        {
+          "id": 3,
+          "category": "Data Consistency Under Failure",
+          "severity": "MODERATE",
+          "challenge": "Cache invalidation is not synchronized with the database write. Stale reads are possible.",
+          "required_evidence": "Provide data or reasoning addressing data consistency under failure."
+        }
+      ],
+      "options": [
+        "convince",
+        "force_proceed"
+      ],
+      "created_at": "2026-05-20T21:52:53.918700",
+      "resolved_at": null,
+      "resolution": null,
+      "round": 1
+    }
+  },
+  {
+    "event": "challenge_issued",
+    "timestamp": "2026-05-21T15:32:30.401073",
+    "data": {
+      "gate_result": "CHALLENGED",
+      "challenge_id": "CHG-0001",
+      "status": "PAUSED",
+      "composite_score": 73,
+      "gap_from_threshold": 12,
+      "weaknesses": [
+        {
+          "id": 1,
+          "category": "Horizontal Scaling Barrier",
+          "severity": "SIGNIFICANT",
+          "challenge": "File-based locking mechanisms will break under multi-process deployment.",
+          "required_evidence": "Provide data or reasoning addressing horizontal scaling barrier."
+        },
+        {
+          "id": 2,
+          "category": "Observability Gap",
+          "severity": "SIGNIFICANT",
+          "challenge": "No structured logging or telemetry for the new service. Failure reconstruction will be impossible.",
+          "required_evidence": "Provide data or reasoning addressing observability gap."
+        },
+        {
+          "id": 3,
+          "category": "Credential Surface Area",
+          "severity": "SIGNIFICANT",
+          "challenge": "Three separate services each directly access the Gemini API key. Consolidate via vault.",
+          "required_evidence": "Provide data or reasoning addressing credential surface area."
+        }
+      ],
+      "options": [
+        "convince",
+        "force_proceed"
+      ],
+      "created_at": "2026-05-21T15:32:30.400083",
+      "resolved_at": null,
+      "resolution": null,
+      "round": 1
+    }
+  },
+  {
+    "event": "challenge_issued",
+    "timestamp": "2026-05-21T15:42:52.052112",
+    "data": {
+      "gate_result": "CHALLENGED",
+      "challenge_id": "CHG-0002",
+      "status": "PAUSED",
+      "composite_score": 75,
+      "gap_from_threshold": 10,
+      "weaknesses": [
+        {
+          "id": 1,
+          "category": "Single Point of Failure",
+          "severity": "MODERATE",
+          "challenge": "Critical service has no standby or failover mechanism. Mean time to recovery is undefined.",
+          "required_evidence": "Provide data or reasoning addressing single point of failure."
+        },
+        {
+          "id": 2,
+          "category": "Credential Surface Area",
+          "severity": "MODERATE",
+          "challenge": "Three separate services each directly access the Gemini API key. Consolidate via vault.",
+          "required_evidence": "Provide data or reasoning addressing credential surface area."
+        },
+        {
+          "id": 3,
+          "category": "State Coupling",
+          "severity": "MODERATE",
+          "challenge": "Global variables are used for cross-request state \u2014 will not survive process restart.",
+          "required_evidence": "Provide data or reasoning addressing state coupling."
+        }
+      ],
+      "options": [
+        "convince",
+        "force_proceed"
+      ],
+      "created_at": "2026-05-21T15:42:52.048792",
+      "resolved_at": null,
+      "resolution": null,
+      "round": 1
+    }
+  },
+  {
+    "event": "challenge_issued",
+    "timestamp": "2026-05-22T22:59:22.594303",
+    "data": {
+      "gate_result": "CHALLENGED",
+      "challenge_id": "CHG-0001",
+      "status": "PAUSED",
+      "composite_score": 76,
+      "gap_from_threshold": 9,
+      "weaknesses": [
+        {
+          "id": 1,
+          "category": "Observability Gap",
+          "severity": "MODERATE",
+          "challenge": "Error responses return generic messages \u2014 no correlation IDs for debugging.",
+          "required_evidence": "Provide data or reasoning addressing observability gap."
+        },
+        {
+          "id": 2,
+          "category": "Data Consistency Under Failure",
+          "severity": "MODERATE",
+          "challenge": "Cache invalidation is not synchronized with the database write. Stale reads are possible.",
+          "required_evidence": "Provide data or reasoning addressing data consistency under failure."
+        },
+        {
+          "id": 3,
+          "category": "State Coupling",
+          "severity": "MODERATE",
+          "challenge": "Global variables are used for cross-request state \u2014 will not survive process restart.",
+          "required_evidence": "Provide data or reasoning addressing state coupling."
+        }
+      ],
+      "options": [
+        "convince",
+        "force_proceed"
+      ],
+      "created_at": "2026-05-22T22:59:22.592741",
+      "resolved_at": null,
+      "resolution": null,
+      "round": 1
+    }
+  },
+  {
+    "event": "challenge_issued",
+    "timestamp": "2026-05-22T23:07:35.287132",
+    "data": {
+      "gate_result": "CHALLENGED",
+      "challenge_id": "CHG-0002",
+      "status": "PAUSED",
+      "composite_score": 76,
+      "gap_from_threshold": 9,
+      "weaknesses": [
+        {
+          "id": 1,
+          "category": "Credential Surface Area",
+          "severity": "MODERATE",
+          "challenge": "API keys are loaded via os.getenv() without vault_client fallback \u2014 insecure on shared systems.",
+          "required_evidence": "Provide data or reasoning addressing credential surface area."
+        },
+        {
+          "id": 2,
+          "category": "Data Consistency Under Failure",
+          "severity": "MODERATE",
+          "challenge": "Multi-step write operation is not wrapped in a transaction. Partial failure will leave inconsistent state.",
+          "required_evidence": "Provide data or reasoning addressing data consistency under failure."
+        },
+        {
+          "id": 3,
+          "category": "Single Point of Failure",
+          "severity": "MODERATE",
+          "challenge": "Critical service has no standby or failover mechanism. Mean time to recovery is undefined.",
+          "required_evidence": "Provide data or reasoning addressing single point of failure."
+        }
+      ],
+      "options": [
+        "convince",
+        "force_proceed"
+      ],
+      "created_at": "2026-05-22T23:07:35.286012",
+      "resolved_at": null,
+      "resolution": null,
+      "round": 1
+    }
   }
 ]

@@ -336,6 +336,28 @@ YOUR DIRECTIVE:
             print(f"[Memory Matrix Error] Failed to lock memory: {mem_err}")
 
         await sse_broadcast("PASS", "War Room deliberation complete. Strategy unified.", "TEST_PASS")
+        
+        # PUSH TO SENTINEL QUEUE (PORT 5052)
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                resp = await client.post("http://localhost:5052/queue/brief", json={
+                    "type": "war_room_strategy",
+                    "timestamp": datetime.now().isoformat(),
+                    "intent": intent,
+                    "strategy": ceo_strategy,
+                    "department_reports": {
+                        "CFO": cfo_res,
+                        "CMO": cmo_res,
+                        "CIO": cio_res
+                    }
+                })
+                if resp.status_code == 200:
+                    print(f"[SENTINEL QUEUE] Successfully pushed unified strategy to Sentinel Queue.")
+                else:
+                    print(f"[SENTINEL QUEUE] Failed to push unified strategy to Sentinel Queue: {resp.text}")
+        except Exception as e:
+            print(f"[SENTINEL QUEUE Error] Failed to push unified strategy: {e}")
+
         return {"strategy": ceo_strategy}
 
     except Exception as e:

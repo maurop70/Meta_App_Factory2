@@ -1,7 +1,7 @@
 """
 cfo_controller.py — Risk Guardian and Local Financial State
 ═══════════════════════════════════════════════════════════
-Replaces the latency-heavy n8n Antigravity_CFO_Execution_Controller.
+Replaces the legacy, latency-heavy Antigravity_CFO_Execution_Controller.
 Manages the native `finance_state.json` config and evaluates the `MAX_BURN` hard boundary.
 """
 

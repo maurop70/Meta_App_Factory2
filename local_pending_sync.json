@@ -38200,9 +38200,21 @@
       "latency_ms": null,
       "error": "Watchdog unreachable",
       "completed_at": "2026-05-14T17:50:30.221012"
+    },
+    {
+      "id": "e0d51889-4793-4f9c-aee8-4ea4ff424a4b",
+      "timestamp": "2026-05-20T14:00:06.354318",
+      "project": "child_app",
+      "url": "https://humanresource.app.n8n.cloud/webhook/critic-v2",
+      "payload_hash": "cb4242a24cc9f465",
+      "status": "failed",
+      "response_code": null,
+      "latency_ms": null,
+      "error": "Watchdog unreachable",
+      "completed_at": "2026-05-20T14:00:06.406189"
     }
   ],
   "pending_count": 7,
   "safe_buffer_mode": false,
-  "last_log_event": "2026-05-14T17:50:30.121196"
+  "last_log_event": "2026-05-20T14:00:06.362493"
 }

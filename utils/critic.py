@@ -63,7 +63,7 @@ class ArtisanCritic:
         }
 
         try:
-            # Give N8N a moment to fully initialize the new workflow
+            # Give the system a moment to fully initialize the new workflow
             time.sleep(5)
             _v3_status = healed_post(webhook_url, test_payload)
 

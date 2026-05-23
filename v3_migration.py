@@ -245,7 +245,7 @@ def validate_app(app_name: str, app_dir: str) -> dict:
         before = sm.get_stats()
 
         # Simulate a push to a non-existent webhook (will buffer or fail)
-        test_url = "https://humanresource.app.n8n.cloud/webhook/v3-migration-test"
+        test_url = "https://humanresource.app.bridge.cloud/webhook/v3-migration-test"
         test_payload = {
             "test": True,
             "app": app_name,
@@ -311,7 +311,7 @@ def main():
     top3 = [
         ("Alpha_V2_Genesis", os.path.join(FACTORY_DIR, "Alpha_V2_Genesis")),
         ("Sentinel_Bridge", os.path.join(FACTORY_DIR, "Sentinel_Bridge")),
-        ("HR_N8N_Bridge", os.path.join(FACTORY_DIR, "HR_N8N_Bridge")),
+        ("HR_Bridge", os.path.join(FACTORY_DIR, "HR_Bridge")),
     ]
 
     for name, path in top3:

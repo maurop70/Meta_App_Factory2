@@ -7,7 +7,35 @@ from pathlib import Path
 def main():
     parser = argparse.ArgumentParser(description="Atomizer Engine for physical disk mutations and AST synthesis.")
     parser.add_argument("--payload", type=str, required=True, help="Blueprint JSON payload to execute.")
+    parser.add_argument("--target", type=str, required=False, help="Target file path to write the payload content directly.")
     args = parser.parse_args()
+
+    # If --target is specified, we perform physical disk mutation directly
+    if args.target:
+        try:
+            # Clean/parse the payload if it is JSON-encoded
+            try:
+                content = json.loads(args.payload)
+            except json.JSONDecodeError:
+                content = args.payload
+            
+            target_file = Path(args.target)
+            if ".." in target_file.parts or target_file.is_absolute():
+                sys.stderr.write(f"SECURITY FATAL: Path traversal block triggered on '{args.target}'\n")
+                sys.exit(2)
+            
+            # Ensure parent directories exist
+            target_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(target_file, "w", encoding="utf-8") as f:
+                f.write(content)
+            
+            print(f"====================================================")
+            print(f"MUTATION SUCCESS: Wrote {len(content)} bytes to {args.target}")
+            print(f"====================================================")
+            sys.exit(0)
+        except Exception as e:
+            sys.stderr.write(f"FATAL: Failed to write to target {args.target}: {e}\n")
+            sys.exit(1)
 
     try:
         blueprint = json.loads(args.payload)
@@ -48,3 +76,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

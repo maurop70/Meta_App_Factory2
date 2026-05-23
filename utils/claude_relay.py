@@ -62,12 +62,12 @@ class ClaudeRelay:
 
     def send_task(self, task):
         """
-        Sends a task command to the n8n webhook.
+        Sends a task command to the system webhook.
         """
         payload = {"task": task}
         
         try:
-            logger.info(f"Sending task to n8n: {task}")
+            logger.info(f"Sending task to webhook: {task}")
             with sentry_sdk.start_transaction(op="task", name=f"run_claude_{task[:20]}"):
                 _v3_status = healed_post(self.webhook_url, payload)
 
