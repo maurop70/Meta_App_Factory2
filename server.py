@@ -11,6 +11,11 @@ from google.antigravity import Agent, LocalAgentConfig
 from google.antigravity.connections.connection import Connection, ConnectionStrategy
 from google.antigravity.types import Step, StepType, StepSource, StepTarget, StepStatus
 
+from dotenv import load_dotenv
+import traceback
+
+load_dotenv()
+
 class NativeProxyTransport:
     def __init__(self):
         self.proxy_url = "http://127.0.0.1:5051/v1/chat/completions"
@@ -26,12 +31,17 @@ class NativeProxyTransport:
             ]
         }
         print(f"[NativeProxyTransport] Routing inference to local proxy on Port 5051...")
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            response = await client.post(self.proxy_url, json=payload)
-        response.raise_for_status()
-        resp_json = response.json()
-        print("[NativeProxyTransport] Successfully received 200 OK from Sanitization Proxy.")
-        return resp_json["choices"][0]["message"]["content"]
+        try:
+            async with httpx.AsyncClient(timeout=60.0, trust_env=False) as client:
+                response = await client.post(self.proxy_url, json=payload)
+            response.raise_for_status()
+            resp_json = response.json()
+            print("[NativeProxyTransport] Successfully received 200 OK from Sanitization Proxy.")
+            return resp_json["choices"][0]["message"]["content"]
+        except Exception as e:
+            print(f"[NativeProxyTransport] FAILED to connect/request proxy on Port 5051: {e}")
+            traceback.print_exc()
+            raise e
 
 class NativeProxyConnection(Connection):
     def __init__(self, transport: NativeProxyTransport):
@@ -197,6 +207,34 @@ async def chat_stream(request: Request):
         yield "data: [DONE]\n\n"
         
     return StreamingResponse(generator(), media_type="text/event-stream")
+
+@app.api_route("/api/apps/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
+async def proxy_apps(path: str, request: Request):
+    async with httpx.AsyncClient(trust_env=False) as client:
+        method = request.method
+        url = f"http://127.0.0.1:5000/api/apps/{path}"
+        headers = dict(request.headers)
+        headers.pop("host", None)
+        params = dict(request.query_params)
+        body = await request.body()
+        resp = await client.request(method, url, headers=headers, params=params, content=body, timeout=10.0)
+        return StreamingResponse(
+            resp.iter_bytes(),
+            status_code=resp.status_code,
+            headers=dict(resp.headers)
+        )
+
+@app.get("/api/qa/stream")
+async def proxy_qa_stream(request: Request):
+    client = httpx.AsyncClient(trust_env=False)
+    req = client.build_request("GET", "http://127.0.0.1:5000/api/qa/stream", headers=request.headers.items())
+    resp = await client.send(req, stream=True)
+    return StreamingResponse(
+        resp.aiter_bytes(),
+        status_code=resp.status_code,
+        headers=dict(resp.headers)
+    )
+
 
 if __name__ == '__main__':
     print("[MasterArchitect] ONLINE. Antigravity SDK Integrated on Port 5050 with NativeProxyTransport.")
