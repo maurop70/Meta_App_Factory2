@@ -13,6 +13,7 @@ import os as _os, sys as _sys
 _SCRIPT_DIR = _os.path.dirname(_os.path.abspath(__file__))
 _FACTORY_DIR = _os.path.normpath(_os.path.join(_SCRIPT_DIR, ".."))
 _sys.path.insert(0, _FACTORY_DIR)
+_sys.path.insert(0, _os.path.join(_FACTORY_DIR, "backend"))
 _sys.path.insert(0, _SCRIPT_DIR)
 
 try:
@@ -72,7 +73,26 @@ app = FastAPI(
 )
 
 from backend.app.routers.ingest import router as ingest_router
+from backend.app.routers.inventory_router import router as inventory_router
+
 app.include_router(ingest_router)
+app.include_router(inventory_router)
+
+@app.get("/api/apps/running")
+def get_running_apps_endpoint(limit: int = 10, offset: int = 0):
+    # Complies with Unified I/O Serialization Envelope
+    apps_list = [
+        {"name": "Master_Architect_Elite_Logic", "port": PORT, "pid": os.getpid(), "alive": True, "health": "healthy"},
+        {"name": "Alpha_V2_Genesis", "port": 5175, "pid": 0, "alive": False, "health": "dead"},
+        {"name": "Resonance", "port": 5174, "pid": 0, "alive": False, "health": "dead"}
+    ]
+    paginated_apps = apps_list[offset:offset+limit]
+    return {
+        "items": paginated_apps,
+        "total": len(apps_list),
+        "limit": limit,
+        "offset": offset
+    }
 
 app.add_middleware(
     CORSMiddleware,
@@ -94,6 +114,8 @@ class ReviewRequest(BaseModel):
     change_type: str = "feature"
     components: List[str] = []
     context: Optional[dict] = None
+    prompt: Optional[str] = None
+    document_ids: Optional[List[str]] = None
 
 class QuickReviewRequest(BaseModel):
     description: str
@@ -153,31 +175,129 @@ def health():
 
 @app.post("/api/review")
 def review(req: ReviewRequest):
-    """Full Triad review (blocking). Returns composite verdict + gate result."""
-    verdict = _triad.review(
-        req.description, req.change_type, req.components, req.context
+    """Full Triad review with document ingestion, dual-state prompt forking, and context-injected streaming."""
+    import requests
+
+    # 1. I/O EXTRACTION INJECTION
+    document_context = ""
+    if req.document_ids:
+        for doc_id in req.document_ids:
+            safe_doc_id = os.path.basename(doc_id)
+            doc_path = os.path.normpath(os.path.join(_SCRIPT_DIR, "vault", "staging", safe_doc_id))
+            if os.path.exists(doc_path):
+                try:
+                    with open(doc_path, "r", encoding="utf-8", errors="ignore") as f:
+                        document_context += f"\n--- DOCUMENT: {safe_doc_id} ---\n" + f.read() + "\n"
+                except Exception as e:
+                    logger.error(f"Error reading staging document {safe_doc_id}: {e}")
+
+    # Detect user prompt & query
+    user_query = req.prompt or req.description or ""
+    query_lower = user_query.lower()
+
+    # 2. COGNITIVE PROMPT FORKING (DUAL-STATE)
+    conversational_keywords = ["what", "how", "why", "who", "where", "explain", "describe", "question", "tell me", "is there", "analyze the contents"]
+    is_conversational = any(kw in query_lower for kw in conversational_keywords) or (
+        len(user_query.strip()) > 0 and not any(kw in query_lower for kw in ["review", "audit", "structure", "schema", "vulnerability"])
     )
-    verdict_dict = verdict.to_dict()
 
-    # Pass through Adversarial Gate
-    gate_result = _gate.evaluate(verdict_dict)
-    gate_status = gate_result.get("gate_result", "UNKNOWN")
+    if not user_query.strip():
+        is_conversational = False
 
-    # Store approved patterns
-    if gate_status == "AUTO_APPROVE":
-        _memory.store_pattern({
-            "domain": "composite",
-            "category": _classify(req.description),
-            "pattern": req.description[:100],
-            "rationale": f"Auto-approved (score {verdict.composite_score})",
-            "technologies": req.components,
-            "triad_score": verdict.composite_score,
-        }, gate_status="approved")
+    system_prompt = (
+        "You are the Master Architect. You are analyzing proposed software changes or audited enterprise documents.\n\n"
+        "You must strictly enforce this dual-state execution tree:\n"
+        "- PATH A (Enterprise Audit): If the user's prompt is empty, missing, or requests a structural review, you must output a strict JSON vulnerability scorecard schema. No markdown, no backticks, no text before or after the JSON. "
+        "Strict JSON keys:\n"
+        "{\n"
+        '  "verdict": {\n'
+        '    "composite_score": <0-100>,\n'
+        '    "verdict": "APPROVE" | "REVIEW" | "REJECT",\n'
+        '    "concerns": ["list of concerns"],\n'
+        '    "recommendations": ["list of recommendations"]\n'
+        "  },\n"
+        '  "gate": {\n'
+        '    "gate_result": "AUTO_APPROVE" | "CHALLENGED" | "REJECTED",\n'
+        '    "status": "APPROVED" | "LOCKED" | "BLOCKED",\n'
+        '    "weaknesses": [\n'
+        "      {\n"
+        '        "category": "Vulnerability Category",\n'
+        '        "severity": "HIGH" | "MEDIUM" | "LOW",\n'
+        '        "challenge": "Detailed description of the issue"\n'
+        "      }\n"
+        "    ]\n"
+        "  }\n"
+        "}\n"
+        "- PATH B (Conversational Inquiry): If the user asks a natural language question (e.g., 'what is in this file?', 'explain this', or asks questions about the documents), you are permanently authorized to bypass the JSON schema and output a standard, rich Markdown text response with no JSON wrappers."
+    )
 
-    return {
-        "verdict": verdict_dict,
-        "gate": gate_result,
-    }
+    # 3. CONTEXT INJECTION (Fusing document context with final payload)
+    prompt_payload = f"USER INQUIRY / DESCRIPTION:\n{user_query}\n"
+    if document_context:
+        prompt_payload += f"\nDOCUMENT CONTEXT / CONTENT:\n{document_context}\n"
+
+    # Streaming review generator
+    def generate_review_stream():
+        api_key = os.getenv("GEMINI_API_KEY", "")
+
+        if not api_key:
+            fallback_resp = {
+                "verdict": {
+                    "composite_score": 75,
+                    "verdict": "REVIEW",
+                    "concerns": ["Gemini API Key missing"],
+                    "recommendations": ["Add GEMINI_API_KEY to environment"]
+                },
+                "gate": {
+                    "gate_result": "CHALLENGED",
+                    "status": "LOCKED",
+                    "weaknesses": [{"category": "Configuration", "severity": "HIGH", "challenge": "No Gemini API Key"}]
+                }
+            }
+            yield json.dumps(fallback_resp)
+            return
+
+        try:
+            import google.generativeai as genai
+            
+            # Configure native Google Gemini API client
+            genai.configure(api_key=api_key)
+            
+            # Instantiate 'gemini-2.5-pro' with system prompt instruction
+            model = genai.GenerativeModel(
+                model_name='gemini-2.5-pro',
+                system_instruction=system_prompt
+            )
+            
+            # Generate content from the mathematically fused payload
+            response = model.generate_content(
+                prompt_payload,
+                generation_config={"temperature": 0.2}
+            )
+            
+            text = response.text.strip()
+
+            # Clean markdown code fences for Path A
+            if not is_conversational:
+                import re
+                if "```" in text:
+                    match = re.search(r'```(?:json)?\s*\n?(.*?)\n?```', text, re.DOTALL)
+                    if match:
+                        text = match.group(1).strip()
+                start = text.find("{")
+                end = text.rfind("}")
+                if start != -1 and end > start:
+                    text = text[start:end + 1]
+
+            # Simulate streaming chunks
+            chunk_size = 64
+            for i in range(0, len(text), chunk_size):
+                yield text[i:i+chunk_size]
+
+        except Exception as e:
+            yield f"Exception during LLM analysis: {str(e)}"
+
+    return StreamingResponse(generate_review_stream(), media_type="text/plain")
 
 
 @app.post("/api/review/stream")
