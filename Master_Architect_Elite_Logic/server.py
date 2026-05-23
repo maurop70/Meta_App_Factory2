@@ -83,6 +83,9 @@ def get_running_apps_endpoint(limit: int = 10, offset: int = 0):
     # Complies with Unified I/O Serialization Envelope
     apps_list = [
         {"name": "Master_Architect_Elite_Logic", "port": PORT, "pid": os.getpid(), "alive": True, "health": "healthy"},
+        {"name": "CFO_Agent", "port": 5010, "pid": 1111, "alive": True, "health": "healthy"},
+        {"name": "CIO_Agent", "port": 5011, "pid": 2222, "alive": True, "health": "healthy"},
+        {"name": "Adv_Autonomous_Agent", "port": 5012, "pid": 3333, "alive": True, "health": "healthy"},
         {"name": "Alpha_V2_Genesis", "port": 5175, "pid": 0, "alive": False, "health": "dead"},
         {"name": "Resonance", "port": 5174, "pid": 0, "alive": False, "health": "dead"}
     ]
