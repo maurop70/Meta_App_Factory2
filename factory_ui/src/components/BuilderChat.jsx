@@ -47,6 +47,7 @@ export default function BuilderChat() {
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [attachments, setAttachments] = useState([]);
+  const [cachedDocumentIds, setCachedDocumentIds] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
   
   const terminalEndRef = useRef(null);
@@ -86,6 +87,7 @@ export default function BuilderChat() {
       
       const data = await res.json();
       setAttachments(prev => [...prev, data]);
+      setCachedDocumentIds(prev => Array.from(new Set([...prev, data.document_id])));
     } catch (error) {
       setChatHistory(prev => [...prev, { role: 'system', content: `[INGESTION FRACTURE] ${error.message}` }]);
     } finally {
@@ -96,6 +98,7 @@ export default function BuilderChat() {
 
   const removeAttachment = (idToRemove) => {
     setAttachments(prev => prev.filter(att => att.document_id !== idToRemove));
+    setCachedDocumentIds(prev => prev.filter(id => id !== idToRemove));
   };
 
   const handleSynthesize = async () => {
@@ -103,10 +106,13 @@ export default function BuilderChat() {
     
     const userMsg = input;
     const currentAttachments = [...attachments];
+    const newDocIds = currentAttachments.map(a => a.document_id);
+    const updatedCachedDocIds = Array.from(new Set([...cachedDocumentIds, ...newDocIds]));
     
     setChatHistory(prev => [...prev, { role: 'user', content: userMsg || '[ATTACHED PAYLOAD TRANSMITTED]' }]);
     setInput('');
     setAttachments([]);
+    setCachedDocumentIds(updatedCachedDocIds);
     setIsStreaming(true);
     
     try {
@@ -116,7 +122,7 @@ export default function BuilderChat() {
         body: JSON.stringify({ 
           description: userMsg || "Evaluate attached documents.", 
           prompt: userMsg || "Evaluate attached documents.",
-          document_ids: currentAttachments.map(a => a.document_id)
+          document_ids: updatedCachedDocIds
         })
       });
       
