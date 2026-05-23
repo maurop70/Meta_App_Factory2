@@ -294,6 +294,19 @@ class VentureScoutService:
         for p in new_pitches:
             if p["id"] not in existing_ids:
                 existing_pitches.append(p)
+                # Push to Sentinel Queue
+                try:
+                    resp = requests.post("http://localhost:5052/queue/brief", json={
+                        "type": "venture_scout_pitch",
+                        "timestamp": datetime.now().isoformat(),
+                        "payload": p
+                    }, timeout=5)
+                    if resp.status_code == 200:
+                        logger.info(f"Venture Scout: Successfully pushed pitch {p['id']} to Sentinel Queue.")
+                    else:
+                        logger.warning(f"Venture Scout: Failed to push pitch {p['id']} to Sentinel Queue: {resp.text}")
+                except Exception as e:
+                    logger.error(f"Venture Scout: Error pushing pitch to Sentinel Queue: {e}")
         
         self.save_pitches(existing_pitches)
         logger.info(f"Venture Scout: Loop complete. {len(new_pitches)} new high-signal pitches generated.")

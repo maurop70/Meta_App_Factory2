@@ -44,7 +44,7 @@ class Atomizer:
 
     def evaluate(self, prompt):
         """
-        Analyzes the prompt complexity using the N8N bridge.
+        Analyzes the prompt complexity using the system bridge.
         Returns a list of chunks if complex, or None/Empty list if simple.
         """
         analysis_prompt = (
@@ -88,7 +88,7 @@ class Atomizer:
                         if attempt < retry_count - 1: continue
                         return []
 
-                    # The response from N8N might be {"text": "..."} or {"output": "..."}
+                    # The response from the Atomizer agent might be {"text": "..."} or {"output": "..."}
                     response = response_data.get("text") or response_data.get("output") or response_data
                 else:
                     # Fallback to Council (Legacy)

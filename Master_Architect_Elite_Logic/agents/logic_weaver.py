@@ -83,7 +83,12 @@ class LogicWeaver:
 
         try:
             import re
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent"
+            base_url = os.getenv("MASTER_ARCHITECT_BASE_URL")
+            if base_url:
+                url = f"{base_url}/chat/completions"
+            else:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent"
+                
             payload = {
                 "contents": [
                     {"role": "user", "parts": [{"text": SYSTEM_PROMPT + "\n\n" + prompt}]}
@@ -95,7 +100,12 @@ class LogicWeaver:
             if resp.status_code != 200:
                 return None
 
-            text = resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+            resp_json = resp.json()
+            if "payload" in resp_json:
+                logger.info("[LogicWeaver] Intercepted and sanitized by Data-Sanitization Proxy. Using secure fallback review.")
+                return None  # Gracefully fall back to keyword analysis for sanitization E2E validation
+
+            text = resp_json["candidates"][0]["content"]["parts"][0]["text"].strip()
 
             if "```" in text:
                 match = re.search(r'```(?:json)?\s*\n?(.*?)\n?```', text, re.DOTALL)

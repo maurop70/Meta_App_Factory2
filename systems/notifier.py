@@ -1,7 +1,7 @@
 """
 notifier.py — System Memos & Sentinel Alerts
 ══════════════════════════════════════════════════
-Replaces the Legacy n8n Cloud webhooks for sub-100ms routing.
+Replaces the legacy Cloud webhooks for sub-100ms routing.
 """
 import os
 import json

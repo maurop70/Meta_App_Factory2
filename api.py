@@ -92,6 +92,8 @@ from api_venture_architect import venture_router
 from api_playwright_bridge import playwright_router
 from api_qa_orchestrator import orchestrator_router
 from api_alpha_genesis import router as alpha_router, sweep_zombie_jobs
+from agents.cio_agent import router as cio_agent_router
+from agents.warroom_agent import router as warroom_agent_router
 
 app = FastAPI(title="Antigravity Meta App Factory API", version="3.0", lifespan=lifespan)
 app.include_router(builder_router, prefix="/api/v1")
@@ -102,6 +104,8 @@ app.include_router(venture_router)
 app.include_router(playwright_router)
 app.include_router(orchestrator_router)
 app.include_router(alpha_router)
+app.include_router(cio_agent_router)
+app.include_router(warroom_agent_router)
 
 # ── CORS ──────────────────────────────────────────────────────
 app.add_middleware(
@@ -2904,7 +2908,7 @@ def v3_map_data():
     outer_agent_names = [
         ("Alpha_V2_Genesis", None, "primary"),
         ("Sentinel_Bridge", None, "primary"),
-        ("HR_N8N_Bridge", None, "primary"),
+        ("HR_Bridge", None, "primary"),
         ("Aether", None, "primary"),
         ("Project_Aether", None, "primary"),
         ("Resonance", 5006, "primary"),
@@ -2913,7 +2917,7 @@ def v3_map_data():
         ("Aegis_Agent", None, "primary"),
         ("Command_Center", None, "primary"),
         ("Adv_Autonomous_Agent", None, "secondary"),
-        ("Claude_N8N_Bridge", None, "secondary"),
+        ("Claude_Bridge", None, "secondary"),
         ("Delegate_Vault", None, "secondary"),
         ("Delegate_Vault_v2", None, "secondary"),
         ("MetaTestApp", None, "secondary"),
@@ -2955,7 +2959,7 @@ def v3_map_data():
     default_statuses = {
         "Alpha_V2_Genesis": "sent",
         "Sentinel_Bridge": "sent",
-        "HR_N8N_Bridge": "sent",
+        "HR_Bridge": "sent",
         "Aether": "sent",
         "Project_Aether": "sent",
         "Resonance": "sent",
@@ -2964,7 +2968,7 @@ def v3_map_data():
         "Aegis_Agent": "sent",
         "Command_Center": "sent",
         "Adv_Autonomous_Agent": "retrofitted",
-        "Claude_N8N_Bridge": "retrofitted",
+        "Claude_Bridge": "retrofitted",
         "Delegate_Vault": "retrofitted",
         "Delegate_Vault_v2": "retrofitted",
         "MetaTestApp": "retrofitted",

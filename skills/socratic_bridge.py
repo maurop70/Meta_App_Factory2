@@ -1,7 +1,7 @@
 """
 socratic_bridge.py — Resonance: Socratic Bridge (Native Python)
 ══════════════════════════════════════════════════════════════════════════════
-Translates the n8n HTTP workflow to native Python for sub-second latency.
+Translates the legacy Socratic HTTP workflow to native Python for sub-second latency.
 Handles the 'Agent Handshake' between the CMO (Strategy) and CFO (Math Witness).
 """
 

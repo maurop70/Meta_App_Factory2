@@ -20,7 +20,7 @@
       "last_timestamp": "2026-03-13T12:04:46.892199",
       "last_status": "sent"
     },
-    "v3_test_HR_N8N_Bridge": {
+    "v3_test_HR_Bridge": {
       "last_timestamp": "2026-03-13T12:04:48.049117",
       "last_status": "sent"
     },
@@ -32,7 +32,7 @@
       "last_timestamp": "2026-03-13T12:20:21.967869",
       "last_status": "sent"
     },
-    "HR_N8N_Bridge": {
+    "HR_Bridge": {
       "last_timestamp": "2026-03-13T12:20:23.619557",
       "last_status": "sent"
     },

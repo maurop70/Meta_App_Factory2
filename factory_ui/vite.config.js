@@ -45,6 +45,18 @@ export default defineConfig({
         target: 'http://127.0.0.1:5000',
         changeOrigin: true,
       },
+      '/api/apps': {
+        target: 'http://127.0.0.1:5000',
+        changeOrigin: true,
+      },
+      '/api/commands': {
+        target: 'http://127.0.0.1:5000',
+        changeOrigin: true,
+      },
+      '/api/v3': {
+        target: 'http://127.0.0.1:5000',
+        changeOrigin: true,
+      },
       '/api/v1/architect': {
         target: 'http://127.0.0.1:5060',
         changeOrigin: true,
@@ -63,7 +75,7 @@ export default defineConfig({
       },
       // 3. Route Enterprise/Inventory traffic to SQLite Engine
       '/api': {
-        target: 'http://127.0.0.1:5050',
+        target: 'http://127.0.0.1:5005',
         changeOrigin: true,
         secure: false
       },

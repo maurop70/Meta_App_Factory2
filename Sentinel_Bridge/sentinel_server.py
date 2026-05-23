@@ -1005,13 +1005,13 @@ async def google_auth_callback(code: str = Query(...),
                                  state: str = Query("work")):
     """
     OAuth2 callback — delegates to factory GoogleAuth for token exchange.
-    N8N_SKIP_AUTH_ON_OAUTH_CALLBACK: when set, bypass any n8n auth
+    SKIP_AUTH_ON_OAUTH_CALLBACK: when set, bypass any auth
     middleware that might block the callback (fixes 401 errors).
     """
-    # N8N auth bypass guard
-    skip_n8n = "true"
-    if skip_n8n == "true":
-        logger.info("OAuth callback — N8N auth bypass active")
+    # Auth bypass guard
+    skip_bypass = "true"
+    if skip_bypass == "true":
+        logger.info("OAuth callback — auth bypass active")
 
     try:
         await google_auth.exchange_code(code, state)

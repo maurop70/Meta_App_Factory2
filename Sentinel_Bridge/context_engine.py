@@ -185,7 +185,7 @@ class ContextEngine:
             return "calendar"
         if source in ("manual", "voice", "text"):
             return "reminder"
-        if source in ("webhook", "n8n"):
+        if source in ("webhook", "bridge"):
             return "webhook"
         if source in ("pipeline", "cron"):
             return "pipeline"
