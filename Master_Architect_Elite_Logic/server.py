@@ -176,21 +176,6 @@ def health():
 @app.post("/api/review")
 def review(req: ReviewRequest):
     """Full Triad review with document ingestion, dual-state prompt forking, and context-injected streaming."""
-    import requests
-
-    # 1. I/O EXTRACTION INJECTION
-    document_context = ""
-    if req.document_ids:
-        for doc_id in req.document_ids:
-            safe_doc_id = os.path.basename(doc_id)
-            doc_path = os.path.normpath(os.path.join(_SCRIPT_DIR, "vault", "staging", safe_doc_id))
-            if os.path.exists(doc_path):
-                try:
-                    with open(doc_path, "r", encoding="utf-8", errors="ignore") as f:
-                        document_context += f"\n--- DOCUMENT: {safe_doc_id} ---\n" + f.read() + "\n"
-                except Exception as e:
-                    logger.error(f"Error reading staging document {safe_doc_id}: {e}")
-
     # Detect user prompt & query
     user_query = req.prompt or req.description or ""
     query_lower = user_query.lower()
@@ -231,11 +216,6 @@ def review(req: ReviewRequest):
         "- PATH B (Conversational Inquiry): If the user asks a natural language question (e.g., 'what is in this file?', 'explain this', or asks questions about the documents), you are permanently authorized to bypass the JSON schema and output a standard, rich Markdown text response with no JSON wrappers."
     )
 
-    # 3. CONTEXT INJECTION (Fusing document context with final payload)
-    prompt_payload = f"USER INQUIRY / DESCRIPTION:\n{user_query}\n"
-    if document_context:
-        prompt_payload += f"\nDOCUMENT CONTEXT / CONTENT:\n{document_context}\n"
-
     # Streaming review generator
     def generate_review_stream():
         api_key = os.getenv("GEMINI_API_KEY", "")
@@ -257,21 +237,58 @@ def review(req: ReviewRequest):
             yield json.dumps(fallback_resp)
             return
 
+        google_uploaded_files = []
+        document_context = ""
+
         try:
             import google.generativeai as genai
             
             # Configure native Google Gemini API client
             genai.configure(api_key=api_key)
-            
+
+            # 1. THE EXTRACTION SPLICE
+            if req.document_ids:
+                for doc_id in req.document_ids:
+                    safe_doc_id = os.path.basename(doc_id)
+                    doc_path = os.path.normpath(os.path.join(_SCRIPT_DIR, "vault", "staging", safe_doc_id))
+                    if os.path.exists(doc_path):
+                        ext = os.path.splitext(safe_doc_id)[1].lower()
+                        # Path A: Lightweight Text
+                        if ext in [".txt", ".md", ".csv", ".json"]:
+                            try:
+                                with open(doc_path, "r", encoding="utf-8", errors="ignore") as f:
+                                    document_context += f"\n--- DOCUMENT: {safe_doc_id} ---\n" + f.read() + "\n"
+                            except Exception as e:
+                                logger.error(f"Error reading lightweight text {safe_doc_id}: {e}")
+                        # Path B: Massive Binary
+                        else:
+                            try:
+                                logger.info(f"Staging massive binary document {safe_doc_id} to Google File API...")
+                                uploaded_file = genai.upload_file(doc_path)
+                                google_uploaded_files.append(uploaded_file)
+                                document_context += f"\n[Staged Binary Payload: {safe_doc_id} (Google URI: {uploaded_file.name})]\n"
+                            except Exception as e:
+                                logger.error(f"Error staging binary document {safe_doc_id} to Google: {e}")
+
+            # 3. PAYLOAD FUSION & CONTEXT INJECTION
+            prompt_payload = f"USER INQUIRY / DESCRIPTION:\n{user_query}\n"
+            if document_context:
+                prompt_payload += f"\nDOCUMENT CONTEXT / CONTENT:\n{document_context}\n"
+
             # Instantiate 'gemini-2.5-pro' with system prompt instruction
             model = genai.GenerativeModel(
                 model_name='gemini-2.5-pro',
                 system_instruction=system_prompt
             )
             
-            # Generate content from the mathematically fused payload
+            # Mathematically fuse binary files with the prompt payload
+            contents_payload = []
+            for uf in google_uploaded_files:
+                contents_payload.append(uf)
+            contents_payload.append(prompt_payload)
+
             response = model.generate_content(
-                prompt_payload,
+                contents_payload,
                 generation_config={"temperature": 0.2}
             )
             
@@ -296,6 +313,18 @@ def review(req: ReviewRequest):
 
         except Exception as e:
             yield f"Exception during LLM analysis: {str(e)}"
+
+        finally:
+            # 4. MEMORY SANITIZATION
+            if google_uploaded_files:
+                try:
+                    import google.generativeai as genai
+                    genai.configure(api_key=api_key)
+                    for uf in google_uploaded_files:
+                        logger.info(f"Sanitizing memory: Forcefully deleting {uf.name} from Google servers...")
+                        genai.delete_file(uf.name)
+                except Exception as e:
+                    logger.error(f"Error during Google File API memory sanitization: {e}")
 
     return StreamingResponse(generate_review_stream(), media_type="text/plain")
 
