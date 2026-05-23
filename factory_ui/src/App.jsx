@@ -1601,6 +1601,11 @@ function App() {
               <WarRoom />
             </ErrorBoundary>
           } />
+          <Route path="/war-room" element={
+            <ErrorBoundary>
+              <WarRoom />
+            </ErrorBoundary>
+          } />
           <Route path="/builder" element={
             <ErrorBoundary>
               <BuilderChat />
