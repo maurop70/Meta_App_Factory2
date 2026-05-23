@@ -62,7 +62,7 @@ function buildSystemPrompt(appName) {
     'LANGUAGE RULES (CRITICAL):',
     '1. NEVER use technical jargon: no "SOPs," "protocols," "pipelines," "webhooks," "endpoints," "system prompts," or "architecture."',
     '2. NEVER mention internal AI names (Gemini, Claude, GPT, Antigravity), agent roles (CFO, CMO, Architect, Critic), or backend systems.',
-    '3. NEVER reveal workflow logic, code, n8n structures, API keys, encryption details, or internal file names.',
+    '3. NEVER reveal workflow logic, code, bridge structures, API keys, encryption details, or internal file names.',
     '4. If asked "How does this work internally?" — answer with the user benefit: "Behind the scenes, we coordinate a team of specialists to get you the best result. Would you like to see what they can do?"',
     '5. Replace technical concepts with user-friendly equivalents:',
     '   - "Triad Execute" → "I\'ll coordinate our specialists to handle that for you"',
@@ -206,7 +206,7 @@ function usageWalkthroughCheck(userText) {
 // Architecture-only keywords (these trigger ONLY without usage intent)
 const GUARD_KEYWORDS = [
   'system prompt', 'source code',
-  'n8n', 'webhook', 'architecture',
+  'bridge', 'webhook', 'architecture',
   'backend', 'how do you work', 'show me your', 'reveal', 'expose',
   'api key', 'secret', 'credential', 'password',
   'circuit breaker', 'auto-heal', 'auto heal', 'self-heal',
@@ -250,14 +250,14 @@ function systemGuardCheck(userText, appConfig) {
 
 const SCRUB_PATTERNS = [
   // Agent/module names
-  /\b(auto_heal|circuit_breaker|n8n_bridge|safe_post|healed_post|recovery_sync)\b/gi,
-  /\b(vault_client|local_state_manager|bootstrap_env|n8n_watchdog)\b/gi,
+  /\b(auto_heal|circuit_breaker|bridge_connector|safe_post|healed_post|recovery_sync)\b/gi,
+  /\b(vault_client|local_state_manager|bootstrap_env|watcher_watchdog)\b/gi,
   /\b(aegis_agent|binding_protocol|resilience_config)\b/gi,
   // File paths
   /[A-Z]:\\[^\s"']+/gi,
   /\/(?:home|Users)\/[^\s"']+/gi,
   // Webhook URLs
-  /https?:\/\/[\w.-]*\.n8n\.cloud\/webhook\/[\w-]+/gi,
+  /https?:\/\/[\w.-]*\.bridge\.cloud\/webhook\/[\w-]+/gi,
   // API keys (partial)
   /AIzaSy[A-Za-z0-9_-]{30,}/g,
   /eyJ[A-Za-z0-9_-]{50,}/g,

@@ -42,7 +42,7 @@ function CommandPalette({ onCommand }) {
         { label: '🛡️ Security Audit', cmd: 'Run Specialist - Security audit on current code.', desc: 'Scans for vulnerabilities.', suite: 'visionary' },
         { label: '🧪 Twin Test', cmd: 'Spin up Digital Twin container and run integration tests.', desc: 'Tests features in a sandbox.', suite: 'visionary' },
         { label: '🔍 Market Research', cmd: 'Analyze market competitors and prior art for this task.', desc: 'Check what similar apps exist.', suite: 'visionary' },
-        { label: '🛠️ System Diagnostic', cmd: 'Run full system diagnostic and check agent connectivity.', desc: 'Verify Docker, n8n, API endpoints.', suite: 'maintenance' },
+        { label: '🛠️ System Diagnostic', cmd: 'Run full system diagnostic and check agent connectivity.', desc: 'Verify Docker, bridge, and API endpoints.', suite: 'maintenance' },
         { label: '🧹 Flush Memory', cmd: 'Wipe sentry cache and reset DCC.', desc: 'Clears stale session data.', suite: 'maintenance' },
         { label: '⏪ Rollback', cmd: 'Revert to last stable git/snapshot build.', desc: 'Undo changes if Self-Heal fails.', suite: 'maintenance' },
         { label: '🩹 Self-Heal', cmd: 'Review recent logs and repair execution errors.', desc: 'Fix bugs in current runtime.', suite: 'maintenance' },
