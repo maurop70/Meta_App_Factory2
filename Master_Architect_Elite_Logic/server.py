@@ -24,6 +24,10 @@ except Exception:
     pass
 
 import os
+# ── Global thread-safe proxy bypass for Google API domains ──
+os.environ["NO_PROXY"] = "generativelanguage.googleapis.com,oauth2.googleapis.com,googleapis.com"
+os.environ["no_proxy"] = "generativelanguage.googleapis.com,oauth2.googleapis.com,googleapis.com"
+
 import sys
 import json
 import logging
@@ -242,18 +246,8 @@ def review(req: ReviewRequest):
 
         google_uploaded_files = []
         document_context = ""
-        
-        # Save proxy environment variables to temporarily pop them for direct Google API egress
-        proxies_keys = ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy", "MASTER_ARCHITECT_BASE_URL"]
-        saved_proxies = {}
 
         try:
-            # Temporarily decouple proxies to establish unproxied direct Google connection
-            for p_key in proxies_keys:
-                if p_key in os.environ:
-                    saved_proxies[p_key] = os.environ[p_key]
-                    del os.environ[p_key]
-
             import google.generativeai as genai
             
             # Configure native Google Gemini API client
@@ -338,10 +332,7 @@ def review(req: ReviewRequest):
                         genai.delete_file(uf.name)
                 except Exception as e:
                     logger.error(f"Error during Google File API memory sanitization: {e}")
-            
-            # Restore proxy environment variables to preserve other loopback daemon calls
-            for p_key, p_val in saved_proxies.items():
-                os.environ[p_key] = p_val
+            pass
 
     return StreamingResponse(generate_review_stream(), media_type="text/plain")
 
