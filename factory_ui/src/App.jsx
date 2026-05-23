@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import './App.css'
+import axios from 'axios'
+import { NavLink, Routes, Route, Navigate } from 'react-router-dom'
 import WarRoom from './WarRoom'
 import CommandCenter from './CommandCenter'
 
@@ -8,8 +10,11 @@ import VentureSuite from './VentureSuite'
 import PhantomQA from './PhantomQA'
 import Atomizer from './components/Atomizer.jsx'
 import BuilderChat from './components/BuilderChat';
-import ExecutiveCommand from './components/ExecutiveCommand';
 import ErrorBoundary from './components/ErrorBoundary';
+import InventoryGrid from './components/InventoryGrid.jsx';
+import AppRegistry from './components/AppRegistry';
+import CIOIntel from './components/CIOIntel';
+import TelemetryPanel from './components/TelemetryPanel';
 
 // ═══════════════════════════════════════════════════════════
 //  META APP FACTORY — BUILDER DASHBOARD (Full Feature Parity)
@@ -1237,10 +1242,10 @@ function App() {
     );
   }
 
-  const [activeView, setActiveView] = useState('systemmap');
+  const [activeView, setActiveView] = useState('inventory');
   const [isExecOpen, setIsExecOpen] = useState(false);
   const [builderMode, setBuilderMode] = useState(null); // 'technical' | 'venture' | null
-  const [builderProfile, setBuilderProfile] = useState('executive'); // 'executive' | 'copilot'
+  const [builderProfile, setBuilderProfile] = useState('copilot'); // locked to 'copilot'
   const [registry, setRegistry] = useState([]);
   const [atomizerChunks, setAtomizerChunks] = useState([]);
   const [atomizerProgress, setAtomizerProgress] = useState(0);
@@ -1258,15 +1263,21 @@ function App() {
   const [refineApp, setRefineApp] = useState(localStorage.getItem('last_active_project') || '');
   const [refineFeedback, setRefineFeedback] = useState('');
 
-  // ── UPGRADE 1: Running Apps State ────────────────────────
   const [runningApps, setRunningApps] = useState({});
   const [launchingApp, setLaunchingApp] = useState(null);
 
-  const refreshRunning = () => {
-    fetch(`/api/apps/running`)
-      .then(r => r.json())
-      .then(data => setRunningApps(data))
-      .catch(() => {});
+  const refreshRunning = async () => {
+    try {
+      const res = await axios.get('/api/apps/running');
+      const apps = res.data.items || [];
+      const appMap = {};
+      apps.forEach(app => {
+        appMap[app.name] = app;
+      });
+      setRunningApps(appMap);
+    } catch (e) {
+      console.error("Failed to fetch running apps via Axios:", e);
+    }
   };
   useEffect(() => {
     refreshRunning();
@@ -1433,6 +1444,7 @@ function App() {
     { icon: '🔧', label: 'Refine App', view: 'refine' },
     { icon: '⚛️', label: 'Atomizer', view: 'atomizer' },
     { icon: '📊', label: 'Telemetry', view: 'telemetry', badge: 'Beta' },
+    { icon: '📦', label: 'Inventory', view: 'inventory', badge: 'MAF' },
   ];
 
   return (
@@ -1454,17 +1466,37 @@ function App() {
       <aside className="factory-sidebar">
         <div className="sidebar-section">
           <h3>Navigation</h3>
-          {sidebarItems.map(item => (
-            <div
-              key={item.view}
-              className={`sidebar-item ${activeView === item.view ? 'active' : ''}`}
-              onClick={() => setActiveView(item.view)}
-            >
-              <span className="icon">{item.icon}</span>
-              <span>{item.label}</span>
-              {item.badge && <span className="badge">{item.badge}</span>}
-            </div>
-          ))}
+          {sidebarItems.map(item => {
+            const pathMap = {
+              systemmap: '/system-map',
+              warroom: '/warroom',
+              builder: '/builder',
+              scout: '/scout',
+              cio: '/cio-intel',
+              registry: '/registry',
+              qa: '/qa',
+              commands: '/commands',
+              agents: '/agents',
+              brand: '/brand',
+              refine: '/refine',
+              atomizer: '/atomizer',
+              telemetry: '/telemetry',
+              inventory: '/inventory'
+            };
+            const toPath = pathMap[item.view] || `/${item.view}`;
+            return (
+              <NavLink
+                key={item.view}
+                to={toPath}
+                className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}
+                style={{ textDecoration: 'none' }}
+              >
+                <span className="icon">{item.icon}</span>
+                <span>{item.label}</span>
+                {item.badge && <span className="badge">{item.badge}</span>}
+              </NavLink>
+            );
+          })}
         </div>
 
         <div className="sidebar-section">
@@ -1552,239 +1584,58 @@ function App() {
           ))}
         </div>
 
-        {/* System Map — V3 Architecture */}
-        {activeView === 'systemmap' && (
-          <div style={{ width: '100%', height: 'calc(100vh - 140px)', borderRadius: '12px', overflow: 'hidden', background: '#0a0e17' }}>
-            <iframe
-              src={`http://127.0.0.1:5000/system_map`}
-              style={{ width: '100%', height: '100%', border: 'none' }}
-              title="V3 System Map"
-            />
-          </div>
-        )}
-
-        {/* War Room — Commander's Control Panel (Phase 8) */}
-        {activeView === 'warroom' && (
-          <CommandCenter key={selectedApp || 'Aether'} projectName={selectedApp || 'Aether'} />
-        )}
-
-        {/* Builder Chat / Mode Selector (EOS V3.1) */}
-        {activeView === 'builder' && (
-          builderMode === null ? (
-            <ModeSelectionScreen onSelectMode={(mode, profile) => {
-              setBuilderMode(mode);
-              setBuilderProfile(profile || 'executive');
-            }} />
-          ) : builderMode === 'venture' ? (
-            <WarRoom 
-              key={`venture-${selectedApp || 'Aether'}`}
-              ventureMode={true} 
-              projectName={selectedApp || 'Aether'}
-              onHandoff={(eosData) => {
-                setBuilderMode('technical');
-                const prompt = `Here is the approved Venture Plan for the MVP. Please build this application immediately:\n\nCompany: ${eosData.company_name}\nTagline: ${eosData.tagline}\nPrimary Color: ${eosData.brand_colors?.primary || '#3b82f6'}\nTAM: ${eosData.tam}\n\nBuild the scaffold and deploy the app!`;
-                setExternalCommand(prompt);
-              }}
-            />
-          ) : (
-            <ErrorBoundary>
-              <BuilderChat
-                registry={registry}
-                onAtomizerUpdate={(c, p) => { setAtomizerChunks(c); setAtomizerProgress(p); }}
-                externalCommand={externalCommand}
-                onBuildComplete={() => {
-                  fetch(`/api/registry`).then(r => r.json()).then(data => setRegistry(data.apps || [])).catch(() => { });
-                }}
-                onQaGate={setQaGate}
-                mode={builderMode}
-                profile={builderProfile}
+        <Routes>
+          <Route path="/" element={<Navigate to="/inventory" replace />} />
+          <Route path="/inventory" element={<InventoryGrid />} />
+          <Route path="/system-map" element={
+            <div style={{ width: '100%', height: 'calc(100vh - 140px)', borderRadius: '12px', overflow: 'hidden', background: '#0a0e17' }}>
+              <iframe
+                src={`http://127.0.0.1:5000/system_map`}
+                style={{ width: '100%', height: '100%', border: 'none' }}
+                title="V3 System Map"
               />
+            </div>
+          } />
+          <Route path="/warroom" element={
+            <ErrorBoundary>
+              <WarRoom />
             </ErrorBoundary>
-          )
-        )}
-
-        {/* App Registry */}
-        {activeView === 'registry' && (
-          <div className="registry-panel">
-            <h3>📦 App Registry</h3>
-            <table className="registry-table">
-              <thead>
-                <tr><th>App Name</th><th>Type</th><th>Status</th><th>Port</th><th>Dialogue</th><th>Actions</th></tr>
-              </thead>
-              <tbody>
-                {registry.map(app => {
-                  const running = runningApps[app.name]?.alive;
-                  const port = runningApps[app.name]?.port || app.port;
-                  return (
-                    <tr key={app.name}>
-                      <td
-                        style={{ color: '#818cf8', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline dotted rgba(99,102,241,0.4)' }}
-                        onClick={() => {
-                          let targetUrl = port ? `http://localhost:${port}` : null;
-                          if (app.name === 'Alpha_V2_Genesis') targetUrl = 'http://localhost:5175';
-                          else if (app.name === 'Resonance') targetUrl = 'http://localhost:5174';
-                          
-                          if (running && targetUrl) {
-                            window.open(targetUrl, '_blank');
-                          } else {
-                            launchApp(app.name);
-                          }
-                        }}
-                        title={port ? `Open ${app.name} (localhost:${port})` : `Launch ${app.name}`}
-                      >
-                        {app.name}
-                      </td>
-                      <td>{app.type}</td>
-                      <td>
-                        <span className={running ? 'status-active' : app.status === 'active' ? 'status-active' : 'status-inactive'}>
-                          {running ? '🟢 Running' : app.status === 'active' ? '● Active' : '○ Inactive'}
-                        </span>
-                      </td>
-                      <td>{running ? port : app.port || '—'}</td>
-                      <td>
-                        {app.form_url && port ? (
-                          <button
-                            onClick={() => window.open(`http://localhost:${port}${app.form_url}`, '_blank')}
-                            title="Open Dialogue Box"
-                            style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '4px', border: '1px solid rgba(139,92,246,0.3)', background: 'rgba(139,92,246,0.1)', color: '#a78bfa', cursor: 'pointer', fontWeight: 600 }}
-                          >💬 Open</button>
-                        ) : (
-                          <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '11px' }}>—</span>
-                        )}
-                      </td>
-                      <td>
-                        {running ? (
-                          <div style={{ display: 'flex', gap: '6px' }}>
-                            <button
-                              className="app-action-btn launch"
-                              onClick={() => {
-                                let targetUrl = `http://localhost:${port}`;
-                                if (app.name === 'Alpha_V2_Genesis') targetUrl = 'http://localhost:5175';
-                                else if (app.name === 'Resonance') targetUrl = 'http://localhost:5174';
-                                window.open(targetUrl, '_blank');
-                              }}
-                              title="Open in browser"
-                              style={{ fontSize: '11px', padding: '3px 8px', borderRadius: '4px', border: '1px solid rgba(34,197,94,0.3)', background: 'rgba(34,197,94,0.1)', color: '#22c55e', cursor: 'pointer' }}
-                            >🌐 Open</button>
-                            <button
-                              className="app-action-btn stop"
-                              onClick={() => stopApp(app.name)}
-                              title="Stop app"
-                              style={{ fontSize: '11px', padding: '3px 8px', borderRadius: '4px', border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.1)', color: '#ef4444', cursor: 'pointer' }}
-                            >⏹ Stop</button>
-                          </div>
-                        ) : (
-                          <button
-                            className="app-action-btn launch"
-                            onClick={() => launchApp(app.name)}
-                            disabled={launchingApp === app.name}
-                            title="Launch app"
-                            style={{ fontSize: '11px', padding: '3px 8px', borderRadius: '4px', border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(99,102,241,0.1)', color: '#818cf8', cursor: 'pointer' }}
-                          >{launchingApp === app.name ? '⏳ Launching...' : '🚀 Launch'}</button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            <AppRegistry apps={registry} />
-          </div>
-        )}
-
-        {/* ── VENTURE SCOUT DASHBOARD (Phase 1) ── */}
-        {activeView === 'scout' && (
-          <VentureScoutDashboard setActiveView={setActiveView} selectedApp={selectedApp} setSelectedApp={setSelectedApp} />
-        )}
-
-        {/* ── CIO INTELLIGENCE DASHBOARD (Phase 1) ── */}
-        {activeView === 'cio' && (
-          <CIOIntelligenceDashboard setActiveView={setActiveView} />
-        )}
-
-        {/* Command Palette */}
-        {activeView === 'commands' && (
-          <CommandPalette onCommand={handleCommand} />
-        )}
-
-        {/* Refine App */}
-        {activeView === 'refine' && (
-          <RefinePanel registry={registry} refineLog={refineLog} setRefineLog={setRefineLog} refining={refining} setRefining={setRefining} refineApp={refineApp} setRefineApp={setRefineApp} refineFeedback={refineFeedback} setRefineFeedback={setRefineFeedback} />
-        )}
-
-        {/* Brand Studio */}
-        {activeView === 'brand' && (
-          <BrandStudioPanel registry={registry} />
-        )}
-
-        {/* Agent Status */}
-        {activeView === 'agents' && <AgentStatusPanel />}
-
-        {/* Atomizer */}
-        {activeView === 'atomizer' && (
-          <Atomizer />
-        )}
-
-        {/* QA Command Center */}
-        {activeView === 'qa' && <PhantomQA setActiveView={setActiveView} />}
-
-        {/* Telemetry */}
-        {activeView === 'telemetry' && (
-          <div className="registry-panel">
-            <h3>📊 Telemetry Dashboard</h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', padding: '1rem' }}>
-              LangSmith traces are being collected under project <strong style={{ color: 'var(--accent-hover)' }}>Meta_App_Factory</strong>.
-              Visit <a href="https://smith.langchain.com" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-hover)' }}>smith.langchain.com</a> to view traces.
-            </p>
-            <AgentStatusPanel />
-          </div>
-        )}
+          } />
+          <Route path="/builder" element={
+            <ErrorBoundary>
+              <BuilderChat />
+            </ErrorBoundary>
+          } />
+          <Route path="/scout" element={
+            <VentureScoutDashboard setActiveView={(view) => window.location.hash = `#/${view}`} selectedApp={selectedApp} setSelectedApp={setSelectedApp} />
+          } />
+          <Route path="/cio-intel" element={<CIOIntel />} />
+          <Route path="/registry" element={<AppRegistry />} />
+          <Route path="/qa" element={<PhantomQA setActiveView={(view) => window.location.hash = `#/${view}`} />} />
+          <Route path="/commands" element={<CommandPalette onCommand={handleCommand} />} />
+          <Route path="/agents" element={<TelemetryPanel />} />
+          <Route path="/telemetry" element={<TelemetryPanel />} />
+          <Route path="/brand" element={<BrandStudioPanel registry={registry} />} />
+          <Route path="/refine" element={
+            <RefinePanel 
+              registry={registry} 
+              refineLog={refineLog} 
+              setRefineLog={setRefineLog} 
+              refining={refining} 
+              setRefining={setRefining} 
+              refineApp={refineApp} 
+              setRefineApp={setRefineApp} 
+              refineFeedback={refineFeedback} 
+              setRefineFeedback={setRefineFeedback} 
+            />
+          } />
+          <Route path="/atomizer" element={<Atomizer />} />
+        </Routes>
       </main>
 
       {/* ── TELEMETRY BAR (bottom) ── */}
       <TelemetryBar streaming={streaming} />
 
-      {/* ── EXECUTIVE ARCHITECT FAB ── */}
-      <button
-        id="executive-fab-trigger"
-        onClick={() => setIsExecOpen(prev => !prev)}
-        title="Executive Architect — Intent Gateway"
-        style={{
-          position: 'fixed',
-          bottom: '24px',
-          right: '24px',
-          width: '52px',
-          height: '52px',
-          borderRadius: '50%',
-          background: isExecOpen
-            ? 'linear-gradient(135deg, #5b21b6, #4338ca)'
-            : 'linear-gradient(135deg, #7c3aed, #6366f1)',
-          border: '2px solid rgba(167,139,250,0.4)',
-          boxShadow: isExecOpen
-            ? '0 0 24px rgba(124,58,237,0.7)'
-            : '0 0 16px rgba(124,58,237,0.4)',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '1.3rem',
-          zIndex: 9997,
-          transition: 'all 0.2s ease',
-        }}
-      >
-        {isExecOpen ? '✕' : '🧠'}
-      </button>
-
-      <ExecutiveCommand
-        isOpen={isExecOpen}
-        onClose={() => setIsExecOpen(false)}
-        onNavigateBuilder={() => {
-          setBuilderMode('technical');
-          setActiveView('builder');
-          const handoff = localStorage.getItem('mode_a_handoff_prompt');
-          if (handoff) setExternalCommand({ text: handoff, isTriad: false, ts: Date.now() });
-        }}
-      />
 
       {/* ── UPGRADE 3: QA Gate Approval Modal ── */}
       {qaGate && (

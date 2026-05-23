@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import NaturalLanguageGateway from './components/NaturalLanguageGateway';
 
 const styles = {
   container: {
@@ -130,6 +131,48 @@ export default function VentureSuite({ onComplete, registry }) {
   const nextStep = () => setStepIdx(s => Math.min(s + 1, STEPS.length - 1));
 
   // Step Handlers
+  const handleNaturalBriefActuation = async (rawText) => {
+    let company_name = 'New Venture';
+    let industry = 'Technology & AI';
+    let problem_statement = rawText;
+
+    // Robust heuristic parsing for intent extraction
+    const nameMatch = rawText.match(/(?:called|named|project)\s+([A-Z][a-zA-Z0-9_\s]{2,20})(?:\s+in|\s+is|\s+to|\.|\,|$)/i);
+    if (nameMatch && nameMatch[1]) {
+      company_name = nameMatch[1].trim();
+    } else {
+      const words = rawText.split(/\s+/).filter(w => w.length > 0);
+      if (words.length > 0) {
+        company_name = words.slice(0, 3).join(' ').replace(/[^a-zA-Z0-9\s]/g, '');
+      }
+    }
+
+    const industryMatch = rawText.match(/in\s+the\s+([a-zA-Z0-9_\s]{3,30})\s+(?:space|industry|market|sector)/i);
+    if (industryMatch && industryMatch[1]) {
+      industry = industryMatch[1].trim();
+    }
+
+    const parsedBrief = { company_name, industry, problem_statement };
+    setBrief(parsedBrief);
+
+    await callApi('state', parsedBrief);
+    nextStep();
+    
+    // Auto-trigger market intelligence
+    const marketRes = await callApi('market-intel', parsedBrief);
+    if (marketRes) {
+      setMarketData(marketRes.market);
+      nextStep();
+      
+      // Auto-trigger brand studio
+      const brandRes = await callApi('brand', parsedBrief);
+      if (brandRes) {
+        setBrandData(brandRes.brand);
+        nextStep();
+      }
+    }
+  };
+
   const handleBriefSubmit = async () => {
     await callApi('state', brief);
     nextStep();
@@ -179,22 +222,13 @@ export default function VentureSuite({ onComplete, registry }) {
 
   // Rendering helpers
   const renderBrief = () => (
-    <div>
-      <h2>Initialization: Project Brief</h2>
-      <p style={{color: '#94a3b8', marginBottom: '24px'}}>Define the core thesis of your new venture.</p>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '480px' }}>
+      <h2 style={{ marginBottom: '8px' }}>Initialization: Project Brief</h2>
+      <p style={{color: '#94a3b8', marginBottom: '20px'}}>Describe your target venture in natural language. The Natural Language Gateway will ingest the intent and delegate to edge agents.</p>
       
-      <label>Company/Project Name</label>
-      <input style={styles.input} value={brief.company_name} onChange={e => setBrief({...brief, company_name: e.target.value})} placeholder="e.g. Aether Dynamics" />
-      
-      <label>Industry / Niche</label>
-      <input style={styles.input} value={brief.industry} onChange={e => setBrief({...brief, industry: e.target.value})} placeholder="e.g. Autonomous AI Software" />
-      
-      <label>Core Problem Statement</label>
-      <textarea style={{...styles.input, height: '100px', resize: 'none'}} value={brief.problem_statement} onChange={e => setBrief({...brief, problem_statement: e.target.value})} placeholder="What problem does this solve?" />
-      
-      <button style={styles.button} onClick={handleBriefSubmit} disabled={!brief.company_name || loading}>
-        {loading ? 'Processing...' : 'Lock Initial Vectors'}
-      </button>
+      <div style={{ flex: 1, minHeight: '320px' }}>
+        <NaturalLanguageGateway onActuate={handleNaturalBriefActuation} />
+      </div>
     </div>
   );
 
