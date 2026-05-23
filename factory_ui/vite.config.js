@@ -13,69 +13,33 @@ export default defineConfig({
         target: 'http://127.0.0.1:5100',
         changeOrigin: true,
       },
-      '/api/builder': {
-        target: 'http://127.0.0.1:5000',
+      '/api/inventory': {
+        target: 'http://127.0.0.1:5005',
         changeOrigin: true,
+        secure: false
       },
-      '/api/qa': {
-        target: 'http://127.0.0.1:5000',
-        changeOrigin: true,
-      },
-      '/api/test': {
-        target: 'http://127.0.0.1:5000',
-        changeOrigin: true,
-      },
-      '/api/pulse': {
-        target: 'http://127.0.0.1:5000',
-        changeOrigin: true,
-      },
-      '/api/reports': {
-        target: 'http://127.0.0.1:5000',
-        changeOrigin: true,
-      },
-      '/api/dashboard': {
-        target: 'http://127.0.0.1:5000',
-        changeOrigin: true,
-      },
-      '/api/repairs': {
-        target: 'http://127.0.0.1:5000',
-        changeOrigin: true,
-      },
-      '/api/ghost-stream': {
-        target: 'http://127.0.0.1:5000',
-        changeOrigin: true,
-      },
-      '/api/apps': {
-        target: 'http://127.0.0.1:5000',
-        changeOrigin: true,
-      },
-      '/api/commands': {
-        target: 'http://127.0.0.1:5000',
-        changeOrigin: true,
-      },
-      '/api/v3': {
-        target: 'http://127.0.0.1:5000',
-        changeOrigin: true,
-      },
-      '/api/v1/architect': {
-        target: 'http://127.0.0.1:5060',
-        changeOrigin: true,
-      },
-      // 1. Route Chat/Inference traffic to Master Architect
       '/api/review': {
         target: 'http://127.0.0.1:5050',
         changeOrigin: true,
         secure: false
       },
-      // 2. Route Binary Ingestion to Master Architect Vault
+      '/api/apps': {
+        target: 'http://127.0.0.1:5050',
+        changeOrigin: true,
+        secure: false
+      },
+      '/api/qa/stream': {
+        target: 'http://127.0.0.1:5050',
+        changeOrigin: true,
+        secure: false
+      },
       '/api/ingest': {
         target: 'http://127.0.0.1:5050',
         changeOrigin: true,
         secure: false
       },
-      // 3. Route Enterprise/Inventory traffic to SQLite Engine
       '/api': {
-        target: 'http://127.0.0.1:5005',
+        target: 'http://127.0.0.1:5000',
         changeOrigin: true,
         secure: false
       },

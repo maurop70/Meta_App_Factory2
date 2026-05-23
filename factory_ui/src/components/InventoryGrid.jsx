@@ -206,7 +206,7 @@ export default function InventoryGrid() {
   };
 
   return (
-    <div className="min-h-screen bg-[#090D16] text-[#E2E8F0] font-sans antialiased p-6 md:p-10 flex flex-col items-center">
+    <div className="registry-panel" style={{ padding: '24px', background: 'rgba(15, 23, 42, 0.45)', borderRadius: '16px', backdropFilter: 'blur(10px)', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
       {/* Embedded CSS Reflow Matrix for Viewports < 900px */}
       <style>{`
         @media (max-width: 899px) {

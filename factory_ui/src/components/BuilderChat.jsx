@@ -153,9 +153,12 @@ export default function BuilderChat() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-slate-950 border border-cyan-500/30 rounded-xl overflow-hidden shadow-2xl">
-      <div className="bg-slate-900 border-b border-cyan-500/30 p-4 flex justify-between items-center shadow-md">
-        <h2 className="text-lg font-semibold tracking-wide uppercase text-cyan-400" style={{fontFamily: "'Outfit', sans-serif"}}>App Synthesis Gateway</h2>
+    <div className="builder-chat">
+      <div className="chat-header">
+        <h2>
+          🏗️ App Synthesis Gateway
+          <span className="stream-badge">SSE STREAM</span>
+        </h2>
         <div className="flex items-center space-x-2">
           <span className="text-xs font-mono tracking-wider text-cyan-400">BUILDER PULSE: ACTIVE</span>
           <span className="flex h-3 w-3 relative">
@@ -165,70 +168,67 @@ export default function BuilderChat() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-4 font-mono text-sm custom-scrollbar">
+      <div className="chat-messages font-mono text-sm custom-scrollbar">
         <div className="text-teal-500 font-semibold opacity-90">&gt; TERMINAL BOOT COMPLETED SUCCESSFULLY</div>
         {chatHistory.length === 0 && <div className="text-cyan-600 animate-pulse mt-4">&gt; AWAITING INGESTION DIRECTIVES...</div>}
         
         {chatHistory.map((msg, idx) => (
-          <div key={idx} className={`flex w-full ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[85%] p-4 rounded-lg shadow-lg ${msg.role === 'user' ? 'bg-cyan-900/40 border border-cyan-500/40 text-cyan-50' : 'bg-slate-800/80 border border-slate-700 text-slate-300'}`}>
-               <strong className={`block mb-2 text-xs uppercase tracking-wider ${msg.role === 'user' ? 'text-cyan-400' : 'text-teal-400'}`}>
-                  {msg.role === 'user' ? 'CO-PILOT' : 'MAF ORCHESTRATOR'}
-               </strong>
-               {renderMessageContent(msg.content)}
-            </div>
+          <div key={idx} className={`msg ${msg.role === 'user' ? 'user' : 'assistant'}`}>
+             <strong className={`block mb-2 text-xs uppercase tracking-wider ${msg.role === 'user' ? 'text-cyan-400' : 'text-teal-400'}`}>
+                {msg.role === 'user' ? 'CO-PILOT' : 'MAF ORCHESTRATOR'}
+             </strong>
+             {renderMessageContent(msg.content)}
           </div>
         ))}
         <div ref={terminalEndRef} />
       </div>
 
-      <div className="p-4 bg-slate-900 border-t border-cyan-500/30 flex flex-col">
-        {/* Document Staging Deck */}
-        {attachments.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-3">
-            {attachments.map(att => (
-              <div key={att.document_id} className="flex items-center space-x-2 bg-slate-800 border border-cyan-500/50 rounded-full px-3 py-1">
-                <span className="text-xs text-cyan-300 truncate max-w-[150px]">{att.original_name}</span>
-                <button onClick={() => removeAttachment(att.document_id)} className="text-slate-400 hover:text-red-400">✕</button>
-              </div>
-            ))}
-          </div>
-        )}
-        
-        <div className="flex gap-2 relative">
-          <input 
-            type="file" 
-            className="hidden" 
-            ref={fileInputRef} 
-            onChange={handleFileUpload}
-            accept=".pdf,.xlsx,.csv,.docx,.txt,.md,.json"
-          />
-          <button 
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isUploading || isStreaming}
-            className="px-4 bg-slate-800 border border-slate-700 hover:border-cyan-500 text-cyan-400 rounded-lg outline-none font-mono text-sm transition-colors flex items-center justify-center"
-            title="Ingest Enterprise Document"
-          >
-            {isUploading ? '...' : '[+]'}
-          </button>
-          <input 
-            type="text" 
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSynthesize()}
-            className="flex-1 bg-slate-950 border border-slate-700 focus:border-cyan-500 text-cyan-50 p-4 rounded-lg outline-none font-mono text-sm shadow-inner transition-colors" 
-            placeholder="___Enter system architectural brief or attach payload___" 
-          />
-          <button 
-            type="button"
-            onClick={handleSynthesize}
-            disabled={isStreaming || (!input.trim() && attachments.length === 0)}
-            className={`px-8 font-bold tracking-wider rounded-lg transition-all ${isStreaming ? 'bg-slate-700 text-slate-500 cursor-not-allowed' : 'bg-cyan-700 hover:bg-cyan-600 text-white shadow-[0_0_15px_rgba(6,182,212,0.5)]'}`}
-          >
-            {isStreaming ? '[SYNTHESIZING...]' : '[SYNTHESIZE]'}
-          </button>
+      {/* Document Staging Deck */}
+      {attachments.length > 0 && (
+        <div className="px-4 py-2 bg-slate-900/60 border-t border-cyan-500/10 flex flex-wrap gap-2">
+          {attachments.map(att => (
+            <div key={att.document_id} className="flex items-center space-x-2 bg-slate-800 border border-cyan-500/50 rounded-full px-3 py-1">
+              <span className="text-xs text-cyan-300 truncate max-w-[150px]">{att.original_name}</span>
+              <button onClick={() => removeAttachment(att.document_id)} className="text-slate-400 hover:text-red-400">✕</button>
+            </div>
+          ))}
         </div>
+      )}
+
+      <div className="chat-input-bar">
+        <input 
+          type="file" 
+          className="hidden" 
+          ref={fileInputRef} 
+          onChange={handleFileUpload}
+          accept=".pdf,.xlsx,.csv,.docx,.txt,.md,.json"
+        />
+        <button 
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isUploading || isStreaming}
+          className="px-4 h-[40px] bg-slate-800 border border-slate-700 hover:border-cyan-500 text-cyan-400 rounded-lg outline-none font-mono text-sm transition-colors flex items-center justify-center mr-1"
+          title="Ingest Enterprise Document"
+        >
+          {isUploading ? '...' : '[+]'}
+        </button>
+        <textarea
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSynthesize(); } }}
+          className="flex-1" 
+          rows={2}
+          placeholder="___Enter system architectural brief or attach payload___" 
+          disabled={isStreaming}
+        />
+        <button 
+          type="button"
+          onClick={handleSynthesize}
+          disabled={isStreaming || (!input.trim() && attachments.length === 0)}
+          className="send-btn ml-1"
+        >
+          ↑
+        </button>
       </div>
     </div>
   );
