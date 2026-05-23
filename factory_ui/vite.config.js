@@ -49,13 +49,19 @@ export default defineConfig({
         target: 'http://127.0.0.1:5060',
         changeOrigin: true,
       },
-      // 1. Route Inference traffic to Master Architect Engine
+      // 1. Route Chat/Inference traffic to Master Architect
       '/api/review': {
         target: 'http://127.0.0.1:5050',
         changeOrigin: true,
         secure: false
       },
-      // 2. Route Enterprise/Inventory traffic to SQLite Engine
+      // 2. Route Binary Ingestion to Master Architect Vault
+      '/api/ingest': {
+        target: 'http://127.0.0.1:5050',
+        changeOrigin: true,
+        secure: false
+      },
+      // 3. Route Enterprise/Inventory traffic to SQLite Engine
       '/api': {
         target: 'http://127.0.0.1:5005',
         changeOrigin: true,

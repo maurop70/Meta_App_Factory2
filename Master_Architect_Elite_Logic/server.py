@@ -71,10 +71,15 @@ app = FastAPI(
     description="Triad Architecture Review + Adversarial Gate (Port 5050)",
 )
 
+from backend.app.routers.ingest import router as ingest_router
+app.include_router(ingest_router)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         f"http://localhost:{p}" for p in range(5173, 5181)
+    ] + [
+        f"http://127.0.0.1:{p}" for p in range(5173, 5181)
     ] + ["http://localhost:8000"],
     allow_credentials=True,
     allow_methods=["*"],
