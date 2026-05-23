@@ -63,7 +63,7 @@ export default defineConfig({
       },
       // 3. Route Enterprise/Inventory traffic to SQLite Engine
       '/api': {
-        target: 'http://127.0.0.1:5005',
+        target: 'http://127.0.0.1:5050',
         changeOrigin: true,
         secure: false
       },
