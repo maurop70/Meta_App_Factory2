@@ -172,6 +172,8 @@ def run_cmo_analysis(intent: str) -> dict:
       { verdict, trend_velocity, public_sentiment_score, summary, sources, live_data }
     """
     api_key = os.environ.get("GEMINI_API_KEY")
+    if api_key:
+        api_key = api_key.strip("'\"")
     if not api_key:
         logger.warning("[CMO Agent] GEMINI_API_KEY missing — using deterministic fallback.")
         return _fallback_sentiment(intent, error="GEMINI_API_KEY missing")

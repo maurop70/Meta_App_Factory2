@@ -673,9 +673,10 @@ async def review(req: ReviewRequest):
                     system_instruction=VENTURE_ARCHITECT
                 )
                 
-                response_stream = model.generate_content_stream(
+                response_stream = model.generate_content(
                     [ceo_prompt],
-                    generation_config={"temperature": 0.2}
+                    generation_config={"temperature": 0.2},
+                    stream=True
                 )
                 
                 full_ceo_strategy = ""
@@ -754,7 +755,7 @@ async def review(req: ReviewRequest):
 
         except Exception as e:
             logger.error(f"Error in Triad Review Stream: {e}")
-            yield f"Exception during LLM analysis: {str(e)}"
+            yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CEO', 'content': f'\\n[STREAM FRACTURE: {str(e)}]'})}\n\n"
 
         finally:
             pass
