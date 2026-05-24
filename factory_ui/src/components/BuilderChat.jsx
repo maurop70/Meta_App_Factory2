@@ -66,6 +66,7 @@ export default function BuilderChat() {
   const [socraticChallenge, setSocraticChallenge] = useState(null);
   const [socraticEvidence, setSocraticEvidence] = useState('');
   const [isSocraticSubmitting, setIsSocraticSubmitting] = useState(false);
+  const abortControllerRef = useRef(null);
 
   const handleNewThread = () => {
     setChatHistory([]);
@@ -81,6 +82,18 @@ export default function BuilderChat() {
       document_ids: [],
       agent: 'UNKNOWN'
     }]);
+  };
+
+  const handleHalt = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      setIsStreaming(false);
+      setChatHistory(prev => [...prev, {
+        role: 'system',
+        content: '🛑 [HALT & INTERVENE] Stream severed by Commander command. Secure input unlocked.',
+        document_ids: []
+      }]);
+    }
   };
 
   const handleSocraticSubmit = async () => {
@@ -235,10 +248,14 @@ export default function BuilderChat() {
     setCachedDocumentIds(updatedCachedDocIds);
     setIsStreaming(true);
     
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    
     try {
       const response = await fetch('/api/orchestrate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({ 
           description: userMsg || "Evaluate attached documents.", 
           prompt: userMsg || "Evaluate attached documents.",
@@ -436,10 +453,14 @@ export default function BuilderChat() {
     setChatHistory(prev => [...prev, { role: 'system', content: `⚙️ [BLUEPRINT HANDOFF INTERCEPTED] Routing blueprint to Executive Architect for physical synthesis...`, document_ids: [] }]);
     
     setIsStreaming(true);
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    
     try {
       const response = await fetch('/api/orchestrate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({ 
           description: blueprintJson, 
           prompt: blueprintJson,
@@ -492,6 +513,8 @@ export default function BuilderChat() {
                   newHistory[newHistory.length - 1].content += parsed.content;
                   return newHistory;
                 });
+              } else if (parsed.type === 'socratic_pause') {
+                setSocraticChallenge(parsed);
               }
             } catch (e) {
               setChatHistory(prev => {
@@ -574,7 +597,7 @@ export default function BuilderChat() {
                         💼 C-SUITE: {emitter}
                       </span>
                     </div>
-                    <div className="text-sm font-mono whitespace-pre-wrap leading-relaxed">
+                    <div className="text-sm font-mono whitespace-pre-wrap leading-relaxed agent-card-text">
                       {block.content}
                     </div>
                   </div>
@@ -705,6 +728,15 @@ export default function BuilderChat() {
       )}
 
       <div className="chat-input-bar">
+        {isStreaming && (
+          <button
+            type="button"
+            onClick={handleHalt}
+            className="absolute left-1/2 -translate-x-1/2 -top-12 px-4 py-2 bg-rose-950/90 hover:bg-rose-900 border border-rose-500/50 hover:border-rose-500 text-rose-300 hover:text-rose-200 text-xs font-mono font-bold tracking-wider rounded-full transition-all shadow-lg flex items-center space-x-2 animate-bounce z-20"
+          >
+            <span>🛑 HALT & INTERVENE</span>
+          </button>
+        )}
         <input 
           type="file" 
           className="hidden" 
