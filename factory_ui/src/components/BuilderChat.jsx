@@ -278,9 +278,14 @@ export default function BuilderChat() {
             remainder = chunk.slice(firstNewlineIdx + 1);
           }
           
-          if (identityLine.includes('{"type": "agent_identity"')) {
+          let cleanIdentity = identityLine;
+          if (cleanIdentity.startsWith('data: ')) {
+            cleanIdentity = cleanIdentity.slice(6);
+          }
+          
+          if (cleanIdentity.includes('{"type": "agent_identity"')) {
             try {
-              const parsed = JSON.parse(identityLine);
+              const parsed = JSON.parse(cleanIdentity);
               if (parsed.agent) {
                 agentType = parsed.agent;
                 setChatHistory(prev => {
@@ -290,7 +295,7 @@ export default function BuilderChat() {
                 });
               }
             } catch (e) {
-              console.error("Error parsing agent identity:", e);
+              console.error("[SSE FRACTURE] Failed to parse chunk:", identityLine);
             }
           }
           
@@ -325,9 +330,15 @@ export default function BuilderChat() {
             const lines = completeLines.split('\n');
             for (const line of lines) {
               if (!line.trim()) continue;
-              if (line.startsWith('{"type": "agent_stream"')) {
-                try {
-                  const parsed = JSON.parse(line);
+              
+              let cleanLine = line;
+              if (cleanLine.startsWith('data: ')) {
+                cleanLine = cleanLine.slice(6);
+              }
+              
+              try {
+                const parsed = JSON.parse(cleanLine);
+                if (parsed.type === 'agent_stream') {
                   const { emitter, content: token } = parsed;
                   
                   // Synchronously update localBlocks to prevent race conditions
@@ -356,16 +367,11 @@ export default function BuilderChat() {
                     lastMsg.content = JSON.stringify(blocks);
                     return newHistory;
                   });
-                } catch (e) {
-                  console.error("Error parsing agent stream JSON line:", e);
+                } else if (parsed.type === 'socratic_pause') {
+                  setSocraticChallenge(parsed);
                 }
-              } else if (line.startsWith('{"type": "socratic_pause"')) {
-                try {
-                  const parsedPause = JSON.parse(line);
-                  setSocraticChallenge(parsedPause);
-                } catch (e) {
-                  console.error("Error parsing socratic_pause line:", e);
-                }
+              } catch (e) {
+                console.error("[SSE FRACTURE] Failed to parse chunk:", line);
               }
             }
           }
@@ -376,10 +382,13 @@ export default function BuilderChat() {
       
       // Flush remaining stream buffer
       if (agentType === 'VENTURE_ARCHITECT' && streamBuffer.trim()) {
-        const line = streamBuffer;
-        if (line.startsWith('{"type": "agent_stream"')) {
-          try {
-            const parsed = JSON.parse(line);
+        let cleanLine = streamBuffer;
+        if (cleanLine.startsWith('data: ')) {
+          cleanLine = cleanLine.slice(6);
+        }
+        try {
+          const parsed = JSON.parse(cleanLine);
+          if (parsed.type === 'agent_stream') {
             const { emitter, content: token } = parsed;
             
             // Synchronously update localBlocks
@@ -407,9 +416,9 @@ export default function BuilderChat() {
               lastMsg.content = JSON.stringify(blocks);
               return newHistory;
             });
-          } catch (e) {
-            console.error("Error flushing stream buffer:", e);
           }
+        } catch (e) {
+          console.error("[SSE FRACTURE] Failed to parse chunk:", streamBuffer);
         }
       }
 

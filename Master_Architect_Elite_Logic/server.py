@@ -403,7 +403,7 @@ async def review(req: ReviewRequest):
                 agent_identity = "EXECUTIVE_ARCHITECT"
                 
                 # CRITICAL: Yield the SSE agent identity tag as the very first chunk
-                yield f'{{"type": "agent_identity", "agent": "{agent_identity}"}}\n'
+                yield f"data: {json.dumps({'type': 'agent_identity', 'agent': agent_identity})}\n\n"
                 
                 # Determine which document_ids are already present in history
                 historical_doc_ids = set()
@@ -527,13 +527,13 @@ async def review(req: ReviewRequest):
 
             else:
                 agent_identity = "VENTURE_ARCHITECT"
-                yield f'{{"type": "agent_identity", "agent": "{agent_identity}"}}\n'
+                yield f"data: {json.dumps({'type': 'agent_identity', 'agent': agent_identity})}\n\n"
                 
                 # ── PHYSICAL MULTI-AGENT SWARM execution ──
                 import httpx
                 
                 # 1. CIO Deep Research Pre-flight Sweep (Port 5090)
-                yield f'{{"type": "agent_stream", "emitter": "CIO", "content": "🔍 [CIO Sweep] Initiating live market research sensor sweep...\\n"}}\n'
+                yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CIO', 'content': '🔍 [CIO Sweep] Initiating live market research sensor sweep...\\n'})}\n\n"
                 
                 intel_brief_str = "No live intelligence gathered."
                 try:
@@ -545,15 +545,15 @@ async def review(req: ReviewRequest):
                 except Exception as cio_err:
                     logger.warning(f"CIO pre-flight HTTP failed: {cio_err}")
                 
-                yield f'{{"type": "agent_stream", "emitter": "CIO", "content": "✅ CIO Sensor Sweep Completed. Live data integrated.\\n\\n"}}\n'
+                yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CIO', 'content': '✅ CIO Sensor Sweep Completed. Live data integrated.\\n\\n'})}\n\n"
 
                 # 2. Parallel Boardroom analysis (CMO, CFO, CIO)
-                yield f'{{"type": "agent_stream", "emitter": "CEO", "content": "💬 Dispatching intent to C-Suite division heads for concurrent strategic audit...\\n"}}\n'
+                yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CEO', 'content': '💬 Dispatching intent to C-Suite division heads for concurrent strategic audit...\\n'})}\n\n"
                 
                 # CMO Analysis (DuckDuckGo live searches)
                 cmo_summary = ""
                 try:
-                    yield f'{{"type": "agent_stream", "emitter": "CMO", "content": "📊 [CMO Agent] Launching competitor landscape DuckDuckGo scans...\\n"}}\n'
+                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CMO', 'content': '📊 [CMO Agent] Launching competitor landscape DuckDuckGo scans...\\n'})}\n\n"
                     async with httpx.AsyncClient(timeout=10.0) as client:
                         resp = await client.post("http://127.0.0.1:5020/api/warroom/respond", json={
                             "topic": user_query,
@@ -575,12 +575,14 @@ async def review(req: ReviewRequest):
                     except Exception as fallback_err:
                         cmo_summary = f"[CMO local analysis fell back. Error: {fallback_err}]"
 
-                yield f'{{"type": "agent_stream", "emitter": "CMO", "content": "📢 CMO Market Report:\\n{cmo_summary}\\n\\n"}}\n'
+                cmo_report_text = f"📢 CMO Market Report:\n{cmo_summary}\n\n"
+                for idx in range(0, len(cmo_report_text), 32):
+                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CMO', 'content': cmo_report_text[idx:idx+32]})}\n\n"
 
                 # CFO Analysis (Excel model math engine via Port 5070 consult)
                 cfo_report = ""
                 try:
-                    yield f'{{"type": "agent_stream", "emitter": "CFO", "content": "💵 [CFO Agent] Ingesting operational costs and calculating projected IRR...\\n"}}\n'
+                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CFO', 'content': '💵 [CFO Agent] Ingesting operational costs and calculating projected IRR...\\n'})}\n\n"
                     async with httpx.AsyncClient(timeout=15.0) as client:
                         resp = await client.post("http://127.0.0.1:5070/api/consult", data={
                             "instruction": f"CEO DIRECTIVE: {user_query}\n\n=== CIO INTELLIGENCE BRIEF ===\n{intel_brief_str}"
@@ -622,12 +624,14 @@ async def review(req: ReviewRequest):
                     except Exception as fallback_err:
                         cfo_report = f"[CFO local analysis fell back. Error: {cfo_err} | Fallback error: {fallback_err}]"
 
-                yield f'{{"type": "agent_stream", "emitter": "CFO", "content": "📈 CFO Financial Projections:\\n{cfo_report}\\n\\n"}}\n'
+                cfo_report_text = f"📈 CFO Financial Projections:\n{cfo_report}\n\n"
+                for idx in range(0, len(cfo_report_text), 32):
+                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CFO', 'content': cfo_report_text[idx:idx+32]})}\n\n"
 
                 # CIO Technical Feasibility Analysis
                 cio_feasibility = ""
                 try:
-                    yield f'{{"type": "agent_stream", "emitter": "CIO", "content": "💻 [CIO Agent] Auditing system constraints and estimating resource capacity...\\n"}}\n'
+                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CIO', 'content': '💻 [CIO Agent] Auditing system constraints and estimating resource capacity...\\n'})}\n\n"
                     async with httpx.AsyncClient(timeout=10.0) as client:
                         resp = await client.post("http://127.0.0.1:5090/api/cio/process", json={
                             "focus_areas": [user_query]
@@ -646,10 +650,12 @@ async def review(req: ReviewRequest):
                     except Exception as cio_err:
                         cio_feasibility = f"[CIO feasibility assessment failed: {cio_err}]"
 
-                yield f'{{"type": "agent_stream", "emitter": "CIO", "content": "⚙️ CIO Technical Feasibility Report:\\n{cio_feasibility}\\n\\n"}}\n'
+                cio_report_text = f"⚙️ CIO Technical Feasibility Report:\n{cio_feasibility}\n\n"
+                for idx in range(0, len(cio_report_text), 32):
+                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CIO', 'content': cio_report_text[idx:idx+32]})}\n\n"
 
                 # 3. CEO Synthesis (Heavy gemini-2.5-pro model execution)
-                yield f'{{"type": "agent_stream", "emitter": "CEO", "content": "👑 [CEO Brain] Synthesizing division reports and resolving strategic bottlenecks...\\n"}}\n'
+                yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CEO', 'content': '👑 [CEO Brain] Synthesizing division reports and resolving strategic bottlenecks...\\n'})}\n\n"
                 
                 ceo_prompt = (
                     f"You are the CEO of the Antigravity Meta App Factory. Ingest the following physical division reports for intent: '{user_query}':\n\n"
@@ -673,10 +679,10 @@ async def review(req: ReviewRequest):
                 for chunk in response_stream:
                     if chunk.text:
                         full_ceo_strategy += chunk.text
-                        yield f'{{"type": "agent_stream", "emitter": "CEO", "content": {json.dumps(chunk.text)}}}\n'
+                        yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CEO', 'content': chunk.text})}\n\n"
 
                 # 3.5. Critic Evaluation / Socratic Gate check
-                yield f'{{"type": "agent_stream", "emitter": "CRITIC", "content": "\\n\\n⚖️ [Critic Node] Initiating adversarial compliance and risk assessment...\\n"}}\n'
+                yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CRITIC', 'content': '\\n\\n⚖️ [Critic Node] Initiating adversarial compliance and risk assessment...\\n'})}\n\n"
                 
                 critic_prompt = (
                     f"You are the Critic Agent. Evaluate the unified strategic plan for the topic: '{user_query}':\n\n"
@@ -704,19 +710,19 @@ async def review(req: ReviewRequest):
                 except Exception as critic_err:
                     logger.error(f"Critic scoring failed: {critic_err}")
                 
-                yield f'{{"type": "agent_stream", "emitter": "CRITIC", "content": "Critic objections: {json.dumps(objections)}\\n"}}\n'
-                yield f'{{"type": "agent_stream", "emitter": "CRITIC", "content": "Critic score: {critic_score}/10.0\\n"}}\n'
+                yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CRITIC', 'content': f'Critic objections: {json.dumps(objections)}\\n'})}\n\n"
+                yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CRITIC', 'content': f'Critic score: {critic_score}/10.0\\n'})}\n\n"
                 
                 if critic_score < 9.5:
                     from socratic_challenger import get_challenger
                     challenger = get_challenger()
                     challenge = challenger.evaluate(proposal=full_ceo_strategy, critic_score=critic_score)
                     
-                    yield f'{{"type": "socratic_pause", "challenge_id": "{challenge.get("challenge_id")}", "weaknesses": {json.dumps(challenge.get("weaknesses"))}}}\n'
+                    yield f"data: {json.dumps({'type': 'socratic_pause', 'challenge_id': challenge.get('challenge_id'), 'weaknesses': challenge.get('weaknesses')})}\n\n"
                     return # Instantly close connection
 
                 # 4. CTO Blueprint Handoff Contract
-                yield f'{{"type": "agent_stream", "emitter": "CTO", "content": "\\n\\n⚙️ [CTO Node] Deliberation approved. Synthesizing immutable physical software contract...\\n"}}\n'
+                yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CTO', 'content': '\\n\\n⚙️ [CTO Node] Deliberation approved. Synthesizing immutable physical software contract...\\n'})}\n\n"
                 
                 blueprint_json = (
                     "{\n"
@@ -738,9 +744,9 @@ async def review(req: ReviewRequest):
                 # Stream blueprint to ensure the frontend interceptor captures it correctly
                 chunk_size = 32
                 for idx in range(0, len(blueprint_json), chunk_size):
-                    yield f'{{"type": "agent_stream", "emitter": "CTO", "content": {json.dumps(blueprint_json[idx:idx+chunk_size])}}}\n'
+                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CTO', 'content': blueprint_json[idx:idx+chunk_size]})}\n\n"
                 
-                yield f'{{"type": "agent_stream", "emitter": "CTO", "content": "\\n✅ Physical Software Contract Sealed. Awaiting execution."}}\n'
+                yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CTO', 'content': '\\n✅ Physical Software Contract Sealed. Awaiting execution.'})}\n\n"
 
         except Exception as e:
             logger.error(f"Error in Triad Review Stream: {e}")
