@@ -155,7 +155,7 @@ export default function BuilderChat() {
     setIsStreaming(true);
     
     try {
-      const response = await fetch('/api/review', {
+      const response = await fetch('/api/orchestrate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -171,30 +171,320 @@ export default function BuilderChat() {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       
-      setChatHistory(prev => [...prev, { role: 'system', content: '', document_ids: [] }]);
+      setChatHistory(prev => [...prev, { role: 'system', content: '', document_ids: [], agent: 'UNKNOWN' }]);
       
+      let isFirstChunk = true;
+      let agentType = 'UNKNOWN';
+      let streamBuffer = '';
+      let localBlocks = [];
+
       while (true) {
         const { done, value } = await reader.read();
+        
+        let chunk = '';
+        if (value) {
+          chunk = decoder.decode(value, { stream: true });
+        }
+        
+        if (isFirstChunk && chunk) {
+          isFirstChunk = false;
+          // The first line contains the agent identity tag
+          const firstNewlineIdx = chunk.indexOf('\n');
+          let identityLine = chunk;
+          let remainder = '';
+          if (firstNewlineIdx !== -1) {
+            identityLine = chunk.slice(0, firstNewlineIdx);
+            remainder = chunk.slice(firstNewlineIdx + 1);
+          }
+          
+          if (identityLine.includes('{"type": "agent_identity"')) {
+            try {
+              const parsed = JSON.parse(identityLine);
+              if (parsed.agent) {
+                agentType = parsed.agent;
+                setChatHistory(prev => {
+                  const newHistory = [...prev];
+                  newHistory[newHistory.length - 1].agent = parsed.agent;
+                  return newHistory;
+                });
+              }
+            } catch (e) {
+              console.error("Error parsing agent identity:", e);
+            }
+          }
+          
+          if (agentType === 'EXECUTIVE_ARCHITECT') {
+            setChatHistory(prev => {
+              const newHistory = [...prev];
+              newHistory[newHistory.length - 1].content += remainder;
+              return newHistory;
+            });
+          } else {
+            streamBuffer += remainder;
+          }
+        } else if (chunk) {
+          if (agentType === 'EXECUTIVE_ARCHITECT') {
+            setChatHistory(prev => {
+              const newHistory = [...prev];
+              newHistory[newHistory.length - 1].content += chunk;
+              return newHistory;
+            });
+          } else {
+            streamBuffer += chunk;
+          }
+        }
+
+        // Always parse complete lines for Venture Swarm if we have them in the streamBuffer
+        if (agentType === 'VENTURE_ARCHITECT' && streamBuffer) {
+          let lastNewlineIdx = streamBuffer.lastIndexOf('\n');
+          if (lastNewlineIdx !== -1) {
+            const completeLines = streamBuffer.slice(0, lastNewlineIdx);
+            streamBuffer = streamBuffer.slice(lastNewlineIdx + 1);
+            
+            const lines = completeLines.split('\n');
+            for (const line of lines) {
+              if (!line.trim()) continue;
+              if (line.startsWith('{"type": "agent_stream"')) {
+                try {
+                  const parsed = JSON.parse(line);
+                  const { emitter, content: token } = parsed;
+                  
+                  // Synchronously update localBlocks to prevent race conditions
+                  if (localBlocks.length > 0 && localBlocks[localBlocks.length - 1].emitter === emitter) {
+                    localBlocks[localBlocks.length - 1].content += token;
+                  } else {
+                    localBlocks.push({ emitter, content: token });
+                  }
+
+                  setChatHistory(prev => {
+                    const newHistory = [...prev];
+                    const lastMsg = newHistory[newHistory.length - 1];
+                    let blocks = [];
+                    try {
+                      blocks = JSON.parse(lastMsg.content);
+                      if (!Array.isArray(blocks)) blocks = [];
+                    } catch (e) {
+                      blocks = [];
+                    }
+                    
+                    if (blocks.length > 0 && blocks[blocks.length - 1].emitter === emitter) {
+                      blocks[blocks.length - 1].content += token;
+                    } else {
+                      blocks.push({ emitter, content: token });
+                    }
+                    lastMsg.content = JSON.stringify(blocks);
+                    return newHistory;
+                  });
+                } catch (e) {
+                  console.error("Error parsing agent stream JSON line:", e);
+                }
+              }
+            }
+          }
+        }
+
         if (done) break;
-        const chunk = decoder.decode(value, { stream: true });
-        setChatHistory(prev => {
-          const newHistory = [...prev];
-          newHistory[newHistory.length - 1].content += chunk;
-          return newHistory;
-        });
       }
+      
+      // Flush remaining stream buffer
+      if (agentType === 'VENTURE_ARCHITECT' && streamBuffer.trim()) {
+        const line = streamBuffer;
+        if (line.startsWith('{"type": "agent_stream"')) {
+          try {
+            const parsed = JSON.parse(line);
+            const { emitter, content: token } = parsed;
+            
+            // Synchronously update localBlocks
+            if (localBlocks.length > 0 && localBlocks[localBlocks.length - 1].emitter === emitter) {
+              localBlocks[localBlocks.length - 1].content += token;
+            } else {
+              localBlocks.push({ emitter, content: token });
+            }
+
+            setChatHistory(prev => {
+              const newHistory = [...prev];
+              const lastMsg = newHistory[newHistory.length - 1];
+              let blocks = [];
+              try {
+                blocks = JSON.parse(lastMsg.content);
+                if (!Array.isArray(blocks)) blocks = [];
+              } catch (e) {
+                blocks = [];
+              }
+              if (blocks.length > 0 && blocks[blocks.length - 1].emitter === emitter) {
+                blocks[blocks.length - 1].content += token;
+              } else {
+                blocks.push({ emitter, content: token });
+              }
+              lastMsg.content = JSON.stringify(blocks);
+              return newHistory;
+            });
+          } catch (e) {
+            console.error("Error flushing stream buffer:", e);
+          }
+        }
+      }
+
+      // Check for physical software blueprint handoff trigger (using stable localBlocks)
+      if (agentType === 'VENTURE_ARCHITECT') {
+        const fullText = localBlocks.map(b => b.content).join('\n');
+        const blueprintJson = extractBlueprint(fullText);
+        if (blueprintJson) {
+          setTimeout(() => {
+            triggerHandoff(blueprintJson);
+          }, 1500);
+        }
+      }
+
     } catch (error) {
-      setChatHistory(prev => [...prev, { role: 'system', content: `[STREAM FRACTURE] ${error.message}`, document_ids: [] }]);
+      setChatHistory(prev => [...prev, { role: 'system', content: `[STREAM FRACTURE] ${error.message}`, document_ids: [], agent: 'UNKNOWN' }]);
     } finally {
       setIsStreaming(false);
     }
   };
 
-  const renderMessageContent = (content) => {
+  const extractBlueprint = (text) => {
+    if (!text) return null;
+    const startIdx = text.indexOf('{');
+    if (startIdx === -1) return null;
+    
+    for (let i = text.length; i > startIdx; i--) {
+      const candidate = text.slice(startIdx, i);
+      if (candidate.includes('"nodes"') && candidate.includes('"version"')) {
+        try {
+          const parsed = JSON.parse(candidate);
+          if (parsed.nodes && Array.isArray(parsed.nodes)) {
+            return candidate;
+          }
+        } catch (e) {}
+      }
+    }
+    return null;
+  };
+
+  const triggerHandoff = async (blueprintJson) => {
+    setChatHistory(prev => [...prev, { role: 'system', content: `⚙️ [BLUEPRINT HANDOFF INTERCEPTED] Routing blueprint to Executive Architect for physical synthesis...`, document_ids: [] }]);
+    
+    setIsStreaming(true);
+    try {
+      const response = await fetch('/api/orchestrate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          description: blueprintJson, 
+          prompt: blueprintJson,
+          document_ids: cachedDocumentIds,
+          history: [] // Clean history for strict alternating sequence
+        })
+      });
+      
+      if (!response.body) throw new Error("No readable stream");
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      
+      setChatHistory(prev => [...prev, { role: 'system', content: '', document_ids: [], agent: 'UNKNOWN' }]);
+      
+      let isFirstChunk = true;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        
+        let displayChunk = chunk;
+        if (isFirstChunk) {
+          isFirstChunk = false;
+          if (chunk.includes('{"type": "agent_identity"')) {
+            try {
+              const lines = chunk.split('\n');
+              const identityLine = lines[0];
+              const parsed = JSON.parse(identityLine);
+              if (parsed.agent) {
+                setChatHistory(prev => {
+                  const newHistory = [...prev];
+                  newHistory[newHistory.length - 1].agent = parsed.agent;
+                  return newHistory;
+                });
+              }
+              displayChunk = lines.slice(1).join('\n');
+            } catch (e) {
+              console.error("Error parsing agent identity:", e);
+            }
+          }
+        }
+        if (displayChunk) {
+          setChatHistory(prev => {
+            const newHistory = [...prev];
+            newHistory[newHistory.length - 1].content += displayChunk;
+            return newHistory;
+          });
+        }
+      }
+    } catch (error) {
+      setChatHistory(prev => [...prev, { role: 'system', content: `[STREAM FRACTURE] ${error.message}`, document_ids: [], agent: 'UNKNOWN' }]);
+    } finally {
+      setIsStreaming(false);
+    }
+  };
+
+  const renderMessageContent = (msg) => {
+    const { content, agent } = msg;
+    
+    // Check if it is a Venture Swarm response
+    if (agent === 'VENTURE_ARCHITECT') {
+      try {
+        const blocks = JSON.parse(content);
+        if (Array.isArray(blocks)) {
+          return (
+            <div className="flex flex-col space-y-4 w-full mt-2">
+              {blocks.map((block, idx) => {
+                const emitter = block.emitter;
+                let emitterColor = 'border-slate-700 bg-slate-900/40 text-slate-300';
+                let tagColor = 'bg-slate-800 text-slate-400';
+                
+                if (emitter === 'CEO') {
+                  emitterColor = 'border-indigo-500/30 bg-indigo-950/10 hover:border-indigo-500/50';
+                  tagColor = 'bg-indigo-900/50 text-indigo-300 border border-indigo-700/50';
+                } else if (emitter === 'CMO') {
+                  emitterColor = 'border-purple-500/30 bg-purple-950/10 hover:border-purple-500/50';
+                  tagColor = 'bg-purple-900/50 text-purple-300 border border-purple-700/50';
+                } else if (emitter === 'CFO') {
+                  emitterColor = 'border-emerald-500/30 bg-emerald-950/10 hover:border-emerald-500/50';
+                  tagColor = 'bg-emerald-900/50 text-emerald-300 border border-emerald-700/50';
+                } else if (emitter === 'CTO') {
+                  emitterColor = 'border-cyan-500/30 bg-cyan-950/10 hover:border-cyan-500/50';
+                  tagColor = 'bg-cyan-900/50 text-cyan-300 border border-cyan-700/50';
+                } else if (emitter === 'CIO') {
+                  emitterColor = 'border-blue-500/30 bg-blue-950/10 hover:border-blue-500/50';
+                  tagColor = 'bg-blue-900/50 text-blue-300 border border-blue-700/50';
+                }
+                
+                return (
+                  <div key={idx} className={`p-4 border rounded-xl shadow-md backdrop-blur-md transition-all duration-300 ${emitterColor}`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className={`text-[10px] font-mono font-bold px-2 py-1 rounded tracking-widest uppercase ${tagColor}`}>
+                        💼 C-SUITE: {emitter}
+                      </span>
+                    </div>
+                    <div className="text-sm font-mono whitespace-pre-wrap leading-relaxed">
+                      {block.content}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        }
+      } catch (e) {
+        // Fallback
+      }
+    }
+    
+    // Normal / Executive Architect scorecard rendering or plain text
     try {
       const parsed = JSON.parse(content);
       if (parsed.verdict && parsed.gate) return <EvaluationScorecard data={parsed} />;
     } catch (e) {}
+    
     return <div className="whitespace-pre-wrap leading-relaxed">{content}</div>;
   };
 
@@ -202,8 +492,8 @@ export default function BuilderChat() {
     <div className="builder-chat">
       <div className="chat-header">
         <h2>
-          🏗️ App Synthesis Gateway
-          <span className="stream-badge">SSE STREAM</span>
+          🌐 Omni-Router Gateway
+          <span className="stream-badge" style={{ background: 'linear-gradient(135deg, #6366f1, #a78bfa)' }}>OMNI-ROUTER ACTIVE</span>
         </h2>
         <div className="flex items-center space-x-2">
           <span className="text-xs font-mono tracking-wider text-cyan-400">BUILDER PULSE: ACTIVE</span>
@@ -220,10 +510,10 @@ export default function BuilderChat() {
         
         {chatHistory.map((msg, idx) => (
           <div key={idx} className={`msg ${msg.role === 'user' ? 'user' : 'assistant'}`}>
-             <strong className={`block mb-2 text-xs uppercase tracking-wider ${msg.role === 'user' ? 'text-cyan-400' : 'text-teal-400'}`}>
-                {msg.role === 'user' ? 'CO-PILOT' : 'MAF ORCHESTRATOR'}
+             <strong className={`block mb-2 text-xs uppercase tracking-wider ${msg.role === 'user' ? 'text-cyan-400' : msg.agent === 'VENTURE_ARCHITECT' ? 'text-purple-400' : 'text-teal-400'}`}>
+                {msg.role === 'user' ? 'CO-PILOT' : msg.agent === 'VENTURE_ARCHITECT' ? '🤖 VENTURE ARCHITECT' : msg.agent === 'EXECUTIVE_ARCHITECT' ? '🏗️ EXECUTIVE ARCHITECT' : 'MAF ORCHESTRATOR'}
              </strong>
-             {renderMessageContent(msg.content)}
+             {renderMessageContent(msg)}
           </div>
         ))}
         <div ref={terminalEndRef} />

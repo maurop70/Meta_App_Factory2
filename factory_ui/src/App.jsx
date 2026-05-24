@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import './App.css'
 import axios from 'axios'
-import { NavLink, Routes, Route, Navigate } from 'react-router-dom'
+import { NavLink, Routes, Route, Navigate, useParams } from 'react-router-dom'
 import WarRoom from './WarRoom'
 import CommandCenter from './CommandCenter'
 
@@ -152,7 +152,9 @@ function AgentStatusPanel() {
           else if (isOffline) cssClass = 'offline';
 
           return (
-            <div key={a} className={`agent-dot ${cssClass}`}>
+            <div key={a} className={`agent-dot ${cssClass}`} style={{ cursor: 'pointer' }} onClick={() => {
+              window.location.hash = `#/agent/${a.toLowerCase()}`;
+            }}>
               <span className="dot" style={
                 isNative ? { background: '#00D1FF', boxShadow: '0 0 6px rgba(0,209,255,0.5)' } :
                 isDegraded ? { background: '#f59e0b', boxShadow: '0 0 6px rgba(245,158,11,0.5)' } : {}
@@ -1227,6 +1229,122 @@ function CIOIntelligenceDashboard({ setActiveView }) {
   );
 }
 
+function DirectAgentChat() {
+  const { agentId } = useParams();
+  const [chatHistory, setChatHistory] = useState([]);
+  const [input, setInput] = useState('');
+  const [isStreaming, setIsStreaming] = useState(false);
+  const terminalEndRef = useRef(null);
+
+  useEffect(() => {
+    setChatHistory([]);
+  }, [agentId]);
+
+  useEffect(() => {
+    terminalEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatHistory]);
+
+  const handleSend = async () => {
+    if (!input.trim() || isStreaming) return;
+    const userMsg = input;
+    setChatHistory(prev => [...prev, { role: 'user', content: userMsg }]);
+    setInput('');
+    setIsStreaming(true);
+
+    try {
+      const response = await fetch('/api/agent/direct', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agent_id: agentId.toUpperCase(),
+          prompt: userMsg,
+          history: chatHistory.map(msg => ({
+            role: msg.role === 'user' ? 'user' : 'model',
+            content: msg.content
+          }))
+        })
+      });
+
+      if (!response.body) throw new Error("No readable stream");
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      setChatHistory(prev => [...prev, { role: 'model', content: '' }]);
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        setChatHistory(prev => {
+          const newHistory = [...prev];
+          newHistory[newHistory.length - 1].content += chunk;
+          return newHistory;
+        });
+      }
+    } catch (error) {
+      setChatHistory(prev => [...prev, { role: 'system', content: `[CONNECTION ERROR] ${error.message}` }]);
+    } finally {
+      setIsStreaming(false);
+    }
+  };
+
+  const agentNames = {
+    cfo: 'CFO (Chief Financial Officer)',
+    cmo: 'CMO (Chief Marketing Officer)',
+    hr: 'HR Director',
+    clo: 'CLO (Chief Legal Officer)',
+    critic: 'Critic Agent',
+    pitch: 'Pitch Architect',
+    atomizer: 'Deconstruction Atomizer',
+    architect: 'Lead Executive Architect'
+  };
+
+  const agentName = agentNames[agentId.toLowerCase()] || `${agentId.toUpperCase()} Agent`;
+
+  return (
+    <div className="registry-panel" style={{ padding: '20px', background: 'rgba(0,0,0,0.2)', borderRadius: '16px', minHeight: 'calc(100vh - 200px)', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '16px', marginBottom: '16px' }}>
+        <h3 style={{ color: '#a78bfa', margin: 0 }}>🛡️ Direct Secure Line: {agentName}</h3>
+        <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>ISOLATED CHANNEL // BYPASSING SEMANTIC ROUTING ENGINE</span>
+      </div>
+
+      <div style={{ flex: 1, overflowY: 'auto', background: 'rgba(0,0,0,0.3)', borderRadius: '12px', padding: '16px', minHeight: '300px', display: 'flex', flexDirection: 'column', gap: '12px', fontFamily: 'monospace', fontSize: '13px' }} className="custom-scrollbar">
+        {chatHistory.length === 0 && (
+          <div style={{ color: '#a78bfa', opacity: 0.5, textAlign: 'center', marginTop: '100px' }}>&gt; SECURE CONNECTION ESTABLISHED. AWAITING INPUT...</div>
+        )}
+        {chatHistory.map((msg, idx) => (
+          <div key={idx} style={{ padding: '8px', borderRadius: '8px', background: msg.role === 'user' ? 'rgba(99,102,241,0.05)' : 'rgba(167,139,250,0.05)', border: msg.role === 'user' ? '1px solid rgba(99,102,241,0.1)' : '1px solid rgba(167,139,250,0.1)' }}>
+            <strong style={{ color: msg.role === 'user' ? '#818cf8' : '#c084fc', display: 'block', marginBottom: '4px', fontSize: '11px', textTransform: 'uppercase' }}>
+              {msg.role === 'user' ? 'CO-PILOT (SECURE)' : `${agentId.toUpperCase()} EXECUTIVE`}
+            </strong>
+            <div style={{ whiteSpace: 'pre-wrap', color: '#e2e8f0', lineHeight: '1.5' }}>{msg.content}</div>
+          </div>
+        ))}
+        <div ref={terminalEndRef} />
+      </div>
+
+      <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+        <textarea
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+          placeholder={`___Transmitting encrypted packet to ${agentId.toUpperCase()}...___`}
+          rows={2}
+          disabled={isStreaming}
+          style={{ flex: 1, background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '8px', padding: '10px', fontSize: '13px', fontFamily: 'monospace', outline: 'none', resize: 'none' }}
+        />
+        <button
+          onClick={handleSend}
+          disabled={isStreaming || !input.trim()}
+          style={{ padding: '0 20px', borderRadius: '8px', background: 'linear-gradient(135deg, #a78bfa, #8b5cf6)', border: 'none', color: '#000', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          ↑
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── MAIN APP ────────────────────────────────────────────────
 function App() {
   // ── Iframe Recursion Guard ──────────────────────────────
@@ -1635,6 +1753,7 @@ function App() {
             />
           } />
           <Route path="/atomizer" element={<Atomizer />} />
+          <Route path="/agent/:agentId" element={<DirectAgentChat />} />
         </Routes>
       </main>
 
