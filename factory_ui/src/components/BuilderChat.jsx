@@ -66,6 +66,8 @@ export default function BuilderChat() {
   const [socraticChallenge, setSocraticChallenge] = useState(null);
   const [evidenceText, setEvidenceText] = useState('');
   const [isSocraticSubmitting, setIsSocraticSubmitting] = useState(false);
+  const [lastPrompt, setLastPrompt] = useState("");
+  const [isMaximized, setIsMaximized] = useState(false);
   const abortControllerRef = useRef(null);
 
   const handleNewThread = () => {
@@ -228,6 +230,7 @@ export default function BuilderChat() {
   const handleSynthesize = async () => {
     if ((!input.trim() && attachments.length === 0) || isStreaming) return;
     
+    setLastPrompt(input);
     const userMsg = input;
     const currentAttachments = [...attachments];
     const newDocIds = currentAttachments.map(a => a.document_id);
@@ -590,6 +593,8 @@ export default function BuilderChat() {
                   tagColor = 'bg-blue-900/50 text-blue-300 border border-blue-700/50';
                 }
                 
+                const formattedBlockContent = typeof block.content === 'string' ? block.content.replace(/\\n/g, '\n') : block.content;
+                
                 return (
                   <div key={idx} className={`p-4 border rounded-xl shadow-md backdrop-blur-md transition-all duration-300 ${emitterColor}`}>
                     <div className="flex items-center justify-between mb-2">
@@ -598,7 +603,7 @@ export default function BuilderChat() {
                       </span>
                     </div>
                     <div className="text-sm font-mono whitespace-pre-wrap leading-relaxed agent-card-text">
-                      {block.content}
+                      {formattedBlockContent}
                     </div>
                   </div>
                 );
@@ -617,19 +622,27 @@ export default function BuilderChat() {
       if (parsed.verdict && parsed.gate) return <EvaluationScorecard data={parsed} />;
     } catch (e) {}
     
-    return <div className="whitespace-pre-wrap leading-relaxed">{content}</div>;
+    const formattedContent = typeof content === 'string' ? content.replace(/\\n/g, '\n') : content;
+    return <div className="whitespace-pre-wrap leading-relaxed">{formattedContent}</div>;
   };
 
   const challenge = socraticChallenge ? { ...socraticChallenge, id: socraticChallenge.challenge_id } : null;
 
   return (
-    <div className="builder-chat">
+    <div className={`builder-chat ${isMaximized ? 'terminal-maximized' : ''}`}>
       <div className="chat-header">
         <h2>
           🌐 Omni-Router Gateway
           <span className="stream-badge" style={{ background: 'linear-gradient(135deg, #6366f1, #a78bfa)' }}>OMNI-ROUTER ACTIVE</span>
         </h2>
         <div className="flex items-center space-x-3">
+          <button
+            onClick={() => setIsMaximized(!isMaximized)}
+            className="px-3 py-1 bg-slate-800/80 hover:bg-slate-700/80 text-xs font-mono font-bold tracking-wider text-indigo-400 hover:text-indigo-350 border border-slate-700 hover:border-indigo-500/50 rounded-lg transition-all shadow-md flex items-center space-x-1"
+            title={isMaximized ? "Restore panel to standard view" : "Maximize panel to fullscreen"}
+          >
+            <span>{isMaximized ? '🗗 Restore' : '⛶ Maximize'}</span>
+          </button>
           <button
             onClick={handleNewThread}
             className="px-3 py-1 bg-slate-800/80 hover:bg-slate-700/80 text-xs font-mono font-bold tracking-wider text-rose-400 hover:text-rose-350 border border-slate-700 hover:border-rose-500/50 rounded-lg transition-all shadow-md flex items-center space-x-1"
@@ -729,6 +742,19 @@ export default function BuilderChat() {
         </div>
       )}
 
+      {lastPrompt !== "" && (
+        <div className="px-4 py-1 flex justify-start">
+          <button
+            type="button"
+            onClick={() => setInput(lastPrompt)}
+            className="recall-btn px-3 py-1 font-mono tracking-wider flex items-center space-x-1"
+            title="Recall last submitted prompt"
+          >
+            <span>⟲ Recall</span>
+          </button>
+        </div>
+      )}
+
       <div className="chat-input-bar">
         {isStreaming && (
           <button
@@ -758,7 +784,15 @@ export default function BuilderChat() {
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSynthesize(); } }}
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowUp' && input === "") {
+              setInput(lastPrompt);
+              e.preventDefault();
+            } else if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              handleSynthesize();
+            }
+          }}
           className="flex-1" 
           rows={2}
           placeholder={socraticChallenge ? "___Standard input locked. Resolve challenge above___" : "___Enter system architectural brief or attach payload___"}
