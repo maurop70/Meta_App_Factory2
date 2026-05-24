@@ -10,9 +10,8 @@ export default function CIOIntel() {
   const fetchMemos = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${CIO_BASE}/api/cio/memos`);
-      const memosData = res.data && res.data.items ? res.data.items : (Array.isArray(res.data) ? res.data : []);
-      setMemos(memosData);
+      const res = await axios.get(`${CIO_BASE}/api/cio/memos`, { params: { limit: 15, offset: 0 } });
+      setMemos(res.data.items);
     } catch (e) {
       console.warn("Failed to load CIO memos:", e.message);
     } finally {
