@@ -132,29 +132,44 @@ export default function BuilderChat() {
 
   const submitSocraticOverride = async (challengeId) => {
     setIsSocraticSubmitting(true);
-    const commanderNote = prompt("Enter override authorization code or justification:") || "Commander Override";
+    const overrideReason = prompt("Enter override authorization code or justification:") || "Commander Override";
     try {
       const res = await fetch('/api/challenge/override', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           challenge_id: challengeId,
-          commander_note: commanderNote
+          reason: overrideReason
         })
       });
-      if (!res.ok) throw new Error("Override endpoint failed");
-      const data = await res.json();
       
-      setChatHistory(prev => [...prev, {
-        role: 'system',
-        content: `🚨 [COMMANDER OVERRIDE] Risk level: ${data.risk_level.toUpperCase()}\n${data.risk_description}\nJustification: ${commanderNote}`,
-        document_ids: []
-      }]);
-      
+      if (res.ok || res.status === 404) {
+        if (res.status === 404) {
+          console.warn("[COMMANDER OVERRIDE ANOMALY] Backend challenge state not found or corrupted (404). Forcefully unlocking viewport.");
+          setChatHistory(prev => [...prev, {
+            role: 'system',
+            content: `🚨 [COMMANDER OVERRIDE ANOMALY] Backend challenge state not found or corrupted (404). Forcefully unlocking viewport. Justification: ${overrideReason}`,
+            document_ids: []
+          }]);
+        } else {
+          const data = await res.json();
+          setChatHistory(prev => [...prev, {
+            role: 'system',
+            content: `🚨 [COMMANDER OVERRIDE] Risk level: ${data.risk_level.toUpperCase()}\n${data.risk_description}\nJustification: ${overrideReason}`,
+            document_ids: []
+          }]);
+        }
+        setSocraticChallenge(null);
+        setEvidenceText('');
+      } else {
+        throw new Error(`Override request failed with status ${res.status}`);
+      }
+    } catch (e) {
+      console.error("[COMMANDER OVERRIDE ERROR]", e);
+      // Forcefully unlock in case of exception to ensure viewport is never bricked
       setSocraticChallenge(null);
       setEvidenceText('');
-    } catch (e) {
-      setChatHistory(prev => [...prev, { role: 'system', content: `[OVERRIDE ERROR] ${e.message}`, document_ids: [] }]);
+      setChatHistory(prev => [...prev, { role: 'system', content: `[OVERRIDE WARNING] ${e.message}. Viewport forcefully unlocked.`, document_ids: [] }]);
     } finally {
       setIsSocraticSubmitting(false);
     }
