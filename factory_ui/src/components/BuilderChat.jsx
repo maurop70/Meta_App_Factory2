@@ -64,7 +64,7 @@ export default function BuilderChat() {
   });
   const [isUploading, setIsUploading] = useState(false);
   const [socraticChallenge, setSocraticChallenge] = useState(null);
-  const [socraticEvidence, setSocraticEvidence] = useState('');
+  const [evidenceText, setEvidenceText] = useState('');
   const [isSocraticSubmitting, setIsSocraticSubmitting] = useState(false);
   const abortControllerRef = useRef(null);
 
@@ -74,7 +74,7 @@ export default function BuilderChat() {
     setCachedDocumentIds([]);
     setInput('');
     setSocraticChallenge(null);
-    setSocraticEvidence('');
+    setEvidenceText('');
     sessionStorage.clear();
     setChatHistory([{
       role: 'system',
@@ -96,16 +96,16 @@ export default function BuilderChat() {
     }
   };
 
-  const handleSocraticSubmit = async () => {
-    if (!socraticEvidence.trim()) return;
+  const submitSocraticEvidence = async (challengeId, evidenceText) => {
+    if (!evidenceText.trim()) return;
     setIsSocraticSubmitting(true);
     try {
       const res = await fetch('/api/challenge/evaluate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          challenge_id: socraticChallenge.challenge_id,
-          evidence: socraticEvidence
+          challenge_id: challengeId,
+          evidence: evidenceText
         })
       });
       if (!res.ok) throw new Error("Evaluation endpoint failed");
@@ -119,7 +119,7 @@ export default function BuilderChat() {
       
       if (data.verdict === 'CONVINCED') {
         setSocraticChallenge(null);
-        setSocraticEvidence('');
+        setEvidenceText('');
       }
     } catch (e) {
       setChatHistory(prev => [...prev, { role: 'system', content: `[CRITIC ERROR] ${e.message}`, document_ids: [] }]);
@@ -128,7 +128,7 @@ export default function BuilderChat() {
     }
   };
 
-  const handleSocraticOverride = async () => {
+  const submitSocraticOverride = async (challengeId) => {
     setIsSocraticSubmitting(true);
     const commanderNote = prompt("Enter override authorization code or justification:") || "Commander Override";
     try {
@@ -136,7 +136,7 @@ export default function BuilderChat() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          challenge_id: socraticChallenge.challenge_id,
+          challenge_id: challengeId,
           commander_note: commanderNote
         })
       });
@@ -150,7 +150,7 @@ export default function BuilderChat() {
       }]);
       
       setSocraticChallenge(null);
-      setSocraticEvidence('');
+      setEvidenceText('');
     } catch (e) {
       setChatHistory(prev => [...prev, { role: 'system', content: `[OVERRIDE ERROR] ${e.message}`, document_ids: [] }]);
     } finally {
@@ -620,6 +620,8 @@ export default function BuilderChat() {
     return <div className="whitespace-pre-wrap leading-relaxed">{content}</div>;
   };
 
+  const challenge = socraticChallenge ? { ...socraticChallenge, id: socraticChallenge.challenge_id } : null;
+
   return (
     <div className="builder-chat">
       <div className="chat-header">
@@ -660,7 +662,7 @@ export default function BuilderChat() {
 
       {/* Socratic Challenge Form Lock */}
       {socraticChallenge && (
-        <div className="p-6 bg-slate-950/90 border border-orange-500/50 rounded-xl shadow-2xl m-4 backdrop-blur-lg flex flex-col space-y-4">
+        <div className="socratic-panel p-6 bg-slate-950/90 border border-orange-500/50 rounded-xl shadow-2xl m-4 backdrop-blur-lg flex flex-col space-y-4">
           <div className="flex justify-between items-center border-b border-orange-500/30 pb-2">
             <span className="text-sm font-mono font-bold text-orange-400 tracking-wider">
               🏛️ ADVERSARIAL CHALLENGE: {socraticChallenge.challenge_id}
@@ -687,8 +689,8 @@ export default function BuilderChat() {
 
           <div className="flex flex-col space-y-2">
             <textarea
-              value={socraticEvidence}
-              onChange={(e) => setSocraticEvidence(e.target.value)}
+              value={evidenceText}
+              onChange={(e) => setEvidenceText(e.target.value)}
               placeholder="___Provide data-driven evidence (e.g. pilot conversions, TAM study, benchmark statistics)___"
               className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-xs font-mono text-slate-200 focus:border-cyan-500 outline-none"
               rows={3}
@@ -696,15 +698,15 @@ export default function BuilderChat() {
             <div className="flex space-x-2">
               <button
                 type="button"
-                onClick={handleSocraticSubmit}
-                disabled={isSocraticSubmitting || !socraticEvidence.trim()}
+                onClick={() => submitSocraticEvidence(challenge.id, evidenceText)}
+                disabled={isSocraticSubmitting || !evidenceText.trim()}
                 className="flex-1 px-4 py-2 bg-emerald-800 hover:bg-emerald-700 text-xs font-mono font-bold text-slate-100 rounded-lg border border-emerald-600 transition-colors"
               >
                 {isSocraticSubmitting ? 'Evaluating...' : 'Submit Evidence'}
               </button>
               <button
                 type="button"
-                onClick={handleSocraticOverride}
+                onClick={() => submitSocraticOverride(challenge.id)}
                 disabled={isSocraticSubmitting}
                 className="px-4 py-2 bg-rose-950 hover:bg-rose-900 text-xs font-mono font-bold text-rose-400 rounded-lg border border-rose-800 transition-colors"
               >
