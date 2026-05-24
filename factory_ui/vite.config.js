@@ -18,8 +18,8 @@ export default defineConfig({
         changeOrigin: true,
         secure: false
       },
-      '/api/cio': {
-        target: 'http://127.0.0.1:5090',
+      '/api/cio/': {
+        target: 'http://127.0.0.1:5090/',
         changeOrigin: true,
         secure: false
       },
@@ -34,7 +34,7 @@ export default defineConfig({
         secure: false
       },
       '/api/qa/stream': {
-        target: 'http://127.0.0.1:5050',
+        target: 'http://127.0.0.1:5000',
         changeOrigin: true,
         secure: false,
         configure: (proxy, _options) => {
