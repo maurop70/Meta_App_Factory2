@@ -31,6 +31,7 @@ os.environ["no_proxy"] = "generativelanguage.googleapis.com,oauth2.googleapis.co
 import sys
 import json
 import logging
+import asyncio
 from datetime import datetime
 
 from fastapi import FastAPI, HTTPException
@@ -267,7 +268,8 @@ async def classify_intent(prompt: str, history: List[dict] = None) -> str:
             "Output exactly one word, either 'BUILDER' or 'VENTURE'. Do not include markdown formatting, markdown code fences, punctuation, or any additional text."
         )
         model = genai.GenerativeModel('gemini-2.5-flash')
-        response = model.generate_content(
+        response = await asyncio.to_thread(
+            model.generate_content,
             classification_prompt,
             generation_config={"temperature": 0.0}
         )
@@ -570,7 +572,7 @@ async def review(req: ReviewRequest):
                     try:
                         from cmo_agent import CMOAgent
                         cmo = CMOAgent()
-                        cmo_res = cmo.run(user_query)
+                        cmo_res = await asyncio.to_thread(cmo.run, user_query)
                         cmo_summary = cmo_res.get("summary", "")
                     except Exception as fallback_err:
                         cmo_summary = f"[CMO local analysis fell back. Error: {fallback_err}]"
@@ -607,7 +609,8 @@ async def review(req: ReviewRequest):
                     try:
                         from cfo_agent import CFOAgent
                         cfo = CFOAgent()
-                        cfo_res = cfo.synthesize(
+                        cfo_res = await asyncio.to_thread(
+                            cfo.synthesize,
                             "warroom",
                             {"marketing_cost": 25000, "sentiment": "neutral"},
                             {"infrastructure_cost_monthly": 500, "complexity": "medium"}
@@ -645,7 +648,7 @@ async def review(req: ReviewRequest):
                     try:
                         from cio_agent import CIOAgent
                         cio = CIOAgent()
-                        cio_res = cio.run(user_query)
+                        cio_res = await asyncio.to_thread(cio.run, user_query)
                         cio_feasibility = cio_res.get("feasibility_analysis", "")
                     except Exception as cio_err:
                         cio_feasibility = f"[CIO feasibility assessment failed: {cio_err}]"
@@ -700,7 +703,8 @@ async def review(req: ReviewRequest):
                 objections = []
                 try:
                     critic_model = genai.GenerativeModel('gemini-2.5-flash')
-                    critic_resp = critic_model.generate_content(
+                    critic_resp = await asyncio.to_thread(
+                        critic_model.generate_content,
                         critic_prompt,
                         generation_config={"temperature": 0.0, "response_mime_type": "application/json"}
                     )
