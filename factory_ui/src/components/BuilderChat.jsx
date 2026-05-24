@@ -43,12 +43,42 @@ const EvaluationScorecard = ({ data }) => {
 };
 
 export default function BuilderChat() {
-  const [chatHistory, setChatHistory] = useState([]);
+  const [chatHistory, setChatHistory] = useState(() => {
+    try {
+      const stored = sessionStorage.getItem('ma_chat_history');
+      return stored ? JSON.parse(stored) : [];
+    } catch (e) {
+      return [];
+    }
+  });
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [attachments, setAttachments] = useState([]);
-  const [cachedDocumentIds, setCachedDocumentIds] = useState([]);
+  const [cachedDocumentIds, setCachedDocumentIds] = useState(() => {
+    try {
+      const stored = sessionStorage.getItem('ma_cached_document_ids');
+      return stored ? JSON.parse(stored) : [];
+    } catch (e) {
+      return [];
+    }
+  });
   const [isUploading, setIsUploading] = useState(false);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('ma_chat_history', JSON.stringify(chatHistory));
+    } catch (e) {
+      console.error("Error setting sessionStorage for chatHistory", e);
+    }
+  }, [chatHistory]);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('ma_cached_document_ids', JSON.stringify(cachedDocumentIds));
+    } catch (e) {
+      console.error("Error setting sessionStorage for cachedDocumentIds", e);
+    }
+  }, [cachedDocumentIds]);
   
   const terminalEndRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -109,7 +139,16 @@ export default function BuilderChat() {
     const newDocIds = currentAttachments.map(a => a.document_id);
     const updatedCachedDocIds = Array.from(new Set([...cachedDocumentIds, ...newDocIds]));
     
-    setChatHistory(prev => [...prev, { role: 'user', content: userMsg || '[ATTACHED PAYLOAD TRANSMITTED]' }]);
+    // Construct serialized history payload tracking document_ids associated with specific turns
+    const serializedHistory = chatHistory
+      .filter(msg => msg.content && !msg.content.startsWith('[INGESTION FRACTURE]') && !msg.content.startsWith('[STREAM FRACTURE]'))
+      .map(msg => ({
+        role: msg.role === 'user' ? 'user' : 'model',
+        content: msg.content,
+        document_ids: msg.document_ids || []
+      }));
+
+    setChatHistory(prev => [...prev, { role: 'user', content: userMsg || '[ATTACHED PAYLOAD TRANSMITTED]', document_ids: newDocIds }]);
     setInput('');
     setAttachments([]);
     setCachedDocumentIds(updatedCachedDocIds);
@@ -122,7 +161,8 @@ export default function BuilderChat() {
         body: JSON.stringify({ 
           description: userMsg || "Evaluate attached documents.", 
           prompt: userMsg || "Evaluate attached documents.",
-          document_ids: updatedCachedDocIds
+          document_ids: updatedCachedDocIds,
+          history: serializedHistory
         })
       });
       
@@ -131,7 +171,7 @@ export default function BuilderChat() {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       
-      setChatHistory(prev => [...prev, { role: 'system', content: '' }]);
+      setChatHistory(prev => [...prev, { role: 'system', content: '', document_ids: [] }]);
       
       while (true) {
         const { done, value } = await reader.read();
@@ -144,7 +184,7 @@ export default function BuilderChat() {
         });
       }
     } catch (error) {
-      setChatHistory(prev => [...prev, { role: 'system', content: `[STREAM FRACTURE] ${error.message}` }]);
+      setChatHistory(prev => [...prev, { role: 'system', content: `[STREAM FRACTURE] ${error.message}`, document_ids: [] }]);
     } finally {
       setIsStreaming(false);
     }

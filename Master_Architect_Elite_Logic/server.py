@@ -123,6 +123,52 @@ class ReviewRequest(BaseModel):
     context: Optional[dict] = None
     prompt: Optional[str] = None
     document_ids: Optional[List[str]] = None
+    history: Optional[List[dict]] = None
+
+def normalize_history(history_data: List[dict]) -> List[dict]:
+    if not history_data:
+        return []
+    
+    cleaned = []
+    for msg in history_data:
+        role = msg.get("role")
+        content = msg.get("content") or ""
+        doc_ids = msg.get("document_ids") or []
+        
+        # Standardize role
+        if role in ["system", "assistant", "model"]:
+            role = "model"
+        else:
+            role = "user"
+            
+        cleaned.append({
+            "role": role,
+            "content": content,
+            "document_ids": doc_ids
+        })
+        
+    # Active role collapse: merge consecutive roles
+    collapsed = []
+    for msg in cleaned:
+        if not collapsed:
+            collapsed.append(msg)
+        else:
+            prev = collapsed[-1]
+            if prev["role"] == msg["role"]:
+                prev["content"] += "\n" + msg["content"]
+                prev["document_ids"] = list(set(prev["document_ids"] + msg["document_ids"]))
+            else:
+                collapsed.append(msg)
+                
+    # Ensure history begins with a user turn
+    if collapsed and collapsed[0]["role"] == "model":
+        collapsed.insert(0, {"role": "user", "content": "[Initial session established]", "document_ids": []})
+        
+    # Ensure alternating order ends with model, so the next turn (current prompt) is a user message.
+    if collapsed and collapsed[-1]["role"] == "user":
+        collapsed.pop()
+            
+    return collapsed
 
 class QuickReviewRequest(BaseModel):
     description: str
@@ -223,9 +269,10 @@ def review(req: ReviewRequest):
         "- PATH B (Conversational Inquiry): If the user asks a natural language question (e.g., 'what is in this file?', 'explain this', or asks questions about the documents), you are permanently authorized to bypass the JSON schema and output a standard, rich Markdown text response with no JSON wrappers."
     )
 
-    # Streaming review generator
     def generate_review_stream():
         api_key = os.getenv("GEMINI_API_KEY", "")
+        if api_key:
+            api_key = api_key.strip("'\"")
 
         if not api_key:
             fallback_resp = {
@@ -245,6 +292,7 @@ def review(req: ReviewRequest):
             return
 
         google_uploaded_files = []
+        current_uploaded_files = []
         document_context = ""
 
         try:
@@ -253,9 +301,18 @@ def review(req: ReviewRequest):
             # Configure native Google Gemini API client
             genai.configure(api_key=api_key)
 
-            # 1. THE EXTRACTION SPLICE
+            # Determine which document_ids are already present in history
+            historical_doc_ids = set()
+            if req.history:
+                for turn in req.history:
+                    for doc_id in turn.get("document_ids", []):
+                        historical_doc_ids.add(doc_id)
+
+            # 1. THE EXTRACTION SPLICE (Current Turn new files only)
             if req.document_ids:
                 for doc_id in req.document_ids:
+                    if doc_id in historical_doc_ids:
+                        continue
                     safe_doc_id = os.path.basename(doc_id)
                     doc_path = os.path.normpath(os.path.join(_SCRIPT_DIR, "vault", "staging", safe_doc_id))
                     if os.path.exists(doc_path):
@@ -273,9 +330,47 @@ def review(req: ReviewRequest):
                                 logger.info(f"Staging massive binary document {safe_doc_id} to Google File API...")
                                 uploaded_file = genai.upload_file(doc_path)
                                 google_uploaded_files.append(uploaded_file)
+                                current_uploaded_files.append(uploaded_file)
                                 document_context += f"\n[Staged Binary Payload: {safe_doc_id} (Google URI: {uploaded_file.name})]\n"
                             except Exception as e:
                                 logger.error(f"Error staging binary document {safe_doc_id} to Google: {e}")
+
+            # Reconstruct history chronologically with types.Part
+            formatted_history = []
+            if req.history:
+                normalized = normalize_history(req.history)
+                for turn in normalized:
+                    parts = []
+                    # Stage historical documents for this specific turn
+                    if turn["document_ids"]:
+                        for doc_id in turn["document_ids"]:
+                            safe_doc_id = os.path.basename(doc_id)
+                            doc_path = os.path.normpath(os.path.join(_SCRIPT_DIR, "vault", "staging", safe_doc_id))
+                            if os.path.exists(doc_path):
+                                ext = os.path.splitext(safe_doc_id)[1].lower()
+                                if ext in [".txt", ".md", ".csv", ".json"]:
+                                    try:
+                                        with open(doc_path, "r", encoding="utf-8", errors="ignore") as f:
+                                            parts.append(f"\n--- HISTORICAL DOCUMENT: {safe_doc_id} ---\n" + f.read() + "\n")
+                                    except Exception as e:
+                                        logger.error(f"Error reading historical text {safe_doc_id}: {e}")
+                                else:
+                                    try:
+                                        logger.info(f"Re-staging historical binary document {safe_doc_id} to Google File API...")
+                                        uploaded_file = genai.upload_file(doc_path)
+                                        google_uploaded_files.append(uploaded_file)
+                                        parts.append(uploaded_file)
+                                    except Exception as e:
+                                        logger.error(f"Error re-staging historical binary document {safe_doc_id} to Google: {e}")
+                    
+                    if turn["content"].strip():
+                        parts.append(turn["content"])
+                        
+                    if parts:
+                        formatted_history.append({
+                            "role": turn["role"],
+                            "parts": parts
+                        })
 
             # 3. PAYLOAD FUSION & CONTEXT INJECTION
             prompt_payload = f"USER INQUIRY / DESCRIPTION:\n{user_query}\n"
@@ -288,16 +383,24 @@ def review(req: ReviewRequest):
                 system_instruction=system_prompt
             )
             
-            # Mathematically fuse binary files with the prompt payload
+            # Mathematically fuse current binary files with the current prompt payload
             contents_payload = []
-            for uf in google_uploaded_files:
+            for uf in current_uploaded_files:
                 contents_payload.append(uf)
             contents_payload.append(prompt_payload)
 
-            response = model.generate_content(
-                contents_payload,
-                generation_config={"temperature": 0.2}
-            )
+            # Properly instantiate the ChatSession if history is present, ensuring strict context binding
+            if formatted_history:
+                chat = model.start_chat(history=formatted_history)
+                response = chat.send_message(
+                    contents_payload,
+                    generation_config={"temperature": 0.2}
+                )
+            else:
+                response = model.generate_content(
+                    contents_payload,
+                    generation_config={"temperature": 0.2}
+                )
             
             text = response.text.strip()
 
