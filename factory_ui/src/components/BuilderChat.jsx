@@ -254,100 +254,54 @@ export default function BuilderChat() {
       
       setChatHistory(prev => [...prev, { role: 'system', content: '', document_ids: [], agent: 'UNKNOWN' }]);
       
-      let isFirstChunk = true;
       let agentType = 'UNKNOWN';
       let streamBuffer = '';
       let localBlocks = [];
 
       while (true) {
         const { done, value } = await reader.read();
-        
-        let chunk = '';
         if (value) {
-          chunk = decoder.decode(value, { stream: true });
+          streamBuffer += decoder.decode(value, { stream: true });
         }
         
-        if (isFirstChunk && chunk) {
-          isFirstChunk = false;
-          // The first line contains the agent identity tag
-          const firstNewlineIdx = chunk.indexOf('\n');
-          let identityLine = chunk;
-          let remainder = '';
-          if (firstNewlineIdx !== -1) {
-            identityLine = chunk.slice(0, firstNewlineIdx);
-            remainder = chunk.slice(firstNewlineIdx + 1);
-          }
+        let lastNewlineIdx = streamBuffer.lastIndexOf('\n');
+        if (lastNewlineIdx !== -1) {
+          const completeLines = streamBuffer.slice(0, lastNewlineIdx);
+          streamBuffer = streamBuffer.slice(lastNewlineIdx + 1);
           
-          let cleanIdentity = identityLine;
-          if (cleanIdentity.startsWith('data: ')) {
-            cleanIdentity = cleanIdentity.slice(6);
-          }
-          
-          if (cleanIdentity.includes('{"type": "agent_identity"')) {
+          const lines = completeLines.split('\n');
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            
+            let cleanLine = line;
+            if (cleanLine.startsWith('data: ')) {
+              cleanLine = cleanLine.slice(6);
+            }
+            
             try {
-              const parsed = JSON.parse(cleanIdentity);
-              if (parsed.agent) {
+              const parsed = JSON.parse(cleanLine.trim());
+              if (parsed.type === 'agent_identity' && parsed.agent) {
                 agentType = parsed.agent;
                 setChatHistory(prev => {
                   const newHistory = [...prev];
                   newHistory[newHistory.length - 1].agent = parsed.agent;
                   return newHistory;
                 });
-              }
-            } catch (e) {
-              console.error("[SSE FRACTURE] Failed to parse chunk:", identityLine);
-            }
-          }
-          
-          if (agentType === 'EXECUTIVE_ARCHITECT') {
-            setChatHistory(prev => {
-              const newHistory = [...prev];
-              newHistory[newHistory.length - 1].content += remainder;
-              return newHistory;
-            });
-          } else {
-            streamBuffer += remainder;
-          }
-        } else if (chunk) {
-          if (agentType === 'EXECUTIVE_ARCHITECT') {
-            setChatHistory(prev => {
-              const newHistory = [...prev];
-              newHistory[newHistory.length - 1].content += chunk;
-              return newHistory;
-            });
-          } else {
-            streamBuffer += chunk;
-          }
-        }
-
-        // Always parse complete lines for Venture Swarm if we have them in the streamBuffer
-        if (agentType === 'VENTURE_ARCHITECT' && streamBuffer) {
-          let lastNewlineIdx = streamBuffer.lastIndexOf('\n');
-          if (lastNewlineIdx !== -1) {
-            const completeLines = streamBuffer.slice(0, lastNewlineIdx);
-            streamBuffer = streamBuffer.slice(lastNewlineIdx + 1);
-            
-            const lines = completeLines.split('\n');
-            for (const line of lines) {
-              if (!line.trim()) continue;
-              
-              let cleanLine = line;
-              if (cleanLine.startsWith('data: ')) {
-                cleanLine = cleanLine.slice(6);
-              }
-              
-              try {
-                const parsed = JSON.parse(cleanLine);
-                if (parsed.type === 'agent_stream') {
-                  const { emitter, content: token } = parsed;
-                  
-                  // Synchronously update localBlocks to prevent race conditions
+              } else if (parsed.type === 'agent_stream') {
+                const { emitter, content: token } = parsed;
+                if (agentType === 'EXECUTIVE_ARCHITECT') {
+                  setChatHistory(prev => {
+                    const newHistory = [...prev];
+                    newHistory[newHistory.length - 1].content += token;
+                    return newHistory;
+                  });
+                } else {
                   if (localBlocks.length > 0 && localBlocks[localBlocks.length - 1].emitter === emitter) {
                     localBlocks[localBlocks.length - 1].content += token;
                   } else {
                     localBlocks.push({ emitter, content: token });
                   }
-
+                  
                   setChatHistory(prev => {
                     const newHistory = [...prev];
                     const lastMsg = newHistory[newHistory.length - 1];
@@ -358,7 +312,6 @@ export default function BuilderChat() {
                     } catch (e) {
                       blocks = [];
                     }
-                    
                     if (blocks.length > 0 && blocks[blocks.length - 1].emitter === emitter) {
                       blocks[blocks.length - 1].content += token;
                     } else {
@@ -367,22 +320,29 @@ export default function BuilderChat() {
                     lastMsg.content = JSON.stringify(blocks);
                     return newHistory;
                   });
-                } else if (parsed.type === 'socratic_pause') {
-                  setSocraticChallenge(parsed);
                 }
-              } catch (e) {
-                console.error("[SSE FRACTURE] Failed to parse chunk:", line);
+              } else if (parsed.type === 'socratic_pause') {
+                setSocraticChallenge(parsed);
+              }
+            } catch (e) {
+              if (agentType === 'EXECUTIVE_ARCHITECT') {
+                setChatHistory(prev => {
+                  const newHistory = [...prev];
+                  newHistory[newHistory.length - 1].content += line;
+                  return newHistory;
+                });
+              } else {
+                console.error("[SSE FRACTURE] Failed to parse line:", line, e);
               }
             }
           }
         }
-
         if (done) break;
       }
       
       // Flush remaining stream buffer
-      if (agentType === 'VENTURE_ARCHITECT' && streamBuffer.trim()) {
-        let cleanLine = streamBuffer;
+      if (streamBuffer.trim()) {
+        let cleanLine = streamBuffer.trim();
         if (cleanLine.startsWith('data: ')) {
           cleanLine = cleanLine.slice(6);
         }
@@ -390,35 +350,48 @@ export default function BuilderChat() {
           const parsed = JSON.parse(cleanLine);
           if (parsed.type === 'agent_stream') {
             const { emitter, content: token } = parsed;
-            
-            // Synchronously update localBlocks
-            if (localBlocks.length > 0 && localBlocks[localBlocks.length - 1].emitter === emitter) {
-              localBlocks[localBlocks.length - 1].content += token;
+            if (agentType === 'EXECUTIVE_ARCHITECT') {
+              setChatHistory(prev => {
+                const newHistory = [...prev];
+                newHistory[newHistory.length - 1].content += token;
+                return newHistory;
+              });
             } else {
-              localBlocks.push({ emitter, content: token });
-            }
-
-            setChatHistory(prev => {
-              const newHistory = [...prev];
-              const lastMsg = newHistory[newHistory.length - 1];
-              let blocks = [];
-              try {
-                blocks = JSON.parse(lastMsg.content);
-                if (!Array.isArray(blocks)) blocks = [];
-              } catch (e) {
-                blocks = [];
-              }
-              if (blocks.length > 0 && blocks[blocks.length - 1].emitter === emitter) {
-                blocks[blocks.length - 1].content += token;
+              if (localBlocks.length > 0 && localBlocks[localBlocks.length - 1].emitter === emitter) {
+                localBlocks[localBlocks.length - 1].content += token;
               } else {
-                blocks.push({ emitter, content: token });
+                localBlocks.push({ emitter, content: token });
               }
-              lastMsg.content = JSON.stringify(blocks);
-              return newHistory;
-            });
+              setChatHistory(prev => {
+                const newHistory = [...prev];
+                const lastMsg = newHistory[newHistory.length - 1];
+                let blocks = [];
+                try {
+                  blocks = JSON.parse(lastMsg.content);
+                  if (!Array.isArray(blocks)) blocks = [];
+                } catch (e) {
+                  blocks = [];
+                }
+                if (blocks.length > 0 && blocks[blocks.length - 1].emitter === emitter) {
+                  blocks[blocks.length - 1].content += token;
+                } else {
+                  blocks.push({ emitter, content: token });
+                }
+                lastMsg.content = JSON.stringify(blocks);
+                return newHistory;
+              });
+            }
           }
         } catch (e) {
-          console.error("[SSE FRACTURE] Failed to parse chunk:", streamBuffer);
+          if (agentType === 'EXECUTIVE_ARCHITECT') {
+            setChatHistory(prev => {
+              const newHistory = [...prev];
+              newHistory[newHistory.length - 1].content += streamBuffer;
+              return newHistory;
+            });
+          } else {
+            console.error("[SSE FRACTURE] Failed to parse remaining buffer:", streamBuffer, e);
+          }
         }
       }
 
@@ -481,37 +454,76 @@ export default function BuilderChat() {
       
       setChatHistory(prev => [...prev, { role: 'system', content: '', document_ids: [], agent: 'UNKNOWN' }]);
       
-      let isFirstChunk = true;
+      let agentType = 'UNKNOWN';
+      let streamBuffer = '';
+
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
-        const chunk = decoder.decode(value, { stream: true });
+        if (value) {
+          streamBuffer += decoder.decode(value, { stream: true });
+        }
         
-        let displayChunk = chunk;
-        if (isFirstChunk) {
-          isFirstChunk = false;
-          if (chunk.includes('{"type": "agent_identity"')) {
+        let lastNewlineIdx = streamBuffer.lastIndexOf('\n');
+        if (lastNewlineIdx !== -1) {
+          const completeLines = streamBuffer.slice(0, lastNewlineIdx);
+          streamBuffer = streamBuffer.slice(lastNewlineIdx + 1);
+          
+          const lines = completeLines.split('\n');
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            
+            let cleanLine = line;
+            if (cleanLine.startsWith('data: ')) {
+              cleanLine = cleanLine.slice(6);
+            }
+            
             try {
-              const lines = chunk.split('\n');
-              const identityLine = lines[0];
-              const parsed = JSON.parse(identityLine);
-              if (parsed.agent) {
+              const parsed = JSON.parse(cleanLine.trim());
+              if (parsed.type === 'agent_identity' && parsed.agent) {
+                agentType = parsed.agent;
                 setChatHistory(prev => {
                   const newHistory = [...prev];
                   newHistory[newHistory.length - 1].agent = parsed.agent;
                   return newHistory;
                 });
+              } else if (parsed.type === 'agent_stream' && parsed.content) {
+                setChatHistory(prev => {
+                  const newHistory = [...prev];
+                  newHistory[newHistory.length - 1].content += parsed.content;
+                  return newHistory;
+                });
               }
-              displayChunk = lines.slice(1).join('\n');
             } catch (e) {
-              console.error("Error parsing agent identity:", e);
+              setChatHistory(prev => {
+                const newHistory = [...prev];
+                newHistory[newHistory.length - 1].content += line;
+                return newHistory;
+              });
             }
           }
         }
-        if (displayChunk) {
+        if (done) break;
+      }
+      
+      // Flush remaining stream buffer
+      if (streamBuffer.trim()) {
+        let cleanLine = streamBuffer.trim();
+        if (cleanLine.startsWith('data: ')) {
+          cleanLine = cleanLine.slice(6);
+        }
+        try {
+          const parsed = JSON.parse(cleanLine);
+          if (parsed.type === 'agent_stream' && parsed.content) {
+            setChatHistory(prev => {
+              const newHistory = [...prev];
+              newHistory[newHistory.length - 1].content += parsed.content;
+              return newHistory;
+            });
+          }
+        } catch (e) {
           setChatHistory(prev => {
             const newHistory = [...prev];
-            newHistory[newHistory.length - 1].content += displayChunk;
+            newHistory[newHistory.length - 1].content += streamBuffer;
             return newHistory;
           });
         }
