@@ -2552,3 +2552,15 @@ body {
   box-shadow: none !important;
   cursor: not-allowed;
 }
+
+/* --- PHASE 10.4 OMNI-ROUTER STABILIZATION STYLES --- */
+.agent-card-text {
+  white-space: pre-wrap !important;
+}
+
+.chat-container, .message-list, .builder-chat {
+  width: 85% !important;
+  max-width: 85% !important;
+  min-width: 85% !important;
+  margin: 0 auto !important;
+}

@@ -234,7 +234,10 @@ DIRECT_AGENT_PERSONAS = {
     ),
     "CRITIC": (
         "You are the Critic Agent. You are the Adversarial Reviewer. "
-        "Your focus is analyzing proposals and finding flaws, identifying risks, auditing logic vulnerabilities, and pressure-testing ideas."
+        "Your focus is analyzing proposals, finding flaws, identifying risks, and pressure-testing ideas.\n"
+        "ABS GUARDRAILS: You must ruthlessly penalize assumptions (such as 'I think' or 'just do it'). "
+        "If a proposal lacks a defined ICP (Ideal Customer Profile), financial model, or architectural blueprint, "
+        "you are mathematically forbidden from scoring it higher than 5.0. Eradicate all leniency."
     ),
     "PITCH": (
         "You are the Pitch Architect. "
@@ -524,6 +527,50 @@ async def review(req: ReviewRequest):
                     if start != -1 and end > start:
                         text = text[start:end + 1]
 
+                    # --- UNIVERSAL SOCRATIC GATE FOR MODE A ---
+                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CRITIC', 'content': '\\n\\n⚖️ [Critic Node] Initiating adversarial compliance and risk assessment on technical blueprint...\\n'})}\n\n"
+                    
+                    critic_prompt = (
+                        f"You are the Critic Agent. Evaluate the technical infrastructure blueprint payload for the topic: '{user_query}':\n\n"
+                        f"Technical Blueprint Payload:\n{text}\n\n"
+                        "Your job is to critically evaluate this technical architecture and assign a rigorous score from 1.0 to 10.0 (where 9.5+ is perfect, and anything below 9.5 has significant weaknesses, architectural flaws, or security vulnerabilities).\n"
+                        "ABS GUARDRAILS: You must ruthlessly penalize assumptions (such as 'I think' or 'just do it'). "
+                        "If the proposal lacks a defined ICP (Ideal Customer Profile), financial model, or architectural blueprint, "
+                        "you are mathematically forbidden from scoring it higher than 5.0. Eradicate all leniency.\n"
+                        "Output a valid JSON object with the following keys:\n"
+                        "{\n"
+                        '  "score": <float between 1.0 and 10.0>,\n'
+                        '  "objections": ["list of objections"]\n'
+                        "}\n"
+                        "Do not include markdown code blocks, backticks, or any additional text."
+                    )
+                    
+                    critic_score = 7.5 # Default fallback
+                    objections = []
+                    try:
+                        critic_model = genai.GenerativeModel('gemini-2.5-flash')
+                        critic_resp = await asyncio.to_thread(
+                            critic_model.generate_content,
+                            critic_prompt,
+                            generation_config={"temperature": 0.0, "response_mime_type": "application/json"}
+                        )
+                        critic_data = json.loads(critic_resp.text.strip())
+                        critic_score = float(critic_data.get("score", 7.5))
+                        objections = critic_data.get("objections", [])
+                    except Exception as critic_err:
+                        logger.error(f"Technical Critic scoring failed: {critic_err}")
+                    
+                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CRITIC', 'content': f'Critic objections: {json.dumps(objections)}\\n'})}\n\n"
+                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CRITIC', 'content': f'Critic score: {critic_score}/10.0\\n'})}\n\n"
+                    
+                    if critic_score < 9.5:
+                        from socratic_challenger import get_challenger
+                        challenger = get_challenger()
+                        challenge = challenger.evaluate(proposal=text, critic_score=critic_score)
+                        
+                        yield f"data: {json.dumps({'type': 'socratic_pause', 'challenge_id': challenge.get('challenge_id'), 'weaknesses': challenge.get('weaknesses')})}\n\n"
+                        return # Instantly close connection
+
                 # Simulate streaming chunks in strict SSE envelope
                 chunk_size = 64
                 for i in range(0, len(text), chunk_size):
@@ -701,6 +748,9 @@ async def review(req: ReviewRequest):
                     f"You are the Critic Agent. Evaluate the unified strategic plan for the topic: '{user_query}':\n\n"
                     f"Unified CEO Strategy:\n{full_ceo_strategy}\n\n"
                     "Your job is to critically evaluate this proposal and assign a rigorous score from 1.0 to 10.0 (where 9.5+ is perfect, and anything below 9.5 has significant weaknesses).\n"
+                    "ABS GUARDRAILS: You must ruthlessly penalize assumptions (such as 'I think' or 'just do it'). "
+                    "If the proposal lacks a defined ICP (Ideal Customer Profile), financial model, or architectural blueprint, "
+                    "you are mathematically forbidden from scoring it higher than 5.0. Eradicate all leniency.\n"
                     "Output a valid JSON object with the following keys:\n"
                     "{\n"
                     '  "score": <float between 1.0 and 10.0>,\n'
