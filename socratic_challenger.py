@@ -139,8 +139,27 @@ class SocraticChallenger:
     def __init__(self, log_dir=None):
         self.log_dir = log_dir or os.path.join(SCRIPT_DIR, "socratic_logs")
         os.makedirs(self.log_dir, exist_ok=True)
-        self._active_challenges = {}
         self._challenge_counter = 0
+
+    def _load_challenges(self):
+        """Load active challenges from disk ledger."""
+        path = os.path.join(self.log_dir, "active_challenges.json")
+        if os.path.exists(path):
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception as e:
+                logger.error(f"Failed to load active challenges: {e}")
+        return {}
+
+    def _save_challenges(self, challenges):
+        """Save active challenges to disk ledger."""
+        path = os.path.join(self.log_dir, "active_challenges.json")
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(challenges, f, indent=2, default=str)
+        except Exception as e:
+            logger.error(f"Failed to save active challenges: {e}")
 
     # ── 1. Strategic Pause ───────────────────────────────
 
@@ -158,8 +177,12 @@ class SocraticChallenger:
             }
 
         # Issue Strategic Pause
-        self._challenge_counter += 1
-        challenge_id = f"CHG-{self._challenge_counter:04d}"
+        challenges = self._load_challenges()
+        counter = len(challenges) + 1
+        challenge_id = f"CHG-{counter:04d}"
+        while challenge_id in challenges:
+            counter += 1
+            challenge_id = f"CHG-{counter:04d}"
 
         weaknesses = self._generate_weaknesses(proposal, critic_score)
 
@@ -178,7 +201,8 @@ class SocraticChallenger:
             "resolution": None,
         }
 
-        self._active_challenges[challenge_id] = challenge
+        challenges[challenge_id] = challenge
+        self._save_challenges(challenges)
         self._log_event("challenge_issued", challenge)
 
         return challenge
@@ -238,10 +262,13 @@ class SocraticChallenger:
         Analyze user's reasoning against the issued challenge.
         Returns a verdict with updated score and validation status.
         """
-        if challenge_id not in self._active_challenges:
+        challenges = self._load_challenges()
+        if challenge_id not in challenges:
             return {"error": f"Challenge {challenge_id} not found or already resolved."}
 
-        challenge = self._active_challenges[challenge_id]
+        challenge = challenges[challenge_id]
+        if challenge.get("resolved_at"):
+            return {"error": f"Challenge {challenge_id} is already resolved."}
 
         # Reasoning quality analysis
         reasoning_lower = user_reasoning.lower()
@@ -324,6 +351,8 @@ class SocraticChallenger:
         if is_convinced:
             challenge["resolved_at"] = datetime.now().isoformat()
             challenge["resolution"] = "User-Validated"
+            challenges[challenge_id] = challenge
+            self._save_challenges(challenges)
 
         self._log_event("reasoning_analyzed", result)
         return result
@@ -335,10 +364,11 @@ class SocraticChallenger:
         Commander Hard Override — logs all risks and releases the lock.
         The Critic must document the risks but allow the Architect to proceed.
         """
-        if challenge_id not in self._active_challenges:
+        challenges = self._load_challenges()
+        if challenge_id not in challenges:
             return {"error": f"Challenge {challenge_id} not found."}
 
-        challenge = self._active_challenges[challenge_id]
+        challenge = challenges[challenge_id]
 
         # Determine risk level from gap
         gap = challenge["gap"]
@@ -371,6 +401,9 @@ class SocraticChallenger:
         challenge["resolved_at"] = datetime.now().isoformat()
         challenge["resolution"] = f"Commander-Override ({risk_level})"
 
+        challenges[challenge_id] = challenge
+        self._save_challenges(challenges)
+
         self._log_event("hard_override", override_log)
 
         return override_log
@@ -379,10 +412,11 @@ class SocraticChallenger:
 
     def get_active_challenges(self):
         """Return list of unresolved challenges."""
+        challenges = self._load_challenges()
         return {
             cid: c
-            for cid, c in self._active_challenges.items()
-            if c["resolved_at"] is None
+            for cid, c in challenges.items()
+            if c.get("resolved_at") is None
         }
 
     def _log_event(self, event_type, data):

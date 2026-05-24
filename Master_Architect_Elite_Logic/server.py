@@ -318,7 +318,7 @@ class ChallengeEvaluateRequest(BaseModel):
 
 class ChallengeOverrideRequest(BaseModel):
     challenge_id: str
-    commander_note: str = ""
+    reason: str = ""
 
 
 # ═══════════════════════════════════════════════════════════
@@ -1020,10 +1020,15 @@ def challenge_override(req: ChallengeOverrideRequest):
     """Commander Hard Override for Socratic challenge — logs risks and releases lock."""
     from socratic_challenger import get_challenger
     challenger = get_challenger()
-    result = challenger.force_proceed(req.challenge_id, req.commander_note)
-    if "error" in result:
-        raise HTTPException(status_code=404, detail=result["error"])
-    return result
+    try:
+        result = challenger.force_proceed(req.challenge_id, req.reason)
+        if "error" in result:
+            raise HTTPException(status_code=404, detail=result["error"])
+        return {"status": "success", **result}
+    except Exception as e:
+        logger.error(f"Error in challenge_override route: {e}")
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
 
 # ── Pattern Memory ───────────────────────────────────────
