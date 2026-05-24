@@ -425,16 +425,6 @@ def review(req: ReviewRequest):
             yield f"Exception during LLM analysis: {str(e)}"
 
         finally:
-            # 4. MEMORY SANITIZATION
-            if google_uploaded_files:
-                try:
-                    import google.generativeai as genai
-                    genai.configure(api_key=api_key)
-                    for uf in google_uploaded_files:
-                        logger.info(f"Sanitizing memory: Forcefully deleting {uf.name} from Google servers...")
-                        genai.delete_file(uf.name)
-                except Exception as e:
-                    logger.error(f"Error during Google File API memory sanitization: {e}")
             pass
 
     return StreamingResponse(generate_review_stream(), media_type="text/plain")
