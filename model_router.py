@@ -51,12 +51,15 @@ TASK_ROUTING = {
 
 def _get_gemini_key():
     """Retrieve Gemini API key from env."""
-    return os.getenv("GEMINI_API_KEY", "")
+    key = os.getenv("GEMINI_API_KEY", "")
+    return key.strip("'\"")
 
 
 def _get_anthropic_key():
     """Retrieve Anthropic API key from env."""
     key = os.getenv("ANTHROPIC_API_KEY", "")
+    if key:
+        key = key.strip("'\"")
     if not key:
         logger.warning("[ModelRouter] WARNING: ANTHROPIC_API_KEY missing from .env. Forcing degraded Gemini fallback for Claude-designated nodes.")
     return key
