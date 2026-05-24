@@ -552,6 +552,12 @@ body {
   transform: none;
 }
 
+.socratic-panel {
+  pointer-events: auto !important;
+  position: relative;
+  z-index: 50 !important;
+}
+
 /* ══ CONSTRUCTION TRACKER ═══════════════════════════════ */
 .construction-tracker {
   padding: 0.7rem 1rem;
