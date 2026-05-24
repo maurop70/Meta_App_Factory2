@@ -714,9 +714,20 @@ async def process_deep_research(req: DeepResearchRequest):
 
 # ── List Memos ────────────────────────────────────────────
 @app.get("/api/cio/memos")
-async def get_memos():
-    """List all generated Upgrade Memos."""
-    return list_memos()
+async def get_memos(limit: int = 50, offset: int = 0):
+    """List all generated Upgrade Memos with pagination & Unified I/O Envelope."""
+    all_memos = list_memos()
+    total_count = len(all_memos)
+    
+    # Enforce limit and offset slice
+    sliced_memos = all_memos[offset:offset+limit]
+    
+    return {
+        "items": sliced_memos,
+        "total": total_count,
+        "limit": limit,
+        "offset": offset
+    }
 
 
 # ── Read Specific Memo ────────────────────────────────────

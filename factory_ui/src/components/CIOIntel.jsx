@@ -5,13 +5,14 @@ export default function CIOIntel() {
   const [memos, setMemos] = useState([]);
   const [selectedMemo, setSelectedMemo] = useState(null);
   const [loading, setLoading] = useState(false);
-  const CIO_BASE = "http://localhost:5090";
+  const CIO_BASE = "";
 
   const fetchMemos = async () => {
     setLoading(true);
     try {
       const res = await axios.get(`${CIO_BASE}/api/cio/memos`);
-      setMemos(res.data || []);
+      const memosData = res.data && res.data.items ? res.data.items : (Array.isArray(res.data) ? res.data : []);
+      setMemos(memosData);
     } catch (e) {
       console.warn("Failed to load CIO memos:", e.message);
     } finally {
