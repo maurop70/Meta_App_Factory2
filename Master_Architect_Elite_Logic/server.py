@@ -307,6 +307,14 @@ class WarRoomRequest(BaseModel):
     agent: str = "ARCHITECT"
     context: Optional[dict] = None
 
+class ChallengeEvaluateRequest(BaseModel):
+    challenge_id: str
+    evidence: str
+
+class ChallengeOverrideRequest(BaseModel):
+    challenge_id: str
+    commander_note: str = ""
+
 
 # ═══════════════════════════════════════════════════════════
 #  ENDPOINTS
@@ -569,29 +577,50 @@ async def review(req: ReviewRequest):
 
                 yield f'{{"type": "agent_stream", "emitter": "CMO", "content": "📢 CMO Market Report:\\n{cmo_summary}\\n\\n"}}\n'
 
-                # CFO Analysis (Excel model math engine)
+                # CFO Analysis (Excel model math engine via Port 5070 consult)
                 cfo_report = ""
                 try:
                     yield f'{{"type": "agent_stream", "emitter": "CFO", "content": "💵 [CFO Agent] Ingesting operational costs and calculating projected IRR...\\n"}}\n'
-                    # Local CFO execution is the standard due to domestic spreadsheet formulas
-                    from cfo_agent import CFOAgent
-                    cfo = CFOAgent()
-                    cfo_res = cfo.synthesize(
-                        "warroom",
-                        {"marketing_cost": 25000, "sentiment": "neutral"},
-                        {"infrastructure_cost_monthly": 500, "complexity": "medium"}
-                    )
-                    if cfo_res.get("status") == "success":
-                        cfo_report = (
-                            f"Generated Spreadsheet Model: {cfo_res.get('file_path')}\n"
-                            f"Projected IRR: {cfo_res.get('metrics', {}).get('irr_pct', 0)}%\n"
-                            f"Break-Even Timeline: {cfo_res.get('metrics', {}).get('breakeven_months', 0)} Months\n"
-                            f"Year 1 Net Profit: ${cfo_res.get('metrics', {}).get('net_income_y1', 0):,.2f}"
-                        )
-                    else:
-                        cfo_report = f"[CFO modeling issue: {cfo_res.get('message')}]"
+                    async with httpx.AsyncClient(timeout=15.0) as client:
+                        resp = await client.post("http://127.0.0.1:5070/api/consult", data={
+                            "instruction": f"CEO DIRECTIVE: {user_query}\n\n=== CIO INTELLIGENCE BRIEF ===\n{intel_brief_str}"
+                        })
+                        if resp.status_code == 200:
+                            cfo_data = resp.json()
+                            if "report" in cfo_data:
+                                inner = cfo_data["report"]
+                                cfo_report = (
+                                    f"Generated Spreadsheet Model: {cfo_data.get('file_path') or 'DefaultModel.xlsx'}\n"
+                                    f"Projected IRR: {inner.get('irr_pct', 0)}%\n"
+                                    f"Break-Even Timeline: {inner.get('breakeven_months', 0)} Months\n"
+                                    f"Year 1 Net Profit: ${inner.get('net_income_y1', 0):,.2f}"
+                                )
+                            else:
+                                cfo_report = json.dumps(cfo_data)
+                        else:
+                            raise Exception(f"HTTP status {resp.status_code}")
                 except Exception as cfo_err:
-                    cfo_report = f"[CFO execution failure: {cfo_err}]"
+                    logger.warning(f"CFO pre-flight HTTP failed: {cfo_err}")
+                    # Local fallback
+                    try:
+                        from cfo_agent import CFOAgent
+                        cfo = CFOAgent()
+                        cfo_res = cfo.synthesize(
+                            "warroom",
+                            {"marketing_cost": 25000, "sentiment": "neutral"},
+                            {"infrastructure_cost_monthly": 500, "complexity": "medium"}
+                        )
+                        if cfo_res.get("status") == "success":
+                            cfo_report = (
+                                f"Generated Spreadsheet Model: {cfo_res.get('file_path')}\n"
+                                f"Projected IRR: {cfo_res.get('metrics', {}).get('irr_pct', 0)}%\n"
+                                f"Break-Even Timeline: {cfo_res.get('metrics', {}).get('breakeven_months', 0)} Months\n"
+                                f"Year 1 Net Profit: ${cfo_res.get('metrics', {}).get('net_income_y1', 0):,.2f}"
+                            )
+                        else:
+                            cfo_report = f"[CFO modeling issue: {cfo_res.get('message')}]"
+                    except Exception as fallback_err:
+                        cfo_report = f"[CFO local analysis fell back. Error: {cfo_err} | Fallback error: {fallback_err}]"
 
                 yield f'{{"type": "agent_stream", "emitter": "CFO", "content": "📈 CFO Financial Projections:\\n{cfo_report}\\n\\n"}}\n'
 
@@ -640,9 +669,51 @@ async def review(req: ReviewRequest):
                     generation_config={"temperature": 0.2}
                 )
                 
+                full_ceo_strategy = ""
                 for chunk in response_stream:
                     if chunk.text:
+                        full_ceo_strategy += chunk.text
                         yield f'{{"type": "agent_stream", "emitter": "CEO", "content": {json.dumps(chunk.text)}}}\n'
+
+                # 3.5. Critic Evaluation / Socratic Gate check
+                yield f'{{"type": "agent_stream", "emitter": "CRITIC", "content": "\\n\\n⚖️ [Critic Node] Initiating adversarial compliance and risk assessment...\\n"}}\n'
+                
+                critic_prompt = (
+                    f"You are the Critic Agent. Evaluate the unified strategic plan for the topic: '{user_query}':\n\n"
+                    f"Unified CEO Strategy:\n{full_ceo_strategy}\n\n"
+                    "Your job is to critically evaluate this proposal and assign a rigorous score from 1.0 to 10.0 (where 9.5+ is perfect, and anything below 9.5 has significant weaknesses).\n"
+                    "Output a valid JSON object with the following keys:\n"
+                    "{\n"
+                    '  "score": <float between 1.0 and 10.0>,\n'
+                    '  "objections": ["list of objections"]\n'
+                    "}\n"
+                    "Do not include markdown code blocks, backticks, or any additional text."
+                )
+                
+                critic_score = 7.5 # Default fallback
+                objections = []
+                try:
+                    critic_model = genai.GenerativeModel('gemini-2.5-flash')
+                    critic_resp = critic_model.generate_content(
+                        critic_prompt,
+                        generation_config={"temperature": 0.0, "response_mime_type": "application/json"}
+                    )
+                    critic_data = json.loads(critic_resp.text.strip())
+                    critic_score = float(critic_data.get("score", 7.5))
+                    objections = critic_data.get("objections", [])
+                except Exception as critic_err:
+                    logger.error(f"Critic scoring failed: {critic_err}")
+                
+                yield f'{{"type": "agent_stream", "emitter": "CRITIC", "content": "Critic objections: {json.dumps(objections)}\\n"}}\n'
+                yield f'{{"type": "agent_stream", "emitter": "CRITIC", "content": "Critic score: {critic_score}/10.0\\n"}}\n'
+                
+                if critic_score < 9.5:
+                    from socratic_challenger import get_challenger
+                    challenger = get_challenger()
+                    challenge = challenger.evaluate(proposal=full_ceo_strategy, critic_score=critic_score)
+                    
+                    yield f'{{"type": "socratic_pause", "challenge_id": "{challenge.get("challenge_id")}", "weaknesses": {json.dumps(challenge.get("weaknesses"))}}}\n'
+                    return # Instantly close connection
 
                 # 4. CTO Blueprint Handoff Contract
                 yield f'{{"type": "agent_stream", "emitter": "CTO", "content": "\\n\\n⚙️ [CTO Node] Deliberation approved. Synthesizing immutable physical software contract...\\n"}}\n'
@@ -856,6 +927,28 @@ def gate_override(req: GateOverrideRequest):
         "triad_score": result.get("original_composite", 0),
     }, gate_status="commander_override")
 
+    return result
+
+
+@app.post("/api/challenge/evaluate")
+def challenge_evaluate(req: ChallengeEvaluateRequest):
+    """Submit Commander evidence for a Socratic challenge."""
+    from socratic_challenger import get_challenger
+    challenger = get_challenger()
+    result = challenger.analyze_response(req.challenge_id, req.evidence)
+    if "error" in result:
+        raise HTTPException(status_code=404, detail=result["error"])
+    return result
+
+
+@app.post("/api/challenge/override")
+def challenge_override(req: ChallengeOverrideRequest):
+    """Commander Hard Override for Socratic challenge — logs risks and releases lock."""
+    from socratic_challenger import get_challenger
+    challenger = get_challenger()
+    result = challenger.force_proceed(req.challenge_id, req.commander_note)
+    if "error" in result:
+        raise HTTPException(status_code=404, detail=result["error"])
     return result
 
 

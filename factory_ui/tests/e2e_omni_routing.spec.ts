@@ -102,3 +102,97 @@ test('verify C-Suite Swarm streaming and Blueprint handoff interceptor', async (
   const handoffMsg = page.locator('div:has-text("[BLUEPRINT HANDOFF INTERCEPTED]")').last();
   await expect(handoffMsg).toBeVisible({ timeout: 15000 });
 });
+
+test('verify Context Flush [➕ New Thread] clears session state', async ({ page }) => {
+  await page.goto('http://localhost:5173/#/builder');
+  
+  // Set some session storage items
+  await page.evaluate(() => {
+    sessionStorage.setItem('ma_chat_history', JSON.stringify([{ role: 'user', content: 'test message' }]));
+    sessionStorage.setItem('ma_cached_document_ids', JSON.stringify(['doc-123']));
+  });
+  await page.reload();
+  
+  // Locate the reset button and click it
+  const newThreadBtn = page.locator('button:has-text("[➕ New Thread]")');
+  await expect(newThreadBtn).toBeVisible({ timeout: 15000 });
+  await newThreadBtn.click();
+  
+  // Assert state is cleared
+  const chatHistoryLength = await page.evaluate(() => {
+    const history = sessionStorage.getItem('ma_chat_history');
+    return history ? JSON.parse(history).length : 0;
+  });
+  
+  // We added a system reset message, so history length is 1
+  expect(chatHistoryLength).toBe(1);
+  
+  const cachedDocIdsLength = await page.evaluate(() => {
+    const docs = sessionStorage.getItem('ma_cached_document_ids');
+    return docs ? JSON.parse(docs).length : 0;
+  });
+  expect(cachedDocIdsLength).toBe(0);
+});
+
+test('verify Socratic strategic pause locking and submit loop', async ({ page }) => {
+  test.setTimeout(30000);
+  
+  await page.goto('http://localhost:5173/#/builder');
+  await page.evaluate(() => sessionStorage.clear());
+  await page.reload();
+  
+  const textarea = page.locator('textarea.flex-1');
+  await expect(textarea).toBeVisible({ timeout: 15000 });
+  
+  // Intercept the API to yield a socratic_pause event
+  await page.route('**/api/orchestrate', async (route) => {
+    const mockIdentity = '{"type": "agent_identity", "agent": "VENTURE_ARCHITECT"}\n';
+    const chunk1 = '{"type": "agent_stream", "emitter": "CEO", "content": "Roadmap initiated...\\n"}\n';
+    const chunk2 = '{"type": "socratic_pause", "challenge_id": "CHG-E2E-999", "weaknesses": [{"category": "Scalability", "severity": "HIGH", "challenge": "No scale plan", "required_evidence": "Provide scale evidence"}]}\n';
+    
+    await route.fulfill({
+      status: 200,
+      contentType: 'text/plain',
+      body: mockIdentity + chunk1 + chunk2
+    });
+  });
+
+  // Intercept evaluate endpoint
+  await page.route('**/api/challenge/evaluate', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        verdict: 'CONVINCED',
+        combined_score: 9.6,
+        message: 'Critic satisfied.'
+      })
+    });
+  });
+  
+  console.log('[E2E Socratic Test] Triggering strategic pause stream...');
+  await textarea.fill("Strategy with gaps");
+  const sendBtn = page.locator('.send-btn');
+  await sendBtn.click();
+  
+  console.log('[E2E Socratic Test] Asserting Socratic Challenge Form mount and Lock...');
+  const challengeTitle = page.locator('span:has-text("ADVERSARIAL CHALLENGE: CHG-E2E-999")');
+  await expect(challengeTitle).toBeVisible({ timeout: 15000 });
+  
+  // Verify standard input is locked/disabled
+  await expect(textarea).toBeDisabled();
+  
+  // Fill the Socratic evidence and submit
+  const evidenceTextarea = page.locator('textarea[placeholder*="Provide data-driven evidence"]');
+  await expect(evidenceTextarea).toBeVisible();
+  await evidenceTextarea.fill("Our test benchmark proves scaling up to 10K RPS.");
+  
+  const submitBtn = page.locator('button:has-text("Submit Evidence")');
+  await submitBtn.click();
+  
+  console.log('[E2E Socratic Test] Asserting lock released after convinced evaluation...');
+  // Standard textarea should be re-enabled
+  await expect(textarea).toBeEnabled({ timeout: 15000 });
+  // Socratic form should disappear
+  await expect(challengeTitle).not.toBeVisible();
+});
