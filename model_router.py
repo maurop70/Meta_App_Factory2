@@ -128,32 +128,56 @@ def get_model_for_task(task_type: str) -> str:
     return TASK_ROUTING.get(task_type, GEMINI_FLASH)
 
 
-def route(task_type: str, prompt: str, system_prompt: str = "") -> str:
+def route(task_type: str, prompt: str, system_prompt: str = "", high_availability: bool = False) -> str:
     """
     Route a prompt to the optimal LLM based on task type.
     Falls back: preferred model → alternative model → empty string.
+    
+    Resilience Matrix:
+    - Heavy Tier (CLAUDE_SONNET) falls back strictly to Heavy Tier (GEMINI_PRO).
+    - Heavy Tier (GEMINI_PRO) falls back strictly to Heavy Tier (CLAUDE_SONNET).
+    - Speed Tier (GEMINI_FLASH) fails cleanly without fallback unless high_availability=True.
     """
     preferred = get_model_for_task(task_type)
-    logger.info(f"[ModelRouter] Task '{task_type}' → {preferred}")
+    logger.info(f"[ModelRouter] Task '{task_type}' → {preferred} (high_availability={high_availability})")
 
     if preferred == CLAUDE_SONNET:
-        # Try Claude first, fallback to Gemini
+        # Heavy Tier: Claude Sonnet -> Fallback strictly to Gemini Pro
         response = _call_claude(prompt, system_prompt)
         if response:
             return f"🧠 [Claude] {response[:2000]}"
-        logger.warning(f"[ModelRouter] Claude unavailable for '{task_type}', falling back to Gemini")
+        logger.warning(f"[ModelRouter] Claude Sonnet unavailable for '{task_type}', falling back strictly to Gemini Pro")
+        response = _call_gemini(prompt, system_prompt, model_name=GEMINI_PRO)
+        if response:
+            return f"🤖 [Gemini Pro] {response[:2000]}"
+            
+    elif preferred == GEMINI_PRO:
+        # Heavy Tier: Gemini Pro -> Fallback strictly to Claude Sonnet
+        response = _call_gemini(prompt, system_prompt, model_name=GEMINI_PRO)
+        if response:
+            return f"🤖 [Gemini Pro] {response[:2000]}"
+        logger.warning(f"[ModelRouter] Gemini Pro unavailable for '{task_type}', falling back strictly to Claude Sonnet")
+        response = _call_claude(prompt, system_prompt)
+        if response:
+            return f"🧠 [Claude] {response[:2000]}"
+            
+    elif preferred == GEMINI_FLASH:
+        # Speed Tier: Gemini Flash -> Fails cleanly unless high_availability=True
         response = _call_gemini(prompt, system_prompt, model_name=GEMINI_FLASH)
         if response:
-            return f"🤖 [Gemini] {response[:2000]}"
-    else:
-        # Try Gemini (Pro or Flash) first, fallback to Claude
-        response = _call_gemini(prompt, system_prompt, model_name=preferred)
-        if response:
-            return f"🤖 [Gemini] {response[:2000]}"
-        logger.warning(f"[ModelRouter] Gemini unavailable for '{task_type}', falling back to Claude")
-        response = _call_claude(prompt, system_prompt)
-        if response:
-            return f"🧠 [Claude] {response[:2000]}"
+            return f"🤖 [Gemini Flash] {response[:2000]}"
+        
+        if high_availability:
+            logger.warning(f"[ModelRouter] Gemini Flash failed. high_availability=True, falling back to Heavy tier (Gemini Pro)")
+            response = _call_gemini(prompt, system_prompt, model_name=GEMINI_PRO)
+            if response:
+                return f"🤖 [Gemini Pro] {response[:2000]}"
+            logger.warning(f"[ModelRouter] Gemini Pro also failed under high_availability, trying Claude Sonnet")
+            response = _call_claude(prompt, system_prompt)
+            if response:
+                return f"🧠 [Claude] {response[:2000]}"
+        else:
+            logger.warning(f"[ModelRouter] Gemini Flash failed. high_availability=False, clean-failing to conserve tokens.")
 
     return ""
 
