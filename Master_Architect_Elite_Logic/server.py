@@ -385,7 +385,9 @@ async def review(req: ReviewRequest):
                     "weaknesses": [{"category": "Configuration", "severity": "HIGH", "challenge": "No Gemini API Key"}]
                 }
             }
-            yield json.dumps(fallback_resp)
+            agent_identity = "EXECUTIVE_ARCHITECT"
+            yield f"data: {json.dumps({'type': 'agent_identity', 'agent': agent_identity})}\n\n"
+            yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CEO', 'content': json.dumps(fallback_resp)})}\n\n"
             return
 
         google_uploaded_files = []
@@ -522,10 +524,12 @@ async def review(req: ReviewRequest):
                     if start != -1 and end > start:
                         text = text[start:end + 1]
 
-                # Simulate streaming chunks
+                # Simulate streaming chunks in strict SSE envelope
                 chunk_size = 64
                 for i in range(0, len(text), chunk_size):
-                    yield text[i:i+chunk_size]
+                    text_chunk = text[i:i+chunk_size]
+                    json_payload = json.dumps({"type": "agent_stream", "emitter": "CEO", "content": text_chunk})
+                    yield f"data: {json_payload}\n\n"
 
             else:
                 agent_identity = "VENTURE_ARCHITECT"
@@ -681,9 +685,14 @@ async def review(req: ReviewRequest):
                 
                 full_ceo_strategy = ""
                 for chunk in response_stream:
-                    if chunk.text:
-                        full_ceo_strategy += chunk.text
-                        yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CEO', 'content': chunk.text})}\n\n"
+                    try:
+                        text_chunk = chunk.text
+                    except (ValueError, AttributeError):
+                        text_chunk = ""
+                    if text_chunk:
+                        full_ceo_strategy += text_chunk
+                        json_payload = json.dumps({"type": "agent_stream", "emitter": "CEO", "content": text_chunk})
+                        yield f"data: {json_payload}\n\n"
 
                 # 3.5. Critic Evaluation / Socratic Gate check
                 yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CRITIC', 'content': '\\n\\n⚖️ [Critic Node] Initiating adversarial compliance and risk assessment...\\n'})}\n\n"
@@ -749,9 +758,13 @@ async def review(req: ReviewRequest):
                 # Stream blueprint to ensure the frontend interceptor captures it correctly
                 chunk_size = 32
                 for idx in range(0, len(blueprint_json), chunk_size):
-                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CTO', 'content': blueprint_json[idx:idx+chunk_size]})}\n\n"
+                    text_chunk = blueprint_json[idx:idx+32]
+                    json_payload = json.dumps({'type': 'agent_stream', 'emitter': 'CTO', 'content': text_chunk})
+                    yield f"data: {json_payload}\n\n"
                 
-                yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CTO', 'content': '\\n✅ Physical Software Contract Sealed. Awaiting execution.'})}\n\n"
+                text_chunk = '\n✅ Physical Software Contract Sealed. Awaiting execution.'
+                json_payload = json.dumps({'type': 'agent_stream', 'emitter': 'CTO', 'content': text_chunk})
+                yield f"data: {json_payload}\n\n"
 
         except Exception as e:
             logger.error(f"Error in Triad Review Stream: {e}")
