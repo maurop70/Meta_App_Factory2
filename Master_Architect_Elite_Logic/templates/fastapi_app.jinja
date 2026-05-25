@@ -76,6 +76,14 @@ async def audit_logging_middleware(request: Request, call_next):
     return response
 {% endif %}
 
+# Startup Event
+@app.on_event("startup")
+async def startup_event():
+    logger.info("Starting {{ agent_name }} JIT App...")
+{% if startup_logic_ast %}
+{{ startup_logic_ast | indent(4, true) }}
+{% endif %}
+
 # Pydantic Schemas from Data Contracts
 {% for contract in data_contracts %}
 class {{ contract.contract_name }}Input(BaseModel):

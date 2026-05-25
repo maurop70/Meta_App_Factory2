@@ -225,7 +225,7 @@ class GenesisOrchestrator:
                 raw_json=raw_dict
             )
 
-    async def run_stream(self, prompt: str, route_logic_blocks: Optional[list] = None) -> AsyncGenerator[str, None]:
+    async def run_stream(self, prompt: str, route_logic_blocks: Optional[list] = None, startup_logic_ast: Optional[str] = None) -> AsyncGenerator[str, None]:
         """
         Async generator yielding SSE formatted strings tracking the pipeline progress.
         """
@@ -253,6 +253,8 @@ class GenesisOrchestrator:
                 
                 if route_logic_blocks:
                     raw_dict["route_logic_blocks"] = route_logic_blocks
+                if startup_logic_ast:
+                    raw_dict["startup_logic_ast"] = startup_logic_ast
 
                 # 2. Run Verification
                 ontology = self._verification_node(raw_dict, round_num)
@@ -297,6 +299,7 @@ class GenesisOrchestrator:
                     data_contracts=[dc.model_dump() for dc in ontology.data_contracts],
                     security_posture=ontology.security_posture.model_dump(),
                     route_logic_blocks=[rlb.model_dump() for rlb in ontology.route_logic_blocks] if ontology.route_logic_blocks else [],
+                    startup_logic_ast=ontology.startup_logic_ast,
                     extra_imports=extra_imports
                 )
                 
@@ -340,13 +343,32 @@ class GenesisOrchestrator:
                 import sys
                 cmd = [sys.executable, "-m", "uvicorn", "app:app", "--host", "127.0.0.1", "--port", str(allocated_port)]
                 try:
+                    # Enforce logs directory initialization and persistent .gitkeep
+                    logs_dir = os.path.join(SCRIPT_DIR, "logs")
+                    os.makedirs(logs_dir, exist_ok=True)
+                    with open(os.path.join(logs_dir, ".gitkeep"), "a"):
+                        pass
+                        
+                    agent_id = ontology.agent_name.lower().replace("_", "")
+                    log_file_path = os.path.join(logs_dir, f"{agent_id}_runtime.log")
+                    
+                    log_file = open(log_file_path, "ab", buffering=0)
+                    
                     process = await asyncio.create_subprocess_exec(
                         *cmd,
                         cwd=agent_dir,
-                        stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.PIPE
+                        stdout=log_file,
+                        stderr=log_file,
+                        creationflags=0x00000200 | 0x01000000 if os.name == 'nt' else 0, # CREATE_NEW_PROCESS_GROUP | CREATE_BREAKAWAY_FROM_JOB
+                        close_fds=False,
+                        env={**os.environ, "PYTHONUNBUFFERED": "1"}
                     )
-                    logger.info(f"Spawned child agent uvicorn process (PID {process.pid}) on port {allocated_port}")
+                    await asyncio.sleep(2)
+                    if process.returncode is not None:
+                        logger.error(f"Spawned child agent uvicorn process (PID {process.pid}) EXITED IMMEDIATELY with code {process.returncode}!")
+                    else:
+                        logger.info(f"Spawned child agent uvicorn process (PID {process.pid}) is running on port {allocated_port}.")
+                    log_file.close()
                 except Exception as spawn_err:
                     logger.error(f"Failed to spawn uvicorn process for {ontology.agent_name}: {spawn_err}")
                     
@@ -396,18 +418,18 @@ class GenesisOrchestrator:
                 })}\n\n"
                 return
 
-    def run(self, prompt: str, route_logic_blocks: Optional[list] = None) -> AgentOntology:
+    def run(self, prompt: str, route_logic_blocks: Optional[list] = None, startup_logic_ast: Optional[str] = None) -> AgentOntology:
         """
         Synchronous blocking wrapper for standard execution or programmatic test suites.
         """
         loop = asyncio.get_event_loop()
         if loop.is_running():
             # If in a running event loop, execute via an task runner
-            return asyncio.run_coroutine_threadsafe(self._run_async_wrapper(prompt, route_logic_blocks), loop).result()
+            return asyncio.run_coroutine_threadsafe(self._run_async_wrapper(prompt, route_logic_blocks, startup_logic_ast), loop).result()
         else:
-            return asyncio.run(self._run_async_wrapper(prompt, route_logic_blocks))
+            return asyncio.run(self._run_async_wrapper(prompt, route_logic_blocks, startup_logic_ast))
 
-    async def _run_async_wrapper(self, prompt: str, route_logic_blocks: Optional[list] = None) -> AgentOntology:
+    async def _run_async_wrapper(self, prompt: str, route_logic_blocks: Optional[list] = None, startup_logic_ast: Optional[str] = None) -> AgentOntology:
         citations = []
         prior_errors = None
         prior_json = None
@@ -423,6 +445,8 @@ class GenesisOrchestrator:
                 )
                 if route_logic_blocks:
                     raw_dict["route_logic_blocks"] = route_logic_blocks
+                if startup_logic_ast:
+                    raw_dict["startup_logic_ast"] = startup_logic_ast
                 citations = list(sorted(set(citations + raw_dict.get("research_citations", []))))
                 return self._verification_node(raw_dict, round_num)
             except OntologyValidationError as ova_err:
