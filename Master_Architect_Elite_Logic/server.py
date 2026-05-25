@@ -210,6 +210,44 @@ def on_genesis_compile_success(agent_name: str, port: int, api_endpoints: list):
 
 ON_COMPILE_SUCCESS_CALLBACKS.append(on_genesis_compile_success)
 
+@app.api_route("/agent/{agent_id}/{proxy_path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
+async def dynamic_wildcard_proxy(agent_id: str, proxy_path: str, request: Request):
+    registry = await load_registry()
+    target_port = None
+    for agent in registry.get("agents", []):
+        if agent["id"] == agent_id:
+            target_port = agent["port"]
+            break
+            
+    if not target_port:
+        logger.error(f"Proxy forwarding failed: Agent '{agent_id}' is not in registry.")
+        raise HTTPException(status_code=502, detail=f"Proxy error: Agent '{agent_id}' is not in registry.")
+        
+    url = f"http://127.0.0.1:{target_port}/{proxy_path}"
+    query_params = dict(request.query_params)
+    body = await request.body()
+    
+    headers = {k: v for k, v in request.headers.items() if k.lower() != 'host'}
+    
+    try:
+        response = await http_client.request(
+            method=request.method,
+            url=url,
+            headers=headers,
+            params=query_params,
+            content=body,
+            timeout=15.0
+        )
+        resp_headers = {k: v for k, v in response.headers.items() if k.lower() not in ['content-length', 'content-encoding']}
+        return Response(
+            content=response.content,
+            status_code=response.status_code,
+            headers=resp_headers
+        )
+    except Exception as e:
+        logger.error(f"Proxy forwarding failed to port {target_port} for /{proxy_path}: {e}")
+        raise HTTPException(status_code=502, detail=f"Proxy error: {str(e)}")
+
 from backend.app.routers.ingest import router as ingest_router
 from backend.app.routers.inventory_router import router as inventory_router
 

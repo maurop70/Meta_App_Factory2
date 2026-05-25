@@ -149,6 +149,10 @@ class AgentOntology(BaseModel):
         default=[],
         description="Optional custom python logic blocks to inject into specific routes during compile rendering"
     )
+    startup_logic_ast: str = Field(
+        default="",
+        description="Optional custom python logic block to inject into the app startup event handler"
+    )
     security_posture: SecurityPosture = Field(
         default_factory=SecurityPosture,
         description="Security configuration governing auth, rate limits, and audit logging"
