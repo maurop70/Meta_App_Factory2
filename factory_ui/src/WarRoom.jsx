@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import NaturalLanguageGateway from './components/NaturalLanguageGateway';
 import axios from 'axios';
 
@@ -6,8 +6,11 @@ export default function WarRoom() {
   const [telemetry, setTelemetry] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const isPending = useRef(false);
 
   const fetchTelemetry = async () => {
+    if (isPending.current) return;
+    isPending.current = true;
     try {
       const res = await axios.get('/agent/warroommonitor/api/health', {
         headers: {
@@ -21,6 +24,7 @@ export default function WarRoom() {
       setError(err.message);
     } finally {
       setLoading(false);
+      isPending.current = false;
     }
   };
 
