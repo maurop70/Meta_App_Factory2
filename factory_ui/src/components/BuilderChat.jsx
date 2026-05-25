@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 // --- ARCHITECTURAL INJECTION: INTELLIGENCE PARSER ---
 const EvaluationScorecard = ({ data }) => {
@@ -68,6 +69,26 @@ export default function BuilderChat() {
   const [isSocraticSubmitting, setIsSocraticSubmitting] = useState(false);
   const [lastPrompt, setLastPrompt] = useState("");
   const [isMaximized, setIsMaximized] = useState(false);
+  const [systemAgents, setSystemAgents] = useState([]);
+
+  const fetchSystemRegistry = async () => {
+    try {
+      const res = await fetch('/api/system/registry');
+      if (res.ok) {
+        const data = await res.json();
+        setSystemAgents(data.agents || []);
+      }
+    } catch (e) {
+      console.error("Failed to load system registry:", e);
+    }
+  };
+
+  useEffect(() => {
+    fetchSystemRegistry();
+    const interval = setInterval(fetchSystemRegistry, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
   const abortControllerRef = useRef(null);
 
   const handleNewThread = () => {
@@ -315,6 +336,11 @@ export default function BuilderChat() {
             
             try {
               const parsed = JSON.parse(cleanLine.trim());
+              
+              if (parsed.event === 'compile_success' || parsed.event === 'ontology_ready') {
+                fetchSystemRegistry();
+              }
+
               if (parsed.type === 'agent_identity' && parsed.agent) {
                 agentType = parsed.agent;
                 setChatHistory(prev => {
@@ -518,6 +544,11 @@ export default function BuilderChat() {
             
             try {
               const parsed = JSON.parse(cleanLine.trim());
+              
+              if (parsed.event === 'compile_success' || parsed.event === 'ontology_ready') {
+                fetchSystemRegistry();
+              }
+
               if (parsed.type === 'agent_identity' && parsed.agent) {
                 agentType = parsed.agent;
                 setChatHistory(prev => {
@@ -651,6 +682,14 @@ export default function BuilderChat() {
           <span className="stream-badge" style={{ background: 'linear-gradient(135deg, #6366f1, #a78bfa)' }}>OMNI-ROUTER ACTIVE</span>
         </h2>
         <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2 bg-slate-900/60 px-3 py-1 rounded-lg border border-slate-800 mr-2">
+            {systemAgents.map(agent => (
+              <span key={agent.id} className="text-[10px] font-mono flex items-center space-x-1" title={`${agent.name} on port ${agent.port}`}>
+                <span className={`h-1.5 w-1.5 rounded-full ${agent.status === 'ACTIVE' ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
+                <span style={{ color: agent.status === 'ACTIVE' ? '#a78bfa' : '#64748b' }}>{agent.name.split('_')[0]}</span>
+              </span>
+            ))}
+          </div>
           <button
             onClick={() => setIsMaximized(!isMaximized)}
             className="px-3 py-1 bg-slate-800/80 hover:bg-slate-700/80 text-xs font-mono font-bold tracking-wider text-indigo-400 hover:text-indigo-350 border border-slate-700 hover:border-indigo-500/50 rounded-lg transition-all shadow-md flex items-center space-x-1"
@@ -689,60 +728,63 @@ export default function BuilderChat() {
       </div>
 
       {/* Socratic Challenge Form Lock */}
-      {socraticChallenge && (
-        <div className="socratic-panel p-6 bg-slate-950/90 border border-orange-500/50 rounded-xl shadow-2xl m-4 backdrop-blur-lg flex flex-col space-y-4">
-          <div className="flex justify-between items-center border-b border-orange-500/30 pb-2">
-            <span className="text-sm font-mono font-bold text-orange-400 tracking-wider">
-              🏛️ ADVERSARIAL CHALLENGE: {socraticChallenge.challenge_id}
-            </span>
-            <span className="text-[10px] font-mono px-2 py-1 bg-red-950 text-red-300 border border-red-800 rounded uppercase font-bold animate-pulse">
-              Input Locked
-            </span>
-          </div>
-          
-          <div className="text-xs text-slate-300 font-mono space-y-2">
-            <p>The Critic has flagged significant strategic gaps. You must provide data-driven evidence or click Hard Override to proceed.</p>
-            <div className="flex flex-col space-y-2 mt-2">
-              {socraticChallenge.weaknesses.map((w, idx) => (
-                <div key={idx} className="p-3 bg-slate-900/80 border border-slate-800 rounded">
-                  <div className="flex justify-between text-[11px] font-bold text-orange-400 mb-1">
-                    <span>{w.category} ({w.severity})</span>
+      {socraticChallenge && createPortal(
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[99999] flex items-center justify-center p-4" style={{ pointerEvents: 'auto' }}>
+          <div className="socratic-panel p-6 bg-slate-950 border border-orange-500/50 rounded-xl shadow-2xl w-full max-w-[500px] backdrop-blur-lg flex flex-col space-y-4 m-0">
+            <div className="flex justify-between items-center border-b border-orange-500/30 pb-2">
+              <span className="text-sm font-mono font-bold text-orange-400 tracking-wider">
+                🏛️ ADVERSARIAL CHALLENGE: {socraticChallenge.challenge_id}
+              </span>
+              <span className="text-[10px] font-mono px-2 py-1 bg-red-950 text-red-300 border border-red-800 rounded uppercase font-bold animate-pulse">
+                Input Locked
+              </span>
+            </div>
+            
+            <div className="text-xs text-slate-300 font-mono space-y-2">
+              <p>The Critic has flagged significant strategic gaps. You must provide data-driven evidence or click Hard Override to proceed.</p>
+              <div className="flex flex-col space-y-2 mt-2">
+                {socraticChallenge.weaknesses.map((w, idx) => (
+                  <div key={idx} className="p-3 bg-slate-900/80 border border-slate-800 rounded">
+                    <div className="flex justify-between text-[11px] font-bold text-orange-400 mb-1">
+                      <span>{w.category} ({w.severity})</span>
+                    </div>
+                    <p className="text-[11px] leading-relaxed text-slate-400">{w.challenge}</p>
+                    <p className="text-[10px] text-cyan-400 mt-1">→ {w.required_evidence}</p>
                   </div>
-                  <p className="text-[11px] leading-relaxed text-slate-400">{w.challenge}</p>
-                  <p className="text-[10px] text-cyan-400 mt-1">→ {w.required_evidence}</p>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
 
-          <div className="flex flex-col space-y-2">
-            <textarea
-              value={evidenceText}
-              onChange={(e) => setEvidenceText(e.target.value)}
-              placeholder="___Provide data-driven evidence (e.g. pilot conversions, TAM study, benchmark statistics)___"
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-xs font-mono text-slate-200 focus:border-cyan-500 outline-none"
-              rows={3}
-            />
-            <div className="flex space-x-2">
-              <button
-                type="button"
-                onClick={() => submitSocraticEvidence(challenge.id, evidenceText)}
-                disabled={isSocraticSubmitting || !evidenceText.trim()}
-                className="flex-1 px-4 py-2 bg-emerald-800 hover:bg-emerald-700 text-xs font-mono font-bold text-slate-100 rounded-lg border border-emerald-600 transition-colors"
-              >
-                {isSocraticSubmitting ? 'Evaluating...' : 'Submit Evidence'}
-              </button>
-              <button
-                type="button"
-                onClick={() => submitSocraticOverride(challenge.id)}
-                disabled={isSocraticSubmitting}
-                className="px-4 py-2 bg-rose-950 hover:bg-rose-900 text-xs font-mono font-bold text-rose-400 rounded-lg border border-rose-800 transition-colors"
-              >
-                Hard Override
-              </button>
+            <div className="flex flex-col space-y-2">
+              <textarea
+                value={evidenceText}
+                onChange={(e) => setEvidenceText(e.target.value)}
+                placeholder="___Provide data-driven evidence (e.g. pilot conversions, TAM study, benchmark statistics)___"
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-xs font-mono text-slate-200 focus:border-cyan-500 outline-none"
+                rows={3}
+              />
+              <div className="flex space-x-2">
+                <button
+                  type="button"
+                  onClick={() => submitSocraticEvidence(challenge.id, evidenceText)}
+                  disabled={isSocraticSubmitting || !evidenceText.trim()}
+                  className="flex-1 px-4 py-2 bg-emerald-800 hover:bg-emerald-700 text-xs font-mono font-bold text-slate-100 rounded-lg border border-emerald-600 transition-colors"
+                >
+                  {isSocraticSubmitting ? 'Evaluating...' : 'Submit Evidence'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => submitSocraticOverride(challenge.id)}
+                  disabled={isSocraticSubmitting}
+                  className="px-4 py-2 bg-rose-950 hover:bg-rose-900 text-xs font-mono font-bold text-rose-400 rounded-lg border border-rose-800 transition-colors"
+                >
+                  Hard Override
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Document Staging Deck */}

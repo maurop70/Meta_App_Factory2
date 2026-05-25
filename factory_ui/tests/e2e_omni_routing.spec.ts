@@ -74,7 +74,7 @@ test('verify C-Suite Swarm streaming and Blueprint handoff interceptor', async (
     const chunk1 = '{"type": "agent_stream", "emitter": "CEO", "content": "Deliberating on strategic roadmap.\\n"}\n';
     const chunk2 = '{"type": "agent_stream", "emitter": "CMO", "content": "Marketing channels are vetted.\\n"}\n';
     const chunk3 = '{"type": "agent_stream", "emitter": "CTO", "content": "Understood. Synthesizing software blueprint contract:\\n"}\n';
-    const chunk4 = '{"type": "agent_stream", "emitter": "CTO", "content": "{\\n  \\"name\\": \\"War Room Primary Infrastructure Blueprint\\",\\n  \\"version\\": \\"1.0.0\\",\\n  \\"nodes\\": [\\n    {\\n      \\"name\\": \\"Verification_Worker\\",\\n      \\"type\\": \\"verifier\\",\\n      \\"parameters\\": {\\n        \\"relative_path\\": \\"scratch/worker_status.json\\",\\n        \\"content\\": \\"ACTIVE\\"\\n      }\\n    }\\n  ]\\n}"}\n';
+    const chunk4 = '{"type": "agent_stream", "emitter": "CTO", "content": "{\\n  \\"name\\": \\"War Room Primary Infrastructure Blueprint\\",\\n  \\"version\\": \\"1.0.0\\",\\n  \\"nodes\\": []\\n}"}\n';
     
     await route.fulfill({
       status: 200,
