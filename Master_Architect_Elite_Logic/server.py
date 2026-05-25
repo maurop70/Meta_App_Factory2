@@ -781,12 +781,27 @@ async def review(req: ReviewRequest):
                         yield f"data: {json.dumps({'type': 'socratic_pause', 'challenge_id': challenge.get('challenge_id'), 'weaknesses': challenge.get('weaknesses')})}\n\n"
                         return # Instantly close connection
 
-                # Simulate streaming chunks in strict SSE envelope
-                chunk_size = 64
-                for i in range(0, len(text), chunk_size):
-                    text_chunk = text[i:i+chunk_size]
-                    json_payload = json.dumps({"type": "agent_stream", "emitter": "CEO", "content": text_chunk})
-                    yield f"data: {json_payload}\n\n"
+                # AST Interception Patch: Package generated code/architecture into strict JSON envelope
+                import time
+                timestamp = int(time.time())
+                blueprint_payload = {
+                    "blueprint_data": text,
+                    "Strategic_Pause": "pause" in query_lower or "pause" in text.lower(),
+                    "Strategic_Fail": "fail" in query_lower or "fail" in text.lower(),
+                    "timestamp": timestamp
+                }
+                blueprint_json = json.dumps(blueprint_payload, indent=2)
+
+                # Enforce asynchronous spooling directly to spool queue
+                ay2_queue_dir = os.path.join(_SCRIPT_DIR, "ay2_dispatch_queue")
+                os.makedirs(ay2_queue_dir, exist_ok=True)
+                blueprint_path = os.path.join(ay2_queue_dir, f"pending_blueprint_{timestamp}.json")
+
+                async with aiofiles.open(blueprint_path, "w", encoding="utf-8") as f:
+                    await f.write(blueprint_json)
+
+                # Yield the precise SSE actuation token
+                yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CTO', 'content': '\n\n⚙️ [CTO Node] Blueprint spooled. IPC Bridge actuating...\n'})}\n\n"
 
             else:
                 agent_identity = "VENTURE_ARCHITECT"

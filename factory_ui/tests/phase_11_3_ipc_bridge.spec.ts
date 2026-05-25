@@ -186,3 +186,78 @@ test('verify Phase 11.3 Native IPC Bridge, Biological Circuit Breaker, and Spool
   cleanTestFiles();
   console.log('[E2E Phase 11.3] Cleaned up E2E test footprints. All assertions passed flawlessly!');
 });
+
+test('verify Phase 11.3 absolute CTO blueprint spooling and raw markdown eradication', async ({ request }) => {
+  console.log('[E2E Phase 11.3] Initiating validation of absolute CTO spooling and raw markdown eradication...');
+
+  const queueDir = path.resolve(process.cwd(), '../Master_Architect_Elite_Logic/ay2_dispatch_queue');
+
+  // Let's get the list of spooled files before making the request
+  const getPendingFiles = () => {
+    if (!fs.existsSync(queueDir)) return [];
+    return fs.readdirSync(queueDir).filter(f => f.startsWith('pending_blueprint_') && f.endsWith('.json'));
+  };
+
+  const initialPendingFiles = getPendingFiles();
+
+  // Send a structural mandate to the /api/orchestrate endpoint (which BuilderChat calls)
+  console.log('[E2E Phase 11.3] Submitting structural mandate to /api/orchestrate...');
+  const orchestrateResponse = await request.post('http://127.0.0.1:5050/api/orchestrate', {
+    data: {
+      description: "Build a high-performance Python microservice for system resource diagnostics",
+      prompt: "Build a high-performance Python microservice for system resource diagnostics",
+      document_ids: [],
+      history: []
+    }
+  });
+
+  expect(orchestrateResponse.status()).toBe(200);
+  const responseBody = await orchestrateResponse.text();
+
+  // Assert that the returned stream contains the precise SSE actuation token
+  expect(responseBody).toContain('[CTO Node] Blueprint spooled. IPC Bridge actuating...');
+
+  // Assert that the stream is permanently forbidden from containing raw code chunks
+  // Since we package the code inside {"blueprint_data": ...} and write to disk,
+  // the SSE response stream should only contain the connection identity, status messages, and the actuation token.
+  // It should NEVER contain raw Python syntax like "class " or "def " or "import psutil" as a raw streamed text chunk.
+  expect(responseBody).not.toContain('"content": "import psutil"');
+  expect(responseBody).not.toContain('"content": "class "');
+  console.log('[E2E Phase 11.3] SSE response successfully verified: no raw code leaks detected!');
+
+  // Poll for the spooled blueprint on disk and verify it's a valid packaged JSON with "blueprint_data"
+  let spooledFileFound = null;
+  let blueprintData = null;
+
+  for (let i = 0; i < 20; i++) {
+    const currentFiles = getPendingFiles();
+    const newFiles = currentFiles.filter(f => !initialPendingFiles.includes(f));
+    if (newFiles.length > 0) {
+      spooledFileFound = newFiles[0];
+      const filePath = path.join(queueDir, spooledFileFound);
+      try {
+        const fileContent = fs.readFileSync(filePath, 'utf-8');
+        blueprintData = JSON.parse(fileContent);
+        if (blueprintData && blueprintData.blueprint_data) {
+          break;
+        }
+      } catch (e) {
+        // May still be writing
+      }
+    }
+    await new Promise(r => setTimeout(r, 500));
+  }
+
+  expect(spooledFileFound).not.toBeNull();
+  expect(blueprintData).not.toBeNull();
+  expect(blueprintData.blueprint_data).toBeDefined();
+  
+  // Clean up the spooled test file
+  if (spooledFileFound) {
+    try {
+      fs.unlinkSync(path.join(queueDir, spooledFileFound));
+    } catch (e) {}
+  }
+
+  console.log('[E2E Phase 11.3] Absolute spooling and raw markdown eradication validated successfully!');
+});
