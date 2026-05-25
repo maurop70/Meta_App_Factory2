@@ -89,6 +89,84 @@ export default function BuilderChat() {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    const es = new EventSource('/api/bridge/stream');
+
+    es.onopen = () => {
+      console.log("IPC Bridge EventSource stream connection successfully opened.");
+    };
+
+    es.onerror = (err) => {
+      console.warn("IPC Bridge EventSource error:", err);
+    };
+
+    es.onmessage = (evt) => {
+      try {
+        const data = JSON.parse(evt.data);
+        if (data.type === 'strategic_pause') {
+          setChatHistory(prev => [...prev, {
+            role: 'system',
+            content: `⚠️ [STRATEGIC PAUSE] Operator review required.`,
+            blueprint_file: data.blueprint_file,
+            is_pause_actionable: true,
+            agent: 'UNKNOWN'
+          }]);
+        } else if (data.type === 'strategic_approval') {
+          setChatHistory(prev => [...prev, {
+            role: 'system',
+            content: `✅ [STRATEGIC APPROVAL] Blueprint approved. Actuating execution: ${data.blueprint_file}`,
+            agent: 'UNKNOWN'
+          }]);
+        } else if (data.type === 'strategic_rejection') {
+          setChatHistory(prev => [...prev, {
+            role: 'system',
+            content: `❌ [STRATEGIC REJECTION] Blueprint execution rejected and deleted: ${data.blueprint_file}`,
+            agent: 'UNKNOWN'
+          }]);
+        } else if (data.type === 'execution_start') {
+          setChatHistory(prev => [...prev, {
+            role: 'system',
+            content: `⚙️ [IPC BRIDGE] Actuating execution for: ${data.blueprint_file}\n`,
+            agent: 'IPC_BRIDGE_SYSTEM'
+          }]);
+        } else if (data.type === 'agent_stream' && (data.emitter === 'IPC_BRIDGE_STDOUT' || data.emitter === 'IPC_BRIDGE_STDERR')) {
+          setChatHistory(prev => {
+            const newHistory = [...prev];
+            const lastMsg = newHistory[newHistory.length - 1];
+            if (lastMsg && lastMsg.agent === 'IPC_BRIDGE_SYSTEM') {
+              lastMsg.content += data.content;
+            } else {
+              newHistory.push({
+                role: 'system',
+                content: data.content,
+                agent: 'IPC_BRIDGE_SYSTEM'
+              });
+            }
+            return newHistory;
+          });
+        } else if (data.type === 'circuit_breaker') {
+          setChatHistory(prev => [...prev, {
+            role: 'system',
+            content: `🚨 [CIRCUIT BREAKER TRIGGERED] Execution halted for: ${data.blueprint_file}\n\nError:\n${data.error}`,
+            agent: 'UNKNOWN'
+          }]);
+        } else if (data.type === 'execution_success') {
+          setChatHistory(prev => [...prev, {
+            role: 'system',
+            content: `✅ [EXECUTION SUCCESS] Subprocess completed successfully: ${data.blueprint_file}`,
+            agent: 'UNKNOWN'
+          }]);
+        }
+      } catch (e) {
+        console.error("Error parsing IPC Bridge stream event:", e);
+      }
+    };
+
+    return () => {
+      es.close();
+    };
+  }, []);
+
   const abortControllerRef = useRef(null);
 
   const handleNewThread = () => {
@@ -211,6 +289,56 @@ export default function BuilderChat() {
       console.error("Error setting sessionStorage for cachedDocumentIds", e);
     }
   }, [cachedDocumentIds]);
+
+  const handleBridgeApprove = async (blueprintFile, msgIndex) => {
+    try {
+      const res = await fetch('/api/bridge/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blueprint_file: blueprintFile })
+      });
+      if (res.ok) {
+        setChatHistory(prev => {
+          const newHistory = [...prev];
+          if (newHistory[msgIndex]) {
+            newHistory[msgIndex].is_pause_actionable = false;
+            newHistory[msgIndex].content += " (APPROVED)";
+          }
+          return newHistory;
+        });
+      } else {
+        const errorData = await res.json();
+        alert(`Approval failed: ${errorData.detail || 'Unknown error'}`);
+      }
+    } catch (e) {
+      alert(`Approval connection failed: ${e.message}`);
+    }
+  };
+
+  const handleBridgeReject = async (blueprintFile, msgIndex) => {
+    try {
+      const res = await fetch('/api/bridge/reject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blueprint_file: blueprintFile })
+      });
+      if (res.ok) {
+        setChatHistory(prev => {
+          const newHistory = [...prev];
+          if (newHistory[msgIndex]) {
+            newHistory[msgIndex].is_pause_actionable = false;
+            newHistory[msgIndex].content += " (REJECTED)";
+          }
+          return newHistory;
+        });
+      } else {
+        const errorData = await res.json();
+        alert(`Rejection failed: ${errorData.detail || 'Unknown error'}`);
+      }
+    } catch (e) {
+      alert(`Rejection connection failed: ${e.message}`);
+    }
+  };
   
   const terminalEndRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -660,6 +788,55 @@ export default function BuilderChat() {
       } catch (e) {
         // Fallback
       }
+    }
+    
+    // IPC Bridge custom components rendering
+    if (msg.is_pause_actionable) {
+      return (
+        <div className="flex flex-col space-y-4 w-full mt-3">
+          <div className="p-4 bg-slate-900/80 border border-amber-500/40 rounded-xl shadow-lg backdrop-blur-md">
+            <div className="flex justify-between items-center mb-3">
+              <span className="text-xs font-mono font-bold text-amber-400 tracking-wider">
+                ⚠️ STRATEGIC PAUSE ACTIVE
+              </span>
+              <span className="text-[10px] font-mono px-2 py-0.5 bg-amber-950/50 text-amber-300 rounded border border-amber-800/50 uppercase">
+                Awaiting Authorization
+              </span>
+            </div>
+            <p className="text-sm text-slate-300 font-mono leading-relaxed mb-4">
+              The system has spooled the blueprint to disk and engaged a biological circuit breaker. Review the spooled target:
+              <br />
+              <span className="text-cyan-400 mt-1 block select-all font-bold">{msg.blueprint_file}</span>
+            </p>
+            <div className="flex space-x-3">
+              <button
+                type="button"
+                onClick={() => handleBridgeApprove(msg.blueprint_file, chatHistory.indexOf(msg))}
+                className="flex-1 px-4 py-2 bg-emerald-800 hover:bg-emerald-700 text-xs font-mono font-bold text-slate-100 rounded-lg border border-emerald-600 transition-all hover:shadow-lg active:scale-95 cursor-pointer"
+              >
+                Approve Execution
+              </button>
+              <button
+                type="button"
+                onClick={() => handleBridgeReject(msg.blueprint_file, chatHistory.indexOf(msg))}
+                className="px-4 py-2 bg-rose-950 hover:bg-rose-900 text-xs font-mono font-bold text-rose-400 rounded-lg border border-rose-800 transition-all hover:shadow-lg active:scale-95 cursor-pointer"
+              >
+                Reject & Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (agent === 'IPC_BRIDGE_SYSTEM') {
+      return (
+        <div className="flex flex-col space-y-2 w-full mt-2">
+          <div className="p-4 bg-black/90 border border-slate-700/60 rounded-xl shadow-lg font-mono text-[11px] text-cyan-400 max-h-[300px] overflow-y-auto leading-relaxed custom-scrollbar whitespace-pre-wrap select-all">
+            {content}
+          </div>
+        </div>
+      );
     }
     
     // Normal / Executive Architect scorecard rendering or plain text
