@@ -16,7 +16,7 @@ from duckduckgo_search import DDGS
 import google.generativeai as genai
 from pydantic import ValidationError
 
-from schemas import AgentOntology, EndpointSpec, DataContract, SecurityPosture
+from schemas import AgentOntology, EndpointSpec, DataContract, SecurityPosture, RouteLogicSpec
 
 logger = logging.getLogger("GenesisOrchestrator")
 
@@ -225,7 +225,7 @@ class GenesisOrchestrator:
                 raw_json=raw_dict
             )
 
-    async def run_stream(self, prompt: str) -> AsyncGenerator[str, None]:
+    async def run_stream(self, prompt: str, route_logic_blocks: Optional[list] = None) -> AsyncGenerator[str, None]:
         """
         Async generator yielding SSE formatted strings tracking the pipeline progress.
         """
@@ -251,6 +251,9 @@ class GenesisOrchestrator:
                 # Keep citations updated
                 citations = list(sorted(set(citations + raw_dict.get("research_citations", []))))
                 
+                if route_logic_blocks:
+                    raw_dict["route_logic_blocks"] = route_logic_blocks
+
                 # 2. Run Verification
                 ontology = self._verification_node(raw_dict, round_num)
                 
@@ -280,13 +283,21 @@ class GenesisOrchestrator:
                 env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir))
                 template = env.get_template("fastapi_app.jinja")
                 
+                extra_imports = []
+                for rlb in (ontology.route_logic_blocks or []):
+                    for imp in rlb.imports:
+                        if imp not in extra_imports:
+                            extra_imports.append(imp)
+
                 rendered_app = template.render(
                     agent_name=ontology.agent_name,
                     role_summary=ontology.role_summary,
                     primary_capabilities=ontology.primary_capabilities,
                     api_endpoints=api_endpoints_enriched,
                     data_contracts=[dc.model_dump() for dc in ontology.data_contracts],
-                    security_posture=ontology.security_posture.model_dump()
+                    security_posture=ontology.security_posture.model_dump(),
+                    route_logic_blocks=[rlb.model_dump() for rlb in ontology.route_logic_blocks] if ontology.route_logic_blocks else [],
+                    extra_imports=extra_imports
                 )
                 
                 # 4. Write workspace outputs asynchronously
@@ -385,18 +396,18 @@ class GenesisOrchestrator:
                 })}\n\n"
                 return
 
-    def run(self, prompt: str) -> AgentOntology:
+    def run(self, prompt: str, route_logic_blocks: Optional[list] = None) -> AgentOntology:
         """
         Synchronous blocking wrapper for standard execution or programmatic test suites.
         """
         loop = asyncio.get_event_loop()
         if loop.is_running():
             # If in a running event loop, execute via an task runner
-            return asyncio.run_coroutine_threadsafe(self._run_async_wrapper(prompt), loop).result()
+            return asyncio.run_coroutine_threadsafe(self._run_async_wrapper(prompt, route_logic_blocks), loop).result()
         else:
-            return asyncio.run(self._run_async_wrapper(prompt))
+            return asyncio.run(self._run_async_wrapper(prompt, route_logic_blocks))
 
-    async def _run_async_wrapper(self, prompt: str) -> AgentOntology:
+    async def _run_async_wrapper(self, prompt: str, route_logic_blocks: Optional[list] = None) -> AgentOntology:
         citations = []
         prior_errors = None
         prior_json = None
@@ -410,6 +421,8 @@ class GenesisOrchestrator:
                     prior_errors=prior_errors,
                     prior_json=prior_json
                 )
+                if route_logic_blocks:
+                    raw_dict["route_logic_blocks"] = route_logic_blocks
                 citations = list(sorted(set(citations + raw_dict.get("research_citations", []))))
                 return self._verification_node(raw_dict, round_num)
             except OntologyValidationError as ova_err:

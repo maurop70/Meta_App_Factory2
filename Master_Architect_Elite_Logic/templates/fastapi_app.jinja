@@ -7,6 +7,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 
+# Extra Imports from Route Logic Specs
+{% for imp in extra_imports | default([]) | unique %}
+{{ imp }}
+{% endfor %}
+
 # Setup Logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
 logger = logging.getLogger("{{ agent_name }}")
@@ -74,14 +79,22 @@ async def audit_logging_middleware(request: Request, call_next):
 # Pydantic Schemas from Data Contracts
 {% for contract in data_contracts %}
 class {{ contract.contract_name }}Input(BaseModel):
-    {% for field in contract.input_fields %}
+    {% if contract.input_fields %}
+      {% for field in contract.input_fields %}
     {{ field }}: str
-    {% endfor %}
+      {% endfor %}
+    {% else %}
+    pass
+    {% endif %}
 
 class {{ contract.contract_name }}Output(BaseModel):
-    {% for field in contract.output_fields %}
+    {% if contract.output_fields %}
+      {% for field in contract.output_fields %}
     {{ field }}: str
-    {% endfor %}
+      {% endfor %}
+    {% else %}
+    pass
+    {% endif %}
 {% endfor %}
 
 # API Endpoints
@@ -97,7 +110,7 @@ class {{ contract.contract_name }}Output(BaseModel):
     summary="{{ endpoint.summary }}",
     dependencies=[Depends(check_rate_limit), Depends(verify_auth)]
 )
-async def {{ endpoint.summary | replace("'", "") | replace('"', "") | replace(" ", "_") | replace(".", "") | replace("-", "_") | replace("/", "_") | replace("{", "") | replace("}", "") | lower }}(
+async def {{ endpoint.summary | replace("'", "") | replace('"', "") | replace(",", "") | replace(":", "") | replace(" ", "_") | replace(".", "") | replace("-", "_") | replace("/", "_") | replace("{", "") | replace("}", "") | lower }}(
     {% for param in endpoint.path_params %}
     {{ param }}: str,
     {% endfor %}
@@ -105,6 +118,15 @@ async def {{ endpoint.summary | replace("'", "") | replace('"', "") | replace(" 
     payload: {{ endpoint.contract_ref }}Input
     {% endif %}
 ):
+{% set matched_logic = namespace(val=None) %}
+{% for rlb in route_logic_blocks | default([]) %}
+  {% if rlb.path == endpoint.path and rlb.method | upper == endpoint.method | upper %}
+    {% set matched_logic.val = rlb %}
+  {% endif %}
+{% endfor %}
+{% if matched_logic.val %}
+{{ matched_logic.val.logic_ast | indent(4, true) }}
+{% else %}
     logger.info(f"Executing endpoint: {{ endpoint.path }}")
     
     # Deterministic Mock Response fulfilling the exact Output Data Contract
@@ -130,4 +152,5 @@ async def {{ endpoint.summary | replace("'", "") | replace('"', "") | replace(" 
     {% endif %}
     
     return response_data
+{% endif %}
 {% endfor %}

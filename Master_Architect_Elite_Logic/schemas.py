@@ -17,7 +17,29 @@ from typing import List, Optional
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 
-# ── Sub-Models ────────────────────────────────────────────────────────────────
+class RouteLogicSpec(BaseModel):
+    """Specification for logic injection into an API endpoint."""
+    path: str = Field(..., description="URL path matching an EndpointSpec.path")
+    method: str = Field(..., description="HTTP method matching an EndpointSpec.method")
+    logic_ast: str = Field(..., description="Python string block containing the route's body logic")
+    imports: List[str] = Field(default=[], description="Required python import strings to inject at the top")
+
+    @field_validator("path")
+    @classmethod
+    def path_must_start_with_api(cls, v: str) -> str:
+        if not v.startswith("/api/"):
+            raise ValueError(f"RouteLogicSpec.path must start with '/api/', got: '{v}'")
+        return v
+
+    @field_validator("method")
+    @classmethod
+    def method_must_be_valid(cls, v: str) -> str:
+        allowed = {"GET", "POST", "PUT", "DELETE", "PATCH"}
+        upper = v.upper()
+        if upper not in allowed:
+            raise ValueError(f"RouteLogicSpec.method must be one of {allowed}, got: '{v}'")
+        return upper
+
 
 class EndpointSpec(BaseModel):
     """Specification for a single API endpoint the agent must expose."""
@@ -122,6 +144,10 @@ class AgentOntology(BaseModel):
     dependencies: List[str] = Field(
         default=[],
         description="pip package names required by this agent (e.g. 'fastapi>=0.110.0')"
+    )
+    route_logic_blocks: List[RouteLogicSpec] = Field(
+        default=[],
+        description="Optional custom python logic blocks to inject into specific routes during compile rendering"
     )
     security_posture: SecurityPosture = Field(
         default_factory=SecurityPosture,

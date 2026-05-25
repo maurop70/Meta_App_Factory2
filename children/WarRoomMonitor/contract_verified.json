@@ -1,26 +1,26 @@
 {
   "agent_name": "WarRoomMonitor",
-  "role_summary": "Monitors the health and operational status of the host system and all registered child agents. Provides real-time CPU/RAM metrics and asynchronous connectivity checks to ensure system stability and agent availability.",
+  "role_summary": "Monitors system health, CPU/RAM usage, and the operational status of all registered child agents by asynchronously pinging their health endpoints, providing a comprehensive system status.",
   "primary_capabilities": [
-    "Monitor host system CPU utilization",
-    "Track host system RAM usage",
-    "Asynchronously ping active child agents via HTTP",
-    "Read agent registry for active agent information",
-    "Provide a comprehensive system health status report",
-    "Expose a detailed monitoring endpoint for specific agent status requests"
+    "Monitor CPU utilization in real-time.",
+    "Track RAM usage and availability.",
+    "Read and parse the agent registry for active child agents.",
+    "Asynchronously ping health endpoints of registered child agents.",
+    "Aggregate and report a comprehensive system status.",
+    "Expose a dedicated health check endpoint for external monitoring."
   ],
   "api_endpoints": [
     {
       "path": "/api/health",
       "method": "GET",
-      "summary": "Retrieves current system health including CPU, RAM, and child agent connectivity status.",
+      "summary": "Provides a comprehensive system health report including CPU, RAM, and child agent statuses.",
       "contract_ref": "SystemHealthContract"
     },
     {
-      "path": "/api/v1/monitor/status",
+      "path": "/api/monitor/start",
       "method": "POST",
-      "summary": "Requests a detailed status report for specified agents or the entire system with configurable depth.",
-      "contract_ref": "DetailedMonitorRequestContract"
+      "summary": "Initiates continuous monitoring of system and child agent health, optionally sending reports to a specified destination.",
+      "contract_ref": "MonitorStartContract"
     }
   ],
   "data_contracts": [
@@ -28,50 +28,61 @@
       "contract_name": "SystemHealthContract",
       "input_fields": [],
       "output_fields": [
-        "timestamp",
         "cpu_percent",
         "memory_percent",
         "child_agents_status",
-        "overall_status"
+        "timestamp"
       ],
       "error_codes": [
         500
       ]
     },
     {
-      "contract_name": "DetailedMonitorRequestContract",
+      "contract_name": "MonitorStartContract",
       "input_fields": [
-        "agent_names_filter",
-        "include_system_metrics",
-        "ping_timeout_ms"
+        "interval_seconds",
+        "report_destination_url",
+        "monitor_duration_minutes"
       ],
       "output_fields": [
-        "timestamp",
-        "requested_agents_status",
-        "system_metrics_snapshot",
-        "overall_request_status"
+        "status",
+        "message",
+        "monitor_id"
       ],
       "error_codes": [
         400,
-        404,
         500
       ]
     }
   ],
   "dependencies": [
-    "fastapi>=0.110.0",
-    "pydantic>=2.0",
     "psutil>=5.9.0",
     "httpx>=0.27.0",
-    "uvicorn>=0.29.0"
+    "fastapi>=0.110.0",
+    "pydantic>=2.0"
+  ],
+  "route_logic_blocks": [
+    {
+      "path": "/api/health",
+      "method": "GET",
+      "logic_ast": "logger.info(\"Executing endpoint: /api/health\")\n\n# 1. Capture live CPU/RAM metrics\ncpu = psutil.cpu_percent(interval=None)\nmem = psutil.virtual_memory().percent\n\n# 2. Read agent_registry.json path relative to factory\nregistry_path = os.path.abspath(os.path.join(os.path.dirname(__file__), \"..\", \"..\", \"Master_Architect_Elite_Logic\", \"agent_registry.json\"))\n\nchild_status = {}\noverall = \"HEALTHY\"\n\nif os.path.exists(registry_path):\n    try:\n        with open(registry_path, \"r\", encoding=\"utf-8\") as f:\n            registry = json.load(f)\n            \n        # 3. Asynchronously ping all active child agent ports via httpx\n        async with httpx.AsyncClient(timeout=2.0) as client:\n            tasks = []\n            agents_to_ping = []\n            for agent in registry.get(\"agents\", []):\n                # Skip master_architect and self\n                if agent[\"id\"] in [\"master_architect\", \"warroommonitor\"] or agent[\"status\"] != \"ACTIVE\":\n                    continue\n                agents_to_ping.append(agent)\n                # Ping /api/health or root\n                tasks.append(client.get(f\"http://127.0.0.1:{agent['port']}/\"))\n                \n            if tasks:\n                responses = await asyncio.gather(*tasks, return_exceptions=True)\n                for agent, resp in zip(agents_to_ping, responses):\n                    name = agent[\"name\"]\n                    if isinstance(resp, Exception):\n                        child_status[name] = \"OFFLINE\"\n                        overall = \"DEGRADED\"\n                    else:\n                        if resp.status_code < 500:\n                            child_status[name] = \"ONLINE\"\n                        else:\n                            child_status[name] = \"DEGRADED\"\n                            overall = \"DEGRADED\"\n    except Exception as reg_err:\n        logger.error(f\"Error reading registry or pinging: {reg_err}\")\n        overall = \"DEGRADED\"\nelse:\n    logger.warning(f\"agent_registry.json not found at {registry_path}\")\n    \nreturn {\n    \"timestamp\": datetime.now().isoformat(),\n    \"cpu_percent\": f\"{cpu}%\",\n    \"memory_percent\": f\"{mem}%\",\n    \"child_agents_status\": json.dumps(child_status),\n    \"overall_status\": overall,\n    \"status\": overall\n}",
+      "imports": [
+        "import psutil",
+        "import httpx",
+        "import os",
+        "import json",
+        "import asyncio",
+        "from datetime import datetime"
+      ]
+    }
   ],
   "security_posture": {
     "auth_method": "api_key",
-    "rate_limit_rpm": 60,
+    "rate_limit_rpm": 30,
     "audit_log_enabled": true,
     "cors_origins": [
       "http://localhost:5173",
-      "https://your-frontend.com"
+      "https://warroom.genesis.ai"
     ]
   },
   "research_citations": [],

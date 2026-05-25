@@ -6,7 +6,21 @@ from fastapi.security import APIKeyHeader, HTTPBearer, HTTPAuthorizationCredenti
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
+
+# Extra Imports from Route Logic Specs
+
+import psutil
+
+import httpx
+
+import os
+
+import json
+
 import asyncio
+
+from datetime import datetime
+
 
 # Setup Logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
@@ -14,12 +28,12 @@ logger = logging.getLogger("WarRoomMonitor")
 
 app = FastAPI(
     title="WarRoomMonitor",
-    description="Monitors the health and operational status of the host system and all registered child agents. Provides real-time CPU/RAM metrics and asynchronous connectivity checks to ensure system stability and agent availability.",
+    description="Monitors system health, CPU/RAM usage, and the operational status of all registered child agents by asynchronously pinging their health endpoints, providing a comprehensive system status.",
     version="1.0.0"
 )
 
 # CORS Middleware
-origins = ['http://localhost:5173', 'https://your-frontend.com']
+origins = ['http://localhost:5173', 'https://warroom.genesis.ai']
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -30,7 +44,7 @@ app.add_middleware(
 
 # Custom Rate Limiter
 rate_limit_store = defaultdict(list)
-RATE_LIMIT_RPM = 60
+RATE_LIMIT_RPM = 30
 
 async def check_rate_limit(request: Request):
     client_ip = request.client.host
@@ -42,6 +56,7 @@ async def check_rate_limit(request: Request):
     rate_limit_store[client_ip].append(now)
 
 # Authentication Posture
+
 api_key_header = APIKeyHeader(name="X-API-KEY", auto_error=True)
 async def verify_auth(api_key: str = Security(api_key_header)):
     import os
@@ -49,7 +64,9 @@ async def verify_auth(api_key: str = Security(api_key_header)):
     if api_key != expected:
         raise HTTPException(status_code=401, detail="Invalid API Key")
 
+
 # Audit Middleware
+
 @app.middleware("http")
 async def audit_logging_middleware(request: Request, call_next):
     client_ip = request.client.host
@@ -58,50 +75,88 @@ async def audit_logging_middleware(request: Request, call_next):
     logger.info(f"AUDIT LOG: Outbound response status {response.status_code} for {request.url.path}")
     return response
 
+
 # Pydantic Schemas from Data Contracts
+
+class SystemHealthContractInput(BaseModel):
+    
+    pass
+    
+
 class SystemHealthContractOutput(BaseModel):
-    timestamp: str
+    
+      
     cpu_percent: str
+      
     memory_percent: str
+      
     child_agents_status: str
-    overall_status: str
-
-class DetailedMonitorRequestContractInput(BaseModel):
-    agent_names_filter: str
-    include_system_metrics: str
-    ping_timeout_ms: str
-
-class DetailedMonitorRequestContractOutput(BaseModel):
+      
     timestamp: str
-    requested_agents_status: str
-    system_metrics_snapshot: str
-    overall_request_status: str
+      
+    
+
+class MonitorStartContractInput(BaseModel):
+    
+      
+    interval_seconds: str
+      
+    report_destination_url: str
+      
+    monitor_duration_minutes: str
+      
+    
+
+class MonitorStartContractOutput(BaseModel):
+    
+      
+    status: str
+      
+    message: str
+      
+    monitor_id: str
+      
+    
+
 
 # API Endpoints
+
+
+
+  
+    
+  
+
+  
+
 @app.get("/api/health", 
     response_model=SystemHealthContractOutput, 
-    summary="Retrieves current system health including CPU, RAM, and child agent connectivity status.",
+    summary="Provides a comprehensive system health report including CPU, RAM, and child agent statuses.",
     dependencies=[Depends(check_rate_limit), Depends(verify_auth)]
 )
-async def retrieves_current_system_health_including_cpu_ram_and_child_agent_connectivity_status():
-    import psutil
-    import httpx
-    import os
-    import json
-    from datetime import datetime
+async def provides_a_comprehensive_system_health_report_including_cpu_ram_and_child_agent_statuses(
     
+    
+):
+
+
+  
+    
+  
+
+
     logger.info("Executing endpoint: /api/health")
-    
+
     # 1. Capture live CPU/RAM metrics
     cpu = psutil.cpu_percent(interval=None)
     mem = psutil.virtual_memory().percent
-    
+
     # 2. Read agent_registry.json path relative to factory
     registry_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "Master_Architect_Elite_Logic", "agent_registry.json"))
-    
+
     child_status = {}
     overall = "HEALTHY"
-    
+
     if os.path.exists(registry_path):
         try:
             with open(registry_path, "r", encoding="utf-8") as f:
@@ -143,24 +198,56 @@ async def retrieves_current_system_health_including_cpu_ram_and_child_agent_conn
         "cpu_percent": f"{cpu}%",
         "memory_percent": f"{mem}%",
         "child_agents_status": json.dumps(child_status),
-        "overall_status": overall
+        "overall_status": overall,
+        "status": overall
     }
 
-@app.post("/api/v1/monitor/status", 
-    response_model=DetailedMonitorRequestContractOutput, 
-    summary="Requests a detailed status report for specified agents or the entire system with configurable depth.",
+
+
+
+  
+
+  
+    
+  
+
+@app.post("/api/monitor/start", 
+    response_model=MonitorStartContractOutput, 
+    summary="Initiates continuous monitoring of system and child agent health, optionally sending reports to a specified destination.",
     dependencies=[Depends(check_rate_limit), Depends(verify_auth)]
 )
-async def requests_a_detailed_status_report_for_specified_agents_or_the_entire_system_with_configurable_depth(
-    payload: DetailedMonitorRequestContractInput
+async def initiates_continuous_monitoring_of_system_and_child_agent_health_optionally_sending_reports_to_a_specified_destination(
+    
+    
+    payload: MonitorStartContractInput
+    
 ):
-    logger.info("Executing endpoint: /api/v1/monitor/status")
+
+
+  
+
+
+    logger.info(f"Executing endpoint: /api/monitor/start")
     
     # Deterministic Mock Response fulfilling the exact Output Data Contract
-    response_data = {
-        "timestamp": "2026-05-25T00:00:00Z",
-        "requested_agents_status": "SUCCESS",
-        "system_metrics_snapshot": getattr(payload, "system_metrics_snapshot", "mock_value_for_system_metrics_snapshot"),
-        "overall_request_status": "SUCCESS"
-    }
+    response_data = {}
+    
+      
+        
+    response_data["status"] = "SUCCESS"
+        
+      
+        
+          
+    response_data["message"] = getattr(payload, "message", "mock_value_for_message")
+          
+        
+      
+        
+    response_data["monitor_id"] = "gen_monitorstartcontract_" + str(int(time.time()))
+        
+      
+    
+    
     return response_data
+
