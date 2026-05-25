@@ -198,6 +198,9 @@ async def register_active_agent_proxies():
 @app.on_event("startup")
 async def startup_event():
     await register_active_agent_proxies()
+    # Start the Asynchronous IPC Bridge
+    from ipc_bridge import start_ipc_bridge
+    asyncio.create_task(start_ipc_bridge())
 
 from genesis_orchestrator import ON_COMPILE_SUCCESS_CALLBACKS
 
@@ -249,6 +252,12 @@ app.add_middleware(
 
 class GenesisRequest(BaseModel):
     prompt: str
+
+class ApproveRequest(BaseModel):
+    blueprint_file: str
+
+class RejectRequest(BaseModel):
+    blueprint_file: str
 
 class ReviewRequest(BaseModel):
     description: str
@@ -997,16 +1006,17 @@ async def review(req: ReviewRequest):
                     "}"
                 )
                 
-                # Stream blueprint to ensure the frontend interceptor captures it correctly
-                chunk_size = 32
-                for idx in range(0, len(blueprint_json), chunk_size):
-                    text_chunk = blueprint_json[idx:idx+32]
-                    json_payload = json.dumps({'type': 'agent_stream', 'emitter': 'CTO', 'content': text_chunk})
-                    yield f"data: {json_payload}\n\n"
+                # Spool to ay2_dispatch_queue
+                import time
+                timestamp = int(time.time())
+                ay2_queue_dir = os.path.join(_SCRIPT_DIR, "ay2_dispatch_queue")
+                os.makedirs(ay2_queue_dir, exist_ok=True)
+                blueprint_path = os.path.join(ay2_queue_dir, f"pending_blueprint_{timestamp}.json")
                 
-                text_chunk = '\n✅ Physical Software Contract Sealed. Awaiting execution.'
-                json_payload = json.dumps({'type': 'agent_stream', 'emitter': 'CTO', 'content': text_chunk})
-                yield f"data: {json_payload}\n\n"
+                async with aiofiles.open(blueprint_path, "w", encoding="utf-8") as f:
+                    await f.write(blueprint_json)
+                
+                yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CTO', 'content': '\\n⚙️ [CTO Node] Blueprint spooled. IPC Bridge actuating...\\n'})}\n\n"
 
         except Exception as e:
             logger.error(f"Error in Triad Review Stream: {e}")
@@ -1371,6 +1381,76 @@ def _classify(description: str) -> str:
         if any(kw in desc_lower for kw in kws):
             return cat
     return "general"
+
+
+# ── Asynchronous IPC Bridge Gateways ────────────────────
+
+@app.get("/api/bridge/stream")
+def get_bridge_stream():
+    """SSE event broadcaster for background IPC bridge operations."""
+    from ipc_bridge import register_client
+    from fastapi.responses import StreamingResponse
+    return StreamingResponse(register_client(), media_type="text/event-stream")
+
+
+@app.post("/api/bridge/approve")
+async def approve_blueprint(req: ApproveRequest):
+    """Biological operator approval route to unblock strategic pauses on blueprints."""
+    import os
+    ay2_queue_dir = os.path.join(_SCRIPT_DIR, "ay2_dispatch_queue")
+    file_name = req.blueprint_file
+    paused_path = os.path.join(ay2_queue_dir, file_name)
+    
+    if not os.path.exists(paused_path):
+        raise HTTPException(status_code=404, detail=f"Paused blueprint not found: {file_name}")
+        
+    if not file_name.startswith("paused_blueprint_"):
+        raise HTTPException(status_code=400, detail="Target is not a paused blueprint file.")
+        
+    # Read, modify Strategic_Pause flag to False to prevent re-pausing, and write back
+    try:
+        with open(paused_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        data["Strategic_Pause"] = False
+        with open(paused_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+    except Exception as e:
+        logger.error(f"Failed to clear Strategic_Pause on approval: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to modify blueprint on disk: {str(e)}")
+
+    new_name = file_name.replace("paused_blueprint_", "pending_blueprint_")
+    pending_path = os.path.join(ay2_queue_dir, new_name)
+    
+    os.rename(paused_path, pending_path)
+    
+    # Emit SSE event to log strategic approval
+    from ipc_bridge import broadcast_event
+    await broadcast_event({"type": "strategic_approval", "status": "APPROVED", "blueprint_file": new_name})
+    
+    return {"status": "success", "detail": f"Blueprint approved. Renamed to {new_name}"}
+
+
+@app.post("/api/bridge/reject")
+async def reject_blueprint(req: RejectRequest):
+    """Biological operator rejection route to delete paused blueprints and unlock UI."""
+    import os
+    ay2_queue_dir = os.path.join(_SCRIPT_DIR, "ay2_dispatch_queue")
+    file_name = req.blueprint_file
+    paused_path = os.path.join(ay2_queue_dir, file_name)
+    
+    if not os.path.exists(paused_path):
+        raise HTTPException(status_code=404, detail=f"Paused blueprint not found: {file_name}")
+        
+    if not file_name.startswith("paused_blueprint_"):
+        raise HTTPException(status_code=400, detail="Target is not a paused blueprint file.")
+        
+    os.remove(paused_path)
+    
+    # Emit SSE event to unlock the UI and log rejection
+    from ipc_bridge import broadcast_event
+    await broadcast_event({"type": "strategic_rejection", "status": "REJECTED", "blueprint_file": file_name})
+    
+    return {"status": "success", "detail": f"Blueprint rejected and deleted: {file_name}"}
 
 
 # ── CLI Launch ───────────────────────────────────────────
