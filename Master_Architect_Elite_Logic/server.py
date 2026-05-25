@@ -558,6 +558,67 @@ async def review(req: ReviewRequest):
     user_query = req.prompt or req.description or ""
     query_lower = user_query.lower()
 
+    # Deterministic Intent Classification Gate
+    if "[MANDATE START]" in user_query or user_query.strip().startswith("/genesis "):
+        classification = "STRUCTURAL_MANDATE"
+    else:
+        classification = "CONVERSATIONAL_QUERY"
+
+    # Branch A: Conversational Query Bypass
+    if classification == "CONVERSATIONAL_QUERY":
+        async def generate_conversational_stream():
+            api_key = os.getenv("GEMINI_API_KEY", "")
+            if api_key:
+                api_key = api_key.strip("'\"")
+            if not api_key:
+                yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CEO', 'content': 'Error: Gemini API Key missing'})}\n\n"
+                return
+                
+            try:
+                import google.generativeai as genai
+                genai.configure(api_key=api_key)
+                
+                # Route query directly to standard conversational LLM context
+                model = genai.GenerativeModel(
+                    model_name='gemini-2.5-pro',
+                    system_instruction="You are the Lead Executive Architect. Provide a clear, professional, and rich Markdown response to the user's conversational query."
+                )
+                
+                # yield agent_identity first
+                yield f"data: {json.dumps({'type': 'agent_identity', 'agent': 'EXECUTIVE_ARCHITECT'})}\n\n"
+                
+                response_stream = await asyncio.to_thread(
+                    model.generate_content,
+                    user_query,
+                    generation_config={"temperature": 0.5},
+                    stream=True
+                )
+                
+                def safe_next(it):
+                    try:
+                        return next(it)
+                    except StopIteration:
+                        return None
+
+                iterator = iter(response_stream)
+                while True:
+                    chunk = await asyncio.to_thread(safe_next, iterator)
+                    if chunk is None:
+                        break
+                    
+                    try:
+                        text_chunk = chunk.text
+                    except (ValueError, AttributeError):
+                        text_chunk = ""
+                    if text_chunk:
+                        yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CEO', 'content': text_chunk})}\n\n"
+            except Exception as e:
+                logger.error(f"Error in Conversational Stream: {e}")
+                yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CEO', 'content': f'[STREAM FRACTURE: {str(e)}]'})}\n\n"
+                
+        return StreamingResponse(generate_conversational_stream(), media_type="text/plain")
+
+    # Branch B: Structural Mandate Fallback
     # 2. COGNITIVE PROMPT FORKING (DUAL-STATE)
     conversational_keywords = ["what", "how", "why", "who", "where", "explain", "describe", "question", "tell me", "is there", "analyze the contents"]
     is_conversational = any(kw in query_lower for kw in conversational_keywords) or (
