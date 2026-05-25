@@ -1,0 +1,40 @@
+{
+  "agents": [
+    {
+      "id": "master_architect",
+      "name": "Master_Architect_Elite_Logic",
+      "status": "ACTIVE",
+      "port": 5050
+    },
+    {
+      "id": "cfo_agent",
+      "name": "CFO_Agent",
+      "status": "ACTIVE",
+      "port": 5070
+    },
+    {
+      "id": "cio_agent",
+      "name": "CIO_Agent",
+      "status": "ACTIVE",
+      "port": 5090
+    },
+    {
+      "id": "adv_autonomous",
+      "name": "Adv_Autonomous_Agent",
+      "status": "INACTIVE",
+      "port": 5012
+    },
+    {
+      "id": "stockalertagent",
+      "name": "StockAlertAgent",
+      "status": "ACTIVE",
+      "port": 63551
+    },
+    {
+      "id": "warroommonitor",
+      "name": "WarRoomMonitor",
+      "status": "ACTIVE",
+      "port": 57165
+    }
+  ]
+}

@@ -1,0 +1,117 @@
+{
+  "agent_name": "StockAlertAgent",
+  "role_summary": "Monitors stock prices in real-time and triggers alerts based on predefined thresholds. This agent enables users to set up custom notifications for specific stock tickers when their price reaches, exceeds, or falls below a target value.",
+  "primary_capabilities": [
+    "Create and manage stock price alerts",
+    "Monitor real-time stock data feeds",
+    "Trigger notifications via various channels (e.g., email, SMS)",
+    "Retrieve a user's active alert configurations",
+    "Validate stock ticker symbols",
+    "Handle various alert types (e.g., 'above', 'below', 'at')"
+  ],
+  "api_endpoints": [
+    {
+      "path": "/api/v1/alerts",
+      "method": "POST",
+      "summary": "Creates a new stock price alert for a specified ticker and user.",
+      "contract_ref": "CreateStockAlertContract"
+    },
+    {
+      "path": "/api/v1/alerts/{user_id}",
+      "method": "GET",
+      "summary": "Retrieves all active stock price alerts for a given user ID.",
+      "contract_ref": "GetStockAlertsContract"
+    },
+    {
+      "path": "/api/v1/alerts/{alert_id}",
+      "method": "DELETE",
+      "summary": "Deletes a specific stock price alert by its ID.",
+      "contract_ref": "DeleteStockAlertContract"
+    }
+  ],
+  "data_contracts": [
+    {
+      "contract_name": "CreateStockAlertContract",
+      "input_fields": [
+        "ticker_symbol",
+        "alert_price",
+        "alert_type",
+        "user_id",
+        "notification_channel",
+        "threshold_operator"
+      ],
+      "output_fields": [
+        "alert_id",
+        "ticker_symbol",
+        "alert_price",
+        "alert_type",
+        "status",
+        "created_at",
+        "user_id"
+      ],
+      "error_codes": [
+        400,
+        401,
+        403,
+        422,
+        500
+      ]
+    },
+    {
+      "contract_name": "GetStockAlertsContract",
+      "input_fields": [
+        "user_id"
+      ],
+      "output_fields": [
+        "alerts",
+        "count"
+      ],
+      "error_codes": [
+        400,
+        401,
+        403,
+        404,
+        500
+      ]
+    },
+    {
+      "contract_name": "DeleteStockAlertContract",
+      "input_fields": [
+        "alert_id",
+        "user_id"
+      ],
+      "output_fields": [
+        "alert_id",
+        "status",
+        "message"
+      ],
+      "error_codes": [
+        400,
+        401,
+        403,
+        404,
+        500
+      ]
+    }
+  ],
+  "dependencies": [
+    "fastapi>=0.110.0",
+    "pydantic>=2.0",
+    "uvicorn>=0.27.0",
+    "requests>=2.31.0",
+    "websocket-client>=1.7.0",
+    "python-dotenv>=1.0.0"
+  ],
+  "security_posture": {
+    "auth_method": "bearer_token",
+    "rate_limit_rpm": 120,
+    "audit_log_enabled": true,
+    "cors_origins": [
+      "http://localhost:5173",
+      "https://your-frontend-domain.com"
+    ]
+  },
+  "research_citations": [],
+  "ontology_version": "1.0.0",
+  "verified": true
+}

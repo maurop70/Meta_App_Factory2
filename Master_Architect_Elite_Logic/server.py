@@ -32,9 +32,10 @@ import sys
 import json
 import logging
 import asyncio
+import aiofiles
 from datetime import datetime
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
@@ -64,6 +65,8 @@ from triad_engine import TriadEngine
 from adversarial_gate import AdversarialGate
 from memory_engine import ArchitectMemory
 from architect_stream import stream_triad_review
+from genesis_orchestrator import GenesisOrchestrator, OntologyValidationError
+from schemas import AgentOntology
 
 # Initialize
 _triad = TriadEngine()
@@ -76,6 +79,133 @@ app = FastAPI(
     version=_CONFIG.get("version", "1.0.0"),
     description="Triad Architecture Review + Adversarial Gate (Port 5050)",
 )
+
+import httpx
+import re
+from registry_manager import load_registry
+
+# Establish a global httpx.AsyncClient lifecycle singleton to prevent socket exhaustion
+http_client = httpx.AsyncClient()
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    await http_client.aclose()
+
+REGISTERED_PROXY_ROUTES = set()
+
+def make_proxy_handler(agent_id: str, path_template: str, method: str):
+    async def proxy_handler(request: Request):
+        # Dynamically look up the active port from agent_registry.json to support dynamic runtime hotswapping
+        registry = await load_registry()
+        target_port = None
+        for agent in registry.get("agents", []):
+            if agent["id"] == agent_id:
+                target_port = agent["port"]
+                break
+                
+        if not target_port:
+            logger.error(f"Proxy forwarding failed: Agent '{agent_id}' is not in registry.")
+            raise HTTPException(status_code=502, detail=f"Proxy error: Agent '{agent_id}' is not in registry.")
+            
+        actual_path = path_template
+        for k, v in request.path_params.items():
+            actual_path = actual_path.replace(f"{{{k}}}", str(v))
+            
+        url = f"http://127.0.0.1:{target_port}{actual_path}"
+        query_params = dict(request.query_params)
+        body = await request.body()
+        
+        # Keep standard headers, except for Host
+        headers = {k: v for k, v in request.headers.items() if k.lower() != 'host'}
+        
+        try:
+            response = await http_client.request(
+                method=method,
+                url=url,
+                headers=headers,
+                params=query_params,
+                content=body,
+                timeout=15.0
+            )
+            
+            # Filter response headers
+            resp_headers = {k: v for k, v in response.headers.items() if k.lower() not in ['content-length', 'content-encoding']}
+            
+            return Response(
+                content=response.content,
+                status_code=response.status_code,
+                headers=resp_headers
+            )
+        except Exception as e:
+            logger.error(f"Proxy forwarding failed to port {target_port} for {actual_path}: {e}")
+            raise HTTPException(status_code=502, detail=f"Proxy error: {str(e)}")
+            
+    return proxy_handler
+
+def register_agent_proxy(agent_name: str, port: int, api_endpoints: list):
+    agent_id = agent_name.lower().replace("_", "")
+    for ep in api_endpoints:
+        path = ep["path"]
+        method = ep["method"]
+        
+        # ISOLATED DYNAMIC PROXY BINDING under /agent/{agent_id}/ prefix
+        proxy_path = f"/agent/{agent_id}{path}"
+        
+        route_key = f"{method}:{proxy_path}"
+        if route_key in REGISTERED_PROXY_ROUTES:
+            logger.info(f"Proxy route already registered: {route_key}")
+            continue
+        REGISTERED_PROXY_ROUTES.add(route_key)
+        
+        handler = make_proxy_handler(agent_id, path, method)
+        
+        app.add_api_route(
+            path=proxy_path,
+            endpoint=handler,
+            methods=[method],
+            summary=f"Forward proxy to {agent_name} {method} {path}"
+        )
+        logger.info(f"Dynamically mapped isolated proxy: {method} {proxy_path} -> dynamic port lookup")
+
+async def register_active_agent_proxies():
+    registry = await load_registry()
+    for agent in registry.get("agents", []):
+        if agent["id"] == "master_architect" or agent["status"] != "ACTIVE":
+            continue
+            
+        agent_name = agent["name"]
+        port = agent["port"]
+        
+        # Load endpoints from contract_verified.json dynamically
+        children_dir = os.path.abspath(os.path.normpath(os.path.join(_FACTORY_DIR, "children")))
+        contract_path = os.path.join(children_dir, agent_name, "contract_verified.json")
+        if os.path.exists(contract_path):
+            try:
+                with open(contract_path, "r", encoding="utf-8") as f:
+                    contract_data = json.load(f)
+                
+                enriched_endpoints = []
+                for ep in contract_data.get("api_endpoints", []):
+                    ep_dict = ep.copy()
+                    params = re.findall(r'\{([a-zA-Z_][a-zA-Z0-9_]*)\}', ep["path"])
+                    ep_dict["path_params"] = params
+                    enriched_endpoints.append(ep_dict)
+                    
+                register_agent_proxy(agent_name, port, enriched_endpoints)
+            except Exception as e:
+                logger.error(f"Failed to dynamically bind startup proxies for {agent_name}: {e}")
+
+@app.on_event("startup")
+async def startup_event():
+    await register_active_agent_proxies()
+
+from genesis_orchestrator import ON_COMPILE_SUCCESS_CALLBACKS
+
+def on_genesis_compile_success(agent_name: str, port: int, api_endpoints: list):
+    logger.info(f"Dynamic callback fired: Registering compiled agent {agent_name} proxies on port {port}")
+    register_agent_proxy(agent_name, port, api_endpoints)
+
+ON_COMPILE_SUCCESS_CALLBACKS.append(on_genesis_compile_success)
 
 from backend.app.routers.ingest import router as ingest_router
 from backend.app.routers.inventory_router import router as inventory_router
@@ -116,6 +246,9 @@ app.add_middleware(
 
 
 # ── Pydantic Models ─────────────────────────────────────
+
+class GenesisRequest(BaseModel):
+    prompt: str
 
 class ReviewRequest(BaseModel):
     description: str
@@ -350,7 +483,25 @@ def health():
     }
 
 
+@app.get("/api/system/registry")
+async def get_system_registry():
+    """Serves the dynamic agent registry JSON ledger dynamically to the UI."""
+    return await load_registry()
+
+
 # ── Triad Review ─────────────────────────────────────────
+
+@app.post("/api/genesis/synthesize")
+async def genesis_synthesize(req: GenesisRequest):
+    """
+    Direct SSE synthesis endpoint for creating verified agent ontologies.
+    Accepts raw prompts, runs the research & verification nodes, and streams SSE results.
+    """
+    orchestrator = GenesisOrchestrator()
+    return StreamingResponse(
+        orchestrator.run_stream(req.prompt),
+        media_type="text/plain"
+    )
 
 @app.post("/api/review")
 @app.post("/api/orchestrate")
@@ -406,6 +557,54 @@ async def review(req: ReviewRequest):
             # Step A: Run classify_intent
             intent = await classify_intent(user_query, req.history)
             if intent == "BUILDER":
+                if user_query.strip().startswith("/genesis "):
+                    # Genesis Architect Mode!
+                    clean_prompt = user_query.strip()[len("/genesis "):].strip()
+                    
+                    # Yield initial identity to UI
+                    yield f"data: {json.dumps({'type': 'agent_identity', 'agent': 'EXECUTIVE_ARCHITECT'})}\n\n"
+                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CEO', 'content': '🧬 [Genesis] Launching autonomous research & validation matrix for: ' + clean_prompt + '\\n'})}\n\n"
+                    
+                    # Run the GenesisOrchestrator stream
+                    orchestrator = GenesisOrchestrator()
+                    
+                    async for event_str in orchestrator.run_stream(clean_prompt):
+                        # Yield the raw SSE event straight to the client so the UI/Playwright can trace it
+                        yield event_str
+                        
+                        # Parse the event to print beautiful status messages to the agent stream
+                        try:
+                            if event_str.startswith("data: "):
+                                event_data = json.loads(event_str.strip()[6:])
+                                ev_type = event_data.get("event")
+                                
+                                if ev_type == "verify_start":
+                                    round_num = event_data.get("round")
+                                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CEO', 'content': f'⚙️ [Genesis] Verification Round {round_num} running...\\n'})}\n\n"
+                                elif ev_type == "verify_fail":
+                                    round_num = event_data.get("round")
+                                    err_list = event_data.get("errors", [])
+                                    errors_summary = "; ".join([f"{e.get('loc')}: {e.get('msg')}" for e in err_list])
+                                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CRITIC', 'content': f'⚠️ [Genesis] Validation failed in Round {round_num}: {errors_summary}\\n'})}\n\n"
+                                elif ev_type == "verify_pass":
+                                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CEO', 'content': '✅ [Genesis] Formal verification checks passed!\\n'})}\n\n"
+                                elif ev_type == "ontology_ready":
+                                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CTO', 'content': '🏗️ [CTO Node] Ingesting verified AgentOntology JSON contract...\\n'})}\n\n"
+                                elif ev_type == "compile_success":
+                                    port = event_data.get("port")
+                                    agent_name = event_data.get("agent_name")
+                                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CTO', 'content': f'🏗️ [CTO Node] Jinja2 files successfully synthesized in children/{agent_name}\\n'})}\n\n"
+                                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CEO', 'content': f'🚀 [Genesis] Spawning child agent uvicorn process on port {port}...\\n'})}\n\n"
+                                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CEO', 'content': f'✅ [Genesis] Child agent synthesis and compilation complete! Physical files are sealed and ready in children/{agent_name}\\n'})}\n\n"
+                                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CTO', 'content': '\\n✅ Physical Software Contract Sealed. Awaiting execution.'})}\n\n"
+                                elif ev_type == "error":
+                                    err_msg = event_data.get("message")
+                                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CRITIC', 'content': f'❌ [Genesis] Pipeline halted with error: {err_msg}\\n'})}\n\n"
+                        except Exception as parse_err:
+                            logger.error(f"Error parsing genesis event in server: {parse_err}")
+                    
+                    return # Exit stream
+
                 system_prompt = EXECUTIVE_ARCHITECT
                 agent_identity = "EXECUTIVE_ARCHITECT"
                 
@@ -431,8 +630,9 @@ async def review(req: ReviewRequest):
                             # Path A: Lightweight Text
                             if ext in [".txt", ".md", ".csv", ".json"]:
                                 try:
-                                    with open(doc_path, "r", encoding="utf-8", errors="ignore") as f:
-                                        document_context += f"\n--- DOCUMENT: {safe_doc_id} ---\n" + f.read() + "\n"
+                                    async with aiofiles.open(doc_path, "r", encoding="utf-8", errors="ignore") as f:
+                                        content = await f.read()
+                                        document_context += f"\n--- DOCUMENT: {safe_doc_id} ---\n" + content + "\n"
                                 except Exception as e:
                                     logger.error(f"Error reading lightweight text {safe_doc_id}: {e}")
                             # Path B: Massive Binary
@@ -461,8 +661,9 @@ async def review(req: ReviewRequest):
                                     ext = os.path.splitext(safe_doc_id)[1].lower()
                                     if ext in [".txt", ".md", ".csv", ".json"]:
                                         try:
-                                            with open(doc_path, "r", encoding="utf-8", errors="ignore") as f:
-                                                parts.append(f"\n--- HISTORICAL DOCUMENT: {safe_doc_id} ---\n" + f.read() + "\n")
+                                            async with aiofiles.open(doc_path, "r", encoding="utf-8", errors="ignore") as f:
+                                                content = await f.read()
+                                                parts.append(f"\n--- HISTORICAL DOCUMENT: {safe_doc_id} ---\n" + content + "\n")
                                         except Exception as e:
                                             logger.error(f"Error reading historical text {safe_doc_id}: {e}")
                                     else:
@@ -566,7 +767,7 @@ async def review(req: ReviewRequest):
                     if critic_score < 9.5:
                         from socratic_challenger import get_challenger
                         challenger = get_challenger()
-                        challenge = challenger.evaluate(proposal=text, critic_score=critic_score)
+                        challenge = await challenger.evaluate(proposal=text, critic_score=critic_score)
                         
                         yield f"data: {json.dumps({'type': 'socratic_pause', 'challenge_id': challenge.get('challenge_id'), 'weaknesses': challenge.get('weaknesses')})}\n\n"
                         return # Instantly close connection
@@ -780,7 +981,7 @@ async def review(req: ReviewRequest):
                 if critic_score < 9.5:
                     from socratic_challenger import get_challenger
                     challenger = get_challenger()
-                    challenge = challenger.evaluate(proposal=full_ceo_strategy, critic_score=critic_score)
+                    challenge = await challenger.evaluate(proposal=full_ceo_strategy, critic_score=critic_score)
                     
                     yield f"data: {json.dumps({'type': 'socratic_pause', 'challenge_id': challenge.get('challenge_id'), 'weaknesses': challenge.get('weaknesses')})}\n\n"
                     return # Instantly close connection
@@ -792,16 +993,7 @@ async def review(req: ReviewRequest):
                     "{\n"
                     '  "name": "War Room Primary Infrastructure Blueprint",\n'
                     '  "version": "1.0.0",\n'
-                    '  "nodes": [\n'
-                    '    {\n'
-                    '      "name": "Verification_Worker",\n'
-                    '      "type": "verifier",\n'
-                    '      "parameters": {\n'
-                    '        "relative_path": "scratch/worker_status.json",\n'
-                    '        "content": "{\\n  \\\"status\\": \\\\\\"ACTIVE\\\\\\\",\\n  \\\"message\\": \\\\\\"Background worker has successfully ingested the blueprint and executed atomizer mutations.\\\\\\"\\n}"\n'
-                    '      }\n'
-                    '    }\n'
-                    '  ]\n'
+                    '  "nodes": []\n'
                     "}"
                 )
                 
@@ -1005,23 +1197,23 @@ def gate_override(req: GateOverrideRequest):
 
 
 @app.post("/api/challenge/evaluate")
-def challenge_evaluate(req: ChallengeEvaluateRequest):
-    """Submit Commander evidence for a Socratic challenge."""
+async def challenge_evaluate(req: ChallengeEvaluateRequest):
+    """Submit Commander evidence for a Socratic challenge asynchronously."""
     from socratic_challenger import get_challenger
     challenger = get_challenger()
-    result = challenger.analyze_response(req.challenge_id, req.evidence)
+    result = await challenger.analyze_response(req.challenge_id, req.evidence)
     if "error" in result:
         raise HTTPException(status_code=404, detail=result["error"])
     return result
 
 
 @app.post("/api/challenge/override")
-def challenge_override(req: ChallengeOverrideRequest):
-    """Commander Hard Override for Socratic challenge — logs risks and releases lock."""
+async def challenge_override(req: ChallengeOverrideRequest):
+    """Commander Hard Override for Socratic challenge — logs risks and releases lock asynchronously."""
     from socratic_challenger import get_challenger
     challenger = get_challenger()
     try:
-        result = challenger.force_proceed(req.challenge_id, req.reason)
+        result = await challenger.force_proceed(req.challenge_id, req.reason)
         if "error" in result:
             raise HTTPException(status_code=404, detail=result["error"])
         return {"status": "success", **result}

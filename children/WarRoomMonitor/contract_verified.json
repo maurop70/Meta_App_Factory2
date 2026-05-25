@@ -1,0 +1,80 @@
+{
+  "agent_name": "WarRoomMonitor",
+  "role_summary": "Monitors the health and operational status of the host system and all registered child agents. Provides real-time CPU/RAM metrics and asynchronous connectivity checks to ensure system stability and agent availability.",
+  "primary_capabilities": [
+    "Monitor host system CPU utilization",
+    "Track host system RAM usage",
+    "Asynchronously ping active child agents via HTTP",
+    "Read agent registry for active agent information",
+    "Provide a comprehensive system health status report",
+    "Expose a detailed monitoring endpoint for specific agent status requests"
+  ],
+  "api_endpoints": [
+    {
+      "path": "/api/health",
+      "method": "GET",
+      "summary": "Retrieves current system health including CPU, RAM, and child agent connectivity status.",
+      "contract_ref": "SystemHealthContract"
+    },
+    {
+      "path": "/api/v1/monitor/status",
+      "method": "POST",
+      "summary": "Requests a detailed status report for specified agents or the entire system with configurable depth.",
+      "contract_ref": "DetailedMonitorRequestContract"
+    }
+  ],
+  "data_contracts": [
+    {
+      "contract_name": "SystemHealthContract",
+      "input_fields": [],
+      "output_fields": [
+        "timestamp",
+        "cpu_percent",
+        "memory_percent",
+        "child_agents_status",
+        "overall_status"
+      ],
+      "error_codes": [
+        500
+      ]
+    },
+    {
+      "contract_name": "DetailedMonitorRequestContract",
+      "input_fields": [
+        "agent_names_filter",
+        "include_system_metrics",
+        "ping_timeout_ms"
+      ],
+      "output_fields": [
+        "timestamp",
+        "requested_agents_status",
+        "system_metrics_snapshot",
+        "overall_request_status"
+      ],
+      "error_codes": [
+        400,
+        404,
+        500
+      ]
+    }
+  ],
+  "dependencies": [
+    "fastapi>=0.110.0",
+    "pydantic>=2.0",
+    "psutil>=5.9.0",
+    "httpx>=0.27.0",
+    "uvicorn>=0.29.0"
+  ],
+  "security_posture": {
+    "auth_method": "api_key",
+    "rate_limit_rpm": 60,
+    "audit_log_enabled": true,
+    "cors_origins": [
+      "http://localhost:5173",
+      "https://your-frontend.com"
+    ]
+  },
+  "research_citations": [],
+  "ontology_version": "1.0.0",
+  "verified": true
+}

@@ -1,14 +1,5 @@
 {
     "name": "War Room Primary Infrastructure Blueprint",
     "version": "1.0.0",
-    "nodes": [
-        {
-            "name": "Orchestrator_Background_Worker_Verification",
-            "type": "verifier",
-            "parameters": {
-                "relative_path": "scratch/worker_status.json",
-                "content": "{\n  \"status\": \"ACTIVE\",\n  \"message\": \"Background worker has successfully ingested the blueprint and executed atomizer mutations.\"\n}"
-            }
-        }
-    ]
+    "nodes": []
 }
