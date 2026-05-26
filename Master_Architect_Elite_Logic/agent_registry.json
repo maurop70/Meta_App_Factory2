@@ -34,7 +34,19 @@
       "id": "warroommonitor",
       "name": "WarRoomMonitor",
       "status": "ACTIVE",
-      "port": 57165
+      "port": 57270
+    },
+    {
+      "id": "phantomsreagent",
+      "name": "PhantomSREAgent",
+      "status": "ACTIVE",
+      "port": 60144
+    },
+    {
+      "id": "phantomsre",
+      "name": "PhantomSRE",
+      "status": "ACTIVE",
+      "port": 54346
     }
   ]
 }
