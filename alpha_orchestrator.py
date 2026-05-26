@@ -85,6 +85,8 @@ def rigid_compile_payload(raw_mandate: str, target_file_content: str = "", targe
     
     prompt_payload = f"""ROLE: You are the Antigravity Swarm Architect (AY2). You are tasked with executing a sub-atomic mutation.
 
+ABSOLUTE DIRECTIVE: You are a sub-atomic AST engine. Conversational markdown is permanently forbidden. You MUST output raw JSON matching this exact schema and absolutely nothing else: {{ 'nodes': [ {{ 'action': 'AST_SPLICE', 'file_path': '...', 'search_content': '...', 'replace_content': '...' }} ] }}
+
 {sub_atomic_restitching_doctrine}
 
 {verification_matrix}
@@ -102,8 +104,6 @@ COMMAND MANDATE / FAULT TRACEBACK:
 
 Please compile your response into a valid, strict JSON object conforming to this schema:
 {{
-    "name": "Self-Healing Patch Blueprint",
-    "version": "1.0.0",
     "nodes": [
         {{
             "action": "AST_SPLICE",
@@ -145,7 +145,18 @@ async def transmit_mandate_to_gemini(compiled_prompt: str, payload_type: str = "
         
         def _call_api():
             genai.configure(api_key=api_key)
-            model = genai.GenerativeModel(model_name)
+            
+            absolute_directive = (
+                "ABSOLUTE DIRECTIVE: You are a sub-atomic AST engine. "
+                "Conversational markdown is permanently forbidden. "
+                "You MUST output raw JSON matching this exact schema and absolutely nothing else: "
+                "{ 'nodes': [ { 'action': 'AST_SPLICE', 'file_path': '...', 'search_content': '...', 'replace_content': '...' } ] }"
+            )
+            
+            model = genai.GenerativeModel(
+                model_name,
+                system_instruction=absolute_directive
+            )
             
             # Request JSON output structure
             response = model.generate_content(
@@ -402,7 +413,7 @@ class AlphaOrchestratorWatchdog:
             # 1. Back up original contents and Apply Splices
             for node in nodes:
                 if node.get("action") == "AST_SPLICE":
-                    target_file = node.get("target_file", "")
+                    target_file = node.get("file_path") or node.get("target_file") or ""
                     search_content = node.get("search_content", "")
                     replace_content = node.get("replace_content", "")
 
