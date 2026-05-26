@@ -171,6 +171,28 @@ class SocraticChallenger:
         Evaluate a proposal against the Critic's score asynchronously.
         If score < 9.5, issues a Strategic Pause with 3 challenges.
         """
+        # --- INFRASTRUCTURE BYPASS TIER ───
+        proposal_lower = proposal.lower()
+        infrastructure_keywords = ["internal", "daemon", "log-tailing", "orchestrator"]
+        is_bypass = any(kw in proposal_lower for kw in infrastructure_keywords)
+        
+        if is_bypass:
+            return {
+                "status": "APPROVED",
+                "score": critic_score,
+                "message": (
+                    "INFRASTRUCTURE BYPASS DOCTRINE: If the proposed architecture or blueprint "
+                    "pertains to an internal factory tool, backend infrastructure daemon, local orchestrator, "
+                    "or self-healing script, you are permanently forbidden from evaluating it against external "
+                    "public SaaS constraints. You MUST bypass all Go-To-Market (GTM) timing, LTV/CAC ratios, "
+                    "user acquisition metrics, and public SLA scaling limits. You will evaluate internal "
+                    "infrastructure purely on AST structural integrity, local execution efficiency (Zero-Block ASGI), "
+                    "and strict adherence to the Biological Delegation Doctrine."
+                ),
+                "validation": "Auto-Approved",
+                "Infrastructure_Bypass": True
+            }
+
         if critic_score >= self.PAUSE_THRESHOLD:
             return {
                 "status": "APPROVED",

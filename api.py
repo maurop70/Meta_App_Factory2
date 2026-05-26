@@ -4912,7 +4912,7 @@ async def warroom_challenge(request: Request):
     proposal = body.get("proposal", "")
     critic_score = body.get("critic_score", _persuasion_score)
 
-    result = _challenger.evaluate(proposal, critic_score)
+    result = await _challenger.evaluate(proposal, critic_score)
 
     if result["status"] == "PAUSED":
         _persuasion_score = max(1, int(critic_score))
@@ -4999,7 +4999,7 @@ async def warroom_convince(request: Request):
     await asyncio.sleep(1.0)
 
     # Analyze the response
-    verdict = _challenger.analyze_response(challenge_id, reasoning)
+    verdict = await _challenger.analyze_response(challenge_id, reasoning)
 
     if "error" in verdict:
         return JSONResponse(verdict, status_code=404)
@@ -5059,7 +5059,7 @@ async def warroom_force_proceed(request: Request):
     challenge_id = body.get("challenge_id", "")
     commander_note = body.get("note", "Commander override — proceeding.")
 
-    override = _challenger.force_proceed(challenge_id, commander_note)
+    override = await _challenger.force_proceed(challenge_id, commander_note)
 
     if "error" in override:
         return JSONResponse(override, status_code=404)
@@ -5262,7 +5262,7 @@ async def audit_master_index():
         )
 
         _persuasion_score = 5  # Start neutral
-        result = _challenger.evaluate(proposal, critic_score=6.0)
+        result = await _challenger.evaluate(proposal, critic_score=6.0)
 
         if result["status"] == "PAUSED":
             _persuasion_score = 6
