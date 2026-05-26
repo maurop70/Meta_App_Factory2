@@ -1,0 +1,119 @@
+{
+  "CHG-0001": {
+    "challenge_id": "CHG-0001",
+    "status": "PAUSED",
+    "score": 2.0,
+    "threshold": 9.5,
+    "gap": 7.5,
+    "proposal_preview": "{\n  \"verdict\": {\n    \"composite_score\": 25,\n    \"verdict\": \"REJECT\",\n    \"concerns\": [\n      \"Extreme operational risk from fully autonomous code deployment without human-in-the-loop verification.\",\n ",
+    "weaknesses": [
+      {
+        "id": 1,
+        "category": "Scalability",
+        "severity": "CRITICAL",
+        "challenge": "WebSocket fan-out without message broker will cap at ~500 concurrent sessions.",
+        "required_evidence": "Provide data or reasoning addressing scalability."
+      },
+      {
+        "id": 2,
+        "category": "Unit Economics",
+        "severity": "CRITICAL",
+        "challenge": "Projected LTV/CAC ratio of 5:1 is optimistic given current churn data.",
+        "required_evidence": "Provide data or reasoning addressing unit economics."
+      },
+      {
+        "id": 3,
+        "category": "Go-to-Market Timing",
+        "severity": "CRITICAL",
+        "challenge": "Market window analysis is absent. Seasonal patterns suggest Q1 launch disadvantage.",
+        "required_evidence": "Provide data or reasoning addressing go-to-market timing."
+      }
+    ],
+    "requires": "user_reasoning",
+    "options": [
+      "convince",
+      "force_proceed"
+    ],
+    "created_at": "2026-05-25T00:23:18.787338",
+    "resolved_at": "2026-05-25T00:25:09.886912",
+    "resolution": "Commander-Override (critical)"
+  },
+  "CHG-0002": {
+    "challenge_id": "CHG-0002",
+    "status": "PAUSED",
+    "score": 1.5,
+    "threshold": 9.5,
+    "gap": 8.0,
+    "proposal_preview": "{\n  \"verdict\": {\n    \"composite_score\": 15,\n    \"verdict\": \"REJECT\",\n    \"concerns\": [\n      \"Extreme operational risk from unsupervised autonomous patching.\",\n      \"Core AST correction logic is tech",
+    "weaknesses": [
+      {
+        "id": 1,
+        "category": "Scalability",
+        "severity": "CRITICAL",
+        "challenge": "The current architecture shows no auto-scaling strategy. At 10x load, response times will breach SLA thresholds.",
+        "required_evidence": "Provide data or reasoning addressing scalability."
+      },
+      {
+        "id": 2,
+        "category": "Team Dependency",
+        "severity": "CRITICAL",
+        "challenge": "No documentation bus-factor analysis. Knowledge concentration creates existential risk.",
+        "required_evidence": "Provide data or reasoning addressing team dependency."
+      },
+      {
+        "id": 3,
+        "category": "Data Privacy",
+        "severity": "CRITICAL",
+        "challenge": "Third-party data sharing agreements lack sub-processor clauses required by modern privacy frameworks.",
+        "required_evidence": "Provide data or reasoning addressing data privacy."
+      }
+    ],
+    "requires": "user_reasoning",
+    "options": [
+      "convince",
+      "force_proceed"
+    ],
+    "created_at": "2026-05-25T00:27:26.387712",
+    "resolved_at": "2026-05-25T00:28:04.761413",
+    "resolution": "Commander-Override (critical)"
+  },
+  "CHG-0003": {
+    "challenge_id": "CHG-0003",
+    "status": "PAUSED",
+    "score": 5,
+    "threshold": 9.5,
+    "gap": 4.5,
+    "proposal_preview": "Build a public consumer SaaS marketplace for local organic produce, focusing on user acquisition and subscription models.",
+    "weaknesses": [
+      {
+        "id": 1,
+        "category": "Team Dependency",
+        "severity": "SIGNIFICANT",
+        "challenge": "Single point of failure: only one engineer understands the core orchestration layer.",
+        "required_evidence": "Provide data or reasoning addressing team dependency."
+      },
+      {
+        "id": 2,
+        "category": "Competitive Moat",
+        "severity": "SIGNIFICANT",
+        "challenge": "The proposed feature set is table-stakes in the current market. No defensible IP or network effect is described.",
+        "required_evidence": "Provide data or reasoning addressing competitive moat."
+      },
+      {
+        "id": 3,
+        "category": "User Retention",
+        "severity": "SIGNIFICANT",
+        "challenge": "No push notification or email drip campaign infrastructure is planned.",
+        "required_evidence": "Provide data or reasoning addressing user retention."
+      }
+    ],
+    "requires": "user_reasoning",
+    "options": [
+      "convince",
+      "force_proceed"
+    ],
+    "created_at": "2026-05-25T21:10:28.787389",
+    "resolved_at": null,
+    "resolution": null
+  }
+}
