@@ -94,6 +94,8 @@ from api_qa_orchestrator import orchestrator_router
 from api_alpha_genesis import router as alpha_router, sweep_zombie_jobs
 from agents.cio_agent import router as cio_agent_router
 from agents.warroom_agent import router as warroom_agent_router
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "backend")))
+from backend.app.routers.inventory_router import router as inventory_router
 
 app = FastAPI(title="Antigravity Meta App Factory API", version="3.0", lifespan=lifespan)
 app.include_router(builder_router, prefix="/api/v1")
@@ -106,6 +108,7 @@ app.include_router(orchestrator_router)
 app.include_router(alpha_router)
 app.include_router(cio_agent_router)
 app.include_router(warroom_agent_router)
+app.include_router(inventory_router)
 
 # ── CORS ──────────────────────────────────────────────────────
 app.add_middleware(
