@@ -769,11 +769,11 @@ def agent_status():
     agents = {}
     
     # Active Native Ports aligned with watchdog
-    c_suite_active = ping_port(5041)
+    c_suite_active = ping_port(5070)
     architect_active = ping_port(5050)
     qa_active = ping_port(5030)
     core_active = ping_port(5000)
-    clo_active = ping_port(5080)
+    clo_active = core_active
     
     # Map overarching C-Suite
     for name in ["CFO", "CMO", "HR", "CRITIC"]:
