@@ -51,8 +51,11 @@ print("=" * 60)
 os.chdir(CIO_DIR)
 sys.path.insert(0, str(CIO_DIR))
 
+# Import the actual app object from CIO_Agent server.py to bypass string-based path resolution errors
+from server import app
+
 uvicorn.run(
-    "server:app",
+    app,
     host="0.0.0.0",
     port=5090,
     reload=False,  # reload=False for production; set True for dev

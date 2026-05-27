@@ -774,6 +774,7 @@ def agent_status():
     qa_active = ping_port(5030)
     core_active = ping_port(5000)
     clo_active = core_active
+    cio_active = ping_port(5090)
     
     # Map overarching C-Suite
     for name in ["CFO", "CMO", "HR", "CRITIC"]:
@@ -783,6 +784,7 @@ def agent_status():
     agents["PITCH"] = qa_active
     agents["ATOMIZER"] = core_active
     agents["CLO"] = clo_active
+    agents["CIO"] = cio_active
     
     return agents
 
@@ -6360,7 +6362,7 @@ async def _startup_watcher():
         try:
             _cio_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "CIO_Agent")
             subprocess.Popen(
-                ["python", "server.py"],
+                ["python", os.path.join(_cio_dir, "server.py")],
                 cwd=_cio_dir,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL

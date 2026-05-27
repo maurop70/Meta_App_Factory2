@@ -59,7 +59,8 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(message
 logger = logging.getLogger("CIO_Agent")
 
 sys.path.insert(0, str(ROOT))
-sys.path.insert(0, str(FACTORY_ROOT))
+if str(FACTORY_ROOT) not in sys.path:
+    sys.path.append(str(FACTORY_ROOT))
 from cio_engine import run_full_sweep, list_memos, read_memo
 
 # ═══════════════════════════════════════════════════════════
@@ -793,4 +794,4 @@ async def authorize_upgrade(req: AuthorizeUpgradeRequest):
 # ═══════════════════════════════════════════════════════════
 
 if __name__ == "__main__":
-    uvicorn.run("server:app", host="0.0.0.0", port=5090, reload=True)
+    uvicorn.run(app, host="0.0.0.0", port=5090)
