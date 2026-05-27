@@ -263,13 +263,38 @@ export default function BuilderChat() {
   const submitSocraticOverride = async (challengeId) => {
     setIsSocraticSubmitting(true);
     const overrideReason = prompt("Enter override authorization code or justification:") || "Commander Override";
+    
+    // Extract the held blueprint JSON from chat history
+    let blueprintObj = null;
+    try {
+      for (let i = chatHistory.length - 1; i >= 0; i--) {
+        const msg = chatHistory[i];
+        if (msg.agent === 'EXECUTIVE_ARCHITECT' || msg.content?.includes('"nodes"')) {
+          const bp = extractBlueprint(msg.content);
+          if (bp) {
+            blueprintObj = JSON.parse(bp);
+            break;
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Failed to parse blueprint from chat history:", err);
+    }
+
+    if (!blueprintObj) {
+      alert("Commander Error: No pending blueprint payload detected in the active chat viewport. Override aborted.");
+      setIsSocraticSubmitting(false);
+      return;
+    }
+
     try {
       const res = await fetch('/api/challenge/override', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           challenge_id: challengeId,
-          reason: overrideReason
+          reason: overrideReason,
+          blueprint: blueprintObj
         })
       });
       
