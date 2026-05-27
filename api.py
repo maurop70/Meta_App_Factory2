@@ -6502,6 +6502,51 @@ import asyncio
 import json
 from datetime import datetime
 
+class ChallengeOverridePayload(BaseModel):
+    challenge_id: str
+    reason: str
+    blueprint: dict
+
+@app.post("/api/challenge/override")
+async def challenge_override(payload: ChallengeOverridePayload):
+    # Log override and justification
+    logger.warning(f"[OVERRIDE DETECTED] Challenge {payload.challenge_id} overridden. Justification: {payload.reason}")
+    
+    # Resolve the destination queue directory
+    import time
+    queue_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Master_Architect_Elite_Logic", "ay2_dispatch_queue")
+    os.makedirs(queue_dir, exist_ok=True)
+    
+    # Enforce atomic writes: write to .tmp then swap
+    timestamp = int(time.time())
+    final_filename = f"pending_srepatch_override_{timestamp}.json"
+    final_path = os.path.join(queue_dir, final_filename)
+    temp_path = os.path.join(queue_dir, f"{final_filename}.tmp")
+    
+    try:
+        # Include original metadata or wrapping if required, or write the blueprint dict directly
+        async with aiofiles.open(temp_path, "w", encoding="utf-8") as f:
+            await f.write(json.dumps(payload.blueprint, indent=2))
+        
+        # Atomic replace
+        os.replace(temp_path, final_path)
+        logger.info(f"Successfully spooled overridden blueprint: {final_filename}")
+        
+        # Return success with override risks
+        risk_level = "high"
+        risk_description = "Critical weaknesses bypassed by Commander override authority. Spooled to watchdog execution loop."
+        
+        return {
+            "status": "success",
+            "challenge_id": payload.challenge_id,
+            "risk_level": risk_level,
+            "risk_description": risk_description
+        }
+    except Exception as e:
+        logger.error(f"Failed to spool override blueprint: {e}")
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail=f"Failed to spool override blueprint: {e}")
+
 TELEMETRY_CLIENTS = []
 
 class TelemetryPayload(BaseModel):
