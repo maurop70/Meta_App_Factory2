@@ -6495,7 +6495,55 @@ async def atomizer_ingest(payload: AtomizerPayload):
         if (end_line - start_line) > 500:
             raise HTTPException(status_code=400, detail="[FATAL] Token Boundary Exceeds MAX_ATOM_LINES. Attention matrix degradation imminent.")
         
-    return {"status": "success", "target": target_path}
+# ── Server-Sent Events (SSE) Telemetry Router ──
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
+import asyncio
+import json
+from datetime import datetime
+
+TELEMETRY_CLIENTS = []
+
+class TelemetryPayload(BaseModel):
+    status: str
+    file: str
+    message: str
+
+@app.post("/api/telemetry/push")
+async def push_telemetry(payload: TelemetryPayload):
+    event = {
+        "status": payload.status,
+        "file": payload.file,
+        "message": payload.message,
+        "timestamp": datetime.now().isoformat()
+    }
+    logger.info(f"Broadcasting telemetry: {payload.status} for {payload.file}")
+    for queue in list(TELEMETRY_CLIENTS):
+        try:
+            await queue.put(event)
+        except Exception as e:
+            logger.error(f"Failed to queue telemetry event: {e}")
+    return {"status": "broadcasted"}
+
+@app.get("/api/telemetry/stream")
+async def get_telemetry_stream():
+    queue = asyncio.Queue()
+    TELEMETRY_CLIENTS.append(queue)
+    logger.info("New UI client connected to Telemetry SSE stream.")
+    
+    async def sse_generator():
+        try:
+            yield f"data: {json.dumps({'type': 'connection', 'status': 'connected'})}\n\n"
+            while True:
+                event = await queue.get()
+                yield f"data: {json.dumps(event)}\n\n"
+        except asyncio.CancelledError:
+            logger.info("UI client disconnected from Telemetry SSE stream.")
+        finally:
+            if queue in TELEMETRY_CLIENTS:
+                TELEMETRY_CLIENTS.remove(queue)
+                
+    return StreamingResponse(sse_generator(), media_type="text/event-stream")
 
 if __name__ == "__main__":
     import uvicorn

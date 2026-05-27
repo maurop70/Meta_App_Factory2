@@ -167,6 +167,37 @@ export default function BuilderChat() {
     };
   }, []);
 
+  useEffect(() => {
+    const telemetryEs = new EventSource('/api/telemetry/stream');
+
+    telemetryEs.onopen = () => {
+      console.log("Telemetry EventSource stream connection successfully opened.");
+    };
+
+    telemetryEs.onerror = (err) => {
+      console.warn("Telemetry EventSource error:", err);
+    };
+
+    telemetryEs.onmessage = (evt) => {
+      try {
+        const data = JSON.parse(evt.data);
+        if (data.status === 'executing') {
+          setChatHistory(prev => [...prev, { role: 'system', content: `⚙️ [AY2 DAEMON] Ingesting patch blueprint for '${data.file}'...`, agent: 'UNKNOWN' }]);
+        } else if (data.status === 'success') {
+          setChatHistory(prev => [...prev, { role: 'system', content: `✅ [AY2 DAEMON SUCCESS] Successfully applied AST splice to '${data.file}'`, agent: 'UNKNOWN' }]);
+        } else if (data.status === 'failed') {
+          setChatHistory(prev => [...prev, { role: 'system', content: `❌ [AY2 DAEMON FAILED] Validation failed for '${data.file}'. Changes rolled back.`, agent: 'UNKNOWN' }]);
+        }
+      } catch (e) {
+        console.error("Telemetry parse failed:", e);
+      }
+    };
+
+    return () => {
+      telemetryEs.close();
+    };
+  }, []);
+
   const abortControllerRef = useRef(null);
 
   const handleNewThread = () => {
