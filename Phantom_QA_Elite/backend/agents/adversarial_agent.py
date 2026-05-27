@@ -32,16 +32,16 @@ class AdversarialTestAgent:
             self.ghost.base_url = daemon.local_url.rstrip("/")
 
             await self.telemetry.push({"status": "executing_api_fuzzing", "agent": "SkepticRunner"})
-            api_ledger = await self.skeptic.execute_attack_matrix(target_url=daemon.local_url)
+            api_ledger = await self.skeptic.run_full_attack()
 
             await self.telemetry.push({"status": "executing_ui_fuzzing", "agent": "GhostUserRunner"})
-            ui_ledger = await self.ghost.execute_headless_assault(target_url=daemon.local_url)
+            ui_ledger = await self.ghost.run_full_suite()
 
             final_ledger = {
                 "target": target_app_path,
                 "api_diagnostics": api_ledger,
                 "ui_diagnostics": ui_ledger,
-                "conclusion": "PASS" if api_ledger["pass"] and ui_ledger["pass"] else "FAIL"
+                "conclusion": "PASS" if api_ledger.get("score", 0) >= 70 and ui_ledger.get("score", 0) >= 70 else "FAIL"
             }
             await self.telemetry.push({"status": "completed", "ledger": final_ledger})
         except Exception as e:
