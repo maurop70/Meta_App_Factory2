@@ -113,6 +113,21 @@ export default defineConfig({
           });
         }
       },
+      '/api/test/adversarial': {
+        target: 'http://127.0.0.1:5030',
+        changeOrigin: true,
+        secure: false,
+        configure: (proxy, _options) => {
+          proxy.on('proxyRes', (proxyRes, req, res) => {
+            res.setHeader('Cache-Control', 'no-cache, no-transform');
+            res.setHeader('Connection', 'keep-alive');
+            res.setHeader('X-Accel-Buffering', 'no');
+            proxyRes.headers['cache-control'] = 'no-cache, no-transform';
+            proxyRes.headers['connection'] = 'keep-alive';
+            proxyRes.headers['x-accel-buffering'] = 'no';
+          });
+        }
+      },
       '/api': {
         target: 'http://127.0.0.1:5000',
         changeOrigin: true,
