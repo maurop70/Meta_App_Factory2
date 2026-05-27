@@ -158,10 +158,32 @@ async def transmit_mandate_to_gemini(compiled_prompt: str, payload_type: str = "
                 system_instruction=absolute_directive
             )
             
-            # Request JSON output structure
+            # Request JSON output structure with strict schema binding
+            schema_dict = {
+                "type": "OBJECT",
+                "properties": {
+                    "nodes": {
+                        "type": "ARRAY",
+                        "items": {
+                            "type": "OBJECT",
+                            "properties": {
+                                "action": {"type": "STRING"},
+                                "file_path": {"type": "STRING"},
+                                "search_content": {"type": "STRING"},
+                                "replace_content": {"type": "STRING"}
+                            },
+                            "required": ["action", "file_path", "search_content", "replace_content"]
+                        }
+                    }
+                },
+                "required": ["nodes"]
+            }
             response = model.generate_content(
                 compiled_prompt,
-                generation_config={"response_mime_type": "application/json"}
+                generation_config={
+                    "response_mime_type": "application/json",
+                    "response_schema": schema_dict
+                }
             )
             return response.text
 

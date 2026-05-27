@@ -895,9 +895,11 @@ async def review(req: ReviewRequest):
                 ay2_queue_dir = os.path.join(_SCRIPT_DIR, "ay2_dispatch_queue")
                 os.makedirs(ay2_queue_dir, exist_ok=True)
                 blueprint_path = os.path.join(ay2_queue_dir, f"pending_blueprint_{timestamp}.json")
+                temp_path = os.path.join(ay2_queue_dir, f"pending_blueprint_{timestamp}.json.tmp")
 
-                async with aiofiles.open(blueprint_path, "w", encoding="utf-8") as f:
+                async with aiofiles.open(temp_path, "w", encoding="utf-8") as f:
                     await f.write(blueprint_json)
+                os.replace(temp_path, blueprint_path)
 
                 # Yield the precise SSE actuation token
                 yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CTO', 'content': '\n\n⚙️ [CTO Node] Blueprint spooled. IPC Bridge actuating...\n'})}\n\n"
@@ -1126,9 +1128,11 @@ async def review(req: ReviewRequest):
                 ay2_queue_dir = os.path.join(_SCRIPT_DIR, "ay2_dispatch_queue")
                 os.makedirs(ay2_queue_dir, exist_ok=True)
                 blueprint_path = os.path.join(ay2_queue_dir, f"pending_blueprint_{timestamp}.json")
+                temp_path = os.path.join(ay2_queue_dir, f"pending_blueprint_{timestamp}.json.tmp")
                 
-                async with aiofiles.open(blueprint_path, "w", encoding="utf-8") as f:
+                async with aiofiles.open(temp_path, "w", encoding="utf-8") as f:
                     await f.write(blueprint_json)
+                os.replace(temp_path, blueprint_path)
                 
                 yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CTO', 'content': '\\n⚙️ [CTO Node] Blueprint spooled. IPC Bridge actuating...\\n'})}\n\n"
 

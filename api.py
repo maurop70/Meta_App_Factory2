@@ -6370,8 +6370,20 @@ async def _startup_watcher():
             logger.info("CIO Agent auto-started on port 5090.")
         except Exception as _e:
             logger.error(f"CIO Agent auto-start FAILED: {_e}")
-    else:
         logger.info("CIO Agent already running on port 5090 — skipping launch.")
+
+    # ── Auto-boot Alpha Orchestrator (AY2 Watchdog Daemon) ──
+    try:
+        _factory_dir = os.path.dirname(os.path.abspath(__file__))
+        subprocess.Popen(
+            ["python", "alpha_orchestrator.py"],
+            cwd=_factory_dir,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+        logger.info("Alpha Orchestrator (AY2 Watchdog) auto-started in background.")
+    except Exception as _e:
+        logger.error(f"Alpha Orchestrator auto-start FAILED: {_e}")
 
 # ── Atomizer Endpoints ────────────────────────────────────────────────────────
 from pydantic import BaseModel, Field, field_validator
