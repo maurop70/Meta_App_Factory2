@@ -1340,6 +1340,44 @@ async def _run_audit(target_url: str, audit_mode: str, file_link: str = "",
 
 
 # ═══════════════════════════════════════════════════════════
+#  ADVERSARIAL ROUTER DEPLOYMENT
+# ═══════════════════════════════════════════════════════════
+
+from fastapi import APIRouter, BackgroundTasks, HTTPException
+from pydantic import BaseModel
+try:
+    from .agents.adversarial_agent import adversarial_commander
+except (ImportError, ValueError):
+    from agents.adversarial_agent import adversarial_commander
+
+router = APIRouter()
+
+class AdversarialTargetPayload(BaseModel):
+    target_app_path: str
+
+@router.post("/api/test/adversarial", status_code=202)
+async def trigger_adversarial_campaign(
+    payload: AdversarialTargetPayload, 
+    background_tasks: BackgroundTasks
+) -> dict:
+    if not payload.target_app_path:
+        raise HTTPException(status_code=400, detail="target_app_path is permanently required.")
+
+    background_tasks.add_task(
+        adversarial_commander.execute_full_adversarial_campaign, 
+        payload.target_app_path
+    )
+    
+    return {
+        "status": "campaign_dispatched",
+        "target": payload.target_app_path,
+        "telemetry_stream": "/api/qa/stream"
+    }
+
+app.include_router(router)
+
+
+# ═══════════════════════════════════════════════════════════
 #  STARTUP
 # ═══════════════════════════════════════════════════════════
 
