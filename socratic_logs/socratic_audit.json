@@ -725,5 +725,197 @@
       "resolved_at": null,
       "resolution": null
     }
+  },
+  {
+    "event": "challenge_issued",
+    "timestamp": "2026-05-25T21:55:21.089435",
+    "data": {
+      "challenge_id": "CHG-0004",
+      "status": "PAUSED",
+      "score": 5,
+      "threshold": 9.5,
+      "gap": 4.5,
+      "proposal_preview": "Build a public consumer SaaS marketplace for local organic produce, focusing on user acquisition and subscription models.",
+      "weaknesses": [
+        {
+          "id": 1,
+          "category": "Scalability",
+          "severity": "SIGNIFICANT",
+          "challenge": "The current architecture shows no auto-scaling strategy. At 10x load, response times will breach SLA thresholds.",
+          "required_evidence": "Provide data or reasoning addressing scalability."
+        },
+        {
+          "id": 2,
+          "category": "Go-to-Market Timing",
+          "severity": "SIGNIFICANT",
+          "challenge": "Competitor release calendar shows 2 major launches within our planned launch window.",
+          "required_evidence": "Provide data or reasoning addressing go-to-market timing."
+        },
+        {
+          "id": 3,
+          "category": "Market Validation",
+          "severity": "SIGNIFICANT",
+          "challenge": "Market size estimate uses top-down TAM methodology without bottom-up validation.",
+          "required_evidence": "Provide data or reasoning addressing market validation."
+        }
+      ],
+      "requires": "user_reasoning",
+      "options": [
+        "convince",
+        "force_proceed"
+      ],
+      "created_at": "2026-05-25T21:55:21.086754",
+      "resolved_at": null,
+      "resolution": null
+    }
+  },
+  {
+    "event": "challenge_issued",
+    "timestamp": "2026-05-26T22:32:09.148021",
+    "data": {
+      "challenge_id": "CHG-0005",
+      "status": "PAUSED",
+      "score": 1.0,
+      "threshold": 9.5,
+      "gap": 8.5,
+      "proposal_preview": "{key}': {e}",
+      "weaknesses": [
+        {
+          "id": 1,
+          "category": "Team Dependency",
+          "severity": "CRITICAL",
+          "challenge": "Single point of failure: only one engineer understands the core orchestration layer.",
+          "required_evidence": "Provide data or reasoning addressing team dependency."
+        },
+        {
+          "id": 2,
+          "category": "Technical Debt",
+          "severity": "CRITICAL",
+          "challenge": "14 TODO markers remain in production code. 3 are in critical authentication paths.",
+          "required_evidence": "Provide data or reasoning addressing technical debt."
+        },
+        {
+          "id": 3,
+          "category": "User Retention",
+          "severity": "CRITICAL",
+          "challenge": "Onboarding flow has 6 steps. Industry data shows each step loses 15-20% of users.",
+          "required_evidence": "Provide data or reasoning addressing user retention."
+        }
+      ],
+      "requires": "user_reasoning",
+      "options": [
+        "convince",
+        "force_proceed"
+      ],
+      "created_at": "2026-05-26T22:32:09.145441",
+      "resolved_at": null,
+      "resolution": null
+    }
+  },
+  {
+    "event": "hard_override",
+    "timestamp": "2026-05-26T22:33:33.884053",
+    "data": {
+      "challenge_id": "CHG-0005",
+      "status": "OVERRIDE",
+      "risk_level": "critical",
+      "risk_description": "Multiple structural risks were flagged but overridden. Full audit required within 30 days.",
+      "original_score": 1.0,
+      "gap_from_threshold": 8.5,
+      "weaknesses_unaddressed": [
+        "Single point of failure: only one engineer understands the core orchestration layer.",
+        "14 TODO markers remain in production code. 3 are in critical authentication paths.",
+        "Onboarding flow has 6 steps. Industry data shows each step loses 15-20% of users."
+      ],
+      "commander_note": "INTERNAL INFRASTRUCTURE PATCH",
+      "override_at": "2026-05-26T22:33:33.879721",
+      "audit_required": true,
+      "audit_deadline": "30 days"
+    }
+  },
+  {
+    "event": "challenge_issued",
+    "timestamp": "2026-05-26T22:45:38.400662",
+    "data": {
+      "challenge_id": "CHG-0006",
+      "status": "PAUSED",
+      "score": 5.0,
+      "threshold": 9.5,
+      "gap": 4.5,
+      "proposal_preview": "{\n  \"nodes\": [\n    {\n      \"search_content\": \"INSERT INTO system_state (key, val) VALUES (?, ?)\",\n      \"replace_content\": \"INSERT OR REPLACE INTO system_state (key, val) VALUES (?, ?)\"\n    }\n  ]\n}",
+      "weaknesses": [
+        {
+          "id": 1,
+          "category": "Go-to-Market Timing",
+          "severity": "SIGNIFICANT",
+          "challenge": "Market window analysis is absent. Seasonal patterns suggest Q1 launch disadvantage.",
+          "required_evidence": "Provide data or reasoning addressing go-to-market timing."
+        },
+        {
+          "id": 2,
+          "category": "User Retention",
+          "severity": "SIGNIFICANT",
+          "challenge": "No push notification or email drip campaign infrastructure is planned.",
+          "required_evidence": "Provide data or reasoning addressing user retention."
+        },
+        {
+          "id": 3,
+          "category": "Team Dependency",
+          "severity": "SIGNIFICANT",
+          "challenge": "Hiring timeline for planned features is unrealistic given current market conditions.",
+          "required_evidence": "Provide data or reasoning addressing team dependency."
+        }
+      ],
+      "requires": "user_reasoning",
+      "options": [
+        "convince",
+        "force_proceed"
+      ],
+      "created_at": "2026-05-26T22:45:38.398155",
+      "resolved_at": null,
+      "resolution": null
+    }
+  },
+  {
+    "event": "hard_override",
+    "timestamp": "2026-05-26T22:51:05.521963",
+    "data": {
+      "challenge_id": "CHG-0001",
+      "status": "OVERRIDE",
+      "risk_level": "critical",
+      "risk_description": "Multiple structural risks were flagged but overridden. Full audit required within 30 days.",
+      "original_score": 2.0,
+      "gap_from_threshold": 7.5,
+      "weaknesses_unaddressed": [
+        "WebSocket fan-out without message broker will cap at ~500 concurrent sessions.",
+        "Projected LTV/CAC ratio of 5:1 is optimistic given current churn data.",
+        "Market window analysis is absent. Seasonal patterns suggest Q1 launch disadvantage."
+      ],
+      "commander_note": "Commander override synthesis verification test",
+      "override_at": "2026-05-26T22:51:05.519973",
+      "audit_required": true,
+      "audit_deadline": "30 days"
+    }
+  },
+  {
+    "event": "hard_override",
+    "timestamp": "2026-05-26T22:51:49.292714",
+    "data": {
+      "challenge_id": "CHG-0001",
+      "status": "OVERRIDE",
+      "risk_level": "critical",
+      "risk_description": "Multiple structural risks were flagged but overridden. Full audit required within 30 days.",
+      "original_score": 2.0,
+      "gap_from_threshold": 7.5,
+      "weaknesses_unaddressed": [
+        "WebSocket fan-out without message broker will cap at ~500 concurrent sessions.",
+        "Projected LTV/CAC ratio of 5:1 is optimistic given current churn data.",
+        "Market window analysis is absent. Seasonal patterns suggest Q1 launch disadvantage."
+      ],
+      "commander_note": "Test Socratic Override",
+      "override_at": "2026-05-26T22:51:49.290764",
+      "audit_required": true,
+      "audit_deadline": "30 days"
+    }
   }
 ]
