@@ -1,3 +1,4 @@
+import './api/client' // Synthesize primary client early to mount response interceptors
 import { createRoot } from 'react-dom/client'
 import { HashRouter } from 'react-router-dom'
 import './index.css'

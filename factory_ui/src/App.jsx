@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import './App.css'
+import './api/client' // Centralized API Interceptor (Antigravity Synthesis Node)
 import axios from 'axios'
 import { NavLink, Routes, Route, Navigate, useParams } from 'react-router-dom'
+import GlobalDiagnosticOverlay from './components/GlobalDiagnosticOverlay'
 import WarRoom from './WarRoom'
 import CommandCenter from './CommandCenter'
 
@@ -1797,6 +1799,7 @@ function App() {
           </div>
         </div>
       )}
+      <GlobalDiagnosticOverlay />
     </div>
   );
 }
