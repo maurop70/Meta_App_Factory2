@@ -855,7 +855,7 @@ export default function BuilderChat() {
     <div className={`builder-chat ${isMaximized ? 'terminal-maximized' : ''}`}>
       <div className="chat-header">
         <h2>
-          🌐 Omni-Router Gateway
+          🌐 Omni-Router Gateway (Phase 12 Active)
           <span className="stream-badge" style={{ background: 'linear-gradient(135deg, #6366f1, #a78bfa)' }}>OMNI-ROUTER ACTIVE</span>
         </h2>
         <div className="flex items-center space-x-3">
