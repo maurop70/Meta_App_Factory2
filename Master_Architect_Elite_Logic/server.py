@@ -33,6 +33,7 @@ import json
 import logging
 import asyncio
 import aiofiles
+import re
 from datetime import datetime
 
 from fastapi import FastAPI, HTTPException, Request, Response
@@ -826,15 +827,23 @@ async def review(req: ReviewRequest):
 
                 # Clean markdown code fences for Path A
                 if not is_conversational and intent == "BUILDER":
-                    import re
-                    if "```" in text:
-                        match = re.search(r'```(?:json)?\s*\n?(.*?)\n?```', text, re.DOTALL)
-                        if match:
-                            text = match.group(1).strip()
-                    start = text.find("{")
-                    end = text.rfind("}")
-                    if start != -1 and end > start:
-                        text = text[start:end + 1]
+                    # 1. Robust Extraction (Tolerates conversational padding)
+                    extracted_text = text.strip()
+                    match = re.search(r"(\{.*\})", extracted_text, re.DOTALL)
+                    if match:
+                        extracted_text = match.group(1).strip()
+                    
+                    # 2. Strict Pre-Spool Validation
+                    try:
+                        blueprint_data = json.loads(extracted_text)
+                        # Re-serialize blueprint_data back to text so it is clean JSON
+                        text = json.dumps(blueprint_data, indent=2)
+                    except json.JSONDecodeError as jde:
+                        logger.error(f"[CTO Node] Pre-spool validation failed. Malformed JSON returned: {jde}\nRaw response:\n{response.text}")
+                        raise HTTPException(
+                            status_code=500,
+                            detail=f"CRITICAL MALFORMED PAYLOAD: Synthesized blueprint contains invalid JSON architecture: {jde}"
+                        )
 
                     # --- UNIVERSAL SOCRATIC GATE FOR MODE A ---
                     yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CRITIC', 'content': '\\n\\n⚖️ [Critic Node] Initiating adversarial compliance and risk assessment on technical blueprint...\\n'})}\n\n"
