@@ -191,7 +191,10 @@ async def transmit_mandate_to_gemini(compiled_prompt: str, payload_type: str = "
         logger.info("Received raw response from Gemini API.")
         
         # Parse and return structured JSON
-        return json.loads(response_text)
+        blueprint_dict = json.loads(response_text)
+        if not blueprint_dict.get("nodes") or len(blueprint_dict.get("nodes", [])) == 0:
+            raise ValueError("CRITICAL HALLUCINATION: CTO Node returned an empty AST nodes array. Spooling aborted.")
+        return blueprint_dict
     except Exception as e:
         logger.error(f"Gemini API transmission failed: {e}")
         return None
