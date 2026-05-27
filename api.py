@@ -6376,7 +6376,7 @@ async def _startup_watcher():
     try:
         _factory_dir = os.path.dirname(os.path.abspath(__file__))
         subprocess.Popen(
-            ["python", "alpha_orchestrator.py"],
+            [sys.executable, "alpha_orchestrator.py"],
             cwd=_factory_dir,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL
