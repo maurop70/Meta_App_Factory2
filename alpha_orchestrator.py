@@ -208,6 +208,24 @@ class AlphaOrchestratorWatchdog:
         self.is_running = False
         self._processed_logs = {}  # Tracks log file sizes to only read new appends
 
+    async def send_webhook(self, status: str, target_file: str, message: str):
+        """Sends asynchronous non-blocking real-time telemetry to api.py."""
+        import urllib.request
+        url = "http://127.0.0.1:5000/api/telemetry/push"
+        payload = {"status": status, "file": target_file, "message": message}
+        req_body = json.dumps(payload).encode("utf-8")
+        def _do_post():
+            try:
+                req = urllib.request.Request(url, data=req_body, headers={'Content-Type': 'application/json'}, method='POST')
+                with urllib.request.urlopen(req, timeout=5) as response:
+                    response.read()
+            except Exception as e:
+                logger.error(f"Failed to post execution telemetry to webhook: {e}")
+        try:
+            await asyncio.get_running_loop().run_in_executor(None, _do_post)
+        except Exception as e:
+            logger.error(f"Failed to submit webhook to executor: {e}")
+
     async def start(self):
         """Starts the persistent non-blocking watchdog loop."""
         self.is_running = True
@@ -423,28 +441,35 @@ class AlphaOrchestratorWatchdog:
 
     async def _consume_patch_blueprint(self, filepath: str):
         """Performs atomic-swap splice, E2E validation, and either commits/archives or rolls back."""
+        target_file = "unknown"
         try:
             async with aiofiles.open(filepath, "r", encoding="utf-8") as f:
                 raw_json = await f.read()
                 patch_data = json.loads(raw_json)
 
             nodes = patch_data.get("nodes", [])
+            if nodes:
+                node = nodes[0]
+                target_file = node.get("file_path") or node.get("target_file") or "unknown"
+
+            await self.send_webhook("executing", target_file, f"Ingesting patch blueprint for '{target_file}'...")
+
             backups = {}
             success = True
 
             # 1. Back up original contents and Apply Splices
             for node in nodes:
                 if node.get("action") == "AST_SPLICE":
-                    target_file = node.get("file_path") or node.get("target_file") or ""
+                    tf = node.get("file_path") or node.get("target_file") or ""
                     search_content = node.get("search_content", "")
                     replace_content = node.get("replace_content", "")
 
-                    target_abs = os.path.abspath(os.path.join(BASE_DIR, target_file.lstrip("/\\")))
+                    target_abs = os.path.abspath(os.path.join(BASE_DIR, tf.lstrip("/\\")))
                     if os.path.exists(target_abs):
                         async with aiofiles.open(target_abs, "r", encoding="utf-8", errors="ignore") as f:
                             backups[target_abs] = await f.read()
 
-                    splice_ok = await self._execute_ast_splice(target_file, search_content, replace_content)
+                    splice_ok = await self._execute_ast_splice(tf, search_content, replace_content)
                     if not splice_ok:
                         success = False
                         break
@@ -466,6 +491,7 @@ class AlphaOrchestratorWatchdog:
                 
                 os.remove(filepath)
                 logger.info(f"[AY2 Actuator] Successfully archived patch blueprint: {archived_filename}")
+                await self.send_webhook("success", target_file, f"Successfully applied AST splice to '{target_file}' and verified via E2E spec.")
             else:
                 logger.warning("[AY2 Actuator] Validation failed! Initiating safety rollback...")
                 for target_abs, original_text in backups.items():
@@ -491,11 +517,16 @@ class AlphaOrchestratorWatchdog:
                     await f.write(raw_json)
                 os.remove(filepath)
                 logger.warning(f"[AY2 Actuator] Failing blueprint quarantined: {broken_filename}")
+                await self.send_webhook("failed", target_file, f"Validation failed for '{target_file}'. Changes rolled back.")
 
         except Exception as e:
             logger.error(f"[AY2 Actuator] Error consuming patch {filepath}: {e}")
             try:
                 os.remove(filepath)
+            except:
+                pass
+            try:
+                await self.send_webhook("failed", target_file, f"Error consuming patch {os.path.basename(filepath)}: {e}")
             except:
                 pass
 
