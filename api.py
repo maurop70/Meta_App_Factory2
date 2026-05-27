@@ -8,6 +8,7 @@ import os
 import sys
 import json
 import logging
+import re
 
 # Ensure telemetry directory exists
 log_dir = "/var/log/aether_net"
@@ -6600,7 +6601,22 @@ async def challenge_override(payload: ChallengeOverridePayload):
             
         logger.info("[CTO Override Node] Querying gemini-2.5-pro to synthesize AST blueprint...")
         response_text = await loop.run_in_executor(None, _call_api)
-        blueprint_data = json.loads(response_text)
+        
+        # 1. Robust Extraction (Tolerates conversational padding)
+        extracted_text = response_text.strip()
+        match = re.search(r"(\{.*\})", extracted_text, re.DOTALL)
+        if match:
+            extracted_text = match.group(1).strip()
+            
+        # 2. Strict Pre-Spool Validation
+        try:
+            blueprint_data = json.loads(extracted_text)
+        except json.JSONDecodeError as jde:
+            logger.error(f"[CTO Override Node] Pre-spool validation failed. Malformed JSON returned: {jde}\nRaw response:\n{response_text}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"CRITICAL MALFORMED PAYLOAD: Synthesized blueprint contains invalid JSON architecture: {jde}"
+            )
         
         # 3. Spool synthesized blueprint JSON atomically to watchdog queue
         queue_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Master_Architect_Elite_Logic", "ay2_dispatch_queue")
