@@ -267,6 +267,25 @@ function RunnerTab({ setActiveView }) {
     }
   };
 
+  const deployAdversarialSwarm = async () => {
+    setRunning(true);
+    setResult(null);
+    setEvents([{ status: 'INFO', message: '🚀 DEPLOYING ADVERSARIAL SWARM OVERRIDE...', timestamp: Date.now(), agent: 'ORCHESTRATOR' }]);
+    setPhase('ghost');
+
+    try {
+        await axios.post('/api/test/adversarial', {
+            target_app_path: "./"
+        });
+    } catch (err) {
+        console.error("[ADVERSARIAL SWARM FRACTURE]", err);
+        setEvents(prev => [...prev, { status: 'FAIL', message: `Swarm deployment failed: ${err.message}`, timestamp: Date.now(), agent: 'ORCHESTRATOR' }]);
+        setResult({ verdict: 'FAIL', score: 0, error: err.message });
+        setRunning(false);
+        setPhase('complete');
+    }
+  };
+
   const authorizeModeAHandoff = () => {
       if (!latestFailure) return;
       
@@ -350,6 +369,24 @@ function RunnerTab({ setActiveView }) {
             }}
           >
             {running ? '⏳ Running...' : '⚡ Run Full Test'}
+          </button>
+          <button
+            id="qa-run-adversarial"
+            onClick={deployAdversarialSwarm}
+            disabled={running}
+            style={{
+              padding: '10px 24px', borderRadius: '10px', border: 'none', fontWeight: 700,
+              fontSize: '13px', cursor: running ? 'not-allowed' : 'pointer',
+              background: running
+                ? 'linear-gradient(135deg, #475569, #334155)'
+                : 'linear-gradient(135deg, #818cf8, #4f46e5)',
+              color: '#fff', transition: 'all 0.3s', letterSpacing: '0.3px',
+              opacity: running ? 0.7 : 1,
+              boxShadow: running ? 'none' : '0 4px 16px rgba(129,140,248,0.25)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {running ? '🤖 Deploying...' : '🤖 Deploy Adversarial Swarm'}
           </button>
         </div>
 
