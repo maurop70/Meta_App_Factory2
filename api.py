@@ -6505,36 +6505,120 @@ from datetime import datetime
 class ChallengeOverridePayload(BaseModel):
     challenge_id: str
     reason: str
-    blueprint: dict
+    original_mandate: str
 
 @app.post("/api/challenge/override")
 async def challenge_override(payload: ChallengeOverridePayload):
     # Log override and justification
     logger.warning(f"[OVERRIDE DETECTED] Challenge {payload.challenge_id} overridden. Justification: {payload.reason}")
     
-    # Resolve the destination queue directory
-    import time
-    queue_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Master_Architect_Elite_Logic", "ay2_dispatch_queue")
-    os.makedirs(queue_dir, exist_ok=True)
+    # 1. Update Socratic Challenger ledger
+    try:
+        from socratic_challenger import get_challenger
+        challenger = get_challenger()
+        await challenger.force_proceed(payload.challenge_id, payload.reason)
+    except Exception as se:
+        logger.warning(f"Failed to update Socratic Challenger ledger: {se}")
     
-    # Enforce atomic writes: write to .tmp then swap
-    timestamp = int(time.time())
-    final_filename = f"pending_srepatch_override_{timestamp}.json"
-    final_path = os.path.join(queue_dir, final_filename)
-    temp_path = os.path.join(queue_dir, f"{final_filename}.tmp")
+    # 2. Physically bypass Critic Node and invoke CTO Node (Gemini API) to synthesize the AST blueprint JSON
+    import time
+    import aiofiles
+    import re
+    import os
+    
+    # Heuristically resolve target file and read content
+    target_file = "api.py"
+    matches = re.findall(r"[\w\-]+\.(?:py|jsx|js|tsx|ts)", payload.original_mandate)
+    if matches:
+        target_file = matches[0]
+        
+    target_abs = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), target_file))
+    target_content = ""
+    if os.path.exists(target_abs):
+        try:
+            with open(target_abs, "r", encoding="utf-8", errors="ignore") as tf:
+                target_content = tf.read()
+        except Exception as e:
+            logger.warning(f"Failed to read target file content for Socratic override: {e}")
+
+    # Compile rigid payload using doctrine
+    from alpha_orchestrator import rigid_compile_payload
+    compiled_prompt = rigid_compile_payload(payload.original_mandate, target_content, target_file)
+    
+    # Configure and Invoke Gemini API (CTO Node: gemini-2.5-pro)
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail="GEMINI_API_KEY is missing from environment secrets.")
+        
+    import google.generativeai as genai
+    genai.configure(api_key=api_key)
+    
+    absolute_directive = (
+        "ABSOLUTE DIRECTIVE: You are a sub-atomic AST engine. "
+        "Conversational markdown is permanently forbidden. "
+        "You MUST output raw JSON matching this exact schema and absolutely nothing else: "
+        "{ 'nodes': [ { 'action': 'AST_SPLICE', 'file_path': '...', 'search_content': '...', 'replace_content': '...' } ] }"
+    )
+    
+    model = genai.GenerativeModel(
+        "gemini-2.5-pro",
+        system_instruction=absolute_directive
+    )
+    
+    schema_dict = {
+        "type": "OBJECT",
+        "properties": {
+            "nodes": {
+                "type": "ARRAY",
+                "items": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "action": {"type": "STRING"},
+                        "file_path": {"type": "STRING"},
+                        "search_content": {"type": "STRING"},
+                        "replace_content": {"type": "STRING"}
+                    },
+                    "required": ["action", "file_path", "search_content", "replace_content"]
+                }
+            }
+        },
+        "required": ["nodes"]
+    }
     
     try:
-        # Include original metadata or wrapping if required, or write the blueprint dict directly
+        loop = asyncio.get_running_loop()
+        def _call_api():
+            response = model.generate_content(
+                compiled_prompt,
+                generation_config={
+                    "response_mime_type": "application/json",
+                    "response_schema": schema_dict
+                }
+            )
+            return response.text
+            
+        logger.info("[CTO Override Node] Querying gemini-2.5-pro to synthesize AST blueprint...")
+        response_text = await loop.run_in_executor(None, _call_api)
+        blueprint_data = json.loads(response_text)
+        
+        # 3. Spool synthesized blueprint JSON atomically to watchdog queue
+        queue_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Master_Architect_Elite_Logic", "ay2_dispatch_queue")
+        os.makedirs(queue_dir, exist_ok=True)
+        
+        timestamp = int(time.time())
+        final_filename = f"pending_srepatch_override_{timestamp}.json"
+        final_path = os.path.join(queue_dir, final_filename)
+        temp_path = os.path.join(queue_dir, f"{final_filename}.tmp")
+        
         async with aiofiles.open(temp_path, "w", encoding="utf-8") as f:
-            await f.write(json.dumps(payload.blueprint, indent=2))
-        
-        # Atomic replace
+            await f.write(json.dumps(blueprint_data, indent=2))
+            
         os.replace(temp_path, final_path)
-        logger.info(f"Successfully spooled overridden blueprint: {final_filename}")
+        logger.info(f"[CTO Override Node] Successfully spooled synthesized blueprint to queue: {final_filename}")
         
-        # Return success with override risks
         risk_level = "high"
-        risk_description = "Critical weaknesses bypassed by Commander override authority. Spooled to watchdog execution loop."
+        risk_description = "Critical weaknesses bypassed by Commander override. Spooled synthesized blueprint to watchdog."
         
         return {
             "status": "success",
@@ -6543,9 +6627,9 @@ async def challenge_override(payload: ChallengeOverridePayload):
             "risk_description": risk_description
         }
     except Exception as e:
-        logger.error(f"Failed to spool override blueprint: {e}")
+        logger.error(f"[CTO Override Node] Failed to compile or spool override blueprint: {e}")
         from fastapi import HTTPException
-        raise HTTPException(status_code=500, detail=f"Failed to spool override blueprint: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to compile or spool override blueprint: {e}")
 
 TELEMETRY_CLIENTS = []
 
