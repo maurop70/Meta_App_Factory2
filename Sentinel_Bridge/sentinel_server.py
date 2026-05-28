@@ -15,8 +15,17 @@ Main application server providing:
 Port: 5009 (configurable via SENTINEL_PORT env)
 """
 
+# ── Standard Console Encoding Config ──────────────────────
+import sys as _sys
+if hasattr(_sys.stdout, 'reconfigure'):
+    try:
+        _sys.stdout.reconfigure(encoding='utf-8')
+        _sys.stderr.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+
 # ── V3.0 Resilience Integration ──────────────────────────
-import os as _os, sys as _sys
+import os as _os
 _FACTORY_DIR = _os.path.normpath(_os.path.join(_os.path.dirname(_os.path.abspath(__file__)), ".."))
 _sys.path.insert(0, _FACTORY_DIR)
 try:
