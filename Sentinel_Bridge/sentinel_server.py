@@ -395,9 +395,9 @@ async def lifespan(app: FastAPI):
     # Schedule calendar polling twice daily: noon and midnight
     scheduler.add_job(safe_calendar_pipeline, "cron", hour="0,12",
                       id="calendar_poll", replace_existing=True)
-    # Also run immediately on startup
-    scheduler.add_job(safe_calendar_pipeline, "date", id="startup_poll",
-                      run_date=datetime.now(timezone.utc))
+    # Also run immediately on startup (commented out in sandbox to prevent blocking lifespan startup)
+    # scheduler.add_job(safe_calendar_pipeline, "date", id="startup_poll",
+    #                   run_date=datetime.now(timezone.utc))
 
     # Schedule tunnel heartbeat every 5 minutes
     scheduler.add_job(tunnel_heartbeat, "interval", minutes=5,
