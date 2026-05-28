@@ -89,7 +89,8 @@ class AetherNativeWatchdog:
             "root_api": "OK",
             "phantom_qa": "OK", 
             "master_architect": "OK",
-            "c_suite": "OK"
+            "c_suite": "OK",
+            "cmo_agent": "OK"
         }
         fail_detected = False
         
@@ -98,11 +99,13 @@ class AetherNativeWatchdog:
             "phantom_qa": 5030,
             "master_architect": 5050,
             "c_suite": 5070,
+            "cmo_agent": 5020,
             "ghost_operator": 5100
         }
 
         # Map ports to their restart commands
         restart_commands = {
+            5020: 'start /min "" cmd /c "cd Project_Aether\\C-Suite_Active_Logic\\CMO\\backend && python server.py"',
             5030: 'start /min "" cmd /c "cd Phantom_QA_Elite\\backend && python server.py"',
             5050: 'start /min "" cmd /c "cd Master_Architect_Elite_Logic && python server.py"',
             5070: 'start /min "" cmd /c "cd CFO_Agent && python server.py"',
