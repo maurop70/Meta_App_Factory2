@@ -150,3 +150,23 @@ async def update_project(project_id: str, payload: ProjectUpdate):
         if isinstance(e, HTTPException):
             raise e
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@projects_router.post("/open-folder")
+async def open_project_folder(payload: dict):
+    """POST /api/projects/open-folder: Open Windows Explorer directly at the project workspace directory."""
+    project = payload.get("project_name")
+    if not project:
+        raise HTTPException(status_code=400, detail="Project name required")
+    
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    pdir = os.path.join(base_dir, "projects", project)
+    if os.path.isdir(pdir):
+        try:
+            import subprocess
+            subprocess.Popen(f'explorer "{os.path.normpath(pdir)}"')
+            return {"status": "ok", "message": f"Explorer opened for {project}"}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+    raise HTTPException(status_code=404, detail=f"Project workspace folder '{project}' does not exist on disk.")
+

@@ -127,12 +127,27 @@ export default function VaultModal({ isOpen, onClose, project, handleActuateProj
               SOCRATIC ENVELOPE METRICS & TIMELINE PERSISTENCE
             </p>
           </div>
-          <button 
-            onClick={onClose} 
-            className="p-1 px-2.5 rounded-lg border border-slate-800 bg-slate-900/60 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors text-xs font-mono"
-          >
-            ✕ CLOSE
-          </button>
+          <div className="flex gap-2">
+            <button 
+              onClick={async () => {
+                try {
+                  await axios.post('/api/projects/open-folder', { project_name: project.project_name });
+                } catch (err) {
+                  console.error("Failed to open folder programmatically:", err);
+                  window.open(`file:///c:/Dev/Antigravity_AI_Agents/Meta_App_Factory/projects/${project.project_name}`, '_blank');
+                }
+              }}
+              className="p-1 px-2.5 rounded-lg border border-slate-800 bg-slate-900/60 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors text-xs font-mono"
+            >
+              📁 OPEN FOLDER
+            </button>
+            <button 
+              onClick={onClose} 
+              className="p-1 px-2.5 rounded-lg border border-slate-800 bg-slate-900/60 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors text-xs font-mono"
+            >
+              ✕ CLOSE
+            </button>
+          </div>
         </div>
 
         {/* Dynamic Nav Tabs */}
