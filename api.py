@@ -3555,6 +3555,7 @@ logger.info("🐕 App Watchdog started (30s interval, auto-restart with 5min coo
 def get_running_apps():
     """Return list of currently running apps with health status."""
     result = {}
+    items = []
     for name, info in list(_running_apps.items()):
         alive = info["process"].poll() is None
         health = "healthy" if alive else "dead"
@@ -3567,11 +3568,16 @@ def get_running_apps():
                         health = "degraded"
             except Exception:
                 health = "degraded"
-        result[name] = {
-            "port": info["port"], "pid": info["pid"],
-            "alive": alive, "health": health
+        app_data = {
+            "name": name,
+            "port": info["port"], 
+            "pid": info["pid"],
+            "alive": alive, 
+            "health": health
         }
-    return result
+        result[name] = app_data
+        items.append(app_data)
+    return {"items": items, "total": len(items), "apps": result, **result}
 
 
 # ── War Room WebSocket (Phase 2 — Adversarial Boardroom) ─────

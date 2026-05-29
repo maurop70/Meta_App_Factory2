@@ -26,8 +26,7 @@ export default defineConfig({
       '/api/cio/': {
         target: 'http://127.0.0.1:5090',
         changeOrigin: true,
-        secure: false,
-        rewrite: (path) => path.replace(/^\/api\/cio\/(.*)/, '/$1/')
+        secure: false
       },
       '/api/review': {
         target: 'http://127.0.0.1:5050',
