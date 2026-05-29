@@ -28,7 +28,8 @@ export default function NaturalLanguageGateway({ mode = 'builder' }) {
     setIsSynthesizing(true);
     
     const endpoint = isWarRoom ? '/api/warroom/seed' : '/api/cio/seed';
-    const payloadText = input.trim() || chatLog.map(m => m.content).join(' ');
+    const payloadText = [...chatLog.map(m => m.content), input.trim()].filter(Boolean).join('\n');
+
 
     try {
       const response = await fetch(endpoint, {

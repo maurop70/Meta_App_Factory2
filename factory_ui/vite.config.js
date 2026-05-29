@@ -89,6 +89,16 @@ export default defineConfig({
         changeOrigin: true,
         secure: false
       },
+      '/api/projects/': {
+        target: 'http://127.0.0.1:5000',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => {
+          const [base, query] = path.split('?');
+          const safeBase = base.endsWith('/') ? base : base + '/';
+          return query ? safeBase + '?' + query : safeBase;
+        }
+      },
       '/api/pulse': {
         target: 'http://127.0.0.1:5030',
         changeOrigin: true,
