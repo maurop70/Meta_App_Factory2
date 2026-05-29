@@ -144,6 +144,20 @@ export default function WorkspaceVault({ setSelectedApp }) {
                 <span>INDEX: #{project.id || 'N/A'}</span>
                 <div className="flex gap-3">
                   <span 
+                    className="text-slate-400 hover:text-cyan-300 font-semibold cursor-pointer transition-colors"
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      try {
+                        await axios.post('/api/projects/open-folder', { project_name: project.project_name });
+                      } catch (err) {
+                        console.error("Failed to open folder programmatically:", err);
+                        window.open(`file:///c:/Dev/Antigravity_AI_Agents/Meta_App_Factory/projects/${project.project_name}`, '_blank');
+                      }
+                    }}
+                  >
+                    📁 FOLDER
+                  </span>
+                  <span 
                     className="text-cyan-400 hover:text-cyan-300 font-semibold cursor-pointer transition-colors"
                     onClick={() => {
                       setSelectedProject(project);
