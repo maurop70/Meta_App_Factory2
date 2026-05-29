@@ -274,7 +274,28 @@ async def proxy_apps_to_gateway(path: str, request: Request):
         )
     except Exception as e:
         logger.error(f"Proxy forwarding failed to gateway for /api/apps/{path}: {e}")
-        raise HTTPException(status_code=502, detail=f"Proxy error: {str(e)}")
+        if "running" in path:
+            return JSONResponse(
+                status_code=502,
+                content={
+                    "items": [],
+                    "total": 0,
+                    "limit": 10,
+                    "offset": 0,
+                    "running_apps": [],
+                    "error": "Gateway Unreachable",
+                    "detail": str(e)
+                }
+            )
+        else:
+            return JSONResponse(
+                status_code=502,
+                content={
+                    "status": "error",
+                    "error": "Gateway Unreachable",
+                    "detail": str(e)
+                }
+            )
 
 from backend.app.routers.ingest import router as ingest_router
 from backend.app.routers.inventory_router import router as inventory_router
