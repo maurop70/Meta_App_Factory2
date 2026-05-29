@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import NaturalLanguageGateway from './components/NaturalLanguageGateway';
 import axios from 'axios';
 
-export default function WarRoom() {
+export default function WarRoom({ selectedApp }) {
   const [telemetry, setTelemetry] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -178,7 +178,7 @@ export default function WarRoom() {
         </div>
 
         <div className="h-[550px]">
-          <NaturalLanguageGateway mode="warroom" />
+          <NaturalLanguageGateway mode="warroom" selectedApp={selectedApp} />
         </div>
       </div>
     </div>

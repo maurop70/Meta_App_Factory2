@@ -1753,12 +1753,12 @@ function App() {
           } />
           <Route path="/warroom" element={
             <ErrorBoundary>
-              <WarRoom />
+              <WarRoom selectedApp={selectedApp} />
             </ErrorBoundary>
           } />
           <Route path="/war-room" element={
             <ErrorBoundary>
-              <WarRoom />
+              <WarRoom selectedApp={selectedApp} />
             </ErrorBoundary>
           } />
           <Route path="/builder" element={
