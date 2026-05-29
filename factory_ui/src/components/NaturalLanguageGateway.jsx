@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 
 export default function NaturalLanguageGateway({ mode = 'builder' }) {
+  const [chatLog, setChatLog] = useState([]);
+  const [input, setInput] = useState('');
+  const [isSynthesizing, setIsSynthesizing] = useState(false);
+
   const isWarRoom = mode === 'warroom';
   const accentColor = isWarRoom ? 'text-red-500' : 'text-cyan-400';
   const borderTheme = isWarRoom ? 'border-red-500/30' : 'border-cyan-500/30';
@@ -9,10 +13,6 @@ export default function NaturalLanguageGateway({ mode = 'builder' }) {
   const title = isWarRoom ? 'Adversarial Threat Ingestion Gateway' : 'App Synthesis Gateway';
   const badge = isWarRoom ? 'THREAT SENSOR: ACTIVE' : 'BUILDER PULSE: ACTIVE';
   const badgePing = isWarRoom ? 'bg-red-500' : 'bg-cyan-500';
-
-  const [chatLog, setChatLog] = useState([]);
-  const [input, setInput] = useState('');
-  const [isSynthesizing, setIsSynthesizing] = useState(false);
 
   useEffect(() => {
     if (!isWarRoom) return;
