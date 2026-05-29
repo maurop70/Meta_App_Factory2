@@ -68,7 +68,42 @@
             "last_build": "2026-04-15T15:41:08.291141",
             "deployed_by": "Master Architect",
             "staging_source": "Maintenance_Work_Order/maintenance_backend.py"
+        },
+        "CMO_Agent": {
+            "status": "active",
+            "type": "Chief Marketing Officer",
+            "port": 5020,
+            "path": "Project_Aether/C-Suite_Active_Logic/CMO/backend",
+            "capabilities": [
+                "Market Research",
+                "Brand Strategy",
+                "GTM Planning"
+            ],
+            "last_build": "2026-05-29T00:00:00"
+        },
+        "Venture_Architect": {
+            "status": "active",
+            "type": "Chief Venture Strategist",
+            "port": 5110,
+            "path": "Venture_Architect_Agent/backend",
+            "capabilities": [
+                "Financial Projections",
+                "Cap Table Modeling",
+                "Unit Economics"
+            ],
+            "last_build": "2026-05-29T00:00:00"
+        },
+        "CLO_Agent": {
+            "status": "active",
+            "type": "Chief Legal Officer",
+            "port": 5080,
+            "path": "apps/CLO_Agent",
+            "capabilities": [
+                "Legal Analysis",
+                "Agreement Vault"
+            ],
+            "last_build": "2026-05-29T00:00:00"
         }
     },
-    "last_updated": "2026-04-14T01:27:34.079956+00:00"
+    "last_updated": "2026-05-29T00:00:00+00:00"
 }
