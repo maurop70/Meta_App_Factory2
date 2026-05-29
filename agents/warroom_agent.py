@@ -4,10 +4,11 @@ from fastapi import APIRouter, Request
 
 router = APIRouter()
 
-@router.post("/api/warroom/seed")
+@router.post("/api/warroom/threat")
 async def ingest_adversarial_threat(request: Request):
     payload = await request.json()
     print("[WAR ROOM NODE] Threat model ingested. Dispatching to Sentinel Queue (Port 5052)...")
+
     
     async with httpx.AsyncClient() as client:
         try:
