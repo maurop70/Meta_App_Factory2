@@ -3367,17 +3367,50 @@ def _do_launch(app_name: str, port_override: int = None) -> dict:
 
     # Check if assigned port is ALREADY occupied by this agent (External adoption)
     if not port_override:
-        import socket as _sock
+        import psutil
         _occupied = False
+        _pid = 0
         try:
-            with _sock.create_connection(("localhost", assigned_port), timeout=0.5):
-                _occupied = True
+            for conn in psutil.net_connections(kind='inet'):
+                if conn.laddr.port == assigned_port and conn.status == 'LISTEN':
+                    _occupied = True
+                    _pid = conn.pid
+                    break
         except Exception:
-            pass
+            # Fallback to simple socket ping if psutil scan fails
+            import socket as _sock
+            try:
+                with _sock.create_connection(("localhost", assigned_port), timeout=0.3):
+                    _occupied = True
+            except Exception:
+                pass
             
         if _occupied:
-            logger.info(f"Adopting externally running {app_name} on port {assigned_port}")
-            return {"status": "already_running", "port": assigned_port, "url": f"http://localhost:{assigned_port}", "pid": 0}
+            logger.info(f"Adopting externally running {app_name} on port {assigned_port} (PID: {_pid})")
+            
+            try:
+                proc_obj = psutil.Process(_pid) if _pid else None
+            except Exception:
+                proc_obj = None
+                
+            class MockProcess:
+                def __init__(self, p):
+                    self.p = p
+                    self.pid = p.pid if p else 0
+                def poll(self):
+                    if self.p:
+                        try:
+                            return None if self.p.is_running() else 0
+                        except Exception:
+                            return 0
+                    return None
+                    
+            _running_apps[app_name] = {
+                "process": MockProcess(proc_obj), "port": assigned_port, "pid": _pid,
+                "app_dir": app_dir, "server_script": server_script,
+                "launched_at": _time.time(),
+            }
+            return {"status": "already_running", "port": assigned_port, "url": f"http://localhost:{assigned_port}", "pid": _pid}
 
     # Start the process
     try:
