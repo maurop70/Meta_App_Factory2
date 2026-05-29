@@ -113,6 +113,7 @@ from intent_extractor import IntentExtractor
 from self_heal import SelfHealEngine
 from utils.google_auth import GoogleAuth
 from utils.tunnel_manager import TunnelManager
+from sentinel_slides_manager import SentinelSlidesManager
 
 # ── Config ───────────────────────────────────────────────────────────
 PORT = int(os.environ.get("SENTINEL_PORT", 5009))
@@ -275,6 +276,19 @@ class VaultSecret(BaseModel):
 class SnoozeInput(BaseModel):
     """Configurable snooze duration."""
     minutes: int = 15
+
+
+class WorkspaceMutation(BaseModel):
+    replace_tag: str
+    injection_value: str
+
+
+class WorkspaceBlueprintInput(BaseModel):
+    execution_id: str
+    target_engine: str
+    master_template_id: str
+    output_filename: str | None = "Generated_Presentation"
+    mutations: list[WorkspaceMutation]
 
 
 # ── Quiet Hours (Master Architect: priority queuing + quiet hours) ────
@@ -816,6 +830,19 @@ async def trigger_poll():
     """Manually trigger a calendar poll."""
     await safe_calendar_pipeline()
     return {"status": "poll_complete"}
+
+
+@app.post("/api/workspace/actuate")
+async def actuate_workspace(blueprint: WorkspaceBlueprintInput):
+    """Clone a Google Slides template and apply text replacement mutations."""
+    try:
+        manager = SentinelSlidesManager()
+        blueprint_dict = blueprint.dict()
+        res = manager.actuate_blueprint(blueprint_dict)
+        return res
+    except Exception as e:
+        logger.error(f"Workspace actuation failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/calendar/freebusy")

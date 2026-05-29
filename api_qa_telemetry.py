@@ -72,9 +72,33 @@ async def telemetry_heartbeat_stream(request: Request):
         logger.warning("[WATCHDOG] SSE Stream violently terminated by environment.")
         raise
 
+from pydantic import BaseModel
+
+class SreAlertInput(BaseModel):
+    alert_id: str
+    source: str
+    agent: str
+    severity: str
+    exception: str
+    message: str
+    staged_blueprint_path: str
+    ast_payload_preview: str
+
 @qa_router.get("/stream")
 async def global_telemetry_stream(request: Request):
     """
     Natively binds to the /api/qa/stream frontend request.
     """
     return StreamingResponse(telemetry_heartbeat_stream(request), media_type="text/event-stream")
+
+@qa_router.post("/alerts")
+async def receive_sre_alert(payload: SreAlertInput):
+    """Receive SRE telemetry crash alerts and push to the global event bus."""
+    push_qa_event(
+        agent=payload.agent,
+        message=f"[SRE ALERT] {payload.exception}: {payload.message}",
+        status="CRITICAL",
+        filename=payload.staged_blueprint_path
+    )
+    logger.info(f"Socratic Adversarial Gate received SRE Alert: {payload.alert_id}")
+    return {"status": "alert_logged", "alert_id": payload.alert_id}
