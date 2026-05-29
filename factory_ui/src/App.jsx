@@ -88,8 +88,9 @@ function AgentStatusPanel() {
     agents.forEach(a => initial[a] = 'pending');
     setStatus(initial);
 
+    const clientId = self.crypto?.randomUUID ? self.crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36);
     // Watchdog Streaming Telemetry (Native Port 5030)
-    const es = new EventSource('/api/qa/stream');
+    const es = new EventSource(`/api/qa/stream?client_id=${clientId}`);
     
     es.onopen = () => {
         // Connected to stream, mark active nodes online
@@ -208,8 +209,10 @@ function TelemetryBar({ streaming }) {
     let reconnectTimer = null;
     let attempt = 0;
 
+    const clientId = self.crypto?.randomUUID ? self.crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36);
+
     const connectSSE = () => {
-      es = new EventSource('/api/qa/stream');
+      es = new EventSource(`/api/qa/stream?client_id=${clientId}`);
       
       es.onopen = () => {
         setTelemetryStatus('ONLINE');

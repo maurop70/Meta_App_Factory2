@@ -917,5 +917,111 @@
       "audit_required": true,
       "audit_deadline": "30 days"
     }
+  },
+  {
+    "event": "hard_override",
+    "timestamp": "2026-05-26T22:54:12.928078",
+    "data": {
+      "challenge_id": "CHG-0001",
+      "status": "OVERRIDE",
+      "risk_level": "critical",
+      "risk_description": "Multiple structural risks were flagged but overridden. Full audit required within 30 days.",
+      "original_score": 2.0,
+      "gap_from_threshold": 7.5,
+      "weaknesses_unaddressed": [
+        "WebSocket fan-out without message broker will cap at ~500 concurrent sessions.",
+        "Projected LTV/CAC ratio of 5:1 is optimistic given current churn data.",
+        "Market window analysis is absent. Seasonal patterns suggest Q1 launch disadvantage."
+      ],
+      "commander_note": "Test Socratic Override",
+      "override_at": "2026-05-26T22:54:12.926105",
+      "audit_required": true,
+      "audit_deadline": "30 days"
+    }
+  },
+  {
+    "event": "hard_override",
+    "timestamp": "2026-05-26T23:20:01.531924",
+    "data": {
+      "challenge_id": "CHG-0002",
+      "status": "OVERRIDE",
+      "risk_level": "critical",
+      "risk_description": "Multiple structural risks were flagged but overridden. Full audit required within 30 days.",
+      "original_score": 1.5,
+      "gap_from_threshold": 8.0,
+      "weaknesses_unaddressed": [
+        "The current architecture shows no auto-scaling strategy. At 10x load, response times will breach SLA thresholds.",
+        "No documentation bus-factor analysis. Knowledge concentration creates existential risk.",
+        "Third-party data sharing agreements lack sub-processor clauses required by modern privacy frameworks."
+      ],
+      "commander_note": "INTERNAL INFRASTRUCTURE PATCH",
+      "override_at": "2026-05-26T23:20:01.529934",
+      "audit_required": true,
+      "audit_deadline": "30 days"
+    }
+  },
+  {
+    "event": "challenge_issued",
+    "timestamp": "2026-05-26T23:21:05.499076",
+    "data": {
+      "challenge_id": "CHG-0007",
+      "status": "PAUSED",
+      "score": 5,
+      "threshold": 9.5,
+      "gap": 4.5,
+      "proposal_preview": "Build a public consumer SaaS marketplace for local organic produce, focusing on user acquisition and subscription models.",
+      "weaknesses": [
+        {
+          "id": 1,
+          "category": "Market Validation",
+          "severity": "SIGNIFICANT",
+          "challenge": "No A/B test data supports the proposed UX flow. Competitor analysis shows 3 alternatives with proven conversion funnels.",
+          "required_evidence": "Provide data or reasoning addressing market validation."
+        },
+        {
+          "id": 2,
+          "category": "Unit Economics",
+          "severity": "SIGNIFICANT",
+          "challenge": "Gross margin assumptions exclude infrastructure amortization and support staffing.",
+          "required_evidence": "Provide data or reasoning addressing unit economics."
+        },
+        {
+          "id": 3,
+          "category": "User Retention",
+          "severity": "SIGNIFICANT",
+          "challenge": "Onboarding flow has 6 steps. Industry data shows each step loses 15-20% of users.",
+          "required_evidence": "Provide data or reasoning addressing user retention."
+        }
+      ],
+      "requires": "user_reasoning",
+      "options": [
+        "convince",
+        "force_proceed"
+      ],
+      "created_at": "2026-05-26T23:21:05.497024",
+      "resolved_at": null,
+      "resolution": null
+    }
+  },
+  {
+    "event": "hard_override",
+    "timestamp": "2026-05-26T23:41:20.786078",
+    "data": {
+      "challenge_id": "CHG-0002",
+      "status": "OVERRIDE",
+      "risk_level": "critical",
+      "risk_description": "Multiple structural risks were flagged but overridden. Full audit required within 30 days.",
+      "original_score": 1.5,
+      "gap_from_threshold": 8.0,
+      "weaknesses_unaddressed": [
+        "The current architecture shows no auto-scaling strategy. At 10x load, response times will breach SLA thresholds.",
+        "No documentation bus-factor analysis. Knowledge concentration creates existential risk.",
+        "Third-party data sharing agreements lack sub-processor clauses required by modern privacy frameworks."
+      ],
+      "commander_note": "INTERNAL INFRASTRUCTURE PATCH",
+      "override_at": "2026-05-26T23:41:20.784159",
+      "audit_required": true,
+      "audit_deadline": "30 days"
+    }
   }
 ]

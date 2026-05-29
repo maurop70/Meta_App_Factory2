@@ -9,6 +9,11 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     proxy: {
+      '/api/system/registry': {
+        target: 'http://127.0.0.1:5050',
+        changeOrigin: true,
+        secure: false
+      },
       '/api/operator': {
         target: 'http://127.0.0.1:5100',
         changeOrigin: true,
@@ -19,9 +24,10 @@ export default defineConfig({
         secure: false
       },
       '/api/cio/': {
-        target: 'http://127.0.0.1:5090/',
+        target: 'http://127.0.0.1:5090',
         changeOrigin: true,
-        secure: false
+        secure: false,
+        rewrite: (path) => path.replace(/^\/api\/cio\/(.*)/, '/$1/')
       },
       '/api/review': {
         target: 'http://127.0.0.1:5050',
@@ -44,7 +50,7 @@ export default defineConfig({
         secure: false
       },
       '/api/qa/stream': {
-        target: 'http://127.0.0.1:5000',
+        target: 'http://127.0.0.1:5030',
         changeOrigin: true,
         secure: false,
         configure: (proxy, _options) => {
@@ -57,6 +63,41 @@ export default defineConfig({
             proxyRes.headers['x-accel-buffering'] = 'no';
           });
         }
+      },
+      '/api/ghost-stream': {
+        target: 'http://127.0.0.1:5030',
+        changeOrigin: true,
+        secure: false,
+        configure: (proxy, _options) => {
+          proxy.on('proxyRes', (proxyRes, req, res) => {
+            res.setHeader('Cache-Control', 'no-cache, no-transform');
+            res.setHeader('Connection', 'keep-alive');
+            res.setHeader('X-Accel-Buffering', 'no');
+            proxyRes.headers['cache-control'] = 'no-cache, no-transform';
+            proxyRes.headers['connection'] = 'keep-alive';
+            proxyRes.headers['x-accel-buffering'] = 'no';
+          });
+        }
+      },
+      '/api/dashboard': {
+        target: 'http://127.0.0.1:5030',
+        changeOrigin: true,
+        secure: false
+      },
+      '/api/reports': {
+        target: 'http://127.0.0.1:5030',
+        changeOrigin: true,
+        secure: false
+      },
+      '/api/pulse': {
+        target: 'http://127.0.0.1:5030',
+        changeOrigin: true,
+        secure: false
+      },
+      '/api/discover': {
+        target: 'http://127.0.0.1:5030',
+        changeOrigin: true,
+        secure: false
       },
       '/api/ingest': {
         target: 'http://127.0.0.1:5050',
@@ -113,7 +154,7 @@ export default defineConfig({
           });
         }
       },
-      '/api/test/adversarial': {
+      '/api/test': {
         target: 'http://127.0.0.1:5030',
         changeOrigin: true,
         secure: false,
