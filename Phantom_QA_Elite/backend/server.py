@@ -56,12 +56,12 @@ from agents.skeptic import run_skeptic
 from warroom_interface import warroom_respond
 
 # ── Ghost Stream Event Queue ─────────────────────────────
-_ghost_stream_clients: list[asyncio.Queue] = []
+_ghost_stream_clients: dict[str, asyncio.Queue] = {}
 
 # ── QA Telemetry Stream Queue (Phase 4 — Native Ghost Stream) ──
 # Separate channel so QA Architect + Auto-Heal events don't
 # collide with Playwright Ghost User activity events.
-_qa_stream_clients: list[asyncio.Queue] = []
+_qa_stream_clients: dict[str, asyncio.Queue] = {}
 
 # ── QA Event Replay Buffer (last 100 events) ──────────────────────
 # New SSE connections replay this buffer immediately so the Ghost
@@ -71,7 +71,7 @@ _qa_event_buffer: list[dict] = []
 
 def ghost_event_callback(event: dict):
     """Push event to all connected Ghost Stream SSE clients."""
-    for q in _ghost_stream_clients[:]:
+    for q in list(_ghost_stream_clients.values()):
         try:
             q.put_nowait(event)
         except asyncio.QueueFull:
@@ -560,6 +560,50 @@ async def get_report(run_id: int):
     return {"report": report}
 
 
+@app.post("/api/reports")
+async def create_report(request: Request):
+    """
+    Ingest an external E2E execution report (e.g. from pytest/test_auto_ghost.py).
+    Save directly to SQLite memory db and trigger real-time SSE broadcasts.
+    """
+    data = await safe_parse_body(request)
+    app_name = data.get("app_name", "CLO_Agent")
+    app_url = data.get("app_url", "http://127.0.0.1:5080")
+    verdict = data.get("verdict", "PASS")
+    score = data.get("score", 100)
+    duration = data.get("duration", 0.0)
+    report_data = data.get("report_data", {})
+    architect_plan = data.get("architect_plan")
+    ghost_summary = data.get("ghost_summary")
+    skeptic_summary = data.get("skeptic_summary")
+    fix_required = data.get("fix_required")
+    
+    run_id = save_test_run(
+        app_name=app_name,
+        app_url=app_url,
+        verdict=verdict,
+        score=score,
+        duration=duration,
+        report_data=report_data,
+        architect_plan=architect_plan,
+        ghost_summary=ghost_summary,
+        skeptic_summary=skeptic_summary,
+        fix_required=fix_required
+    )
+    
+    # SSE broadcast to live telemetry screen
+    event = {
+        "timestamp": datetime.now().isoformat(),
+        "agent": "GHOST",
+        "status": verdict,
+        "message": f"Pytest E2E fuzzer run registered: {app_name} on {app_url} in {duration}s. Score: {score}/100",
+        "score": score
+    }
+    qa_event_broadcast(event)
+    
+    return {"status": "success", "run_id": run_id}
+
+
 # ═══════════════════════════════════════════════════════════
 #  ROUTES — War Room
 # ═══════════════════════════════════════════════════════════
@@ -581,12 +625,28 @@ async def warroom_handler(request: Request):
 # ═══════════════════════════════════════════════════════════
 
 @app.get("/api/ghost-stream")
-async def ghost_stream():
+async def ghost_stream(client_id: str):
     """Server-Sent Events stream for real-time Ghost User activity."""
+    import uuid
+    from fastapi import HTTPException
+    try:
+        uuid.UUID(client_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid client_id UUID handshake.")
 
     async def event_generator() -> AsyncGenerator[str, None]:
-        q: asyncio.Queue = asyncio.Queue(maxsize=200)
-        _ghost_stream_clients.append(q)
+        if client_id in _ghost_stream_clients:
+            q = _ghost_stream_clients[client_id]
+            # Physically clear / flush the queue
+            while not q.empty():
+                try:
+                    q.get_nowait()
+                except asyncio.QueueEmpty:
+                    break
+        else:
+            q = asyncio.Queue(maxsize=200)
+            _ghost_stream_clients[client_id] = q
+
         try:
             # Send initial connected event
             yield f"data: {json.dumps({'type': 'CONNECTED', 'timestamp': datetime.now().isoformat()})}\n\n"
@@ -600,8 +660,7 @@ async def ghost_stream():
         except asyncio.CancelledError:
             pass
         finally:
-            if q in _ghost_stream_clients:
-                _ghost_stream_clients.remove(q)
+            _ghost_stream_clients.pop(client_id, None)
 
     return StreamingResponse(event_generator(), media_type="text/event-stream",
                               headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
@@ -621,7 +680,7 @@ def qa_event_broadcast(event: dict):
     if len(_qa_event_buffer) > _QA_BUFFER_MAX:
         del _qa_event_buffer[0]
     # Push to live clients
-    for q in _qa_stream_clients[:]:
+    for q in list(_qa_stream_clients.values()):
         try:
             q.put_nowait(event)
         except asyncio.QueueFull:
@@ -629,7 +688,7 @@ def qa_event_broadcast(event: dict):
 
 
 @app.get("/api/qa/stream")
-async def qa_stream():
+async def qa_stream(client_id: str):
     """
     SSE endpoint: live telemetry feed for Phantom QA Architect + Auto-Heal loop.
     Connect from the Ghost Stream tab in the frontend:
@@ -640,14 +699,28 @@ async def qa_stream():
 
     status values: RUNNING | PASS | FAIL | SECURITY_BLOCK | TIMEOUT | HEAL_ATTEMPT | HEAL_PASS | HEAL_FAIL | CONNECTED | HEARTBEAT
     """
+    import uuid
+    from fastapi import HTTPException
+    try:
+        uuid.UUID(client_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid client_id UUID handshake.")
+
     async def event_generator() -> AsyncGenerator[str, None]:
-        q: asyncio.Queue = asyncio.Queue(maxsize=500)
-        _qa_stream_clients.append(q)
+        if client_id in _qa_stream_clients:
+            q = _qa_stream_clients[client_id]
+            # Physically clear / flush the queue
+            while not q.empty():
+                try:
+                    q.get_nowait()
+                except asyncio.QueueEmpty:
+                    break
+        else:
+            q = asyncio.Queue(maxsize=500)
+            _qa_stream_clients[client_id] = q
+
         try:
             yield f"data: {json.dumps({'type': 'CONNECTED', 'agent': 'QA_STREAM', 'message': 'Ghost Stream Telemetry online.', 'timestamp': datetime.now().isoformat()})}\n\n"
-            # ── Replay buffer: catch up new connections immediately ──
-            for buffered_event in list(_qa_event_buffer):
-                yield f"data: {json.dumps(buffered_event)}\n\n"
             while True:
                 try:
                     event = await asyncio.wait_for(q.get(), timeout=25.0)
@@ -657,8 +730,7 @@ async def qa_stream():
         except asyncio.CancelledError:
             pass
         finally:
-            if q in _qa_stream_clients:
-                _qa_stream_clients.remove(q)
+            _qa_stream_clients.pop(client_id, None)
 
     return StreamingResponse(
         event_generator(),

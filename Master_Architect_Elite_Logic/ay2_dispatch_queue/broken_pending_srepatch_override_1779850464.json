@@ -1,0 +1,10 @@
+{
+  "nodes": [
+    {
+      "action": "AST_SPLICE",
+      "file_path": "success_result.js",
+      "search_content": "",
+      "replace_content": "// This is a mock comment."
+    }
+  ]
+}
