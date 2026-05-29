@@ -47,6 +47,24 @@
       "name": "PhantomSRE",
       "status": "ACTIVE",
       "port": 54346
+    },
+    {
+      "id": "cmo_agent",
+      "name": "CMO_Agent",
+      "status": "ACTIVE",
+      "port": 5020
+    },
+    {
+      "id": "venture_architect",
+      "name": "Venture_Architect",
+      "status": "ACTIVE",
+      "port": 5110
+    },
+    {
+      "id": "clo_agent",
+      "name": "CLO_Agent",
+      "status": "ACTIVE",
+      "port": 5080
     }
   ]
 }

@@ -16,7 +16,10 @@ async def load_registry() -> dict:
                 {"id": "master_architect", "name": "Master_Architect_Elite_Logic", "status": "ACTIVE", "port": 5050},
                 {"id": "cfo_agent", "name": "CFO_Agent", "status": "ACTIVE", "port": 5070},
                 {"id": "cio_agent", "name": "CIO_Agent", "status": "ACTIVE", "port": 5090},
-                {"id": "adv_autonomous", "name": "Adv_Autonomous_Agent", "status": "INACTIVE", "port": 5012}
+                {"id": "adv_autonomous", "name": "Adv_Autonomous_Agent", "status": "INACTIVE", "port": 5012},
+                {"id": "cmo_agent", "name": "CMO_Agent", "status": "ACTIVE", "port": 5020},
+                {"id": "venture_architect", "name": "Venture_Architect", "status": "ACTIVE", "port": 5110},
+                {"id": "clo_agent", "name": "CLO_Agent", "status": "ACTIVE", "port": 5080}
             ]
         }
         await save_registry(initial_data)
