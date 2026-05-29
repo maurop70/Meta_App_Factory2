@@ -7,6 +7,20 @@ export default function WorkspaceVault() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const renderOperationalContext = (context) => {
+    if (!context) {
+      return 'No operational context defined for this persistent workspace matrix.';
+    }
+    
+    if (typeof context === 'object') {
+      return Object.entries(context)
+        .map(([key, val]) => `${key.replace(/_/g, ' ').toUpperCase()}: ${val}`)
+        .join('\n');
+    }
+    
+    return String(context);
+  };
+
   useEffect(() => {
     const fetchProjects = async () => {
       try {
@@ -93,7 +107,7 @@ export default function WorkspaceVault() {
                 <div className="h-[1px] bg-slate-800/60"></div>
                 
                 <p className="text-xs text-slate-400 font-mono leading-relaxed line-clamp-4 overflow-hidden" style={{ whiteSpace: 'pre-wrap' }}>
-                  {project.operational_context || 'No operational context defined for this persistent workspace matrix.'}
+                  {renderOperationalContext(project.operational_context)}
                 </p>
               </div>
 
