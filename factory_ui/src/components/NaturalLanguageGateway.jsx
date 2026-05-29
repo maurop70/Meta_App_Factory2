@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-export default function NaturalLanguageGateway({ mode = 'builder' }) {
+export default function NaturalLanguageGateway({ mode = 'builder', selectedApp }) {
   const [chatLog, setChatLog] = useState([]);
   const [input, setInput] = useState('');
   const [isSynthesizing, setIsSynthesizing] = useState(false);
@@ -17,10 +17,11 @@ export default function NaturalLanguageGateway({ mode = 'builder' }) {
   useEffect(() => {
     if (!isWarRoom) return;
 
+    const activeProject = selectedApp || localStorage.getItem('last_active_project') || 'Aether';
     let eventSource;
     const connectSSE = () => {
-      console.log("Connecting EventSource to /api/war-room/stream?project=Aether...");
-      eventSource = new EventSource('/api/war-room/stream?project=Aether');
+      console.log(`Connecting EventSource to /api/war-room/stream?project=${activeProject}...`);
+      eventSource = new EventSource(`/api/war-room/stream?project=${activeProject}`);
 
       eventSource.onmessage = (event) => {
         try {
@@ -63,7 +64,7 @@ export default function NaturalLanguageGateway({ mode = 'builder' }) {
         eventSource.close();
       }
     };
-  }, [isWarRoom]);
+  }, [isWarRoom, selectedApp]);
 
 
 
@@ -84,11 +85,14 @@ export default function NaturalLanguageGateway({ mode = 'builder' }) {
     const payloadText = [...chatLog.map(m => m.content), input.trim()].filter(Boolean).join('\n');
 
 
+    const activeProject = selectedApp || localStorage.getItem('last_active_project') || 'Aether';
+
     try {
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          project: activeProject,
           description: payloadText,
           change_type: 'feature',
           components: []

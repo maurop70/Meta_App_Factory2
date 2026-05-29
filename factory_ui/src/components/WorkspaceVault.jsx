@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import VaultModal from './VaultModal';
 
 export default function WorkspaceVault({ setSelectedApp }) {
   const navigate = useNavigate();
@@ -9,6 +10,8 @@ export default function WorkspaceVault({ setSelectedApp }) {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedProject, setSelectedProject] = useState(null);
 
   const handleActuateProject = async (project) => {
     if (activatingId) return;
@@ -139,17 +142,38 @@ export default function WorkspaceVault({ setSelectedApp }) {
 
               <div className="mt-4 flex justify-between items-center text-[10px] font-mono text-slate-500">
                 <span>INDEX: #{project.id || 'N/A'}</span>
-                <span 
-                  className={`group-hover:text-cyan-300 transition-colors flex items-center gap-1 font-semibold cursor-pointer ${activatingId === project.project_name ? 'text-cyan-500 animate-pulse' : 'text-cyan-400/70'}`}
-                  onClick={() => handleActuateProject(project)}
-                >
-                  {activatingId === project.project_name ? 'ACTIVATING...' : 'ACTUATE LEDGER ➜'}
-                </span>
+                <div className="flex gap-3">
+                  <span 
+                    className="text-cyan-400 hover:text-cyan-300 font-semibold cursor-pointer transition-colors"
+                    onClick={() => {
+                      setSelectedProject(project);
+                      setIsModalOpen(true);
+                    }}
+                  >
+                    📂 OPEN WORKSPACE
+                  </span>
+                  <span 
+                    className={`group-hover:text-cyan-300 transition-colors flex items-center gap-1 font-semibold cursor-pointer ${activatingId === project.project_name ? 'text-cyan-500 animate-pulse' : 'text-cyan-400/70'}`}
+                    onClick={() => handleActuateProject(project)}
+                  >
+                    {activatingId === project.project_name ? 'ACTIVATING...' : 'ACTUATE LEDGER ➜'}
+                  </span>
+                </div>
               </div>
             </div>
           ))}
         </div>
       )}
+      
+      <VaultModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        project={selectedProject}
+        handleActuateProject={(proj) => {
+          setIsModalOpen(false);
+          handleActuateProject(proj);
+        }}
+      />
     </div>
   );
 }

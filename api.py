@@ -4948,6 +4948,7 @@ async def warroom_seed(request: Request):
     global _persuasion_score
     body = await request.json()
     topic = body.get("topic", body.get("description", "strategic direction"))
+    project_name = body.get("project", body.get("project_name", "Aether"))
     _persuasion_score = 5  # Reset
 
     await _broadcast({
@@ -4957,12 +4958,12 @@ async def warroom_seed(request: Request):
         "color": "#eab308",
         "message": f"🏛️ BOARDROOM SESSION OPENED — Topic: \"{topic}\"",
         "timestamp": _dt.now().isoformat(),
-    })
-    await _broadcast({"type": "persuasion_update", "score": 5, "reason": "Session reset"})
+    }, project=project_name)
+    await _broadcast({"type": "persuasion_update", "score": 5, "reason": "Session reset"}, project=project_name)
 
     # Kick off live debate via Model Router agents
-    asyncio.create_task(_live_debate(topic))
-    return {"status": "ok", "topic": topic}
+    asyncio.create_task(_live_debate(topic, project_name=project_name))
+    return {"status": "ok", "topic": topic, "project": project_name}
 
 
 # ── Socratic Challenger (Phase 3 — Dialectical Challenge) ─────
@@ -5674,15 +5675,19 @@ def phantom_report(filename: str):
 # ═══════════════════════════════════════════════════════════════
 
 @app.get("/api/warroom/history")
-def warroom_history():
-    """Return full War Room debate history from disk."""
+def warroom_history(project: str = "Aether", limit: int = 50, offset: int = 0):
+    """Return full War Room debate history from disk for a specific project with strict pagination."""
     try:
-        if os.path.exists(_WARROOM_HISTORY_PATH):
-            with open(_WARROOM_HISTORY_PATH, "r", encoding="utf-8") as f:
+        path = _get_history_path(project)
+        sessions = []
+        total = 0
+        last_updated = None
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            # Group messages into sessions by SYSTEM "SESSION OPENED" markers
             messages = data.get("messages", [])
-            sessions = []
+            last_updated = data.get("last_updated")
+            # Group messages into sessions by SYSTEM "SESSION OPENED" markers
             current_session = {"topic": "Unknown", "started": None, "messages": []}
             for msg in messages:
                 if msg.get("type") == "dialogue" and msg.get("agent") == "SYSTEM" and "SESSION OPENED" in msg.get("message", ""):
@@ -5698,28 +5703,33 @@ def warroom_history():
                     current_session["messages"].append(msg)
             if current_session["messages"]:
                 sessions.append(current_session)
-            return {
-                "session_count": len(sessions),
-                "total_messages": len(messages),
-                "sessions": sessions,
-                "last_updated": data.get("last_updated"),
-            }
-        return {"session_count": 0, "total_messages": 0, "sessions": []}
+            
+            sessions.reverse()
+            total = len(sessions)
+            sessions = sessions[offset : offset + limit]
+            
+        return {
+            "items": sessions,
+            "total": total,
+            "session_count": total,
+            "last_updated": last_updated
+        }
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
 
 
 @app.delete("/api/warroom/history/clear")
-def warroom_history_clear():
-    """Clear all War Room history."""
-    global _warroom_log
-    _warroom_log.clear()
+def warroom_history_clear(project: str = "Aether"):
+    """Clear all War Room history for a specific project."""
+    if project in _warroom_logs:
+        _warroom_logs[project] = []
     try:
-        if os.path.exists(_WARROOM_HISTORY_PATH):
-            os.remove(_WARROOM_HISTORY_PATH)
+        path = _get_history_path(project)
+        if os.path.exists(path):
+            os.remove(path)
     except Exception:
         pass
-    return {"status": "ok", "message": "War Room history cleared"}
+    return {"status": "ok", "message": f"War Room history cleared for {project}"}
 
 
 # ═══════════════════════════════════════════════════════════════
