@@ -43,7 +43,10 @@ export default function NaturalLanguageGateway({ mode = 'builder' }) {
       });
       
       if (response.ok) {
-        setChatLog(prev => [...prev, { role: 'cio_agent', content: `[SYSTEM] Payload injected into Sentinel Queue. Target: ${endpoint}. Awaiting Native AY Actuation.` }]);
+        const msg = isWarRoom 
+          ? `[SYSTEM] Boardroom session successfully opened. Strategic debate ignited on topic: "${payloadText}".`
+          : `[SYSTEM] Payload injected into Sentinel Queue. Target: ${endpoint}. Awaiting Native AY Actuation.`;
+        setChatLog(prev => [...prev, { role: 'cio_agent', content: msg }]);
       } else {
         setChatLog(prev => [...prev, { role: 'cio_agent', content: `[FRACTURE] Backend rejected payload. Status: ${response.status}` }]);
       }
