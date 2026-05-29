@@ -1,11 +1,37 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-export default function WorkspaceVault() {
+export default function WorkspaceVault({ setSelectedApp }) {
+  const navigate = useNavigate();
+  const [activatingId, setActivatingId] = useState(null);
   const [projects, setProjects] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const handleActuateProject = async (project) => {
+    if (activatingId) return;
+    setActivatingId(project.project_name);
+    try {
+      if (setSelectedApp) {
+        setSelectedApp(project.project_name);
+      }
+      localStorage.setItem('last_active_project', project.project_name);
+      
+      await axios.post('/api/warroom/execute', {
+        project_id: project.project_name,
+        intent: `@Operator Directive: Actuate boardroom debate for ${project.project_name}`
+      });
+      
+      navigate('/warroom');
+    } catch (err) {
+      console.error("Failed to actuate workspace ledger:", err);
+      alert("Encryption boundary handshake failed. Unable to actuate War Room session.");
+    } finally {
+      setActivatingId(null);
+    }
+  };
 
   const renderOperationalContext = (context) => {
     if (!context) {
@@ -113,8 +139,11 @@ export default function WorkspaceVault() {
 
               <div className="mt-4 flex justify-between items-center text-[10px] font-mono text-slate-500">
                 <span>INDEX: #{project.id || 'N/A'}</span>
-                <span className="text-cyan-400/70 group-hover:text-cyan-300 transition-colors flex items-center gap-1 font-semibold cursor-pointer">
-                  ACTUATE LEDGER ➜
+                <span 
+                  className={`group-hover:text-cyan-300 transition-colors flex items-center gap-1 font-semibold cursor-pointer ${activatingId === project.project_name ? 'text-cyan-500 animate-pulse' : 'text-cyan-400/70'}`}
+                  onClick={() => handleActuateProject(project)}
+                >
+                  {activatingId === project.project_name ? 'ACTIVATING...' : 'ACTUATE LEDGER ➜'}
                 </span>
               </div>
             </div>

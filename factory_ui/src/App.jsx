@@ -1044,6 +1044,7 @@ function BrandStudioPanel({ registry }) {
 function VentureScoutDashboard({ setActiveView, selectedApp, setSelectedApp }) {
   const [pitches, setPitches] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [hunting, setHunting] = useState(false);
 
   const fetchPitches = async () => {
     setLoading(true);
@@ -1053,6 +1054,21 @@ function VentureScoutDashboard({ setActiveView, selectedApp, setSelectedApp }) {
       setPitches(data.pitches || []);
     } catch (e) { console.error(e); }
     setLoading(false);
+  };
+
+  const triggerHunt = async () => {
+    setHunting(true);
+    try {
+      await fetch('/api/scout/run', { method: 'POST' });
+      // Poll/refresh after 6 seconds once background scan starts returning signals
+      setTimeout(async () => {
+        await fetchPitches();
+        setHunting(false);
+      }, 6000);
+    } catch (e) {
+      console.error(e);
+      setHunting(false);
+    }
   };
 
   useEffect(() => { fetchPitches(); }, []);
@@ -1096,7 +1112,20 @@ function VentureScoutDashboard({ setActiveView, selectedApp, setSelectedApp }) {
     <div className="scout-dashboard" style={{ padding: '20px', background: 'rgba(0,0,0,0.2)', borderRadius: '16px' }}>
       <div className="dashboard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <h2 style={{ color: '#00FFFF', margin: 0 }}>🚀 Venture Scout Hunting Loop</h2>
-        <button onClick={fetchPitches} className="refresh-btn" style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #00FFFF', background: 'transparent', color: '#00FFFF', cursor: 'pointer' }}>🔄 Refresh Signals</button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button 
+            onClick={triggerHunt} 
+            disabled={hunting || loading}
+            style={{ 
+              padding: '8px 16px', borderRadius: '8px', border: 'none', 
+              background: 'linear-gradient(135deg, #00FFFF, #8A2BE2)', color: '#000', 
+              cursor: (hunting || loading) ? 'not-allowed' : 'pointer', fontWeight: 'bold' 
+            }}
+          >
+            {hunting ? '📡 Hunting...' : '🔍 Scan for New Pitches'}
+          </button>
+          <button onClick={fetchPitches} className="refresh-btn" style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #00FFFF', background: 'transparent', color: '#00FFFF', cursor: 'pointer' }}>🔄 Refresh Signals</button>
+        </div>
       </div>
       
       {loading ? <div className="loading" style={{ textAlign: 'center', padding: '100px', fontSize: '1.2rem', color: 'rgba(255,255,255,0.4)', letterSpacing: '2px' }}>HUNTING IN PROGRESS...</div> : (
@@ -1763,7 +1792,7 @@ function App() {
           <Route path="/atomizer" element={<Atomizer />} />
           <Route path="/workspaces" element={
             <ErrorBoundary>
-              <WorkspaceVault />
+              <WorkspaceVault setSelectedApp={setSelectedApp} />
             </ErrorBoundary>
           } />
           <Route path="/agent/:agentId" element={<DirectAgentChat />} />
