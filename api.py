@@ -3583,7 +3583,7 @@ import requests as _requests
 from datetime import datetime as _dt
 from concurrent.futures import ThreadPoolExecutor
 
-_warroom_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="warroom")
+_warroom_executor = ThreadPoolExecutor(max_workers=16, thread_name_prefix="warroom")
 
 # War Room State (Per-Project)
 _warroom_clients: dict[str, list[WebSocket]] = {}

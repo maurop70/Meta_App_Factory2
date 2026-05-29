@@ -1,10 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 export default function NaturalLanguageGateway({ mode = 'builder' }) {
-  const [chatLog, setChatLog] = useState([]);
-  const [input, setInput] = useState('');
-  const [isSynthesizing, setIsSynthesizing] = useState(false);
-
   const isWarRoom = mode === 'warroom';
   const accentColor = isWarRoom ? 'text-red-500' : 'text-cyan-400';
   const borderTheme = isWarRoom ? 'border-red-500/30' : 'border-cyan-500/30';
@@ -13,6 +9,63 @@ export default function NaturalLanguageGateway({ mode = 'builder' }) {
   const title = isWarRoom ? 'Adversarial Threat Ingestion Gateway' : 'App Synthesis Gateway';
   const badge = isWarRoom ? 'THREAT SENSOR: ACTIVE' : 'BUILDER PULSE: ACTIVE';
   const badgePing = isWarRoom ? 'bg-red-500' : 'bg-cyan-500';
+
+  const [chatLog, setChatLog] = useState([]);
+  const [input, setInput] = useState('');
+  const [isSynthesizing, setIsSynthesizing] = useState(false);
+
+  useEffect(() => {
+    if (!isWarRoom) return;
+
+    let eventSource;
+    const connectSSE = () => {
+      console.log("Connecting EventSource to /api/war-room/stream?project=Aether...");
+      eventSource = new EventSource('/api/war-room/stream?project=Aether');
+
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'dialogue') {
+            setChatLog(prev => {
+              // Avoid duplicates
+              const isDuplicate = prev.some(msg => 
+                msg.agent === data.agent && 
+                msg.content === data.message && 
+                msg.timestamp === data.timestamp
+              );
+              if (isDuplicate) return prev;
+              return [...prev, {
+                role: data.agent.toLowerCase(),
+                agent: data.agent,
+                content: data.message,
+                color: data.color,
+                timestamp: data.timestamp
+              }];
+            });
+          }
+        } catch (err) {
+          console.error("SSE parse error:", err);
+        }
+      };
+
+      eventSource.onerror = (err) => {
+        console.error("EventSource encountered an error:", err);
+        eventSource.close();
+        setTimeout(connectSSE, 3000);
+      };
+    };
+
+    connectSSE();
+
+    return () => {
+      if (eventSource) {
+        console.log("Disconnecting EventSource...");
+        eventSource.close();
+      }
+    };
+  }, [isWarRoom]);
+
+
 
   const handleTransmit = async () => {
     if (!input.trim()) return;
@@ -72,16 +125,28 @@ export default function NaturalLanguageGateway({ mode = 'builder' }) {
       </div>
       <div className="chat-matrix flex-1 overflow-y-auto p-6 space-y-4 bg-[#0B0F19]">
         {chatLog.length === 0 && <div className="text-center text-gray-600 mt-10 font-mono text-sm uppercase">Awaiting biological input stream...</div>}
-        {chatLog.map((msg, idx) => (
-          <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[80%] p-3 rounded-lg text-sm font-mono ${msg.role === 'user' ? 'bg-blue-900/30 border border-blue-500/30 text-blue-100' : `${bgTheme} border ${borderTheme} text-gray-300`}`}>
-              <strong className={`block mb-1 text-xs ${msg.role === 'user' ? 'text-blue-400' : accentColor}`}>
-                {msg.role === 'user' ? 'CO-PILOT' : 'MAF ORCHESTRATOR'}
-              </strong>
-              {msg.content}
+        {chatLog.map((msg, idx) => {
+          const isUser = msg.role === 'user';
+          const agentName = isUser ? 'CO-PILOT' : (msg.agent || 'MAF ORCHESTRATOR');
+          const agentStyleColor = (!isUser && msg.color) ? { color: msg.color } : {};
+
+          return (
+            <div key={idx} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+              <div 
+                className={`max-w-[80%] p-3 rounded-lg text-sm font-mono ${isUser ? 'bg-blue-900/30 border border-blue-500/30 text-blue-100' : `${bgTheme} border ${borderTheme} text-gray-300`}`}
+                style={{ whiteSpace: 'pre-wrap' }}
+              >
+                <strong 
+                  className={`block mb-1 text-xs ${isUser ? 'text-blue-400' : accentColor}`}
+                  style={agentStyleColor}
+                >
+                  {agentName}
+                </strong>
+                {msg.content}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
       <div className={`p-4 bg-gray-900/80 border-t ${borderTheme}`}>
         <textarea className={`w-full p-3 bg-[#0B0F19] border ${borderTheme} rounded-lg text-gray-200 font-mono text-sm focus:outline-none focus:border-opacity-100 transition-colors mb-3 resize-none`} rows="3" placeholder="Describe the architectural parameters..." value={input} onChange={(e) => setInput(e.target.value)} />
