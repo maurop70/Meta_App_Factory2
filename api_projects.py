@@ -153,6 +153,7 @@ async def update_project(project_id: str, payload: ProjectUpdate):
 
 
 @projects_router.post("/open-folder")
+@projects_router.post("/open-folder/")
 async def open_project_folder(payload: dict):
     """POST /api/projects/open-folder: Open Windows Explorer directly at the project workspace directory."""
     project = payload.get("project_name")
