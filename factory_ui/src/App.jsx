@@ -17,6 +17,7 @@ import InventoryGrid from './components/InventoryGrid.jsx';
 import AppRegistry from './components/AppRegistry';
 import CIOIntel from './components/CIOIntel';
 import TelemetryPanel from './components/TelemetryPanel';
+import WorkspaceVault from './components/WorkspaceVault';
 
 // ═══════════════════════════════════════════════════════════
 //  META APP FACTORY — BUILDER DASHBOARD (Full Feature Parity)
@@ -1564,6 +1565,7 @@ function App() {
     { icon: '🎮', label: 'Command Palette', view: 'commands' },
     { icon: '🧠', label: 'Agent Status', view: 'agents' },
     { icon: '🎨', label: 'Brand Studio', view: 'brand', badge: 'NEW' },
+    { icon: '📂', label: 'Workspace Vault', view: 'workspaces' },
     { icon: '🔧', label: 'Refine App', view: 'refine' },
     { icon: '⚛️', label: 'Atomizer', view: 'atomizer' },
     { icon: '📊', label: 'Telemetry', view: 'telemetry', badge: 'Beta' },
@@ -1601,6 +1603,7 @@ function App() {
               commands: '/commands',
               agents: '/agents',
               brand: '/brand',
+              workspaces: '/workspaces',
               refine: '/refine',
               atomizer: '/atomizer',
               telemetry: '/telemetry',
@@ -1758,6 +1761,11 @@ function App() {
             />
           } />
           <Route path="/atomizer" element={<Atomizer />} />
+          <Route path="/workspaces" element={
+            <ErrorBoundary>
+              <WorkspaceVault />
+            </ErrorBoundary>
+          } />
           <Route path="/agent/:agentId" element={<DirectAgentChat />} />
         </Routes>
       </main>
