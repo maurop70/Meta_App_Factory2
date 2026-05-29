@@ -3554,6 +3554,36 @@ logger.info("🐕 App Watchdog started (30s interval, auto-restart with 5min coo
 @app.get("/api/apps/running")
 def get_running_apps():
     """Return list of currently running apps with health status."""
+    # ── Dynamic Port Scan & Auto-Adoption ──
+    try:
+        import psutil
+        with open(REGISTRY_PATH, "r", encoding="utf-8") as f:
+            reg_data = json.load(f)
+        for app_name, app_info in reg_data.get("apps", {}).items():
+            if app_name not in _running_apps:
+                port = app_info.get("port")
+                if port:
+                    port = int(port)
+                    occupied = False
+                    try:
+                        for conn in psutil.net_connections(kind='inet'):
+                            if conn.laddr.port == port and conn.status == 'LISTEN':
+                                occupied = True
+                                break
+                    except Exception:
+                        import socket as _sock
+                        try:
+                            with _sock.create_connection(("localhost", port), timeout=0.05):
+                                occupied = True
+                        except Exception:
+                            pass
+                    
+                    if occupied:
+                        logger.info(f"Dynamic auto-adoption: Adopting active {app_name} on port {port}")
+                        _do_launch(app_name)
+    except Exception as e:
+        logger.warning(f"Dynamic auto-adoption failed: {e}")
+
     result = {}
     items = []
     for name, info in list(_running_apps.items()):
@@ -6401,6 +6431,38 @@ async def approve_pitch(pitch_id: str):
 @app.on_event("startup")
 async def _startup_watcher():
     global _watcher_thread
+    
+    #  Auto-adopt already running apps from registry.json
+    try:
+        import psutil
+        with open(REGISTRY_PATH, "r", encoding="utf-8") as f:
+            reg_data = json.load(f)
+        for app_name, app_info in reg_data.get("apps", {}).items():
+            port = app_info.get("port")
+            if port:
+                port = int(port)
+                # Check if port is occupied
+                occupied = False
+                try:
+                    for conn in psutil.net_connections(kind='inet'):
+                        if conn.laddr.port == port and conn.status == 'LISTEN':
+                            occupied = True
+                            break
+                except Exception:
+                    # Fallback socket ping
+                    import socket as _sock
+                    try:
+                        with _sock.create_connection(("localhost", port), timeout=0.1):
+                            occupied = True
+                    except Exception:
+                        pass
+                
+                if occupied:
+                    logger.info(f"Watchdog auto-adopting active app {app_name} on port {port}")
+                    _do_launch(app_name)
+    except Exception as e:
+        logger.warning(f"Failed to auto-adopt registered apps: {e}")
+
     if _watcher_available:
         _watcher_thread = threading.Thread(target=watch_incoming, args=(60,), daemon=True)
         _watcher_thread.start()
