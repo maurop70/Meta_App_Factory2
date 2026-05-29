@@ -249,32 +249,6 @@ async def dynamic_wildcard_proxy(agent_id: str, proxy_path: str, request: Reques
         logger.error(f"Proxy forwarding failed to port {target_port} for /{proxy_path}: {e}")
         raise HTTPException(status_code=502, detail=f"Proxy error: {str(e)}")
 
-
-from backend.app.routers.ingest import router as ingest_router
-from backend.app.routers.inventory_router import router as inventory_router
-
-app.include_router(ingest_router)
-app.include_router(inventory_router)
-
-@app.get("/api/apps/running")
-def get_running_apps_endpoint(limit: int = 10, offset: int = 0):
-    # Complies with Unified I/O Serialization Envelope
-    apps_list = [
-        {"name": "Master_Architect_Elite_Logic", "port": PORT, "pid": os.getpid(), "alive": True, "health": "healthy"},
-        {"name": "CFO_Agent", "port": 5010, "pid": 1111, "alive": True, "health": "healthy"},
-        {"name": "CIO_Agent", "port": 5011, "pid": 2222, "alive": True, "health": "healthy"},
-        {"name": "Adv_Autonomous_Agent", "port": 5012, "pid": 3333, "alive": True, "health": "healthy"},
-        {"name": "Alpha_V2_Genesis", "port": 5175, "pid": 0, "alive": False, "health": "dead"},
-        {"name": "Resonance", "port": 5174, "pid": 0, "alive": False, "health": "dead"}
-    ]
-    paginated_apps = apps_list[offset:offset+limit]
-    return {
-        "items": paginated_apps,
-        "total": len(apps_list),
-        "limit": limit,
-        "offset": offset
-    }
-
 @app.api_route("/api/apps/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
 async def proxy_apps_to_gateway(path: str, request: Request):
     """Proxies app lifecycle operations (launch, stop, status) to the central API gateway on Port 5000."""
@@ -300,28 +274,32 @@ async def proxy_apps_to_gateway(path: str, request: Request):
         )
     except Exception as e:
         logger.error(f"Proxy forwarding failed to gateway for /api/apps/{path}: {e}")
-        if "running" in path:
-            return JSONResponse(
-                status_code=200,
-                content={
-                    "items": [],
-                    "total": 0,
-                    "limit": 10,
-                    "offset": 0,
-                    "running_apps": [],
-                    "error": "Gateway Unreachable",
-                    "detail": str(e)
-                }
-            )
-        else:
-            return JSONResponse(
-                status_code=200,
-                content={
-                    "status": "error",
-                    "error": "Gateway Unreachable",
-                    "detail": str(e)
-                }
-            )
+        raise HTTPException(status_code=502, detail=f"Proxy error: {str(e)}")
+
+from backend.app.routers.ingest import router as ingest_router
+from backend.app.routers.inventory_router import router as inventory_router
+
+app.include_router(ingest_router)
+app.include_router(inventory_router)
+
+@app.get("/api/apps/running")
+def get_running_apps_endpoint(limit: int = 10, offset: int = 0):
+    # Complies with Unified I/O Serialization Envelope
+    apps_list = [
+        {"name": "Master_Architect_Elite_Logic", "port": PORT, "pid": os.getpid(), "alive": True, "health": "healthy"},
+        {"name": "CFO_Agent", "port": 5010, "pid": 1111, "alive": True, "health": "healthy"},
+        {"name": "CIO_Agent", "port": 5011, "pid": 2222, "alive": True, "health": "healthy"},
+        {"name": "Adv_Autonomous_Agent", "port": 5012, "pid": 3333, "alive": True, "health": "healthy"},
+        {"name": "Alpha_V2_Genesis", "port": 5175, "pid": 0, "alive": False, "health": "dead"},
+        {"name": "Resonance", "port": 5174, "pid": 0, "alive": False, "health": "dead"}
+    ]
+    paginated_apps = apps_list[offset:offset+limit]
+    return {
+        "items": paginated_apps,
+        "total": len(apps_list),
+        "limit": limit,
+        "offset": offset
+    }
 
 app.add_middleware(
     CORSMiddleware,
