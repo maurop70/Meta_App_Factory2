@@ -16,7 +16,7 @@ class GoogleEmbeddingService:
         self.api_key = api_key or os.getenv("GEMINI_API_KEY", "")
         if self.api_key:
             self.api_key = self.api_key.strip("'\"")
-        self.api_url = "https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent"
+        self.api_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-2:embedContent"
 
     async def get_embedding_async(self, text: str) -> Union[List[float], JSONResponse]:
         """
@@ -28,9 +28,9 @@ class GoogleEmbeddingService:
                 headers = {"Content-Type": "application/json"}
                 params = {"key": self.api_key}
                 
-                # First attempt: text-embedding-004
+                # First attempt: gemini-embedding-2
                 payload = {
-                    "model": "models/text-embedding-004",
+                    "model": "models/gemini-embedding-2",
                     "content": {
                         "parts": [{"text": text}]
                     },
@@ -40,9 +40,9 @@ class GoogleEmbeddingService:
                 
                 # Self-healing fallback if 404 (Not Found or Unsupported in this API key/region)
                 if response.status_code == 404:
-                    fallback_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-2:embedContent"
+                    fallback_url = "https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent"
                     fallback_payload = {
-                        "model": "models/gemini-embedding-2",
+                        "model": "models/text-embedding-004",
                         "content": {
                             "parts": [{"text": text}]
                         },
