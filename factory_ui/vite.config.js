@@ -9,6 +9,11 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     proxy: {
+      '/api/workspace/actuate': {
+        target: 'http://127.0.0.1:5009',
+        changeOrigin: true,
+        secure: false
+      },
       '/api/system/registry': {
         target: 'http://127.0.0.1:5050',
         changeOrigin: true,
