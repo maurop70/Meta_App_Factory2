@@ -93,7 +93,7 @@ logger.addHandler(fh)
 from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent.parent / ".env")
 
-from fastapi import FastAPI, HTTPException, Query, Request, UploadFile, File
+from fastapi import FastAPI, HTTPException, Query, Request, UploadFile, File, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -832,14 +832,133 @@ async def trigger_poll():
     return {"status": "poll_complete"}
 
 
+async def background_vectorize_blueprint(blueprint_dict: dict, asset_url: str, presentation_id: str):
+    """
+    Asynchronously vectorize the executed blueprint and inject it into the local ChromaDB.
+    Runs inside BackgroundTasks to prevent blocking the HTTP response.
+    STRICT GUARDRAIL: The actual ChromaDB .add() execution MUST be wrapped in await asyncio.to_thread(collection.add, ...).
+    """
+    logger.info(f"Closed-loop memory vectorization hook triggered for presentation ID: {presentation_id}")
+    try:
+        # Resolve import path for Core and Services
+        try:
+            from backend.core.vector_store import VectorStore
+            from backend.services.embedding_service import GoogleEmbeddingService
+        except ImportError:
+            from core.vector_store import VectorStore
+            from services.embedding_service import GoogleEmbeddingService
+
+        # Instantiation
+        import os
+        factory_dir = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+        chroma_dir = os.path.join(factory_dir, "chroma_data")
+        
+        vector_store = VectorStore(persist_directory=chroma_dir)
+        embedding_service = GoogleEmbeddingService()
+
+        # Format a highly dense semantic text block encapsulating mutations
+        mutations_str = ", ".join([f"Replace '{m.get('replace_tag')}' with '{m.get('injection_value')}'" for m in blueprint_dict.get("mutations", [])])
+        dense_semantic_payload = (
+            f"Executed Google Workspace Blueprint.\n"
+            f"Execution ID: {blueprint_dict.get('execution_id')}\n"
+            f"Target Engine: {blueprint_dict.get('target_engine')}\n"
+            f"Master Template ID: {blueprint_dict.get('master_template_id')}\n"
+            f"Output Filename: {blueprint_dict.get('output_filename')}\n"
+            f"Asset URL: {asset_url}\n"
+            f"Mutations Applied: {mutations_str}"
+        )
+        
+        logger.info(f"Vectorizing dense semantic payload: {dense_semantic_payload[:150]}...")
+        
+        # 1. Contact Google Embedding Service
+        embedding_res = await embedding_service.get_embedding_async(dense_semantic_payload)
+        
+        # Check if embedding_res is a JSONResponse (represents 502/404 failures)
+        if isinstance(embedding_res, JSONResponse):
+            error_data = json.loads(embedding_res.body.decode())
+            error_msg = error_data.get("detail", "Unknown embedding service error.")
+            raise RuntimeError(f"EmbeddingServiceFailure: {error_msg}")
+
+        # Ingestion ID
+        doc_id = f"blueprint_{blueprint_dict.get('execution_id', str(uuid.uuid4()))}"
+        
+        # 2. Write to ChromaDB in thread pool via asyncio.to_thread
+        collection = await vector_store.get_or_create_collection_async("maf_knowledge")
+        await asyncio.to_thread(
+            collection.add,
+            ids=[doc_id],
+            embeddings=[embedding_res],
+            metadatas=[{
+                "type": "workspace_blueprint",
+                "execution_id": blueprint_dict.get("execution_id", ""),
+                "target_engine": blueprint_dict.get("target_engine", ""),
+                "master_template_id": blueprint_dict.get("master_template_id", ""),
+                "output_filename": blueprint_dict.get("output_filename", ""),
+                "asset_url": asset_url,
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }],
+            documents=[dense_semantic_payload]
+        )
+        logger.info(f"Successfully vectorized and ingested blueprint: {doc_id} into ChromaDB.")
+    except Exception as e:
+        logger.error(f"Post-actuation background memory ingestion failed: {e}")
+        # Asynchronous SRE Telemetry Escalation
+        try:
+            import httpx
+            alert_payload = {
+                "alert_id": f"sre_err_{uuid.uuid4().hex[:8]}",
+                "source": "WORKSPACE_MEMORY_HOOK",
+                "agent": "CTO",
+                "severity": "CRITICAL",
+                "exception": type(e).__name__,
+                "message": f"Closed-loop memory ingestion failed for blueprint: {str(e)}",
+                "staged_blueprint_path": f"staged_blueprint_{blueprint_dict.get('output_filename', 'Heinlein_Foods_Consensus')}.json",
+                "ast_payload_preview": f"Failed to vector-ingest asset: {asset_url}"
+            }
+            # Post asynchronously to api_qa_telemetry SRE alerts
+            for port_tel in [8000, 5009]:
+                try:
+                    async with httpx.AsyncClient(timeout=2.0) as tel_client:
+                        resp = await tel_client.post(f"http://127.0.0.1:{port_tel}/api/qa/alerts", json=alert_payload)
+                        if resp.status_code in (200, 201):
+                            logger.info(f"SRE node successfully notified on port {port_tel}")
+                            break
+                except Exception:
+                    pass
+        except Exception as tel_err:
+            logger.warning(f"Failed to dispatch background worker crash telemetry: {tel_err}")
+
+
 @app.post("/api/workspace/actuate")
-async def actuate_workspace(blueprint: WorkspaceBlueprintInput):
+async def actuate_workspace(blueprint: WorkspaceBlueprintInput, background_tasks: BackgroundTasks):
     """Clone a Google Slides template and apply text replacement mutations."""
     try:
         manager = SentinelSlidesManager()
         blueprint_dict = blueprint.dict()
         res = manager.actuate_blueprint(blueprint_dict)
-        return res
+        
+        presentation_id = res.get("presentation_id", "")
+        if not presentation_id and "web_link" in res:
+            parts = res["web_link"].split("/d/")
+            if len(parts) > 1:
+                presentation_id = parts[1].split("/")[0]
+        
+        # Formulate absolute asset_url
+        asset_url = f"https://docs.google.com/presentation/d/{presentation_id}/edit"
+        
+        # decoupled background ingestion
+        background_tasks.add_task(
+            background_vectorize_blueprint,
+            blueprint_dict=blueprint_dict,
+            asset_url=asset_url,
+            presentation_id=presentation_id
+        )
+        
+        return {
+            "status": "success",
+            "asset_url": asset_url,
+            "document_id": presentation_id
+        }
     except Exception as e:
         logger.error(f"Workspace actuation failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))

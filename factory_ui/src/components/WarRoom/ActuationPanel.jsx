@@ -130,8 +130,8 @@ export default function ActuationPanel({
       setActuationResult({
         status: "success",
         message: "Google Slides & Drive workspace successfully synchronized!",
-        presentation_id: res.presentation_id || "cloned_success_200",
-        url: res.url || `https://docs.google.com/presentation/d/${res.presentation_id}/edit`
+        presentation_id: res.document_id || "cloned_success_200",
+        url: res.asset_url || res.url || `https://docs.google.com/presentation/d/${res.presentation_id || res.document_id}/edit`
       });
     } catch (err) {
       // 3. STRICT FRONTEND EXCEPTION ESCALATION
@@ -254,7 +254,7 @@ export default function ActuationPanel({
             rel="noopener noreferrer" 
             className="text-cyan-400 hover:underline text-[11px] font-bold block"
           >
-            Open Generated Presentation ➜
+            [ VIEW DEPLOYED ASSET ]
           </a>
         </div>
       )}
