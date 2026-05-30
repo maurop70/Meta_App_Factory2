@@ -23,10 +23,15 @@ class GoogleEmbeddingService:
         Retrieves the float embedding values for a given text.
         STRICT GUARDRAIL: Traps httpx connection failures and returns a 502 JSONResponse fallback.
         """
+        # Resolve API key dynamically to protect against import-order bugs
+        api_key = self.api_key or os.getenv("GEMINI_API_KEY", "")
+        if api_key:
+            api_key = api_key.strip("'\"")
+
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 headers = {"Content-Type": "application/json"}
-                params = {"key": self.api_key}
+                params = {"key": api_key}
                 
                 # First attempt: gemini-embedding-2
                 payload = {

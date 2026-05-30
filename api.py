@@ -99,6 +99,8 @@ from api_projects import projects_router
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "backend")))
 
 from backend.app.routers.inventory_router import router as inventory_router
+from backend.app.routers.cio_router import router as backend_cio_router
+from backend.app.routers.vector_router import router as vector_router
 
 app = FastAPI(title="Antigravity Meta App Factory API", version="3.0", lifespan=lifespan)
 app.include_router(builder_router, prefix="/api/v1")
@@ -113,6 +115,8 @@ app.include_router(cio_agent_router)
 app.include_router(warroom_agent_router)
 app.include_router(inventory_router)
 app.include_router(projects_router)
+app.include_router(backend_cio_router)
+app.include_router(vector_router)
 
 
 # ── CORS ──────────────────────────────────────────────────────
