@@ -178,17 +178,28 @@ class SentinelSlidesManager:
         output_filename = blueprint.get("output_filename", "Generated_Presentation")
         mutations = blueprint.get("mutations", [])
         
-        # 1. Duplicate
-        cloned_id = self.clone_template(template_id, output_filename)
+        try:
+            # 1. Try to Duplicate
+            cloned_id = self.clone_template(template_id, output_filename)
+            target_id = cloned_id
+            mode = "cloned"
+        except Exception as e:
+            if "storageQuotaExceeded" in str(e) or "quota" in str(e).lower() or "403" in str(e) or "Forbidden" in str(e):
+                logger.warning(f"Storage Quota Exceeded on Service Account. Actuating IN-PLACE fallback on template ID: {template_id}")
+                target_id = template_id
+                mode = "in-place-fallback"
+            else:
+                raise e
         
         # 2. Mutate
-        res = self.apply_mutations(cloned_id, mutations)
+        res = self.apply_mutations(target_id, mutations)
+        res["mode"] = mode
         
         # 3. Formulate output web view link
         if self.initialized:
-            res["web_link"] = f"https://docs.google.com/presentation/d/{cloned_id}/view"
+            res["web_link"] = f"https://docs.google.com/presentation/d/{target_id}/view"
         else:
-            res["web_link"] = f"https://docs.google.com/presentation/d/{cloned_id}_stub/view"
+            res["web_link"] = f"https://docs.google.com/presentation/d/{target_id}_stub/view"
             
         return res
 
