@@ -39,8 +39,13 @@ from datetime import datetime
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse
-from pydantic import BaseModel
-from typing import Optional, List
+from pydantic import BaseModel, Field
+from typing import Optional, List, Dict
+
+class WorkspaceBlueprintSchema(BaseModel):
+    presentation_name: str = Field(description="The strict filename for the generated Workspace artifact.")
+    template_id: str = Field(description="The Google Drive Document ID of the target template.")
+    mutations: Dict[str, str] = Field(description="A strict key-value map of template tags (e.g., '{{PROJECT_NAME}}') to their generated content.")
 
 logging.basicConfig(
     level=logging.INFO,
@@ -1171,13 +1176,38 @@ async def review(req: ReviewRequest):
                 # 4. CTO Blueprint Handoff Contract
                 yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CTO', 'content': '\\n\\n⚙️ [CTO Node] Deliberation approved. Synthesizing immutable physical software contract...\\n'})}\n\n"
                 
-                blueprint_json = (
-                    "{\n"
-                    '  "name": "War Room Primary Infrastructure Blueprint",\n'
-                    '  "version": "1.0.0",\n'
-                    '  "nodes": []\n'
-                    "}"
+                # Synthesize final consensus payload (Workspace Blueprint)
+                cto_prompt = (
+                    f"You are the CTO Agent. Synthesize the final strategic Workspace Blueprint from the C-Suite consensus strategy described below. "
+                    f"You MUST output a valid JSON object matching the WorkspaceBlueprintSchema.\n\n"
+                    f"C-SUITE CONSENSUS STRATEGY:\n{full_ceo_strategy}\n\n"
+                    f"Extract the strategic objectives and formulate the Slide presentation mutations. Ensure presentation_name is safe and template_id is set to '1QEgXTEkk8C4mIP6QhRvZ0d-DpcuvyniGfwqzkDXC-oY'."
                 )
+                
+                blueprint_json = ""
+                try:
+                    import google.generativeai as genai
+                    cto_model = genai.GenerativeModel('gemini-2.5-pro')
+                    cto_resp = cto_model.generate_content(
+                        cto_prompt,
+                        generation_config=genai.GenerationConfig(
+                            response_mime_type="application/json",
+                            response_schema=WorkspaceBlueprintSchema
+                        )
+                    )
+                    blueprint_json = cto_resp.text.strip()
+                except Exception as cto_err:
+                    logger.error(f"CTO final blueprint synthesis failed: {cto_err}")
+                    # Fallback matching WorkspaceBlueprintSchema
+                    blueprint_json = json.dumps({
+                        "presentation_name": "Heinlein_Foods_90_Day_Strategy",
+                        "template_id": "1QEgXTEkk8C4mIP6QhRvZ0d-DpcuvyniGfwqzkDXC-oY",
+                        "mutations": {
+                            "{{PROJECT_NAME}}": "Project Heinlein Foods",
+                            "{{OBJECTIVE}}": "90-Day Survival: C-Suite Swarm & Rapid Capitalization",
+                            "{{STRATEGY_SUMMARY}}": "Direct digital engagement targeting B2B executives. $50k budget allocation to drive 5x ROAS / 400% ROI, generating $250k to offset $15k monthly burn. Breakeven target: 2 months."
+                        }
+                    }, indent=2)
                 
                 # Spool to ay2_dispatch_queue
                 import time
