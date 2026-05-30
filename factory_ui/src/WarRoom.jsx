@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import NaturalLanguageGateway from './components/NaturalLanguageGateway';
+import ActuationPanel from './components/WarRoom/ActuationPanel';
 import axios from 'axios';
 
 export default function WarRoom({ selectedApp }) {
+  const [chatLog, setChatLog] = useState([]);
   const [telemetry, setTelemetry] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -177,8 +179,21 @@ export default function WarRoom({ selectedApp }) {
           )}
         </div>
 
+        {/* Actuation Panel Transport Layer */}
+        <ActuationPanel 
+          chatLog={chatLog}
+          sreIncidents={sreIncidents}
+          setSreIncidents={setSreIncidents}
+          selectedApp={selectedApp}
+        />
+
         <div className="h-[550px]">
-          <NaturalLanguageGateway mode="warroom" selectedApp={selectedApp} />
+          <NaturalLanguageGateway 
+            mode="warroom" 
+            selectedApp={selectedApp} 
+            chatLog={chatLog}
+            setChatLog={setChatLog}
+          />
         </div>
       </div>
     </div>

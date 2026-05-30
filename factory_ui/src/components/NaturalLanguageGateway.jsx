@@ -1,7 +1,14 @@
 import React, { useState, useEffect } from 'react';
 
-export default function NaturalLanguageGateway({ mode = 'builder', selectedApp }) {
-  const [chatLog, setChatLog] = useState([]);
+export default function NaturalLanguageGateway({ 
+  mode = 'builder', 
+  selectedApp,
+  chatLog: externalChatLog,
+  setChatLog: externalSetChatLog
+}) {
+  const [internalChatLog, setInternalChatLog] = useState([]);
+  const chatLog = externalChatLog || internalChatLog;
+  const setChatLog = externalSetChatLog || setInternalChatLog;
   const [input, setInput] = useState('');
   const [isSynthesizing, setIsSynthesizing] = useState(false);
 
