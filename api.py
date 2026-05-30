@@ -666,7 +666,12 @@ async def refine_app(req: RefineRequest):
     """Accept user feedback about a built app and stream improvement analysis."""
     # Find the app directory
     gdrive = os.path.join(os.path.expanduser("~"), "My Drive", "Antigravity-AI Agents", "Meta_App_Factory")
-    app_dir = os.path.join(gdrive, req.app_name) if os.path.isdir(os.path.join(gdrive, req.app_name)) else os.path.join(SCRIPT_DIR, req.app_name)
+    # Optimize to avoid slow Windows directory checks on non-existent cloud folder
+    app_dir = os.path.join(SCRIPT_DIR, req.app_name)
+    if os.path.isdir(gdrive):
+        gdrive_app_dir = os.path.join(gdrive, req.app_name)
+        if os.path.isdir(gdrive_app_dir):
+            app_dir = gdrive_app_dir
 
     # Gather app context
     context_parts = [f"App: {req.app_name}", f"Location: {app_dir}"]
@@ -716,7 +721,12 @@ async def refine_apply(req: RefineApplyRequest):
 
     # Resolve app directory
     gdrive = os.path.join(os.path.expanduser("~"), "My Drive", "Antigravity-AI Agents", "Meta_App_Factory")
-    app_dir = os.path.join(gdrive, req.app_name) if os.path.isdir(os.path.join(gdrive, req.app_name)) else os.path.join(SCRIPT_DIR, req.app_name)
+    # Optimize to avoid slow Windows directory checks on non-existent cloud folder
+    app_dir = os.path.join(SCRIPT_DIR, req.app_name)
+    if os.path.isdir(gdrive):
+        gdrive_app_dir = os.path.join(gdrive, req.app_name)
+        if os.path.isdir(gdrive_app_dir):
+            app_dir = gdrive_app_dir
 
     if not os.path.isdir(app_dir):
         return JSONResponse({"error": f"App directory not found: {app_dir}"}, status_code=404)
@@ -3313,13 +3323,22 @@ def _do_launch(app_name: str, port_override: int = None) -> dict:
         return {"status": "already_running", "port": info["port"], "url": f"http://localhost:{info['port']}", "pid": info["pid"]}
 
     # Resolve app directory
-    gdrive = os.path.join(os.path.expanduser("~"), "My Drive", "Antigravity-AI Agents", "Meta_App_Factory")
-    candidates = [
-        os.path.join(gdrive, app_name), 
+    candidates = []
+    # Avoid scanning non-existent Google Drive directories on Windows, which introduces a 2.0s block
+    gdrive_root = os.path.join(os.path.expanduser("~"), "My Drive")
+    if os.path.isdir(gdrive_root):
+        gdrive_maf = os.path.join(gdrive_root, "Antigravity-AI Agents", "Meta_App_Factory")
+        try:
+            if os.path.isdir(gdrive_maf) and app_name in os.listdir(gdrive_maf):
+                candidates.append(os.path.join(gdrive_maf, app_name))
+        except Exception:
+            pass
+        
+    candidates.extend([
         os.path.join(SCRIPT_DIR, app_name),
         os.path.join(SCRIPT_DIR, "projects", app_name),
         os.path.join(SCRIPT_DIR, "agents", app_name)
-    ]
+    ])
     
     try:
         with open(REGISTRY_PATH, "r", encoding="utf-8") as f:
@@ -3375,19 +3394,22 @@ def _do_launch(app_name: str, port_override: int = None) -> dict:
         _occupied = False
         _pid = 0
         try:
-            for conn in psutil.net_connections(kind='inet'):
-                if conn.laddr.port == assigned_port and conn.status == 'LISTEN':
-                    _occupied = True
-                    _pid = conn.pid
-                    break
-        except Exception:
-            # Fallback to simple socket ping if psutil scan fails
+            # Optimize: check socket connection to 127.0.0.1 first! If closed, it is definitely not occupied.
+            # This completely avoids calling psutil.net_connections() if the port is free!
             import socket as _sock
             try:
-                with _sock.create_connection(("localhost", assigned_port), timeout=0.3):
+                with _sock.create_connection(("127.0.0.1", assigned_port), timeout=0.03):
                     _occupied = True
             except Exception:
                 pass
+
+            if _occupied:
+                for conn in psutil.net_connections(kind='inet'):
+                    if conn.laddr.port == assigned_port and conn.status == 'LISTEN':
+                        _pid = conn.pid
+                        break
+        except Exception:
+            pass
             
         if _occupied:
             logger.info(f"Adopting externally running {app_name} on port {assigned_port} (PID: {_pid})")
@@ -3556,61 +3578,88 @@ logger.info("🐕 App Watchdog started (30s interval, auto-restart with 5min coo
 
 
 @app.get("/api/apps/running")
-def get_running_apps():
+async def get_running_apps():
     """Return list of currently running apps with health status."""
     # ── Dynamic Port Scan & Auto-Adoption ──
     try:
-        import psutil
         with open(REGISTRY_PATH, "r", encoding="utf-8") as f:
             reg_data = json.load(f)
+        
+        ports_to_check = {}
         for app_name, app_info in reg_data.get("apps", {}).items():
             if app_name not in _running_apps:
                 port = app_info.get("port")
                 if port:
-                    port = int(port)
-                    occupied = False
-                    try:
-                        for conn in psutil.net_connections(kind='inet'):
-                            if conn.laddr.port == port and conn.status == 'LISTEN':
-                                occupied = True
-                                break
-                    except Exception:
-                        import socket as _sock
-                        try:
-                            with _sock.create_connection(("localhost", port), timeout=0.05):
-                                occupied = True
-                        except Exception:
-                            pass
+                    ports_to_check[app_name] = int(port)
                     
-                    if occupied:
-                        logger.info(f"Dynamic auto-adoption: Adopting active {app_name} on port {port}")
-                        _do_launch(app_name)
+        if ports_to_check:
+            def check_ports_sync(ports_dict):
+                import socket as _sock
+                import psutil
+                listening_ports = set()
+                try:
+                    for conn in psutil.net_connections(kind='inet'):
+                        if conn.status == 'LISTEN':
+                            listening_ports.add(conn.laddr.port)
+                except Exception:
+                    pass
+                
+                active = {}
+                for name, port in ports_dict.items():
+                    if port in listening_ports:
+                        active[name] = True
+                    else:
+                        try:
+                            # 127.0.0.1 is much faster than localhost on Windows
+                            with _sock.create_connection(("127.0.0.1", port), timeout=0.03):
+                                active[name] = True
+                        except Exception:
+                            active[name] = False
+                return active
+                
+            active_ports = await asyncio.to_thread(check_ports_sync, ports_to_check)
+            for app_name, occupied in active_ports.items():
+                if occupied:
+                    logger.info(f"Dynamic auto-adoption: Adopting active {app_name} on port {ports_to_check[app_name]}")
+                    _do_launch(app_name)
     except Exception as e:
         logger.warning(f"Dynamic auto-adoption failed: {e}")
 
     result = {}
     items = []
-    for name, info in list(_running_apps.items()):
+    
+    # Concurrent health ping helper
+    async def ping_health(name, info):
         alive = info["process"].poll() is None
         health = "healthy" if alive else "dead"
-        # Quick health ping for alive processes
+        
         if alive:
             try:
-                import urllib.request
-                with urllib.request.urlopen(f"http://localhost:{info['port']}/api/health", timeout=2) as resp:
-                    if resp.status != 200:
+                import httpx
+                async with httpx.AsyncClient(timeout=0.15) as client:
+                    resp = await client.get(f"http://127.0.0.1:{info['port']}/api/health")
+                    if resp.status_code != 200:
                         health = "degraded"
             except Exception:
                 health = "degraded"
-        app_data = {
+                
+        return {
             "name": name,
             "port": info["port"], 
             "pid": info["pid"],
             "alive": alive, 
             "health": health
         }
-        result[name] = app_data
-        items.append(app_data)
+
+    if _running_apps:
+        tasks = [ping_health(name, info) for name, info in list(_running_apps.items())]
+        ping_results = await asyncio.gather(*tasks)
+        
+        for app_data in ping_results:
+            name = app_data["name"]
+            result[name] = app_data
+            items.append(app_data)
+            
     return {"items": items, "total": len(items), "apps": result, **result}
 
 
@@ -6448,31 +6497,44 @@ async def _startup_watcher():
     
     #  Auto-adopt already running apps from registry.json
     try:
-        import psutil
         with open(REGISTRY_PATH, "r", encoding="utf-8") as f:
             reg_data = json.load(f)
+        
+        ports_to_check = {}
         for app_name, app_info in reg_data.get("apps", {}).items():
             port = app_info.get("port")
             if port:
-                port = int(port)
-                # Check if port is occupied
-                occupied = False
+                ports_to_check[app_name] = int(port)
+                
+        if ports_to_check:
+            def check_ports_sync(ports_dict):
+                import socket as _sock
+                import psutil
+                listening_ports = set()
                 try:
                     for conn in psutil.net_connections(kind='inet'):
-                        if conn.laddr.port == port and conn.status == 'LISTEN':
-                            occupied = True
-                            break
+                        if conn.status == 'LISTEN':
+                            listening_ports.add(conn.laddr.port)
                 except Exception:
-                    # Fallback socket ping
-                    import socket as _sock
-                    try:
-                        with _sock.create_connection(("localhost", port), timeout=0.1):
-                            occupied = True
-                    except Exception:
-                        pass
+                    pass
                 
+                active = {}
+                for name, port in ports_dict.items():
+                    if port in listening_ports:
+                        active[name] = True
+                    else:
+                        try:
+                            # 127.0.0.1 is much faster than localhost on Windows
+                            with _sock.create_connection(("127.0.0.1", port), timeout=0.03):
+                                active[name] = True
+                        except Exception:
+                            active[name] = False
+                return active
+                
+            active_ports = await asyncio.to_thread(check_ports_sync, ports_to_check)
+            for app_name, occupied in active_ports.items():
                 if occupied:
-                    logger.info(f"Watchdog auto-adopting active app {app_name} on port {port}")
+                    logger.info(f"Watchdog auto-adopting active app {app_name} on port {ports_to_check[app_name]}")
                     _do_launch(app_name)
     except Exception as e:
         logger.warning(f"Failed to auto-adopt registered apps: {e}")
