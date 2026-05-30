@@ -25,7 +25,7 @@ class SentinelSlidesManager:
         if credentials_dict is None:
             if VAULT_AVAILABLE:
                 vault = FernetVault()
-                creds_raw = vault.retrieve("google_drive_service_account")
+                creds_raw = vault.retrieve("google_drive_service_account") or vault.retrieve("google_workspace_sa")
                 if creds_raw:
                     try:
                         credentials_dict = json.loads(creds_raw)
@@ -120,6 +120,55 @@ class SentinelSlidesManager:
         except Exception as e:
             logger.error(f"Failed to apply mutations to presentation {presentation_id}: {e}")
             raise RuntimeError(f"WORKSPACE_MUTATION_ERROR: Slides batchUpdate failed: {e}")
+
+    def inject_image_to_slide(self, presentation_id: str, slide_object_id: str, image_url: str) -> dict:
+        """
+        Injects a generated visual asset (using a public URL) directly into the targeted slide.
+        Utilizes slides createImage batchUpdate request.
+        """
+        if not self.initialized:
+            logger.info(f"[STUB] Injecting image '{image_url}' to slide '{slide_object_id}' inside presentation '{presentation_id}'")
+            return {"status": "success", "mode": "stub", "image_url": image_url}
+
+        try:
+            import uuid
+            image_id = f"image_{uuid.uuid4().hex[:8]}"
+            requests = [
+                {
+                    'createImage': {
+                        'objectId': image_id,
+                        'url': image_url,
+                        'elementProperties': {
+                            'pageObjectId': slide_object_id,
+                            'size': {
+                                'height': {'magnitude': 270, 'unit': 'PT'},
+                                'width': {'magnitude': 480, 'unit': 'PT'}
+                            },
+                            'transform': {
+                                'scaleX': 1, 'scaleY': 1,
+                                'translateX': 120, 'translateY': 150,
+                                'unit': 'PT'
+                            }
+                        }
+                    }
+                }
+            ]
+
+            response = self.slides_service.presentations().batchUpdate(
+                presentationId=presentation_id, 
+                body={'requests': requests}
+            ).execute()
+            
+            logger.info(f"Successfully injected image into slide {slide_object_id} for presentation {presentation_id}.")
+            return {
+                "status": "success",
+                "presentation_id": presentation_id,
+                "image_object_id": image_id,
+                "api_response": response
+            }
+        except Exception as e:
+            logger.error(f"Failed to inject image into slide {slide_object_id}: {e}")
+            raise RuntimeError(f"WORKSPACE_IMAGE_ERROR: Slides batchUpdate createImage failed: {e}")
 
     def actuate_blueprint(self, blueprint: dict) -> dict:
         """
