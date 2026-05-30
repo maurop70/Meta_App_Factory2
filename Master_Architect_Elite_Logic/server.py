@@ -1099,6 +1099,88 @@ async def review(req: ReviewRequest):
                 # 3. CEO Synthesis (Heavy gemini-2.5-pro model execution)
                 yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CEO', 'content': '👑 [CEO Brain] Synthesizing division reports and resolving strategic bottlenecks...\\n'})}\n\n"
                 
+                # Phase 2 Semantic Recall Pre-Fetch Hook
+                historical_context = ""
+                try:
+                    from backend.core.vector_store import VectorStore
+                    from backend.services.embedding_service import GoogleEmbeddingService
+                except ImportError:
+                    from core.vector_store import VectorStore
+                    from services.embedding_service import GoogleEmbeddingService
+                
+                pre_fetch_store = VectorStore(persist_directory="./chroma_data")
+                pre_fetch_service = GoogleEmbeddingService()
+                
+                logger.info("Semantic Recall Hook: Vectorizing raw CEO objective...")
+                embedding_res = await pre_fetch_service.get_embedding_async(user_query)
+                
+                # STRICT GUARDRAIL: Halt and yield 502 error if embedding service fails
+                if isinstance(embedding_res, JSONResponse):
+                    err_msg = json.loads(embedding_res.body.decode()).get("detail", "Google Embedding API offline.")
+                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CEO', 'content': f'❌ [Semantic Recall Gate] FAILED to fetch objective embedding: {err_msg}\\n'})}\n\n"
+                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CEO', 'content': '[STREAM FRACTURE: 502 Gateway Unreachable]'})}\n\n"
+                    return
+                
+                # Asynchronously query ChromaDB (L2 distance threshold: 0.55)
+                try:
+                    logger.info("Semantic Recall Hook: Actuating spatial ChromaDB recall query...")
+                    results = await pre_fetch_store.query_async(
+                        collection_name="maf_knowledge",
+                        query_embeddings=[embedding_res],
+                        n_results=5
+                    )
+                    
+                    ids = results.get("ids", [[]])[0]
+                    distances = results.get("distances", [[]])[0]
+                    documents = results.get("documents", [[]])[0]
+                    
+                    valid_docs = []
+                    recalled_telemetry = []
+                    
+                    for idx_item in range(len(ids)):
+                        doc_id = ids[idx_item]
+                        distance = distances[idx_item]
+                        doc_text = documents[idx_item]
+                        
+                        # STRICT GUARDRAIL: L2 distance must be < 0.55
+                        if distance < 0.55:
+                            valid_docs.append(f"Document ID: {doc_id}\nContent: {doc_text}")
+                            recalled_telemetry.append({"document_id": doc_id, "l2_distance": float(distance)})
+                    
+                    if valid_docs:
+                        joined_docs = "\n\n".join(valid_docs)
+                        # STRICT GUARDRAIL: XML Bounded Prompt Mutation
+                        historical_context = (
+                            "<historical_semantic_memory>\n"
+                            f"{joined_docs}\n"
+                            "</historical_semantic_memory>"
+                        )
+                        logger.info(f"Semantic Recall Hook: Injected {len(valid_docs)} recalled documents.")
+                        
+                        # Telemetry Handshake: Transmit asynchronously to /api/qa/alerts
+                        try:
+                            import httpx
+                            async def dispatch_telemetry():
+                                alert_payload = {
+                                    "source": "CEO_SEMANTIC_RECALL",
+                                    "severity": "INFO",
+                                    "alert_type": "vector_recall",
+                                    "message": f"Semantic recall successful for objective. Items recalled: {len(recalled_telemetry)}",
+                                    "metadata": {"recalled_items": recalled_telemetry, "objective": user_query[:100]}
+                                }
+                                for port_tel in [8000, 5009]:
+                                    try:
+                                        async with httpx.AsyncClient(timeout=2.0) as tel_client:
+                                            await tel_client.post(f"http://127.0.0.1:{port_tel}/api/qa/alerts", json=alert_payload)
+                                            break
+                                    except Exception:
+                                        pass
+                            asyncio.create_task(dispatch_telemetry())
+                        except Exception as tel_err:
+                            logger.warning(f"Telemetry dispatch failed: {tel_err}")
+                except Exception as query_err:
+                    logger.error(f"Semantic Recall Hook query failure: {query_err}")
+
                 ceo_prompt = (
                     f"You are the CEO of the Antigravity Meta App Factory. Ingest the following physical division reports for intent: '{user_query}':\n\n"
                     f"=== CMO Market Trend analysis ===\n{cmo_summary}\n\n"
@@ -1107,9 +1189,14 @@ async def review(req: ReviewRequest):
                     "Provide a master synthesis of these findings. Force a decisive resolution. State next actions."
                 )
                 
+                # Stitch historical semantic context under XML boundary isolation
+                ceo_system_instruction = VENTURE_ARCHITECT
+                if historical_context:
+                    ceo_system_instruction = f"{VENTURE_ARCHITECT}\n\n{historical_context}"
+                
                 model = genai.GenerativeModel(
                     model_name='gemini-2.5-pro',
-                    system_instruction=VENTURE_ARCHITECT
+                    system_instruction=ceo_system_instruction
                 )
                 
                 response_stream = model.generate_content(

@@ -1,3 +1,4 @@
+# Phase 2 Semantic Recall - Verified for text-embedding-004 & gemini-embedding-2 fallback
 import os
 import httpx
 from typing import List, Union, Dict, Any, Optional
