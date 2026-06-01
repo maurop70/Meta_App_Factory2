@@ -84,7 +84,8 @@ async def get_status():
             e.get("params", {}).get("response", {}).get("url", "") or
             ""
         )
-        if "claude.ai" in str(url):
+        if any(domain in str(url) for domain in 
+               ("claude.ai", "anthropic.com", "assets-proxy.anthropic.com")):
             return False
         if not url and e.get("type") in ("console_error", "page_error"):
             return False
