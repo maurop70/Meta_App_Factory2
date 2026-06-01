@@ -1,0 +1,10 @@
+{
+  "nodes": [
+    {
+      "action": "AST_SPLICE",
+      "file_path": "cpo_verify.py",
+      "search_content": "    db_cursor.execute(\"INSERT INTO system_state (key, val) VALUES (?, ?)\")",
+      "replace_content": "    db_cursor.execute(\"INSERT INTO system_state (key, val) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET val = excluded.val\")"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "nodes": [
+    {
+      "action": "AST_SPLICE",
+      "file_path": "cpo_verify.py",
+      "search_content": "def execute_blueprint(db_cursor):\n    db_cursor.execute(\"INSERT INTO system_state (key, val) VALUES (?, ?)\")\n    return True",
+      "replace_content": "def execute_blueprint(db_cursor):\n    db_cursor.execute(\"INSERT INTO system_state (key, val) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET val = excluded.val\")\n    return True"
+    }
+  ]
+}

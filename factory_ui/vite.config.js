@@ -9,12 +9,27 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     proxy: {
+      '/api/workspace/actuate': {
+        target: 'http://127.0.0.1:5009',
+        changeOrigin: true,
+        secure: false
+      },
+      '/api/system/registry': {
+        target: 'http://127.0.0.1:5050',
+        changeOrigin: true,
+        secure: false
+      },
       '/api/operator': {
         target: 'http://127.0.0.1:5100',
         changeOrigin: true,
       },
       '/api/inventory': {
-        target: 'http://127.0.0.1:5005',
+        target: 'http://127.0.0.1:5000',
+        changeOrigin: true,
+        secure: false
+      },
+      '/api/cio/': {
+        target: 'http://127.0.0.1:5090',
         changeOrigin: true,
         secure: false
       },
@@ -23,13 +38,78 @@ export default defineConfig({
         changeOrigin: true,
         secure: false
       },
-      '/api/apps': {
+      '/api/orchestrate': {
         target: 'http://127.0.0.1:5050',
         changeOrigin: true,
         secure: false
       },
-      '/api/qa/stream': {
+      '/api/agent': {
         target: 'http://127.0.0.1:5050',
+        changeOrigin: true,
+        secure: false
+      },
+      '/api/apps': {
+        target: 'http://127.0.0.1:5000',
+        changeOrigin: true,
+        secure: false
+      },
+      '/api/qa/stream': {
+        target: 'http://127.0.0.1:5030',
+        changeOrigin: true,
+        secure: false,
+        configure: (proxy, _options) => {
+          proxy.on('proxyRes', (proxyRes, req, res) => {
+            res.setHeader('Cache-Control', 'no-cache, no-transform');
+            res.setHeader('Connection', 'keep-alive');
+            res.setHeader('X-Accel-Buffering', 'no');
+            proxyRes.headers['cache-control'] = 'no-cache, no-transform';
+            proxyRes.headers['connection'] = 'keep-alive';
+            proxyRes.headers['x-accel-buffering'] = 'no';
+          });
+        }
+      },
+      '/api/ghost-stream': {
+        target: 'http://127.0.0.1:5030',
+        changeOrigin: true,
+        secure: false,
+        configure: (proxy, _options) => {
+          proxy.on('proxyRes', (proxyRes, req, res) => {
+            res.setHeader('Cache-Control', 'no-cache, no-transform');
+            res.setHeader('Connection', 'keep-alive');
+            res.setHeader('X-Accel-Buffering', 'no');
+            proxyRes.headers['cache-control'] = 'no-cache, no-transform';
+            proxyRes.headers['connection'] = 'keep-alive';
+            proxyRes.headers['x-accel-buffering'] = 'no';
+          });
+        }
+      },
+      '/api/dashboard': {
+        target: 'http://127.0.0.1:5030',
+        changeOrigin: true,
+        secure: false
+      },
+      '/api/reports': {
+        target: 'http://127.0.0.1:5030',
+        changeOrigin: true,
+        secure: false
+      },
+      '/api/projects/': {
+        target: 'http://127.0.0.1:5000',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => {
+          const [base, query] = path.split('?');
+          const safeBase = base.endsWith('/') ? base : base + '/';
+          return query ? safeBase + '?' + query : safeBase;
+        }
+      },
+      '/api/pulse': {
+        target: 'http://127.0.0.1:5030',
+        changeOrigin: true,
+        secure: false
+      },
+      '/api/discover': {
+        target: 'http://127.0.0.1:5030',
         changeOrigin: true,
         secure: false
       },
@@ -37,6 +117,91 @@ export default defineConfig({
         target: 'http://127.0.0.1:5050',
         changeOrigin: true,
         secure: false
+      },
+      '/api/challenge/override': {
+        target: 'http://127.0.0.1:5000',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/api/challenge': {
+        target: 'http://127.0.0.1:5050',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/api/genesis': {
+        target: 'http://127.0.0.1:5050',
+        changeOrigin: true,
+        secure: false
+      },
+      '/api/bridge/stream': {
+        target: 'http://127.0.0.1:5050',
+        changeOrigin: true,
+        secure: false,
+        configure: (proxy, _options) => {
+          proxy.on('proxyRes', (proxyRes, req, res) => {
+            res.setHeader('Cache-Control', 'no-cache, no-transform');
+            res.setHeader('Connection', 'keep-alive');
+            res.setHeader('X-Accel-Buffering', 'no');
+            proxyRes.headers['cache-control'] = 'no-cache, no-transform';
+            proxyRes.headers['connection'] = 'keep-alive';
+            proxyRes.headers['x-accel-buffering'] = 'no';
+          });
+        }
+      },
+      '/api/bridge': {
+        target: 'http://127.0.0.1:5050',
+        changeOrigin: true,
+        secure: false
+      },
+      '/api/claudeay': {
+        target: 'http://127.0.0.1:5000',
+        changeOrigin: true,
+        secure: false
+      },
+      '/api/telemetry/stream': {
+        target: 'http://127.0.0.1:5000',
+        changeOrigin: true,
+        secure: false,
+        configure: (proxy, _options) => {
+          proxy.on('proxyRes', (proxyRes, req, res) => {
+            res.setHeader('Cache-Control', 'no-cache, no-transform');
+            res.setHeader('Connection', 'keep-alive');
+            res.setHeader('X-Accel-Buffering', 'no');
+            proxyRes.headers['cache-control'] = 'no-cache, no-transform';
+            proxyRes.headers['connection'] = 'keep-alive';
+            proxyRes.headers['x-accel-buffering'] = 'no';
+          });
+        }
+      },
+      '/api/test': {
+        target: 'http://127.0.0.1:5030',
+        changeOrigin: true,
+        secure: false,
+        configure: (proxy, _options) => {
+          proxy.on('proxyRes', (proxyRes, req, res) => {
+            res.setHeader('Cache-Control', 'no-cache, no-transform');
+            res.setHeader('Connection', 'keep-alive');
+            res.setHeader('X-Accel-Buffering', 'no');
+            proxyRes.headers['cache-control'] = 'no-cache, no-transform';
+            proxyRes.headers['connection'] = 'keep-alive';
+            proxyRes.headers['x-accel-buffering'] = 'no';
+          });
+        }
+      },
+      '/api/war-room/stream': {
+        target: 'http://127.0.0.1:5000',
+        changeOrigin: true,
+        secure: false,
+        configure: (proxy, _options) => {
+          proxy.on('proxyRes', (proxyRes, req, res) => {
+            res.setHeader('Cache-Control', 'no-cache, no-transform');
+            res.setHeader('Connection', 'keep-alive');
+            res.setHeader('X-Accel-Buffering', 'no');
+            proxyRes.headers['cache-control'] = 'no-cache, no-transform';
+            proxyRes.headers['connection'] = 'keep-alive';
+            proxyRes.headers['x-accel-buffering'] = 'no';
+          });
+        }
       },
       '/api': {
         target: 'http://127.0.0.1:5000',

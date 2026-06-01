@@ -100,6 +100,8 @@ debug_screenshot_current.png
 client/
 server/
 src/
+!factory_ui/src/
+!factory_ui/src/**
 check_execution_status.py
 check_manifest.py
 diagnose_ui_state.py
@@ -126,3 +128,40 @@ e2e_inventory_audit.py
 test_500.py
 vite.config.js
 factory_ui/vite.config.js.backup
+
+# ── Runtime & ephemeral state (never commit) ──────────────
+registry.json
+projects/Aether/warroom_history.json
+Project_Aether/Boardroom_Exchange/reports/
+.secure_backup/
+chroma_data/
+chroma_test_data/
+
+# ── Python bytecode (never commit) ────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# ── Claude MCP Bridge runtime logs ────────────────────────
+claude-mcp-bridge/logs/
+claude-mcp-bridge/mandates/
+
+# ── Node / frontend builds ────────────────────────────────
+node_modules/
+dist/
+build/
+
+# ── Databases ─────────────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+*-wal
+*-shm
+
+# ── Environment secrets ───────────────────────────────────
+.env
+.env.*
+
+# ── Local Backup Files ───────────────────────────────────
+*.bak

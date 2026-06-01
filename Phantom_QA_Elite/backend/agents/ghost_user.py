@@ -337,7 +337,13 @@ class GhostUserRunner:
         self._record(result)
         return result
 
-    # ── Full Suite ────────────────────────────────────────
+    async def _run_all_tests(self):
+        await self._launch()
+        await self.test_page_load()
+        await self.test_navigation()
+        await self.test_forms()
+        await self.test_responsive()
+        await self.test_console_errors()
 
     async def run_full_suite(self, test_plan: dict = None) -> dict:
         """
@@ -349,19 +355,26 @@ class GhostUserRunner:
         self._emit("SUITE_START", {"url": self.base_url, "action": "Starting full UI test suite"})
 
         try:
-            await self._launch()
-
-            await self.test_page_load()
-            await self.test_navigation()
-            await self.test_forms()
-            await self.test_responsive()
-            await self.test_console_errors()
-
+            await asyncio.wait_for(self._run_all_tests(), timeout=60.0)
+        except asyncio.TimeoutError:
+            logger.error("Ghost User timed out after 60s. Fatal DOM lock.")
+            try:
+                await self._close()
+            except Exception:
+                pass
+            return {"pass": False, "error": "Ghost User timed out after 60s. Fatal DOM lock."}
         except Exception as e:
             logger.error(f"Ghost User suite crashed: {e}")
             self.results.append(TestResult("Suite Error", False, str(e)[:200], 0))
-        finally:
-            await self._close()
+            try:
+                await self._close()
+            except Exception:
+                pass
+        else:
+            try:
+                await self._close()
+            except Exception:
+                pass
 
         total = len(self.results)
         passed = sum(1 for r in self.results if r.passed)
