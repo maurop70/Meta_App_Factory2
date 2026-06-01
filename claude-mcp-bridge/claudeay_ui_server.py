@@ -5,8 +5,11 @@ Lightweight FastAPI server serving the ClaudeAY standalone
 web interface on port 9002. Bridges the browser UI to the
 MCP bridge, loop engine, and Antigravity API.
 """
-
 import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+
 import json
 import asyncio
 import logging
@@ -96,10 +99,10 @@ async def execute_intent(request: Request):
 
     async def stream():
         try:
-            from claude_mcp_bridge.dispatcher import AntigravityDispatcher
-            from claude_mcp_bridge.ay_client import send_mandate
-            from claude_mcp_bridge.loop_engine import load_recent_telemetry
-            from claude_mcp_bridge.intent_router import classify_intent
+            from dispatcher import AntigravityDispatcher
+            from ay_client import send_mandate
+            from loop_engine import load_recent_telemetry
+            from intent_router import classify_intent
 
             yield f"data: {json.dumps({'type': 'status', 'content': 'Classifying intent...'})}\n\n"
 
@@ -117,7 +120,7 @@ async def execute_intent(request: Request):
 
             yield f"data: {json.dumps({'type': 'status', 'content': 'Sending mandate to Antigravity...'})}\n\n"
 
-            ledger = send_mandate(mandate)
+            ledger = await asyncio.to_thread(send_mandate, mandate)
 
             for line in ledger.split("\n"):
                 if line.strip():
