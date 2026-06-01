@@ -47,6 +47,14 @@ async def ws_handler(websocket):
             try:
                 event = json.loads(raw)
                 event["_received_at"] = datetime.utcnow().isoformat()
+
+                # ── Telemetry filter: exclude claude.ai traffic ──────────
+                _url = event.get("url") or event.get("data", {}).get("url", "")
+                if "claude.ai" in str(_url):
+                    log.debug(f"[TELEMETRY FILTER] Skipped claude.ai event: {str(event)[:80]}")
+                    continue
+                # ─────────────────────────────────────────────────────────
+
                 telemetry_buffer.append(event)
                 TELEMETRY_LOG.parent.mkdir(parents=True, exist_ok=True)
                 with open(TELEMETRY_LOG, "a", encoding="utf-8") as f:
