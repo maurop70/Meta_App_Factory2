@@ -46,6 +46,7 @@ from typing import Optional, List, Dict
 import threading
 from collections import deque
 from loop_engine import AutonomousLoop
+from intent_router import classify_intent
 
 # Shared loop status ring buffer — last 50 messages
 loop_status_buffer: deque = deque(maxlen=50)
@@ -497,7 +498,7 @@ DIRECT_AGENT_PERSONAS = {
     ),
 }
 
-async def classify_intent(prompt: str, history: List[dict] = None) -> str:
+async def classify_builder_venture_intent(prompt: str, history: List[dict] = None) -> str:
     api_key = os.getenv("GEMINI_API_KEY", "")
     if api_key:
         api_key = api_key.strip("'\"")
@@ -697,13 +698,7 @@ async def review(req: ReviewRequest):
     # Branch A: Conversational Query Bypass
     if classification == "CONVERSATIONAL_QUERY":
         # ── ClaudeAY Dual-Engine Router ─────────────────────
-        import sys as _cay_sys
-        import os as _cay_os
-        _cay_sys.path.insert(0, _cay_os.path.dirname(
-            _cay_os.path.dirname(_cay_os.path.abspath(__file__))
-        ))
         try:
-            from claude_mcp_bridge.intent_router import classify_intent
             _routing_engine = await classify_intent(user_query)
         except Exception as _cay_err:
             import logging
@@ -856,7 +851,7 @@ async def review(req: ReviewRequest):
             genai.configure(api_key=api_key)
 
             # Step A: Run classify_intent
-            intent = await classify_intent(user_query, req.history)
+            intent = await classify_builder_venture_intent(user_query, req.history)
             if intent == "BUILDER":
                 if user_query.strip().startswith("/genesis "):
                     # Genesis Architect Mode!
