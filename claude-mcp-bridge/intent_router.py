@@ -25,6 +25,11 @@ CLAUDE_KEYWORDS = [
     "backend", "frontend", "component", "schema", "function",
     "syntax", "import", "install", "dependency", "port",
     "server", "fastapi", "react", "vite", "uvicorn",
+    "404", "500", "503", "health", "diagnose", "diagnosis",
+    "endpoint", "route", "not found", "traceback", "stderr",
+    "stdout", "log", "watchdog", "monitor", "check", "verify",
+    "curl", "ping", "socket", "connection refused", "timeout",
+    "restart", "kill", "process", "pid", "daemon", "service",
 ]
 
 GEMINI_KEYWORDS = [
