@@ -7,6 +7,10 @@ The central API server for the Master Architect Elite Logic app.
 Exposes Triad review, Adversarial Gate management, pattern memory,
 and War Room integration endpoints.
 """
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
 # ── V3.0 Resilience Integration ──────────────────────────
 import os as _os, sys as _sys
@@ -716,9 +720,9 @@ async def review(req: ReviewRequest):
                     os.path.dirname(os.path.abspath(__file__))
                 ))
                 try:
-                    from claude_mcp_bridge.dispatcher import AntigravityDispatcher
-                    from claude_mcp_bridge.ay_client import send_mandate
-                    from claude_mcp_bridge.loop_engine import load_recent_telemetry
+                    from dispatcher import AntigravityDispatcher
+                    from ay_client import send_mandate
+                    from loop_engine import load_recent_telemetry
 
                     dispatcher = AntigravityDispatcher()
                     telemetry = load_recent_telemetry()
@@ -1189,11 +1193,12 @@ async def review(req: ReviewRequest):
                             {"infrastructure_cost_monthly": 500, "complexity": "medium"}
                         )
                         if cfo_res.get("status") == "success":
+                            metrics = cfo_res.get('metrics', cfo_res)
                             cfo_report = (
-                                f"Generated Spreadsheet Model: {cfo_res.get('file_path')}\n"
-                                f"Projected IRR: {cfo_res.get('metrics', {}).get('irr_pct', 0)}%\n"
-                                f"Break-Even Timeline: {cfo_res.get('metrics', {}).get('breakeven_months', 0)} Months\n"
-                                f"Year 1 Net Profit: ${cfo_res.get('metrics', {}).get('net_income_y1', 0):,.2f}"
+                                f"Generated Spreadsheet Model: {cfo_res.get('file_path', cfo_res.get('file_name', 'None'))}\n"
+                                f"Projected IRR: {metrics.get('irr_pct', metrics.get('roi_percentage', 0))}%\n"
+                                f"Break-Even Timeline: {metrics.get('breakeven_months', 0)} Months\n"
+                                f"Year 1 Net Profit: ${metrics.get('net_income_y1', metrics.get('projected_revenue', 0)):,.2f}"
                             )
                         else:
                             cfo_report = f"[CFO modeling issue: {cfo_res.get('message')}]"

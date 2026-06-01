@@ -4,7 +4,7 @@ import uuid
 import subprocess
 import asyncio
 
-from fastapi import FastAPI, UploadFile, File, HTTPException, status
+from fastapi import FastAPI, UploadFile, File, HTTPException, status, Request
 from fastapi.responses import JSONResponse
 
 # Assume 'app' is already initialized in server.py.
@@ -121,6 +121,53 @@ async def ingest_ledger(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to ingest ledger file: {e}"
         )
+
+@app.post("/api/consult")
+async def cfo_consult(req: Request):
+    try:
+        content_type = req.headers.get("content-type", "")
+        if "application/json" in content_type:
+            body = await req.json()
+        else:
+            form = await req.form()
+            body = dict(form)
+            
+        from cfo_agent import CFOAgent
+        cfo = CFOAgent()
+        
+        marketing_cost = body.get("marketing_cost")
+        if marketing_cost is not None:
+            try:
+                marketing_cost = float(marketing_cost)
+            except ValueError:
+                marketing_cost = 25000
+        else:
+            marketing_cost = 25000
+
+        infrastructure_cost = body.get("infrastructure_cost")
+        if infrastructure_cost is not None:
+            try:
+                infrastructure_cost = float(infrastructure_cost)
+            except ValueError:
+                infrastructure_cost = 500
+        else:
+            infrastructure_cost = 500
+
+        result = await asyncio.to_thread(
+            cfo.synthesize,
+            "warroom",
+            {"marketing_cost": marketing_cost, 
+             "sentiment": body.get("sentiment", "neutral")},
+            {"infrastructure_cost_monthly": infrastructure_cost, 
+             "complexity": body.get("complexity", "medium")},
+            {"instruction": body.get("instruction", "")}
+        )
+        return JSONResponse(content=result)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger("CFO_Agent")
+        logger.error(f"CFO consult failed: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
 if __name__ == "__main__":
     import uvicorn

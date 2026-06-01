@@ -20,10 +20,44 @@ import asyncio
 import logging
 from typing import Optional
 from html.parser import HTMLParser
+import os
+import httpx
 
 import aiohttp
 
 logger = logging.getLogger("DeepResearch")
+
+FIRECRAWL_KEY = os.getenv("FIRECRAWL_API_KEY", "")
+
+async def _firecrawl_search(query: str) -> str:
+    if not FIRECRAWL_KEY:
+        return ""
+    try:
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            resp = await client.post(
+                "https://api.firecrawl.dev/v1/search",
+                headers={
+                    "Authorization": f"Bearer {FIRECRAWL_KEY}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "query": query,
+                    "limit": 5,
+                    "scrapeOptions": {"formats": ["markdown"]}
+                }
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                results = data.get("data", [])
+                if results:
+                    formatted = "\n\n".join([
+                        f"## {r.get('title','')}\n{r.get('markdown', r.get('description',''))}\nSource: {r.get('url','')}"
+                        for r in results
+                    ])
+                    return formatted
+    except Exception as e:
+        pass
+    return ""
 
 
 class _TextExtractor(HTMLParser):
@@ -278,4 +312,15 @@ class DeepResearchCrawler:
 async def deep_research(query: str, custom_urls: list[str] = None) -> dict:
     """One-call convenience function for deep research."""
     crawler = DeepResearchCrawler()
-    return await crawler.research(query, custom_urls)
+    res = await crawler.research(query, custom_urls)
+    
+    existing_output = res.get("intelligence_brief", "")
+    firecrawl_data = await _firecrawl_search(query)
+    if firecrawl_data:
+        # Prepend Firecrawl results as primary intelligence
+        final_output = firecrawl_data + "\n\n---\n\n" + existing_output
+    else:
+        final_output = existing_output
+        
+    res["intelligence_brief"] = final_output
+    return res
