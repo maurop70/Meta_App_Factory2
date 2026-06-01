@@ -70,6 +70,7 @@ export default function BuilderChat() {
   const [isSocraticSubmitting, setIsSocraticSubmitting] = useState(false);
   const [lastPrompt, setLastPrompt] = useState("");
   const [isMaximized, setIsMaximized] = useState(false);
+  const [swarmOpen, setSwarmOpen] = useState(false);
   const [systemAgents, setSystemAgents] = useState([]);
 
   const fetchSystemRegistry = async () => {
@@ -198,6 +199,15 @@ export default function BuilderChat() {
       telemetryEs.close();
     };
   }, []);
+
+  useEffect(() => {
+    if (!swarmOpen) return;
+    const close = (e) => {
+      if (!e.target.closest('.swarm-pill-wrapper')) setSwarmOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [swarmOpen]);
 
   const abortControllerRef = useRef(null);
 
@@ -777,6 +787,23 @@ export default function BuilderChat() {
 
   const renderMessageContent = (msg) => {
     const { content, agent } = msg;
+
+    // Claude Architect response rendering
+    if (agent === 'CLAUDE_ARCHITECT') {
+      const formattedContent = typeof content === 'string'
+        ? content.replace(/\\n/g, '\n')
+        : content;
+      return (
+        <div className="claude-architect-response">
+          <div className="claude-architect-badge">
+            🔵 CLAUDE ARCHITECT
+          </div>
+          <div className="whitespace-pre-wrap leading-relaxed font-mono text-sm text-slate-200">
+            {formattedContent}
+          </div>
+        </div>
+      );
+    }
     
     // Check if it is a Venture Swarm response
     if (agent === 'VENTURE_ARCHITECT') {
@@ -899,27 +926,46 @@ export default function BuilderChat() {
           <span className="stream-badge" style={{ background: 'linear-gradient(135deg, #6366f1, #a78bfa)' }}>OMNI-ROUTER ACTIVE</span>
         </h2>
         <div className="flex items-center space-x-3">
-          <div className="flex items-center space-x-2 bg-slate-900/60 px-3 py-1 rounded-lg border border-slate-800 mr-2">
-            {systemAgents.map(agent => (
-              <span key={agent.id} className="text-[10px] font-mono flex items-center space-x-1" title={`${agent.name} on port ${agent.port}`}>
-                <span className={`h-1.5 w-1.5 rounded-full ${agent.status === 'ACTIVE' ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
-                <span style={{ color: agent.status === 'ACTIVE' ? '#a78bfa' : '#64748b' }}>{agent.name.split('_')[0]}</span>
-              </span>
-            ))}
+          <div className="swarm-pill-wrapper">
+            <button
+              className="swarm-pill"
+              onClick={() => setSwarmOpen(o => !o)}
+            >
+              <span className="swarm-pill-dot" />
+              Active Swarm
+              <span className="swarm-pill-count">{systemAgents.length}</span>
+            </button>
+            {swarmOpen && (
+              <div className="swarm-dropdown">
+                {systemAgents.length === 0 && (
+                  <div className="swarm-empty">No agents online</div>
+                )}
+                {systemAgents.map(agent => (
+                  <div key={agent.id} className="swarm-agent-row">
+                    <span className={`swarm-agent-dot ${agent.status === 'ACTIVE' ? 'dot-live' : 'dot-off'}`} />
+                    <span className="swarm-agent-name">{agent.name}</span>
+                    <span className="swarm-agent-port">:{agent.port}</span>
+                    <span className={`swarm-agent-status ${agent.status === 'ACTIVE' ? 'status-active' : 'status-idle'}`}>
+                      {agent.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           <button
             onClick={() => setIsMaximized(!isMaximized)}
-            className="px-3 py-1 bg-slate-800/80 hover:bg-slate-700/80 text-xs font-mono font-bold tracking-wider text-indigo-400 hover:text-indigo-350 border border-slate-700 hover:border-indigo-500/50 rounded-lg transition-all shadow-md flex items-center space-x-1"
+            className="header-btn header-btn-primary"
             title={isMaximized ? "Restore panel to standard view" : "Maximize panel to fullscreen"}
           >
-            <span>{isMaximized ? '🗗 Restore' : '⛶ Maximize'}</span>
+            {isMaximized ? '🗗 Restore' : '⛶ Maximize'}
           </button>
           <button
             onClick={handleNewThread}
-            className="px-3 py-1 bg-slate-800/80 hover:bg-slate-700/80 text-xs font-mono font-bold tracking-wider text-rose-400 hover:text-rose-350 border border-slate-700 hover:border-rose-500/50 rounded-lg transition-all shadow-md flex items-center space-x-1"
+            className="header-btn header-btn-danger"
             title="Flush chat history, sessionStorage, and cached document IDs"
           >
-            <span>[➕ New Thread]</span>
+            ➕ New Thread
           </button>
           <span className="text-xs font-mono tracking-wider text-cyan-400">BUILDER PULSE: ACTIVE</span>
           <span className="flex h-3 w-3 relative">
@@ -937,7 +983,7 @@ export default function BuilderChat() {
         {chatHistory.map((msg, idx) => (
           <div key={idx} className={`msg ${msg.role === 'user' ? 'user' : 'assistant'}`}>
              <strong className={`block mb-2 text-xs uppercase tracking-wider ${msg.role === 'user' ? 'text-cyan-400' : msg.agent === 'VENTURE_ARCHITECT' ? 'text-purple-400' : 'text-teal-400'}`}>
-                {msg.role === 'user' ? 'CO-PILOT' : msg.agent === 'VENTURE_ARCHITECT' ? '🤖 VENTURE ARCHITECT' : msg.agent === 'EXECUTIVE_ARCHITECT' ? '🏗️ EXECUTIVE ARCHITECT' : 'MAF ORCHESTRATOR'}
+                {msg.role === 'user' ? 'CO-PILOT' : msg.agent === 'VENTURE_ARCHITECT' ? '🤖 VENTURE ARCHITECT' : msg.agent === 'EXECUTIVE_ARCHITECT' ? '🏗️ EXECUTIVE ARCHITECT' : msg.agent === 'CLAUDE_ARCHITECT' ? '🔵 CLAUDE ARCHITECT' : 'MAF ORCHESTRATOR'}
              </strong>
              {renderMessageContent(msg)}
           </div>
@@ -1030,7 +1076,7 @@ export default function BuilderChat() {
         </div>
       )}
 
-      <div className="chat-input-bar">
+      <div className="chat-input-bar glowing-capsule-input">
         {isStreaming && (
           <button
             type="button"
