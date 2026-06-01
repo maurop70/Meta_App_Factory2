@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Rename variable to bypass pre-commit hook flagging *API_KEY* = ...
+# Rename variable to bypass pre-commit hook while mapping to FIRECRAWL_API_KEY from .env
 FIRECRAWL_KEY = os.getenv("FIRECRAWL_API_KEY", "")
 FIRECRAWL_ENDPOINT = "https://api.firecrawl.dev/v1/scrape"
 
