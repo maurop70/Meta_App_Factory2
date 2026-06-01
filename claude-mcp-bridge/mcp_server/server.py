@@ -55,6 +55,17 @@ async def ws_handler(websocket):
                     continue
                 # ─────────────────────────────────────────────────────────
 
+                # Drop console_error and page_error from external tabs
+                if event.get("type") in ("console_error", "page_error"):
+                    _url = (
+                        event.get("url") or
+                        event.get("data", {}).get("url", "") or
+                        ""
+                    )
+                    if not _url or "claude.ai" in str(_url):
+                        log.debug(f"[FILTER] Skipped external tab error: {event.get('type')}")
+                        continue
+
                 telemetry_buffer.append(event)
                 TELEMETRY_LOG.parent.mkdir(parents=True, exist_ok=True)
                 with open(TELEMETRY_LOG, "a", encoding="utf-8") as f:

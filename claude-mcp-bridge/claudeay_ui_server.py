@@ -74,8 +74,23 @@ async def get_status():
 
     telemetry = _read_jsonl(TELEMETRY_LOG, 20)
     loop_events = _read_jsonl(LOOP_LOG, 10)
-    critical = [e for e in telemetry if e.get("type") in
-                ("console_error", "page_error", "request_failed")]
+
+    def _is_maf_critical(e):
+        if e.get("type") not in ("console_error", "page_error", "request_failed"):
+            return False
+        url = (
+            e.get("url") or
+            e.get("data", {}).get("url", "") or
+            e.get("params", {}).get("response", {}).get("url", "") or
+            ""
+        )
+        if "claude.ai" in str(url):
+            return False
+        if not url and e.get("type") in ("console_error", "page_error"):
+            return False
+        return True
+
+    critical = [e for e in telemetry if _is_maf_critical(e)]
 
     return JSONResponse({
         "mcp_online": mcp_online,
