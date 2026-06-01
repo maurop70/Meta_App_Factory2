@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import ClaudeAYStatus from './ClaudeAYStatus';
 
 // --- ARCHITECTURAL INJECTION: INTELLIGENCE PARSER ---
 const EvaluationScorecard = ({ data }) => {
@@ -927,6 +928,7 @@ export default function BuilderChat() {
           </span>
         </div>
       </div>
+      <ClaudeAYStatus />
 
       <div className="chat-messages font-mono text-sm custom-scrollbar">
         <div className="text-teal-500 font-semibold opacity-90">&gt; TERMINAL BOOT COMPLETED SUCCESSFULLY</div>

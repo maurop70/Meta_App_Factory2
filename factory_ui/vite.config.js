@@ -153,6 +153,11 @@ export default defineConfig({
         changeOrigin: true,
         secure: false
       },
+      '/api/claudeay': {
+        target: 'http://127.0.0.1:5000',
+        changeOrigin: true,
+        secure: false
+      },
       '/api/telemetry/stream': {
         target: 'http://127.0.0.1:5000',
         changeOrigin: true,

@@ -1020,6 +1020,53 @@ def health_check():
     
     return telemetry
 
+@app.get("/api/claudeay/status")
+async def get_claudeay_status():
+    """ClaudeAY bridge status for the web terminal panel."""
+    import socket
+    from pathlib import Path as _P
+    _bridge = _P(__file__).parent / "claude-mcp-bridge"
+    _tlog   = _bridge / "logs" / "telemetry.jsonl"
+    _llog   = _bridge / "logs" / "loop_history.jsonl"
+    _rules  = _bridge / "rules" / "CLAUDE_RULES.md"
+
+    def _read_jsonl(path, n):
+        if not path.exists():
+            return []
+        try:
+            lines = path.read_text(encoding="utf-8").strip().splitlines()
+            return [json.loads(l) for l in lines[-n:] if l.strip()]
+        except Exception:
+            return []
+
+    _mcp_online = False
+    try:
+        _s = socket.create_connection(("localhost", 9001), timeout=1)
+        _s.close()
+        _mcp_online = True
+    except Exception:
+        pass
+
+    _telemetry  = _read_jsonl(_tlog, 10)
+    _loop       = _read_jsonl(_llog, 5)
+    _critical   = sum(1 for e in _telemetry
+                      if e.get("type") in
+                      ("console_error", "page_error", "request_failed"))
+
+    return JSONResponse({
+        "claudeay": {
+            "mcp_bridge_online": _mcp_online,
+            "mcp_port": 9001,
+            "rules_loaded": _rules.exists(),
+            "rules_lines": _rules.read_text(encoding="utf-8").count("\n")
+                           if _rules.exists() else 0,
+            "telemetry_events": len(_telemetry),
+            "critical_errors": _critical,
+        },
+        "recent_telemetry": _telemetry[-5:],
+        "recent_loop": _loop,
+    })
+
 
 class WarRoomExecuteRequest(BaseModel):
     project_id: str
