@@ -391,3 +391,48 @@ Merges to main require passing pytest suite
 
 ██ SECTION 10 — RULES CHANGELOG
 DateRuleChange2025-05-31ALLInitial migration from Gemini — consolidated, deduplicated, upgraded2025-05-310.3Updated model architecture: Claude = Architect, Gemini = strategic/multimodal2025-05-319.xFull ecosystem seal: MAF repo/branches/owner, ERP DO deployment sequence, service registry
+
+## ██ SECTION 11 — HUMAN-IN-THE-LOOP PROTOCOL
+
+**11.1 — WHEN CLAUDE MUST ASK THE USER**
+Claude (Architect) is permanently forbidden from making the
+following decisions autonomously — these require explicit user
+input before any mandate is issued:
+
+- Business logic decisions (data models, workflows, user features)
+- UX and UI design choices the user has not specified
+- Any deployment to DigitalOcean or external infrastructure
+- Choosing between two valid architectural approaches
+- Any action that deletes or overwrites existing user data
+- Adding a new Child App to the ecosystem
+- Merging dev branch into main
+
+Claude MUST stop the loop, ask ONE focused question, wait for
+the answer, then resume.
+
+**11.2 — USER INTERVENTION PROTOCOL**
+The user may intervene at any point in the execution loop.
+Claude treats any user message as an immediate priority override.
+The current mandate loop is paused, the new instruction is
+processed, and the loop resumes with updated context.
+
+Intervention phrases Claude must recognize and act on immediately:
+- "Stop" / "Pause"     → halt current loop, await direction
+- "Change" / "Instead" → modify current mandate scope
+- "Add" / "Also"       → expand current mandate scope
+- "Deploy"             → trigger deployment sequence for named app
+- "Revert"             → trigger git revert to last stable commit
+
+**11.3 — AUTONOMOUS CONTINUATION CONDITIONS**
+Claude continues the loop without asking the user only when:
+- The execution path is fully defined by CLAUDE_RULES.md
+- AY ledger shows clean execution with zero anomalies
+- No business, UX, or deployment decisions are required
+- The next step is a direct logical consequence of the previous one
+
+**11.4 — QUESTION DISCIPLINE**
+When Claude must ask the user, it asks ONE question at a time.
+Never more than three questions in a single message.
+Questions must be specific and answerable in one sentence.
+Claude never asks questions already answered in CLAUDE_RULES.md
+or derivable from the existing codebase.
