@@ -189,6 +189,29 @@ export default function BuilderChat() {
           setChatHistory(prev => [...prev, { role: 'system', content: `✅ [AY2 DAEMON SUCCESS] Successfully applied AST splice to '${data.file}'`, agent: 'UNKNOWN' }]);
         } else if (data.status === 'failed') {
           setChatHistory(prev => [...prev, { role: 'system', content: `❌ [AY2 DAEMON FAILED] Validation failed for '${data.file}'. Changes rolled back.`, agent: 'UNKNOWN' }]);
+        } else if (data.type === 'claudeay_fix_proposal') {
+          setChatHistory(prev => [...prev, {
+            role: 'system',
+            content: JSON.stringify({
+              fix_id: data.fix_id,
+              diagnosis: data.diagnosis,
+              error_count: data.error_count,
+            }),
+            agent: 'CLAUDEAY_PROPOSAL',
+            is_claudeay_proposal: true,
+          }]);
+        } else if (data.type === 'claudeay_fix_executing') {
+          setChatHistory(prev => [...prev, {
+            role: 'system',
+            content: `⚙️ [CLAUDEAY] Executing approved fix ${data.fix_id}...`,
+            agent: 'UNKNOWN'
+          }]);
+        } else if (data.type === 'claudeay_fix_dismissed') {
+          setChatHistory(prev => [...prev, {
+            role: 'system',
+            content: `🚫 [CLAUDEAY] Fix proposal ${data.fix_id} dismissed.`,
+            agent: 'UNKNOWN'
+          }]);
         }
       } catch (e) {
         console.error("Telemetry parse failed:", e);
@@ -787,6 +810,54 @@ export default function BuilderChat() {
 
   const renderMessageContent = (msg) => {
     const { content, agent } = msg;
+
+    if (agent === 'CLAUDEAY_PROPOSAL') {
+      let proposal = {};
+      try { proposal = JSON.parse(content); } catch (_) {}
+      return (
+        <div className="claudeay-proposal-card">
+          <div className="claudeay-proposal-header">
+            <span className="claudeay-proposal-badge">
+              🔵 CLAUDEAY AUTO-DIAGNOSIS
+            </span>
+            <span className="claudeay-proposal-count">
+              {proposal.error_count} error{proposal.error_count !== 1 ? 's' : ''} detected
+            </span>
+          </div>
+          <div className="claudeay-proposal-diagnosis">
+            {proposal.diagnosis}
+          </div>
+          <div className="claudeay-proposal-actions">
+            <button
+              type="button"
+              className="claudeay-approve-btn"
+              onClick={async () => {
+                await fetch('/api/claudeay/approve', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ fix_id: proposal.fix_id, action: 'approve' })
+                });
+              }}
+            >
+              ✅ Approve & Execute Fix
+            </button>
+            <button
+              type="button"
+              className="claudeay-dismiss-btn"
+              onClick={async () => {
+                await fetch('/api/claudeay/approve', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ fix_id: proposal.fix_id, action: 'dismiss' })
+                });
+              }}
+            >
+              🚫 Dismiss
+            </button>
+          </div>
+        </div>
+      );
+    }
 
     // Claude Architect response rendering
     if (agent === 'CLAUDE_ARCHITECT') {
