@@ -160,3 +160,6 @@ build/
 # ── Environment secrets ───────────────────────────────────
 .env
 .env.*
+
+# ── Local Backup Files ───────────────────────────────────
+*.bak
