@@ -141,6 +141,47 @@ async def get_telemetry():
     return JSONResponse({"events": events})
 
 
+@app.post("/api/loop/start")
+async def loop_start_proxy(request: Request):
+    import httpx
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.post("http://localhost:5050/api/loop/start", json=body, timeout=30.0)
+            return JSONResponse(status_code=resp.status_code, content=resp.json())
+        except Exception as e:
+            return JSONResponse(status_code=500, content={"error": f"Failed to reach loop server: {e}"})
+
+
+@app.get("/api/loop/status")
+async def loop_status_proxy():
+    import httpx
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.get("http://localhost:5050/api/loop/status", timeout=10.0)
+            return JSONResponse(status_code=resp.status_code, content=resp.json())
+        except Exception as e:
+            return JSONResponse(status_code=500, content={"error": f"Failed to reach loop server: {e}"})
+
+
+@app.post("/api/loop/approve")
+async def loop_approve_proxy(request: Request):
+    import httpx
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.post("http://localhost:5050/api/loop/approve", json=body, timeout=10.0)
+            return JSONResponse(status_code=resp.status_code, content=resp.json())
+        except Exception as e:
+            return JSONResponse(status_code=500, content={"error": f"Failed to reach loop server: {e}"})
+
+
 if __name__ == "__main__":
     print("ClaudeAY Web UI starting on http://localhost:9002")
     uvicorn.run(app, host="0.0.0.0", port=9002, log_level="warning")

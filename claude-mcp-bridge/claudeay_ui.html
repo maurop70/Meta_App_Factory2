@@ -501,6 +501,273 @@
   .chat-area::-webkit-scrollbar { width: 4px; }
   .chat-area::-webkit-scrollbar-track { background: transparent; }
   .chat-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ── Loop Panel Side Drawer ── */
+  .loop-panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 380px;
+    background: rgba(12, 12, 30, 0.95);
+    border-left: 1px solid var(--border);
+    backdrop-filter: blur(25px);
+    z-index: 50;
+    transform: translateX(100%);
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex;
+    flex-direction: column;
+    box-shadow: -10px 0 30px rgba(0,0,0,0.5);
+  }
+
+  .loop-panel.visible {
+    transform: translateX(0);
+  }
+
+  .loop-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .loop-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--indigo3);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .loop-status-badge {
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 20px;
+    border: 1px solid;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .badge-idle {
+    color: var(--text2);
+    border-color: rgba(71,85,105,0.3);
+    background: rgba(71,85,105,0.08);
+  }
+
+  .badge-running {
+    color: var(--green);
+    border-color: rgba(74,222,128,0.3);
+    background: rgba(74,222,128,0.08);
+  }
+
+  .loop-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .loop-body::-webkit-scrollbar { width: 4px; }
+  .loop-body::-webkit-scrollbar-track { background: transparent; }
+  .loop-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .loop-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .loop-label {
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .loop-input {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 10px;
+    outline: none;
+    resize: none;
+  }
+
+  .loop-input:focus {
+    border-color: var(--border2);
+  }
+
+  .btn-primary {
+    width: 100%;
+    padding: 10px;
+    background: linear-gradient(135deg, var(--indigo), var(--purple));
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 0 16px rgba(99,102,241,0.4);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .loop-terminal {
+    flex: 1;
+    background: #030308;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #a7f3d0; /* Soft terminal green */
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 260px;
+    min-height: 180px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .loop-terminal::-webkit-scrollbar { width: 4px; }
+  .loop-terminal::-webkit-scrollbar-track { background: transparent; }
+  .loop-terminal::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .term-line {
+    line-height: 1.4;
+    word-break: break-word;
+    white-space: pre-wrap;
+  }
+
+  .term-line.start { color: var(--indigo2); font-weight: 700; }
+  .term-line.done { color: var(--green); font-weight: 700; }
+  .term-line.error { color: var(--red); }
+  .term-line.approval { color: var(--amber); font-weight: 700; }
+
+  /* ── Approval Card ── */
+  .approval-card {
+    background: rgba(251,191,36,0.06);
+    border: 1px solid rgba(251,191,36,0.3);
+    border-radius: 8px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    animation: fade-in 0.3s ease;
+    box-shadow: 0 0 20px rgba(251,191,36,0.05);
+  }
+
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .approval-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--amber);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .approval-prompt {
+    font-size: 11px;
+    line-height: 1.4;
+    color: var(--text);
+  }
+
+  .approval-input {
+    width: 100%;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(251,191,36,0.3);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 8px;
+    outline: none;
+  }
+
+  .approval-input:focus {
+    border-color: rgba(251,191,36,0.6);
+  }
+
+  .btn-approval {
+    width: 100%;
+    padding: 8px;
+    background: var(--amber);
+    border: none;
+    border-radius: 6px;
+    color: var(--bg);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .btn-approval:hover {
+    box-shadow: 0 0 12px rgba(251,191,36,0.4);
+    background: #fcd34d;
+  }
+
+  /* ── Header toggle button style ── */
+  .loop-toggle-btn {
+    font-size: 9px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--indigo3);
+    background: rgba(99,102,241,0.08);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .loop-toggle-btn:hover {
+    color: white;
+    border-color: var(--border2);
+    box-shadow: var(--glow);
+  }
+
+  .loop-toggle-btn.active {
+    background: var(--indigo);
+    color: white;
+    border-color: var(--indigo2);
+  }
 </style>
 </head>
 <body>
@@ -529,6 +796,7 @@
       <span class="dot-pulse"></span>
       <span id="errorCount">0</span> ERR
     </span>
+    <button class="loop-toggle-btn" id="loopToggleBtn" onclick="toggleLoopPanel()">🔄 Loop Engine</button>
     <button class="telem-btn" onclick="toggleTelemetry()">Telemetry</button>
     <button class="new-session-btn" onclick="newSession()">↺ New</button>
   </div>
@@ -591,6 +859,40 @@
     <div class="input-hint">
       Enter to send · Shift+Enter for new line ·
       🔵 Claude handles code · ✦ Gemini handles strategy
+    </div>
+  </div>
+
+  <!-- Loop Engine Panel -->
+  <div class="loop-panel" id="loopPanel">
+    <div class="loop-header">
+      <div class="loop-title">Loop Engine</div>
+      <span class="loop-status-badge badge-idle" id="loopStatusBadge">Idle</span>
+    </div>
+    <div class="loop-body">
+      <div class="loop-input-group">
+        <label class="loop-label">User Intent</label>
+        <textarea id="loopIntentInput" class="loop-input" placeholder="Enter intent for Autonomous Loop..." rows="2"></textarea>
+        <button class="btn-primary" id="startLoopBtn" onclick="triggerStartLoop()">Actuate Loop</button>
+      </div>
+      
+      <div class="loop-input-group">
+        <label class="loop-label">Status Monitor</label>
+        <div class="loop-terminal" id="loopTerminal">
+          <div class="term-line start">Terminal ready. Actuate loop to begin tracking events.</div>
+        </div>
+      </div>
+
+      <!-- Dynamic Approval Card -->
+      <div class="approval-card" id="loopApprovalCard" style="display: none;">
+        <div class="approval-header">
+          <span>⚠️ Operator Approval Required</span>
+        </div>
+        <div class="approval-prompt" id="loopApprovalPrompt">
+          Waiting for directive...
+        </div>
+        <input type="text" id="loopApprovalInput" class="approval-input" placeholder="proceed / stop / custom directive..." onkeydown="handleApprovalKey(event)">
+        <button class="btn-approval" onclick="triggerSubmitApproval()">Submit Directive</button>
+      </div>
     </div>
   </div>
 </main>
@@ -824,6 +1126,181 @@
   function autoResize(el) {
     el.style.height = 'auto';
     el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  }
+
+  // ── Loop Engine Integration ─────────────────────────────
+  let isLoopMonitoring = false;
+  let loopPollInterval = null;
+
+  function toggleLoopPanel() {
+    const panel = document.getElementById('loopPanel');
+    const btn = document.getElementById('loopToggleBtn');
+    panel.classList.toggle('visible');
+    btn.classList.toggle('active');
+    
+    // Automatically poll status when panel is opened
+    if (panel.classList.contains('visible')) {
+      pollLoopStatus();
+      if (!loopPollInterval) {
+        loopPollInterval = setInterval(pollLoopStatus, 3000);
+      }
+    } else {
+      // Keep polling in background if loop is actually running
+      checkStopPolling();
+    }
+  }
+
+  function checkStopPolling() {
+    const panel = document.getElementById('loopPanel');
+    const statusBadge = document.getElementById('loopStatusBadge');
+    const isRunning = statusBadge.classList.contains('badge-running');
+    
+    if (!panel.classList.contains('visible') && !isRunning) {
+      if (loopPollInterval) {
+        clearInterval(loopPollInterval);
+        loopPollInterval = null;
+      }
+    }
+  }
+
+  async function triggerStartLoop() {
+    const input = document.getElementById('loopIntentInput');
+    const intent = input.value.trim();
+    if (!intent) return;
+
+    const startBtn = document.getElementById('startLoopBtn');
+    startBtn.disabled = true;
+    
+    try {
+      const res = await fetch('/api/loop/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ intent })
+      });
+      const data = await res.json();
+      if (data.status === 'loop started') {
+        appendTerminalLine('System', `Actuating loop: "${intent}"`, 'start');
+        input.value = '';
+        pollLoopStatus();
+      } else {
+        appendTerminalLine('Error', data.error || 'Failed to start loop', 'error');
+        startBtn.disabled = false;
+      }
+    } catch (e) {
+      appendTerminalLine('Error', `Network error: ${e.message}`, 'error');
+      startBtn.disabled = false;
+    }
+  }
+
+  async function pollLoopStatus() {
+    try {
+      const res = await fetch('/api/loop/status');
+      if (!res.ok) return;
+      const data = await res.json();
+      
+      const badge = document.getElementById('loopStatusBadge');
+      const startBtn = document.getElementById('startLoopBtn');
+      
+      if (data.running) {
+        badge.textContent = 'Running';
+        badge.className = 'loop-status-badge badge-running';
+        startBtn.disabled = true;
+      } else {
+        badge.textContent = 'Idle';
+        badge.className = 'loop-status-badge badge-idle';
+        startBtn.disabled = false;
+        checkStopPolling();
+      }
+      
+      renderLoopStatus(data.buffer);
+    } catch (_) {}
+  }
+
+  let lastBufferLength = 0;
+  
+  function renderLoopStatus(buffer) {
+    const terminal = document.getElementById('loopTerminal');
+    const approvalCard = document.getElementById('loopApprovalCard');
+    const approvalPrompt = document.getElementById('loopApprovalPrompt');
+    
+    // Clear terminal only if the buffer has been reset or is smaller (e.g. new loop started)
+    if (buffer.length < lastBufferLength || lastBufferLength === 0) {
+      terminal.innerHTML = '';
+    }
+    
+    // Render any new lines
+    const newItems = buffer.slice(terminal.children.length);
+    newItems.forEach(item => {
+      let typeClass = '';
+      if (item.type === 'start') typeClass = 'start';
+      else if (item.type === 'done') typeClass = 'done';
+      else if (item.type === 'error') typeClass = 'error';
+      else if (item.type === 'approval_required') typeClass = 'approval';
+      
+      const prefix = item.type ? `[${item.type.toUpperCase()}] ` : '';
+      appendTerminalLine(null, `${prefix}${item.msg}`, typeClass);
+    });
+    
+    lastBufferLength = buffer.length;
+    
+    // Check if approval is required (last entry in the buffer is approval_required)
+    const lastItem = buffer[buffer.length - 1];
+    if (lastItem && lastItem.type === 'approval_required') {
+      approvalPrompt.textContent = lastItem.msg;
+      approvalCard.style.display = 'flex';
+      
+      // Auto scroll loop body to show approval card
+      const loopBody = document.querySelector('.loop-body');
+      if (loopBody) {
+        loopBody.scrollTop = loopBody.scrollHeight;
+      }
+    } else {
+      approvalCard.style.display = 'none';
+    }
+  }
+
+  function appendTerminalLine(sender, message, typeClass) {
+    const terminal = document.getElementById('loopTerminal');
+    const div = document.createElement('div');
+    div.className = `term-line ${typeClass || ''}`;
+    
+    const timestamp = new Date().toLocaleTimeString();
+    const prefix = sender ? `[${timestamp}] ${sender}: ` : `[${timestamp}] `;
+    
+    div.textContent = `${prefix}${message}`;
+    terminal.appendChild(div);
+    terminal.scrollTop = terminal.scrollHeight;
+  }
+
+  async function triggerSubmitApproval() {
+    const input = document.getElementById('loopApprovalInput');
+    const directive = input.value.trim() || 'proceed';
+    
+    input.value = '';
+    
+    try {
+      appendTerminalLine('Operator', `Submitting directive: "${directive}"`, 'start');
+      const res = await fetch('/api/loop/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ directive })
+      });
+      const data = await res.json();
+      if (data.status === 'directive received') {
+        document.getElementById('loopApprovalCard').style.display = 'none';
+        pollLoopStatus();
+      } else {
+        appendTerminalLine('Error', 'Failed to submit directive', 'error');
+      }
+    } catch (e) {
+      appendTerminalLine('Error', `Network error: ${e.message}`, 'error');
+    }
+  }
+
+  function handleApprovalKey(e) {
+    if (e.key === 'Enter') {
+      triggerSubmitApproval();
+    }
   }
 
   // ── Init ────────────────────────────────────────────────
