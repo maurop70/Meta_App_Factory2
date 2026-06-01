@@ -4,20 +4,23 @@ echo ================================================
 echo   ClaudeAY — Claude + Antigravity Bridge
 echo ================================================
 echo.
-echo Starting Claude MCP Bridge (Port 9001)...
-start "Claude MCP Bridge" /min cmd /k "cd /d %~dp0 && python claude-mcp-bridge/mcp_server/server.py"
 
-echo Starting ClaudeAY Web UI Server (Port 9002)...
-start "ClaudeAY Server" /min cmd /k "cd /d %~dp0 && python claude-mcp-bridge/claudeay_ui_server.py"
+:: ── Server Layer ─────────────────────────────────────────
+start "MCP Bridge" cmd /c "cd /d %~dp0 && python claude-mcp-bridge/mcp_server/server.py"
+timeout /t 2 /nobreak >nul
 
-echo Waiting for servers to initialize...
-timeout /t 4 >nul
+start "Master Architect" cmd /c "cd /d %~dp0 && python Master_Architect_Elite_Logic/server.py"
+timeout /t 3 /nobreak >nul
 
-echo Opening ClaudeAY in browser...
-start http://localhost:9002
+start "ClaudeAY UI" cmd /c "cd /d %~dp0 && python claude-mcp-bridge/claudeay_ui_server.py"
+timeout /t 2 /nobreak >nul
+
+:: ── Open Browser ──────────────────────────────────────────
+start "" "http://localhost:9002"
 
 echo.
 echo ClaudeAY is running.
 echo MCP Bridge:  ws://localhost:9001
+echo Master Architect: http://localhost:5050
 echo Web UI:      http://localhost:9002
 timeout /t 2 >nul
