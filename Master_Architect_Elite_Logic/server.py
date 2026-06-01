@@ -12,6 +12,7 @@ and War Room integration endpoints.
 import os as _os, sys as _sys
 _SCRIPT_DIR = _os.path.dirname(_os.path.abspath(__file__))
 _FACTORY_DIR = _os.path.normpath(_os.path.join(_SCRIPT_DIR, ".."))
+_sys.path.insert(0, _os.path.join(_FACTORY_DIR, "claude-mcp-bridge"))
 _sys.path.insert(0, _FACTORY_DIR)
 _sys.path.insert(0, _os.path.join(_FACTORY_DIR, "backend"))
 _sys.path.insert(0, _SCRIPT_DIR)
@@ -41,6 +42,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict
+
+import threading
+from collections import deque
+from loop_engine import AutonomousLoop
+
+# Shared loop status ring buffer — last 50 messages
+loop_status_buffer: deque = deque(maxlen=50)
+loop_running: bool = False
+_approval_event = threading.Event()
+_approval_response: list = ["proceed"]
 
 class WorkspaceBlueprintSchema(BaseModel):
     presentation_name: str = Field(description="The strict filename for the generated Workspace artifact.")
@@ -588,6 +599,71 @@ def health():
 async def get_system_registry():
     """Serves the dynamic agent registry JSON ledger dynamically to the UI."""
     return await load_registry()
+
+
+@app.post("/api/loop/start")
+async def loop_start(request: Request):
+    global loop_running
+    try:
+        data = await request.json()
+    except Exception:
+        data = {}
+    user_intent = (data or {}).get("intent", "").strip()
+    if not user_intent:
+        return JSONResponse({"error": "intent is required"}, status_code=400)
+    if loop_running:
+        return JSONResponse({"error": "Loop already running"}, status_code=409)
+
+    def run_loop():
+        global loop_running
+        loop_running = True
+        loop_status_buffer.append({"type": "start", "msg": f"Loop started: {user_intent}"})
+        try:
+            engine = AutonomousLoop()
+            # Monkey-patch input() so Section 11 gates post to status buffer
+            # instead of blocking the thread on console
+            import builtins
+            original_input = builtins.input
+            def ui_input(prompt=""):
+                loop_status_buffer.append({"type": "approval_required", "msg": prompt})
+                # Block this thread until operator posts to /api/loop/approve
+                while not _approval_event.is_set():
+                    import time; time.sleep(0.5)
+                _approval_event.clear()
+                return _approval_response[0]
+            builtins.input = ui_input
+            engine.run(user_intent)
+            builtins.input = original_input
+        except Exception as e:
+            loop_status_buffer.append({"type": "error", "msg": str(e)})
+        finally:
+            loop_running = False
+            loop_status_buffer.append({"type": "done", "msg": "Loop complete"})
+
+    _approval_event.clear()
+    t = threading.Thread(target=run_loop, daemon=True)
+    t.start()
+    return {"status": "loop started"}
+
+
+@app.get("/api/loop/status")
+def loop_status():
+    return {
+        "running": loop_running,
+        "buffer": list(loop_status_buffer)
+    }
+
+
+@app.post("/api/loop/approve")
+async def loop_approve(request: Request):
+    try:
+        data = await request.json()
+    except Exception:
+        data = {}
+    directive = (data or {}).get("directive", "proceed").strip()
+    _approval_response[0] = directive
+    _approval_event.set()
+    return {"status": "directive received"}
 
 
 # ── Triad Review ─────────────────────────────────────────
