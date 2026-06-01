@@ -24,6 +24,11 @@ async def startup_event_cfo_agent():
     os.makedirs(INGEST_DIR, exist_ok=True)
     print(f"CFO_Agent: Ensured ingestion directory exists at {INGEST_DIR}")
 
+@app.get("/api/health")
+async def health_check():
+    """CFO Agent health endpoint for watchdog monitoring."""
+    return {"status": "healthy", "service": "CFO_Agent", "port": 5070}
+
 # --- New Asynchronous FastAPI POST Route ---
 @app.post("/api/v1/economics/ingest_ledger", status_code=status.HTTP_202_ACCEPTED)
 async def ingest_ledger(
