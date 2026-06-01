@@ -1067,6 +1067,154 @@ async def get_claudeay_status():
         "recent_loop": _loop,
     })
 
+# In-memory store for pending fix proposals
+pending_fixes: dict = {}
+
+@app.post("/api/claudeay/diagnose")
+async def claudeay_diagnose(request: Request):
+    """
+    Receives critical errors from auto_trigger.py.
+    Calls Claude via loop_engine to diagnose and build a fix proposal.
+    Broadcasts the proposal to Builder Chat via SSE telemetry stream.
+    """
+    import sys as _sys
+    from pathlib import Path as _P
+    _sys.path.insert(0, str(_P(__file__).parent / "claude-mcp-bridge"))
+
+    body = await request.json()
+    errors = body.get("errors", [])
+    if not errors:
+        return JSONResponse({"status": "no errors"})
+
+    try:
+        from claude_mcp_bridge.dispatcher import AntigravityDispatcher
+        from claude_mcp_bridge.loop_engine import load_recent_telemetry
+
+        dispatcher = AntigravityDispatcher()
+        telemetry = {"critical_events": errors, "total_events": len(errors), "other": []}
+
+        # Build diagnosis prompt
+        error_summary = "\n".join(
+            f"- [{e.get('type')}] {e.get('message','?')[:120]} "
+            f"(line {e.get('lineNumber','?')}, {e.get('url','?')})"
+            for e in errors[:5]
+        )
+
+        diagnosis_prompt = (
+            f"AUTONOMOUS DIAGNOSIS REQUEST\n\n"
+            f"The following critical errors were detected in the browser:\n\n"
+            f"{error_summary}\n\n"
+            f"Tasks:\n"
+            f"1. Identify the root cause from the error details above.\n"
+            f"2. Locate the relevant source file(s) in the codebase.\n"
+            f"3. Propose the minimal fix — be specific about file and line.\n"
+            f"4. Format your response as:\n"
+            f"   ROOT CAUSE: <one sentence>\n"
+            f"   FILE: <path/to/file.py>\n"
+            f"   FIX: <exact change needed>\n"
+            f"   CONFIDENCE: HIGH | MEDIUM | LOW"
+        )
+
+        mandate = dispatcher.build_prompt(
+            instruction=diagnosis_prompt,
+            telemetry=telemetry,
+        )
+
+        # Import and call AY client
+        from claude_mcp_bridge.ay_client import send_mandate
+        diagnosis = send_mandate(mandate)
+
+        # Store pending fix for approval
+        import uuid as _uuid
+        fix_id = str(_uuid.uuid4())[:8]
+        pending_fixes[fix_id] = {
+            "fix_id": fix_id,
+            "errors": errors,
+            "diagnosis": diagnosis,
+            "mandate": mandate,
+            "timestamp": __import__('datetime').datetime.utcnow().isoformat(),
+            "status": "pending"
+        }
+
+        # Broadcast to Builder Chat via telemetry SSE
+        event = {
+            "type": "claudeay_fix_proposal",
+            "fix_id": fix_id,
+            "error_count": len(errors),
+            "diagnosis": diagnosis,
+            "timestamp": __import__('datetime').datetime.utcnow().isoformat()
+        }
+        for queue in list(TELEMETRY_CLIENTS):
+            try:
+                await queue.put(event)
+            except Exception:
+                pass
+
+        return JSONResponse({"status": "diagnosed", "fix_id": fix_id})
+
+    except Exception as e:
+        logger.error(f"[CLAUDEAY DIAGNOSE] Error: {e}")
+        return JSONResponse({"status": "error", "detail": str(e)}, status_code=500)
+
+@app.post("/api/claudeay/approve")
+async def claudeay_approve(request: Request):
+    """
+    Operator approves a pending fix proposal.
+    Dispatches the mandate to Antigravity for execution.
+    """
+    import sys as _sys
+    from pathlib import Path as _P
+    _sys.path.insert(0, str(_P(__file__).parent / "claude-mcp-bridge"))
+
+    body = await request.json()
+    fix_id = body.get("fix_id")
+    action = body.get("action", "approve")  # approve | dismiss
+
+    if fix_id not in pending_fixes:
+        return JSONResponse({"status": "not_found"}, status_code=404)
+
+    fix = pending_fixes[fix_id]
+
+    if action == "dismiss":
+        pending_fixes[fix_id]["status"] = "dismissed"
+        event = {
+            "type": "claudeay_fix_dismissed",
+            "fix_id": fix_id,
+        }
+        for queue in list(TELEMETRY_CLIENTS):
+            try:
+                await queue.put(event)
+            except Exception:
+                pass
+        return JSONResponse({"status": "dismissed"})
+
+    # Approve — dispatch to AY
+    try:
+        from claude_mcp_bridge.ay_client import send_mandate
+        pending_fixes[fix_id]["status"] = "executing"
+
+        # Broadcast execution start
+        event = {
+            "type": "claudeay_fix_executing",
+            "fix_id": fix_id,
+        }
+        for queue in list(TELEMETRY_CLIENTS):
+            try:
+                await queue.put(event)
+            except Exception:
+                pass
+
+        # Execute in background
+        import asyncio as _asyncio
+        loop = _asyncio.get_event_loop()
+        loop.run_in_executor(None, send_mandate, fix["mandate"])
+
+        pending_fixes[fix_id]["status"] = "executed"
+        return JSONResponse({"status": "executing", "fix_id": fix_id})
+
+    except Exception as e:
+        return JSONResponse({"status": "error", "detail": str(e)}, status_code=500)
+
 
 class WarRoomExecuteRequest(BaseModel):
     project_id: str

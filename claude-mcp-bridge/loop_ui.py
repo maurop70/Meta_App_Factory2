@@ -66,6 +66,11 @@ def main():
     print_banner()
     check_systems()
 
+    # Start autonomous error watcher in background
+    from auto_trigger import start_background
+    start_background()
+    console.print("[dim]Auto-trigger: watching telemetry every 30s[/dim]\n")
+
     console.print("[bold]You are the CEO. Type what you want built.[/bold]")
     console.print("[dim]Type 'exit' to quit. "
                   "Interrupt anytime by typing your directive.[/dim]\n")
