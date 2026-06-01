@@ -620,6 +620,69 @@ async def review(req: ReviewRequest):
 
     # Branch A: Conversational Query Bypass
     if classification == "CONVERSATIONAL_QUERY":
+        # ── ClaudeAY Dual-Engine Router ─────────────────────
+        import sys as _cay_sys
+        import os as _cay_os
+        _cay_sys.path.insert(0, _cay_os.path.dirname(
+            _cay_os.path.dirname(_cay_os.path.abspath(__file__))
+        ))
+        try:
+            from claude_mcp_bridge.intent_router import classify_intent
+            _routing_engine = await classify_intent(user_query)
+        except Exception as _cay_err:
+            import logging
+            logging.getLogger("server").warning(
+                f"[ROUTER] Intent classification failed: {_cay_err}. Defaulting to GEMINI."
+            )
+            _routing_engine = "GEMINI"
+
+        if _routing_engine == "CLAUDE":
+            async def generate_claudeay_stream():
+                import json
+                import sys
+                import os
+                sys.path.insert(0, os.path.dirname(
+                    os.path.dirname(os.path.abspath(__file__))
+                ))
+                try:
+                    from claude_mcp_bridge.dispatcher import AntigravityDispatcher
+                    from claude_mcp_bridge.ay_client import send_mandate
+                    from claude_mcp_bridge.loop_engine import load_recent_telemetry
+
+                    dispatcher = AntigravityDispatcher()
+                    telemetry = load_recent_telemetry()
+
+                    yield f"data: {json.dumps({'type': 'agent_identity', 'agent': 'CLAUDE_ARCHITECT'})}\n\n"
+                    yield f"data: {json.dumps({'type': 'agent_stream', 'content': '[🔵 CLAUDE ARCHITECT] Analyzing request...\\n'})}\n\n"
+
+                    mandate = dispatcher.build_prompt(
+                        instruction=user_query,
+                        telemetry=telemetry if telemetry.get('total_events', 0) > 0 else None,
+                    )
+
+                    ledger = send_mandate(mandate)
+
+                    for line in ledger.split('\n'):
+                        if line.strip():
+                            yield f"data: {json.dumps({'type': 'agent_stream', 'content': line + chr(10)})}\n\n"
+
+                    yield f"data: {json.dumps({'type': 'agent_stream', 'content': '\\n[🔵 CLAUDE ARCHITECT] Mandate complete.'})}\n\n"
+
+                except Exception as e:
+                    yield f"data: {json.dumps({'type': 'agent_stream', 'content': f'[CLAUDE ERROR] {str(e)}\\nFalling back to Gemini.'})}\n\n"
+                    # Fallback: signal to use Gemini
+                    yield f"data: {json.dumps({'type': 'fallback_to_gemini'})}\n\n"
+
+            return StreamingResponse(
+                generate_claudeay_stream(),
+                media_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "X-Accel-Buffering": "no",
+                }
+            )
+        # ── End ClaudeAY Router — GEMINI path continues below ──
+
         async def generate_conversational_stream():
             api_key = os.getenv("GEMINI_API_KEY", "")
             if api_key:
