@@ -28,6 +28,9 @@ start "CIO Agent" /min cmd /k "cd /d %~dp0CIO_Agent && python server.py"
 echo Starting Operator Agent (Port 5100)...
 start "Operator Agent" /min cmd /k "cd /d %~dp0 && python operator_agent.py"
 
+echo Starting CFO Agent (Port 5070)...
+start "CFO Agent" /min cmd /k "cd /d %~dp0CFO_Agent && python server.py"
+
 echo Starting Vite Frontend (Port 5173)...
 start "MAF Frontend" cmd /k "cd /d %~dp0factory_ui && npm run dev"
 
