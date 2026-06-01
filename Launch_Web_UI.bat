@@ -45,3 +45,5 @@ start "" "code" "%~dp0"
 
 echo Opening Claude Code (Architect Terminal)...
 start "Claude Code" cmd /k "cd /d %~dp0 && claude.cmd"
+start "MAF Loop Engine" cmd /k "cd /d %~dp0 && python claude-mcp-bridge/loop_ui.py"
+
