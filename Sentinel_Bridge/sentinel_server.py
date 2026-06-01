@@ -408,6 +408,75 @@ async def tunnel_heartbeat():
         )
 
 
+async def cto_optimization_sweep():
+    """
+    Daily CTO Agent optimization sweep.
+    Ingests SRE telemetry logs, queries ChromaDB for agent performance patterns,
+    and posts optimization directives to the Master Architect orchestration layer.
+    """
+    logger.info("[CTO DAEMON] Daily optimization sweep initiated.")
+    try:
+        import httpx
+        from backend.core.vector_store import VectorStore
+        from backend.services.embedding_service import GoogleEmbeddingService
+
+        # 1. Pull SRE telemetry alerts from QA node
+        telemetry_data = []
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            for port in [8000, 5009]:
+                try:
+                    resp = await client.get(f"http://127.0.0.1:{port}/api/qa/alerts")
+                    if resp.status_code == 200:
+                        telemetry_data = resp.json()
+                        logger.info(f"[CTO DAEMON] SRE telemetry pulled from port {port}: {len(telemetry_data)} alerts.")
+                        break
+                except Exception:
+                    continue
+
+        # 2. Query ChromaDB for recent agent execution patterns
+        chroma_context = []
+        try:
+            embedding_service = GoogleEmbeddingService()
+            query_text = "agent performance optimization critic rejection rate latency failure"
+            embedding_res = await embedding_service.get_embedding_async(query_text)
+            if not isinstance(embedding_res, JSONResponse):
+                vector_store = VectorStore(persist_directory="./chroma_data")
+                results = await vector_store.query_async(
+                    collection_name="maf_knowledge",
+                    query_embeddings=[embedding_res],
+                    n_results=5
+                )
+                chroma_context = results.get("documents", [[]])[0]
+                logger.info(f"[CTO DAEMON] ChromaDB context retrieved: {len(chroma_context)} documents.")
+        except Exception as e:
+            logger.warning(f"[CTO DAEMON] ChromaDB query failed: {e}")
+
+        # 3. Build CTO optimization mandate and post to Master Architect
+        cto_payload = {
+            "intent": (
+                "CTO_DAILY_SWEEP: Analyze the following SRE telemetry and agent memory context. "
+                "Identify the top 3 underperforming agents by failure rate or critic rejection. "
+                "For each, produce a specific system prompt optimization directive. "
+                "Output as structured JSON: {agent, problem, directive}.\n\n"
+                f"SRE_ALERTS: {json.dumps(telemetry_data[:10])}\n\n"
+                f"CHROMA_CONTEXT: {chr(10).join(chroma_context[:3])}"
+            )
+        }
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            resp = await client.post(
+                "http://127.0.0.1:5050/api/orchestrate",
+                json=cto_payload
+            )
+            if resp.status_code == 200:
+                result = resp.json()
+                logger.info(f"[CTO DAEMON] Optimization directives received: {str(result)[:300]}")
+            else:
+                logger.warning(f"[CTO DAEMON] Master Architect returned {resp.status_code}")
+
+    except Exception as e:
+        logger.error(f"[CTO DAEMON] Sweep failed: {e}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup/shutdown events."""
@@ -425,6 +494,18 @@ async def lifespan(app: FastAPI):
     # Schedule tunnel heartbeat every 5 minutes
     scheduler.add_job(tunnel_heartbeat, "interval", minutes=5,
                       id="tunnel_heartbeat", replace_existing=True)
+
+    # Schedule CTO daily sweep at 3:00 AM daily
+    from apscheduler.triggers.cron import CronTrigger
+    scheduler.add_job(
+        cto_optimization_sweep,
+        trigger=CronTrigger(hour=3, minute=0),  # 3:00 AM daily
+        id="cto_daily_sweep",
+        name="CTO Agent Daily Optimization Sweep",
+        replace_existing=True
+    )
+    logger.info("[SCHEDULER] CTO daily optimization sweep registered at 03:00.")
+
     scheduler.start()
 
     # ── ngrok tunnel — force reconnect to kill stale endpoints ──
