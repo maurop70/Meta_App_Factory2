@@ -423,25 +423,46 @@ def scout_agents():
     except Exception:
         registered_names = []
         
+    def clean_name_str(s):
+        return s.lower().replace("_agent", "").replace("_agents", "").replace(" ", "").replace("_", "")
+
+    registered_clean = {clean_name_str(n) for n in registered_names}
     anomalies = []
     
-    # Check Meta_App_Factory directory
-    for item in os.listdir(factory_dir):
-        if item.endswith("_Agent") or item.endswith("_Agents"):
-            item_path = os.path.join(factory_dir, item)
-            if os.path.isdir(item_path):
-                if os.path.exists(os.path.join(item_path, "server.py")) or os.path.exists(os.path.join(item_path, "main.py")) or os.path.exists(os.path.join(item_path, "api.py")):
-                    if item not in registered_names:
-                        anomalies.append({"name": item, "path": item_path})
-                        
-    # Check Root directory
-    for item in os.listdir(root_dir):
-        if item.endswith("_Agent") or item.endswith("_Agents"):
-            item_path = os.path.join(root_dir, item)
-            if os.path.isdir(item_path) and item not in [a["name"] for a in anomalies]:
-                if os.path.exists(os.path.join(item_path, "server.py")) or os.path.exists(os.path.join(item_path, "main.py")) or os.path.exists(os.path.join(item_path, "api.py")):
-                    if item not in registered_names:
-                        anomalies.append({"name": item, "path": item_path})
+    def is_valid_agent_dir(path):
+        if not os.path.isdir(path):
+            return False
+        for cand in ["server.py", "main.py", "api.py", "backend/server.py", "backend/main.py", "backend/api.py"]:
+            if os.path.exists(os.path.join(path, cand)):
+                return True
+        return False
+
+    scan_dirs = [factory_dir, root_dir]
+    for b in [factory_dir, root_dir]:
+        apps_dir = os.path.join(b, "apps")
+        if os.path.isdir(apps_dir):
+            scan_dirs.append(apps_dir)
+        aether_dir = os.path.join(b, "Project_Aether", "C-Suite_Active_Logic")
+        if os.path.isdir(aether_dir):
+            scan_dirs.append(aether_dir)
+
+    for s_dir in scan_dirs:
+        if not os.path.isdir(s_dir):
+            continue
+        for item in os.listdir(s_dir):
+            is_agent = (
+                item.endswith("_Agent") or 
+                item.endswith("_Agents") or 
+                item in ["CMO", "CLO", "CFO", "CIO", "CTO", "CEO", "Venture_Architect"]
+            )
+            if is_agent:
+                item_path = os.path.normpath(os.path.join(s_dir, item))
+                if is_valid_agent_dir(item_path):
+                    # Map to a clean registered name
+                    name = item if item.endswith("_Agent") else f"{item}_Agent"
+                    c_name = clean_name_str(name)
+                    if c_name not in registered_clean and not any(clean_name_str(a["name"]) == c_name for a in anomalies):
+                        anomalies.append({"name": name, "path": item_path})
                         
     return anomalies
 

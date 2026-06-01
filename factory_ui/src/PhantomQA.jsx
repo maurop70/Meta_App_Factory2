@@ -144,7 +144,7 @@ function DashboardTab() {
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+            <table className="recent-tests-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                   {['#', 'App', 'Verdict', 'Score', 'Duration', 'Timestamp'].map(h => (
@@ -157,15 +157,15 @@ function DashboardTab() {
                   <tr key={run.id || i} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', transition: 'background 0.2s' }}
                     onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                    <td style={{ padding: '10px 16px', color: 'rgba(255,255,255,0.3)' }}>{run.id || i + 1}</td>
-                    <td style={{ padding: '10px 16px', color: '#e0e0e0', fontWeight: 500 }}>{run.app_name || '—'}</td>
-                    <td style={{ padding: '10px 16px' }}><VerdictBadge verdict={run.verdict || 'WARN'} /></td>
-                    <td style={{ padding: '10px 16px' }}>
+                    <td data-label="#" style={{ padding: '10px 16px', color: 'rgba(255,255,255,0.3)' }}>{run.id || i + 1}</td>
+                    <td data-label="App" style={{ padding: '10px 16px', color: '#e0e0e0', fontWeight: 500 }}>{run.app_name || '—'}</td>
+                    <td data-label="Verdict" style={{ padding: '10px 16px' }}><VerdictBadge verdict={run.verdict || 'WARN'} /></td>
+                    <td data-label="Score" style={{ padding: '10px 16px' }}>
                       <span style={{ color: run.score >= 80 ? '#22c55e' : run.score >= 50 ? '#f59e0b' : '#ef4444', fontWeight: 700 }}>{run.score ?? '—'}</span>
                       <span style={{ color: 'rgba(255,255,255,0.2)' }}>/100</span>
                     </td>
-                    <td style={{ padding: '10px 16px', color: 'rgba(255,255,255,0.4)' }}>{run.duration ? `${run.duration}s` : '—'}</td>
-                    <td style={{ padding: '10px 16px', color: 'rgba(255,255,255,0.3)', fontSize: '12px' }}>
+                    <td data-label="Duration" style={{ padding: '10px 16px', color: 'rgba(255,255,255,0.4)' }}>{run.duration ? `${run.duration}s` : '—'}</td>
+                    <td data-label="Timestamp" style={{ padding: '10px 16px', color: 'rgba(255,255,255,0.3)', fontSize: '12px' }}>
                       {run.created_at ? new Date(run.created_at).toLocaleString() : '—'}
                     </td>
                   </tr>
@@ -180,6 +180,31 @@ function DashboardTab() {
 }
 
 
+// ── Event Log Entry Component ──────────────────────────────
+function EventLogEntry({ evt }) {
+  const statusColors = {
+    PASS: '#22c55e', HEAL_PASS: '#22c55e', RUNNING: '#818cf8',
+    FAIL: '#ef4444', HEAL_FAIL: '#ef4444',
+    WARN: '#f59e0b', DEGRADED_MANUAL_REQUIRED: '#f59e0b',
+    CONNECTED: '#06b6d4', INFO: '#94a3b8', HEARTBEAT: '#475569',
+  };
+  const color = statusColors[evt.status] || '#94a3b8';
+  return (
+    <div style={{
+      padding: '4px 20px', display: 'flex', gap: '10px', alignItems: 'flex-start',
+      borderLeft: `3px solid ${color}`, marginBottom: '2px',
+      background: evt.status === 'FAIL' ? 'rgba(239,68,68,0.03)' : 'transparent',
+    }}>
+      <span style={{ color: 'rgba(255,255,255,0.15)', minWidth: '70px', flexShrink: 0, fontSize: '10px' }}>
+        {evt.timestamp ? new Date(evt.timestamp).toLocaleTimeString() : ''}
+      </span>
+      <span style={{ color: 'rgba(255,255,255,0.3)', minWidth: '60px', flexShrink: 0 }}>[{evt.agent || '?'}]</span>
+      <span style={{ color: color, minWidth: '50px', flexShrink: 0, fontWeight: 600, fontSize: '11px' }}>{evt.status || ''}</span>
+      <span style={{ color: 'rgba(255,255,255,0.6)', wordBreak: 'break-word' }}>{evt.message || ''}</span>
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════
 //  TAB 2: RUNNER — Full Test Bench Trigger + SSE Progress
 // ═══════════════════════════════════════════════════════════
@@ -189,7 +214,7 @@ function RunnerTab({ setActiveView }) {
   const [appName, setAppName] = useState('');
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState(null);
-  const [events, setEvents] = useState([]);
+  const [events, setEvents] = useState({});
   const [phase, setPhase] = useState(null);
   const [latestFailure, setLatestFailure] = useState(null);
   const logRef = useRef(null);
@@ -198,14 +223,23 @@ function RunnerTab({ setActiveView }) {
   // Connect to SSE stream
   const connectStream = useCallback(() => {
     if (esRef.current) esRef.current.close();
-    const es = new EventSource('/api/qa/stream');
+    const clientId = self.crypto?.randomUUID ? self.crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36);
+    const es = new EventSource(`/api/qa/stream?client_id=${clientId}`);
     esRef.current = es;
 
     es.onmessage = (evt) => {
       try {
         const data = JSON.parse(evt.data);
         if (data.type === 'HEARTBEAT') return;
-        setEvents(prev => [...prev.slice(-200), { ...data, _ts: Date.now() }]);
+        const eventId = data.id || data.uuid || `${data.timestamp || Date.now()}_${data.agent || ''}_${data.status || ''}_${(data.message || '').substring(0, 30)}`;
+        setEvents(prev => ({
+          ...prev,
+          [eventId]: {
+            id: eventId,
+            ...data,
+            _ts: Date.now()
+          }
+        }));
 
         // Phase detection
         const msg = (data.message || '').toLowerCase();
@@ -234,7 +268,17 @@ function RunnerTab({ setActiveView }) {
   const runFullTest = async () => {
     setRunning(true);
     setResult(null);
-    setEvents([{ status: 'INFO', message: 'IGNITING MODE C...', timestamp: Date.now(), agent: 'ORCHESTRATOR' }]);
+    const startEventId = `start_${Date.now()}`;
+    setEvents({
+      [startEventId]: {
+        id: startEventId,
+        status: 'INFO',
+        message: 'IGNITING MODE C...',
+        timestamp: new Date().toISOString(),
+        agent: 'ORCHESTRATOR',
+        _ts: Date.now()
+      }
+    });
     setPhase('ghost');
 
     try {
@@ -246,7 +290,18 @@ function RunnerTab({ setActiveView }) {
         const traceResult = `STATUS: ${response.data.status}\n\n${response.data.trace}`;
         console.log("[ORCHESTRATOR TRACE]", traceResult);
         
-        setEvents(prev => [...prev, { status: response.data.status, message: `Trace: ${response.data.trace.substring(0, 200)}...`, timestamp: Date.now(), agent: 'GHOST' }]);
+        const endEventId = `end_${Date.now()}`;
+        setEvents(prev => ({
+            ...prev,
+            [endEventId]: {
+                id: endEventId,
+                status: response.data.status === 'PASSED' ? 'PASS' : 'FAIL',
+                message: `Trace: ${response.data.trace.substring(0, 200)}...`,
+                timestamp: new Date().toISOString(),
+                agent: 'GHOST',
+                _ts: Date.now()
+            }
+        }));
         setResult({ verdict: response.data.status === 'PASSED' ? 'PASS' : 'FAIL', score: response.data.status === 'PASSED' ? 100 : 0, error: response.data.error });
         
         if (response.data.status === 'FAILED') {
@@ -259,11 +314,62 @@ function RunnerTab({ setActiveView }) {
         }
     } catch (err) {
         console.error("[ORCHESTRATOR FRACTURE]", err);
-        setEvents(prev => [...prev, { status: 'FAIL', message: err.message, timestamp: Date.now(), agent: 'ORCHESTRATOR' }]);
+        const errorEventId = `error_${Date.now()}`;
+        setEvents(prev => ({
+            ...prev,
+            [errorEventId]: {
+                id: errorEventId,
+                status: 'FAIL',
+                message: err.message,
+                timestamp: new Date().toISOString(),
+                agent: 'ORCHESTRATOR',
+                _ts: Date.now()
+            }
+        }));
         setResult({ verdict: 'FAIL', score: 0, error: err.message });
     } finally {
         setPhase('complete');
         setRunning(false);
+    }
+  };
+
+  const deployAdversarialSwarm = async () => {
+    setRunning(true);
+    setResult(null);
+    const startEventId = `swarm_${Date.now()}`;
+    setEvents({
+      [startEventId]: {
+        id: startEventId,
+        status: 'INFO',
+        message: '🚀 DEPLOYING ADVERSARIAL SWARM OVERRIDE...',
+        timestamp: new Date().toISOString(),
+        agent: 'ORCHESTRATOR',
+        _ts: Date.now()
+      }
+    });
+    setPhase('ghost');
+
+    try {
+        await axios.post('/api/test/adversarial', {
+            target_app_path: "./"
+        });
+    } catch (err) {
+        console.error("[ADVERSARIAL SWARM FRACTURE]", err);
+        const errorEventId = `error_${Date.now()}`;
+        setEvents(prev => ({
+            ...prev,
+            [errorEventId]: {
+                id: errorEventId,
+                status: 'FAIL',
+                message: `Swarm deployment failed: ${err.message}`,
+                timestamp: new Date().toISOString(),
+                agent: 'ORCHESTRATOR',
+                _ts: Date.now()
+            }
+        }));
+        setResult({ verdict: 'FAIL', score: 0, error: err.message });
+        setRunning(false);
+        setPhase('complete');
     }
   };
 
@@ -350,6 +456,24 @@ function RunnerTab({ setActiveView }) {
             }}
           >
             {running ? '⏳ Running...' : '⚡ Run Full Test'}
+          </button>
+          <button
+            id="qa-run-adversarial"
+            onClick={deployAdversarialSwarm}
+            disabled={running}
+            style={{
+              padding: '10px 24px', borderRadius: '10px', border: 'none', fontWeight: 700,
+              fontSize: '13px', cursor: running ? 'not-allowed' : 'pointer',
+              background: running
+                ? 'linear-gradient(135deg, #475569, #334155)'
+                : 'linear-gradient(135deg, #818cf8, #4f46e5)',
+              color: '#fff', transition: 'all 0.3s', letterSpacing: '0.3px',
+              opacity: running ? 0.7 : 1,
+              boxShadow: running ? 'none' : '0 4px 16px rgba(129,140,248,0.25)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {running ? '🤖 Deploying...' : '🤖 Deploy Adversarial Swarm'}
           </button>
         </div>
 
@@ -442,43 +566,26 @@ function RunnerTab({ setActiveView }) {
             👻 Ghost Stream
             <span style={{
               width: '6px', height: '6px', borderRadius: '50%',
-              background: events.length > 0 ? '#22c55e' : '#ef4444',
+              background: Object.keys(events).length > 0 ? '#22c55e' : '#ef4444',
               display: 'inline-block', animation: 'pulse 2s infinite',
             }} />
           </h3>
-          <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.2)' }}>{events.length} events</span>
+          <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.2)' }}>{Object.keys(events).length} events</span>
         </div>
         <div ref={logRef} style={{
           maxHeight: '300px', overflowY: 'auto', padding: '8px 0',
           fontFamily: 'JetBrains Mono, Consolas, monospace', fontSize: '12px',
         }}>
-          {events.length === 0 ? (
+          {Object.keys(events).length === 0 ? (
             <div style={{ padding: '30px 20px', textAlign: 'center', color: 'rgba(255,255,255,0.15)', fontSize: '12px' }}>
               Waiting for telemetry events... Run a test to see real-time progress.
             </div>
-          ) : events.map((evt, i) => {
-            const statusColors = {
-              PASS: '#22c55e', HEAL_PASS: '#22c55e', RUNNING: '#818cf8',
-              FAIL: '#ef4444', HEAL_FAIL: '#ef4444',
-              WARN: '#f59e0b', DEGRADED_MANUAL_REQUIRED: '#f59e0b',
-              CONNECTED: '#06b6d4', INFO: '#94a3b8', HEARTBEAT: '#475569',
-            };
-            const color = statusColors[evt.status] || '#94a3b8';
-            return (
-              <div key={i} style={{
-                padding: '4px 20px', display: 'flex', gap: '10px', alignItems: 'flex-start',
-                borderLeft: `3px solid ${color}`, marginBottom: '2px',
-                background: evt.status === 'FAIL' ? 'rgba(239,68,68,0.03)' : 'transparent',
-              }}>
-                <span style={{ color: 'rgba(255,255,255,0.15)', minWidth: '70px', flexShrink: 0, fontSize: '10px' }}>
-                  {evt.timestamp ? new Date(evt.timestamp).toLocaleTimeString() : ''}
-                </span>
-                <span style={{ color: 'rgba(255,255,255,0.3)', minWidth: '60px', flexShrink: 0 }}>[{evt.agent || '?'}]</span>
-                <span style={{ color: color, minWidth: '50px', flexShrink: 0, fontWeight: 600, fontSize: '11px' }}>{evt.status || ''}</span>
-                <span style={{ color: 'rgba(255,255,255,0.6)', wordBreak: 'break-word' }}>{evt.message || ''}</span>
-              </div>
-            );
-          })}
+          ) : (
+            Object.values(events)
+              .sort((a, b) => a._ts - b._ts)
+              .slice(-200)
+              .map((evt) => <EventLogEntry key={evt.id} evt={evt} />)
+          )}
         </div>
       </div>
     </div>

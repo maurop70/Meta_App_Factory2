@@ -3,7 +3,7 @@ import axios from 'axios';
 
 export default function TelemetryPanel() {
   const [running, setRunning] = useState([]);
-  const [telemetryLog, setTelemetryLog] = useState([]);
+  const [telemetryLog, setTelemetryLog] = useState({});
   const [status, setStatus] = useState({});
   const [loading, setLoading] = useState(false);
 
@@ -20,8 +20,9 @@ export default function TelemetryPanel() {
     refreshStatus();
     const interval = setInterval(refreshStatus, 8000);
 
+    const clientId = self.crypto?.randomUUID ? self.crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36);
     // Watchdog Streaming Telemetry (Native Port 5030)
-    const es = new EventSource('/api/qa/stream');
+    const es = new EventSource(`/api/qa/stream?client_id=${clientId}`);
     
     es.onopen = () => {
       console.log("Telemetry EventSource stream connection successfully opened.");
@@ -39,15 +40,18 @@ export default function TelemetryPanel() {
             ...prev,
             [data.agent]: data.status || 'ACTIVE'
           }));
-          setTelemetryLog(prev => [
-            {
+          const eventId = data.id || data.uuid || `${data.timestamp || Date.now()}_${data.agent || ''}_${data.status || ''}_${(data.message || '').substring(0, 30)}`;
+          setTelemetryLog(prev => ({
+            ...prev,
+            [eventId]: {
+              id: eventId,
               time: new Date().toLocaleTimeString(),
               agent: data.agent,
               status: data.status,
-              message: data.message || 'Heartbeat signal received'
-            },
-            ...prev.slice(0, 29)
-          ]);
+              message: data.message || 'Heartbeat signal received',
+              _ts: Date.now()
+            }
+          }));
         }
       } catch (e) {}
     };
@@ -119,17 +123,20 @@ export default function TelemetryPanel() {
       }}>
         <h4 style={{ color: '#00FFFF', margin: '0 0 15px 0', fontSize: '0.9rem', letterSpacing: '1px', textTransform: 'uppercase' }}>Live Network Telemetry Trace Log</h4>
         <div style={{ maxHeight: '200px', overflowY: 'auto', fontFamily: 'monospace', fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          {telemetryLog.length === 0 ? (
+          {Object.keys(telemetryLog).length === 0 ? (
             <div style={{ opacity: 0.3, textAlign: 'center', padding: '20px' }}>Awaiting backend stream signals...</div>
           ) : (
-            telemetryLog.map((log, idx) => (
-              <div key={idx} style={{ display: 'flex', gap: '10px', opacity: 0.8 }}>
-                <span style={{ color: '#818cf8' }}>[{log.time}]</span>
-                <strong style={{ color: '#c084fc' }}>{log.agent}:</strong>
-                <span style={{ color: '#34d399' }}>{log.status}</span>
-                <span style={{ opacity: 0.7 }}>- {log.message}</span>
-              </div>
-            ))
+            Object.values(telemetryLog)
+              .sort((a, b) => b._ts - a._ts)
+              .slice(0, 30)
+              .map((log) => (
+                <div key={log.id} style={{ display: 'flex', gap: '10px', opacity: 0.8 }}>
+                  <span style={{ color: '#818cf8' }}>[{log.time}]</span>
+                  <strong style={{ color: '#c084fc' }}>{log.agent}:</strong>
+                  <span style={{ color: '#34d399' }}>{log.status}</span>
+                  <span style={{ opacity: 0.7 }}>- {log.message}</span>
+                </div>
+              ))
           )}
         </div>
       </div>

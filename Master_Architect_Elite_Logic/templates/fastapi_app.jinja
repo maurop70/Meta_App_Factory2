@@ -1,0 +1,164 @@
+import logging
+import time
+from collections import defaultdict
+from fastapi import FastAPI, Request, HTTPException, Security, Depends
+from fastapi.security import APIKeyHeader, HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import List, Optional
+
+# Extra Imports from Route Logic Specs
+{% for imp in extra_imports | default([]) | unique %}
+{{ imp }}
+{% endfor %}
+
+# Setup Logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
+logger = logging.getLogger("{{ agent_name }}")
+
+app = FastAPI(
+    title="{{ agent_name }}",
+    description="{{ role_summary }}",
+    version="1.0.0"
+)
+
+# CORS Middleware
+origins = {{ security_posture.cors_origins }}
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Custom Rate Limiter
+rate_limit_store = defaultdict(list)
+RATE_LIMIT_RPM = {{ security_posture.rate_limit_rpm }}
+
+async def check_rate_limit(request: Request):
+    client_ip = request.client.host
+    now = time.time()
+    rate_limit_store[client_ip] = [t for t in rate_limit_store[client_ip] if now - t < 60]
+    if len(rate_limit_store[client_ip]) >= RATE_LIMIT_RPM:
+        logger.warning(f"Rate limit exceeded for {client_ip} ({len(rate_limit_store[client_ip])}/{RATE_LIMIT_RPM} RPM)")
+        raise HTTPException(status_code=429, detail="Rate limit exceeded. Try again in a minute.")
+    rate_limit_store[client_ip].append(now)
+
+# Authentication Posture
+{% if security_posture.auth_method == 'api_key' %}
+api_key_header = APIKeyHeader(name="X-API-KEY", auto_error=True)
+async def verify_auth(api_key: str = Security(api_key_header)):
+    import os
+    expected = os.getenv("{{ agent_name | upper }}_API_KEY", "default_secret_key")
+    if api_key != expected:
+        raise HTTPException(status_code=401, detail="Invalid API Key")
+{% elif security_posture.auth_method == 'bearer_token' %}
+bearer_scheme = HTTPBearer(auto_error=True)
+async def verify_auth(credentials: HTTPAuthorizationCredentials = Security(bearer_scheme)):
+    import os
+    expected = os.getenv("{{ agent_name | upper }}_BEARER_TOKEN", "default_bearer_token")
+    if credentials.credentials != expected:
+        raise HTTPException(status_code=401, detail="Invalid Bearer Token")
+{% else %}
+async def verify_auth():
+    pass
+{% endif %}
+
+# Audit Middleware
+{% if security_posture.audit_log_enabled %}
+@app.middleware("http")
+async def audit_logging_middleware(request: Request, call_next):
+    client_ip = request.client.host
+    logger.info(f"AUDIT LOG: Inbound {request.method} request to {request.url.path} from {client_ip}")
+    response = await call_next(request)
+    logger.info(f"AUDIT LOG: Outbound response status {response.status_code} for {request.url.path}")
+    return response
+{% endif %}
+
+# Startup Event
+@app.on_event("startup")
+async def startup_event():
+    logger.info("Starting {{ agent_name }} JIT App...")
+{% if startup_logic_ast %}
+{{ startup_logic_ast | indent(4, true) }}
+{% endif %}
+
+# Pydantic Schemas from Data Contracts
+{% for contract in data_contracts %}
+class {{ contract.contract_name }}Input(BaseModel):
+    {% if contract.input_fields %}
+      {% for field in contract.input_fields %}
+    {{ field }}: str
+      {% endfor %}
+    {% else %}
+    pass
+    {% endif %}
+
+class {{ contract.contract_name }}Output(BaseModel):
+    {% if contract.output_fields %}
+      {% for field in contract.output_fields %}
+    {{ field }}: str
+      {% endfor %}
+    {% else %}
+    pass
+    {% endif %}
+{% endfor %}
+
+# API Endpoints
+{% for endpoint in api_endpoints %}
+{% set contract = namespace(val=None) %}
+{% for c in data_contracts %}
+  {% if c.contract_name == endpoint.contract_ref %}
+    {% set contract.val = c %}
+  {% endif %}
+{% endfor %}
+@app.{{ endpoint.method | lower }}("{{ endpoint.path }}", 
+    response_model={{ endpoint.contract_ref }}Output, 
+    summary="{{ endpoint.summary }}",
+    dependencies=[Depends(check_rate_limit), Depends(verify_auth)]
+)
+async def {{ endpoint.summary | replace("'", "") | replace('"', "") | replace(",", "") | replace(":", "") | replace(" ", "_") | replace(".", "") | replace("-", "_") | replace("/", "_") | replace("{", "") | replace("}", "") | lower }}(
+    {% for param in endpoint.path_params %}
+    {{ param }}: str,
+    {% endfor %}
+    {% if endpoint.method in ['POST', 'PUT', 'PATCH'] %}
+    payload: {{ endpoint.contract_ref }}Input
+    {% endif %}
+):
+{% set matched_logic = namespace(val=None) %}
+{% for rlb in route_logic_blocks | default([]) %}
+  {% if rlb.path == endpoint.path and rlb.method | upper == endpoint.method | upper %}
+    {% set matched_logic.val = rlb %}
+  {% endif %}
+{% endfor %}
+{% if matched_logic.val %}
+{{ matched_logic.val.logic_ast | indent(4, true) }}
+{% else %}
+    logger.info(f"Executing endpoint: {{ endpoint.path }}")
+    
+    # Deterministic Mock Response fulfilling the exact Output Data Contract
+    response_data = {}
+    {% if contract.val %}
+      {% for field in contract.val.output_fields %}
+        {% if 'id' in field %}
+    response_data["{{ field }}"] = "gen_{{ endpoint.contract_ref | lower }}_" + str(int(time.time()))
+        {% elif 'status' in field %}
+    response_data["{{ field }}"] = "SUCCESS"
+        {% elif 'time' in field or 'date' in field %}
+    response_data["{{ field }}"] = "2026-05-25T00:00:00Z"
+        {% elif 'is_active' in field %}
+    response_data["{{ field }}"] = "true"
+        {% else %}
+          {% if endpoint.method in ['POST', 'PUT', 'PATCH'] %}
+    response_data["{{ field }}"] = getattr(payload, "{{ field }}", "mock_value_for_{{ field }}")
+          {% else %}
+    response_data["{{ field }}"] = "mock_value_for_{{ field }}"
+          {% endif %}
+        {% endif %}
+      {% endfor %}
+    {% endif %}
+    
+    return response_data
+{% endif %}
+{% endfor %}

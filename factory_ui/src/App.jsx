@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import './App.css'
+import './api/client' // Centralized API Interceptor (Antigravity Synthesis Node)
 import axios from 'axios'
-import { NavLink, Routes, Route, Navigate } from 'react-router-dom'
+import { NavLink, Routes, Route, Navigate, useParams } from 'react-router-dom'
+import GlobalDiagnosticOverlay from './components/GlobalDiagnosticOverlay'
 import WarRoom from './WarRoom'
 import CommandCenter from './CommandCenter'
 
@@ -15,6 +17,7 @@ import InventoryGrid from './components/InventoryGrid.jsx';
 import AppRegistry from './components/AppRegistry';
 import CIOIntel from './components/CIOIntel';
 import TelemetryPanel from './components/TelemetryPanel';
+import WorkspaceVault from './components/WorkspaceVault';
 
 // ═══════════════════════════════════════════════════════════
 //  META APP FACTORY — BUILDER DASHBOARD (Full Feature Parity)
@@ -86,8 +89,9 @@ function AgentStatusPanel() {
     agents.forEach(a => initial[a] = 'pending');
     setStatus(initial);
 
+    const clientId = self.crypto?.randomUUID ? self.crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36);
     // Watchdog Streaming Telemetry (Native Port 5030)
-    const es = new EventSource('/api/qa/stream');
+    const es = new EventSource(`/api/qa/stream?client_id=${clientId}`);
     
     es.onopen = () => {
         // Connected to stream, mark active nodes online
@@ -152,7 +156,9 @@ function AgentStatusPanel() {
           else if (isOffline) cssClass = 'offline';
 
           return (
-            <div key={a} className={`agent-dot ${cssClass}`}>
+            <div key={a} className={`agent-dot ${cssClass}`} style={{ cursor: 'pointer' }} onClick={() => {
+              window.location.hash = `#/agent/${a.toLowerCase()}`;
+            }}>
               <span className="dot" style={
                 isNative ? { background: '#00D1FF', boxShadow: '0 0 6px rgba(0,209,255,0.5)' } :
                 isDegraded ? { background: '#f59e0b', boxShadow: '0 0 6px rgba(245,158,11,0.5)' } : {}
@@ -204,8 +210,10 @@ function TelemetryBar({ streaming }) {
     let reconnectTimer = null;
     let attempt = 0;
 
+    const clientId = self.crypto?.randomUUID ? self.crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36);
+
     const connectSSE = () => {
-      es = new EventSource('/api/qa/stream');
+      es = new EventSource(`/api/qa/stream?client_id=${clientId}`);
       
       es.onopen = () => {
         setTelemetryStatus('ONLINE');
@@ -1036,6 +1044,7 @@ function BrandStudioPanel({ registry }) {
 function VentureScoutDashboard({ setActiveView, selectedApp, setSelectedApp }) {
   const [pitches, setPitches] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [hunting, setHunting] = useState(false);
 
   const fetchPitches = async () => {
     setLoading(true);
@@ -1045,6 +1054,21 @@ function VentureScoutDashboard({ setActiveView, selectedApp, setSelectedApp }) {
       setPitches(data.pitches || []);
     } catch (e) { console.error(e); }
     setLoading(false);
+  };
+
+  const triggerHunt = async () => {
+    setHunting(true);
+    try {
+      await fetch('/api/scout/run', { method: 'POST' });
+      // Poll/refresh after 6 seconds once background scan starts returning signals
+      setTimeout(async () => {
+        await fetchPitches();
+        setHunting(false);
+      }, 6000);
+    } catch (e) {
+      console.error(e);
+      setHunting(false);
+    }
   };
 
   useEffect(() => { fetchPitches(); }, []);
@@ -1088,7 +1112,20 @@ function VentureScoutDashboard({ setActiveView, selectedApp, setSelectedApp }) {
     <div className="scout-dashboard" style={{ padding: '20px', background: 'rgba(0,0,0,0.2)', borderRadius: '16px' }}>
       <div className="dashboard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <h2 style={{ color: '#00FFFF', margin: 0 }}>🚀 Venture Scout Hunting Loop</h2>
-        <button onClick={fetchPitches} className="refresh-btn" style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #00FFFF', background: 'transparent', color: '#00FFFF', cursor: 'pointer' }}>🔄 Refresh Signals</button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button 
+            onClick={triggerHunt} 
+            disabled={hunting || loading}
+            style={{ 
+              padding: '8px 16px', borderRadius: '8px', border: 'none', 
+              background: 'linear-gradient(135deg, #00FFFF, #8A2BE2)', color: '#000', 
+              cursor: (hunting || loading) ? 'not-allowed' : 'pointer', fontWeight: 'bold' 
+            }}
+          >
+            {hunting ? '📡 Hunting...' : '🔍 Scan for New Pitches'}
+          </button>
+          <button onClick={fetchPitches} className="refresh-btn" style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #00FFFF', background: 'transparent', color: '#00FFFF', cursor: 'pointer' }}>🔄 Refresh Signals</button>
+        </div>
       </div>
       
       {loading ? <div className="loading" style={{ textAlign: 'center', padding: '100px', fontSize: '1.2rem', color: 'rgba(255,255,255,0.4)', letterSpacing: '2px' }}>HUNTING IN PROGRESS...</div> : (
@@ -1222,6 +1259,122 @@ function CIOIntelligenceDashboard({ setActiveView }) {
             <div className="empty-memo" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', opacity: 0.2, fontSize: '1.2rem' }}>Select an upgrade memo to view intelligence.</div>
           )}
         </main>
+      </div>
+    </div>
+  );
+}
+
+function DirectAgentChat() {
+  const { agentId } = useParams();
+  const [chatHistory, setChatHistory] = useState([]);
+  const [input, setInput] = useState('');
+  const [isStreaming, setIsStreaming] = useState(false);
+  const terminalEndRef = useRef(null);
+
+  useEffect(() => {
+    setChatHistory([]);
+  }, [agentId]);
+
+  useEffect(() => {
+    terminalEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatHistory]);
+
+  const handleSend = async () => {
+    if (!input.trim() || isStreaming) return;
+    const userMsg = input;
+    setChatHistory(prev => [...prev, { role: 'user', content: userMsg }]);
+    setInput('');
+    setIsStreaming(true);
+
+    try {
+      const response = await fetch('/api/agent/direct', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agent_id: agentId.toUpperCase(),
+          prompt: userMsg,
+          history: chatHistory.map(msg => ({
+            role: msg.role === 'user' ? 'user' : 'model',
+            content: msg.content
+          }))
+        })
+      });
+
+      if (!response.body) throw new Error("No readable stream");
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      setChatHistory(prev => [...prev, { role: 'model', content: '' }]);
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        setChatHistory(prev => {
+          const newHistory = [...prev];
+          newHistory[newHistory.length - 1].content += chunk;
+          return newHistory;
+        });
+      }
+    } catch (error) {
+      setChatHistory(prev => [...prev, { role: 'system', content: `[CONNECTION ERROR] ${error.message}` }]);
+    } finally {
+      setIsStreaming(false);
+    }
+  };
+
+  const agentNames = {
+    cfo: 'CFO (Chief Financial Officer)',
+    cmo: 'CMO (Chief Marketing Officer)',
+    hr: 'HR Director',
+    clo: 'CLO (Chief Legal Officer)',
+    critic: 'Critic Agent',
+    pitch: 'Pitch Architect',
+    atomizer: 'Deconstruction Atomizer',
+    architect: 'Lead Executive Architect'
+  };
+
+  const agentName = agentNames[agentId.toLowerCase()] || `${agentId.toUpperCase()} Agent`;
+
+  return (
+    <div className="registry-panel" style={{ padding: '20px', background: 'rgba(0,0,0,0.2)', borderRadius: '16px', minHeight: 'calc(100vh - 200px)', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '16px', marginBottom: '16px' }}>
+        <h3 style={{ color: '#a78bfa', margin: 0 }}>🛡️ Direct Secure Line: {agentName}</h3>
+        <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>ISOLATED CHANNEL // BYPASSING SEMANTIC ROUTING ENGINE</span>
+      </div>
+
+      <div style={{ flex: 1, overflowY: 'auto', background: 'rgba(0,0,0,0.3)', borderRadius: '12px', padding: '16px', minHeight: '300px', display: 'flex', flexDirection: 'column', gap: '12px', fontFamily: 'monospace', fontSize: '13px' }} className="custom-scrollbar">
+        {chatHistory.length === 0 && (
+          <div style={{ color: '#a78bfa', opacity: 0.5, textAlign: 'center', marginTop: '100px' }}>&gt; SECURE CONNECTION ESTABLISHED. AWAITING INPUT...</div>
+        )}
+        {chatHistory.map((msg, idx) => (
+          <div key={idx} style={{ padding: '8px', borderRadius: '8px', background: msg.role === 'user' ? 'rgba(99,102,241,0.05)' : 'rgba(167,139,250,0.05)', border: msg.role === 'user' ? '1px solid rgba(99,102,241,0.1)' : '1px solid rgba(167,139,250,0.1)' }}>
+            <strong style={{ color: msg.role === 'user' ? '#818cf8' : '#c084fc', display: 'block', marginBottom: '4px', fontSize: '11px', textTransform: 'uppercase' }}>
+              {msg.role === 'user' ? 'CO-PILOT (SECURE)' : `${agentId.toUpperCase()} EXECUTIVE`}
+            </strong>
+            <div style={{ whiteSpace: 'pre-wrap', color: '#e2e8f0', lineHeight: '1.5' }}>{msg.content}</div>
+          </div>
+        ))}
+        <div ref={terminalEndRef} />
+      </div>
+
+      <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+        <textarea
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+          placeholder={`___Transmitting encrypted packet to ${agentId.toUpperCase()}...___`}
+          rows={2}
+          disabled={isStreaming}
+          style={{ flex: 1, background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '8px', padding: '10px', fontSize: '13px', fontFamily: 'monospace', outline: 'none', resize: 'none' }}
+        />
+        <button
+          onClick={handleSend}
+          disabled={isStreaming || !input.trim()}
+          style={{ padding: '0 20px', borderRadius: '8px', background: 'linear-gradient(135deg, #a78bfa, #8b5cf6)', border: 'none', color: '#000', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          ↑
+        </button>
       </div>
     </div>
   );
@@ -1441,6 +1594,7 @@ function App() {
     { icon: '🎮', label: 'Command Palette', view: 'commands' },
     { icon: '🧠', label: 'Agent Status', view: 'agents' },
     { icon: '🎨', label: 'Brand Studio', view: 'brand', badge: 'NEW' },
+    { icon: '📂', label: 'Workspace Vault', view: 'workspaces' },
     { icon: '🔧', label: 'Refine App', view: 'refine' },
     { icon: '⚛️', label: 'Atomizer', view: 'atomizer' },
     { icon: '📊', label: 'Telemetry', view: 'telemetry', badge: 'Beta' },
@@ -1478,6 +1632,7 @@ function App() {
               commands: '/commands',
               agents: '/agents',
               brand: '/brand',
+              workspaces: '/workspaces',
               refine: '/refine',
               atomizer: '/atomizer',
               telemetry: '/telemetry',
@@ -1598,12 +1753,12 @@ function App() {
           } />
           <Route path="/warroom" element={
             <ErrorBoundary>
-              <WarRoom />
+              <WarRoom selectedApp={selectedApp} />
             </ErrorBoundary>
           } />
           <Route path="/war-room" element={
             <ErrorBoundary>
-              <WarRoom />
+              <WarRoom selectedApp={selectedApp} />
             </ErrorBoundary>
           } />
           <Route path="/builder" element={
@@ -1635,6 +1790,12 @@ function App() {
             />
           } />
           <Route path="/atomizer" element={<Atomizer />} />
+          <Route path="/workspaces" element={
+            <ErrorBoundary>
+              <WorkspaceVault setSelectedApp={setSelectedApp} />
+            </ErrorBoundary>
+          } />
+          <Route path="/agent/:agentId" element={<DirectAgentChat />} />
         </Routes>
       </main>
 
@@ -1678,6 +1839,7 @@ function App() {
           </div>
         </div>
       )}
+      <GlobalDiagnosticOverlay />
     </div>
   );
 }

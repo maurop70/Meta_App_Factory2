@@ -1,0 +1,10 @@
+{
+  "nodes": [
+    {
+      "action": "AST_SPLICE",
+      "file_path": "test_file.py",
+      "search_content": "print(\"hello\")",
+      "replace_content": "print(\"hello world\")"
+    }
+  ]
+}

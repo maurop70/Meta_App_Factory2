@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Query, HTTPException
 from pydantic import BaseModel
+from typing import List
+import sqlite3
 from app.db import get_db_connection
 
 router = APIRouter(prefix="/api/inventory", tags=["Inventory"])
@@ -7,7 +9,22 @@ router = APIRouter(prefix="/api/inventory", tags=["Inventory"])
 class StockUpdateRequest(BaseModel):
     stock: int
 
-@router.get("")
+class InventoryItem(BaseModel):
+    id: int
+    sku: str
+    name: str
+    category: str
+    stock: int
+    price: float
+    status: str
+
+class InventoryResponse(BaseModel):
+    items: List[InventoryItem]
+    total: int
+    limit: int
+    offset: int
+
+@router.get("", response_model=InventoryResponse)
 async def get_inventory(
     limit: int = Query(default=10, ge=1, le=100),
     offset: int = Query(default=0, ge=0)
@@ -17,26 +34,31 @@ async def get_inventory(
         cursor = conn.cursor()
         
         # Enforce direct binding to SQLite layer for count and paginated query
-        cursor.execute("SELECT COUNT(*) FROM inventory")
-        total = cursor.fetchone()[0]
-        
-        cursor.execute(
-            "SELECT id, sku, name, category, stock, price, status FROM inventory LIMIT ? OFFSET ?",
-            (limit, offset)
-        )
-        rows = cursor.fetchall()
-        
-        items = []
-        for row in rows:
-            items.append({
-                "id": row["id"],
-                "sku": row["sku"],
-                "name": row["name"],
-                "category": row["category"],
-                "stock": row["stock"],
-                "price": row["price"],
-                "status": row["status"]
-            })
+        try:
+            cursor.execute("SELECT COUNT(*) FROM inventory")
+            total = cursor.fetchone()[0]
+            
+            cursor.execute(
+                "SELECT id, sku, name, category, stock, price, status FROM inventory LIMIT ? OFFSET ?",
+                (limit, offset)
+            )
+            rows = cursor.fetchall()
+            
+            items = []
+            for row in rows:
+                items.append({
+                    "id": row["id"],
+                    "sku": row["sku"],
+                    "name": row["name"],
+                    "category": row["category"],
+                    "stock": row["stock"],
+                    "price": row["price"],
+                    "status": row["status"]
+                })
+        except sqlite3.OperationalError:
+            # Handle uninitialized database (table doesn't exist)
+            items = []
+            total = 0
             
         conn.close()
         

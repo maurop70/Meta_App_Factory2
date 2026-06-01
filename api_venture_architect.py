@@ -16,7 +16,10 @@ class ArtifactPayload(BaseModel):
 # Lazy retrieval — this module is imported BEFORE api.py loads .env,
 # so os.getenv at module scope would return None.
 def _get_api_key() -> str | None:
-    return os.getenv("GEMINI_API_KEY")
+    key = os.getenv("GEMINI_API_KEY")
+    if key:
+        return key.strip("'\"")
+    return None
 
 async def _async_agent_prompt(agent_role: str, artifact_payload: str) -> dict:
     """

@@ -112,7 +112,17 @@ GENERATED_DIR.mkdir(parents=True, exist_ok=True)
 
 # Mount Global Projects for cross-agent file sharing
 import sys
-SYSTEM_CORE_PATH = ROOT.parent / ".system_core"
+# Dynmically locate the correct .system_core containing project_manager.py in ancestor directories
+_curr = Path(__file__).resolve()
+SYSTEM_CORE_PATH = None
+for _ in range(7):
+    _curr = _curr.parent
+    if (_curr / ".system_core" / "project_manager.py").exists():
+        SYSTEM_CORE_PATH = _curr / ".system_core"
+        break
+if not SYSTEM_CORE_PATH:
+    SYSTEM_CORE_PATH = META_ROOT.parent / ".system_core"
+
 if str(SYSTEM_CORE_PATH) not in sys.path:
     sys.path.append(str(SYSTEM_CORE_PATH))
 from project_manager import GLOBAL_PROJECTS_DIR
