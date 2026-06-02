@@ -9,6 +9,7 @@ from google.genai import types
 load_dotenv(Path(__file__).parent.parent / ".env")
 
 MAF_ROOT = Path(__file__).parent.parent.resolve()
+MAX_ITERATIONS = 5
 
 client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 
@@ -72,10 +73,20 @@ def send_mandate(mandate: str, timeout: int = 300) -> str:
 
             # Tool execution loop — handle all function calls until
             # Gemini returns a final text response
+            iteration = 0
             while True:
                 function_calls = getattr(response, 'function_calls', None)
                 if not function_calls:
                     break
+
+                iteration += 1
+                if iteration > MAX_ITERATIONS:
+                    raise RuntimeError(
+                        f"[AY CLIENT] Circuit breaker triggered: tool execution "
+                        f"exceeded {MAX_ITERATIONS} iterations. Possible hallucination "
+                        f"loop detected. Halting per CLAUDE_RULES.md Section 3.1."
+                    )
+
                 tool_results = []
                 for fc in function_calls:
                     if fc.name == "execute_local_shell":
