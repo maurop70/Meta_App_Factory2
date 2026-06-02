@@ -51,6 +51,7 @@ import threading
 from collections import deque
 from loop_engine import AutonomousLoop
 from intent_router import classify_intent
+from shared_modules.agent_schemas import validate_cfo_output, validate_cio_output, validate_critic_output
 
 # Shared loop status ring buffer — last 50 messages
 loop_status_buffer: deque = deque(maxlen=50)
@@ -1192,6 +1193,11 @@ async def review(req: ReviewRequest):
                             {"marketing_cost": 25000, "sentiment": "neutral"},
                             {"infrastructure_cost_monthly": 500, "complexity": "medium"}
                         )
+                        try:
+                            validate_cfo_output(cfo_res)
+                        except ValueError as schema_err:
+                            logger.error(f"[SCHEMA GATE] CFO output rejected: {schema_err}")
+                            raise
                         if cfo_res.get("status") == "success":
                             metrics = cfo_res.get('metrics', cfo_res)
                             cfo_report = (
@@ -1227,6 +1233,11 @@ async def review(req: ReviewRequest):
                         from cio_agent import CIOAgent
                         cio = CIOAgent()
                         cio_res = await asyncio.to_thread(cio.run, user_query)
+                        try:
+                            validate_cio_output(cio_res)
+                        except ValueError as schema_err:
+                            logger.error(f"[SCHEMA GATE] CIO output rejected: {schema_err}")
+                            raise
                         cio_feasibility = cio_res.get("feasibility_analysis", "")
                     except Exception as cio_err:
                         cio_feasibility = f"[CIO feasibility assessment failed: {cio_err}]"
@@ -1385,6 +1396,11 @@ async def review(req: ReviewRequest):
                     critic_data = json.loads(critic_resp.text.strip())
                     critic_score = float(critic_data.get("score", 7.5))
                     objections = critic_data.get("objections", [])
+                    try:
+                        validate_critic_output({"score": critic_score, "objections": objections})
+                    except ValueError as schema_err:
+                        logger.error(f"[SCHEMA GATE] Critic output rejected: {schema_err}")
+                        raise
                 except Exception as critic_err:
                     logger.error(f"Critic scoring failed: {critic_err}")
                 
