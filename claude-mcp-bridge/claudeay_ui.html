@@ -294,12 +294,13 @@
     line-height: 1.6;
     white-space: pre-wrap;
     word-break: break-word;
+    color: #e5e7eb !important;
   }
 
   .msg-bubble.user {
     background: rgba(34,211,238,0.06);
     border: 1px solid rgba(34,211,238,0.15);
-    color: var(--text);
+    color: #e5e7eb !important;
     align-self: flex-end;
     max-width: 80%;
   }
@@ -307,20 +308,20 @@
   .msg-bubble.claude {
     background: rgba(99,102,241,0.06);
     border: 1px solid var(--border);
-    color: var(--text);
+    color: #e5e7eb !important;
   }
 
   .msg-bubble.system {
     background: var(--bg3);
     border: 1px solid var(--border);
-    color: var(--text2);
+    color: var(--text2) !important;
     font-size: 10px;
   }
 
   .msg-bubble.error {
     background: rgba(248,113,113,0.06);
     border: 1px solid rgba(248,113,113,0.2);
-    color: var(--red);
+    color: var(--red) !important;
     font-size: 10px;
   }
 
@@ -1093,7 +1094,19 @@
                 engine
               );
               outputBubble.classList.add('streaming-cursor');
-            } else if (data.type === 'output' && outputBubble) {
+            } else if (data.type === 'output') {
+              // Defensive: create outputBubble if engine event was missed
+              if (!outputBubble) {
+                engine = engine || 'CLAUDE';
+                currentEngine = engine;
+                try { sysMsg.remove(); } catch(_) {}
+                outputBubble = addMessage(
+                  engine === 'CLAUDE' ? 'claude' : 'gemini',
+                  '',
+                  engine
+                );
+                outputBubble.classList.add('streaming-cursor');
+              }
               outputBubble.textContent += data.content + '\n';
               document.getElementById('chatArea').scrollTop =
                 document.getElementById('chatArea').scrollHeight;
