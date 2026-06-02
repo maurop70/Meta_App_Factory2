@@ -26,6 +26,8 @@ BRIDGE_ROOT = Path(__file__).parent
 sys.path.insert(0, str(BRIDGE_ROOT))
 sys.path.insert(0, str(BRIDGE_ROOT.parent))
 
+from shared_modules.dispatch_queue import dispatch_mandate
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ClaudeAY-UI")
 
@@ -39,6 +41,15 @@ RULES_PATH     = BRIDGE_ROOT / "rules" / "CLAUDE_RULES.md"
 
 # SSE clients for streaming loop output to browser
 sse_clients: list = []
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Clear stale telemetry log on startup."""
+    import os
+    telemetry_log = TELEMETRY_LOG
+    if telemetry_log.exists():
+        telemetry_log.write_text("")  # clear stale events on startup
 
 
 def _read_jsonl(path: Path, n: int) -> list:
@@ -199,6 +210,35 @@ async def loop_approve_proxy(request: Request):
             return JSONResponse(status_code=resp.status_code, content=resp.json())
         except Exception as e:
             return JSONResponse(status_code=500, content={"error": f"Failed to reach loop server: {e}"})
+
+
+@app.post("/api/dispatch")
+async def dispatch_to_queue(request: Request):
+    """
+    Allows ClaudeAY to dispatch mandates directly to ay2_dispatch_queue
+    without human transport between UI instances.
+    """
+    try:
+        body = await request.json()
+        mandate_text = body.get("mandate", "").strip()
+
+        if not mandate_text:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "mandate is required"}
+            )
+
+        filename = dispatch_mandate(mandate_text, source="ClaudeAY")
+
+        return JSONResponse(content={
+            "status": "queued",
+            "blueprint": filename
+        })
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": str(e)}
+        )
 
 
 if __name__ == "__main__":
