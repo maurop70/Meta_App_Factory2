@@ -1111,7 +1111,32 @@ async def review(req: ReviewRequest):
                 
                 # ── PHYSICAL MULTI-AGENT SWARM execution ──
                 import httpx
-                
+
+                # VAULT EXTRACTION SPLICE — bind foundational documents to C-Suite context
+                if req.document_ids:
+                    for doc_id in req.document_ids:
+                        safe_doc_id = os.path.basename(doc_id)
+                        doc_path = os.path.normpath(os.path.join(_SCRIPT_DIR, "vault", "staging", safe_doc_id))
+                        if os.path.exists(doc_path):
+                            ext = os.path.splitext(safe_doc_id)[1].lower()
+                            if ext in [".txt", ".md", ".csv", ".json"]:
+                                try:
+                                    async with aiofiles.open(doc_path, "r", encoding="utf-8", errors="ignore") as f:
+                                        content = await f.read()
+                                        document_context += f"\n--- DOCUMENT: {safe_doc_id} ---\n" + content + "\n"
+                                except Exception as e:
+                                    logger.error(f"Error reading vault document {safe_doc_id}: {e}")
+                            else:
+                                try:
+                                    logger.info(f"Staging binary document {safe_doc_id} to Google File API...")
+                                    uploaded_file = genai.upload_file(doc_path)
+                                    google_uploaded_files.append(uploaded_file)
+                                    document_context += f"\n[Staged Binary Payload: {safe_doc_id} (Google URI: {uploaded_file.name})]\n"
+                                except Exception as e:
+                                    logger.error(f"Error staging binary document {safe_doc_id} to Google: {e}")
+                    if document_context:
+                        user_query += f"\n\n[ATTACHED FOUNDATIONAL DOCUMENTS]:\n{document_context}"
+
                 # 1. CIO Deep Research Pre-flight Sweep (Port 5090)
                 yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CIO', 'content': '🔍 [CIO Sweep] Initiating live market research sensor sweep...\\n'})}\n\n"
                 
