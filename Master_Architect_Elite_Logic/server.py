@@ -1265,7 +1265,7 @@ async def review(req: ReviewRequest):
                         except ValueError as schema_err:
                             logger.error(f"[SCHEMA GATE] CIO output rejected: {schema_err}")
                             raise
-                        cio_feasibility = cio_res.get("feasibility_analysis", "")
+                        cio_feasibility = cio_res.get("feasibility_analysis", "") or cio_res.get("data", "")
                     except Exception as cio_err:
                         cio_feasibility = f"[CIO feasibility assessment failed: {cio_err}]"
 

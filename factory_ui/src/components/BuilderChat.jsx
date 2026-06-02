@@ -68,7 +68,13 @@ export default function BuilderChat() {
   const [socraticChallenge, setSocraticChallenge] = useState(null);
   const [evidenceText, setEvidenceText] = useState('');
   const [isSocraticSubmitting, setIsSocraticSubmitting] = useState(false);
-  const [lastPrompt, setLastPrompt] = useState("");
+  const [lastPrompt, setLastPrompt] = useState(() => {
+    try {
+      return sessionStorage.getItem('ma_last_prompt') || "";
+    } catch (e) {
+      return "";
+    }
+  });
   const [isMaximized, setIsMaximized] = useState(false);
   const [swarmOpen, setSwarmOpen] = useState(false);
   const [systemAgents, setSystemAgents] = useState([]);
@@ -298,7 +304,15 @@ export default function BuilderChat() {
     setIsSocraticSubmitting(true);
     const overrideReason = prompt("Enter override authorization code or justification:") || "Commander Override";
     
-    if (!lastPrompt || !lastPrompt.trim()) {
+    let mandate = lastPrompt;
+    if (!mandate || !mandate.trim()) {
+      const userMsgs = chatHistory.filter(msg => msg.role === 'user');
+      if (userMsgs.length > 0) {
+        mandate = userMsgs[userMsgs.length - 1].content;
+      }
+    }
+
+    if (!mandate || !mandate.trim()) {
       alert("Commander Error: No original mandate found to override. Aborting.");
       setIsSocraticSubmitting(false);
       return;
@@ -311,7 +325,7 @@ export default function BuilderChat() {
         body: JSON.stringify({
           challenge_id: challengeId,
           reason: overrideReason,
-          original_mandate: lastPrompt
+          original_mandate: mandate
         })
       });
       
@@ -362,6 +376,14 @@ export default function BuilderChat() {
       console.error("Error setting sessionStorage for cachedDocumentIds", e);
     }
   }, [cachedDocumentIds]);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('ma_last_prompt', lastPrompt);
+    } catch (e) {
+      console.error("Error setting sessionStorage for lastPrompt", e);
+    }
+  }, [lastPrompt]);
 
   const handleBridgeApprove = async (blueprintFile, msgIndex) => {
     try {

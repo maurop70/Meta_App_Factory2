@@ -119,7 +119,12 @@ Structure:
         try:
             blueprint = self.generate_blueprint(pitch, f"Direct feasibility scan for: {user_query}")
             if "error" in blueprint:
-                return {"feasibility_analysis": f"Feasibility assessment failed: {blueprint['error']}"}
+                error_msg = f"Feasibility assessment failed: {blueprint['error']}"
+                return {
+                    "status": "failed",
+                    "data": error_msg,
+                    "feasibility_analysis": error_msg
+                }
             
             analysis = (
                 f"Recommended Libraries: {', '.join(blueprint.get('recommended_libraries', []))}\n"
@@ -127,9 +132,18 @@ Structure:
                 f"Architecture Summary: {blueprint.get('integration_blueprint', {}).get('architecture_summary', '')}\n"
                 f"Required Endpoints: {', '.join(blueprint.get('integration_blueprint', {}).get('required_endpoints', []))}"
             )
-            return {"feasibility_analysis": analysis}
+            return {
+                "status": "success",
+                "data": analysis,
+                "feasibility_analysis": analysis
+            }
         except Exception as e:
-            return {"feasibility_analysis": f"Feasibility assessment failed: {str(e)}"}
+            error_msg = f"Feasibility assessment failed: {str(e)}"
+            return {
+                "status": "failed",
+                "data": error_msg,
+                "feasibility_analysis": error_msg
+            }
 
 # Backward-compatible class alias
 CIOAgent = CIO_Agent
