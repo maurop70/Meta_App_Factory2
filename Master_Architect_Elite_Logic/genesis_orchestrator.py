@@ -116,7 +116,7 @@ class GenesisOrchestrator:
             "Your sole objective is to output a raw JSON structure conforming EXACTLY to the following Pydantic schema details:\n\n"
             "SCHEMA DEFINITION:\n"
             "1. agent_name (string): PascalCase name of the agent. Starts with an uppercase letter, containing only letters, numbers, or underscores (e.g., 'StockAlertAgent'). No spaces or hyphens allowed.\n"
-            "2. role_summary (string): Brief summary of the agent's role and primary directive. MUST NOT exceed 280 characters and MUST NOT be empty.\n"
+            "2. role_summary (string): Brief summary of the agent's role and primary directive. MUST NOT exceed 2000 characters and MUST NOT be empty.\n"
             "3. primary_capabilities (list of strings): Describe what this agent can do. Min 3 capabilities, max 8 capabilities.\n"
             "4. api_endpoints (list of objects): At least one endpoint spec. Each endpoint object has:\n"
             "   - path (string): URL path. MUST start with '/api/' (e.g. '/api/v1/alerts').\n"
