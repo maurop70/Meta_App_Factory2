@@ -287,13 +287,13 @@ def run_personnel_archiver():
 class ExplainRequest(BaseModel):
     app_name: str
 
-class WarRoomDispatchRequest(BaseModel):
+class SimpleWarRoomDispatchRequest(BaseModel):
     commander_intent: str
     project_id: str = "Aether"
     strategy_mode: str = "operator_directive"
 
 @app.post("/api/warroom/dispatch")
-async def warroom_dispatch(req: WarRoomDispatchRequest, request: Request):
+async def warroom_dispatch(req: SimpleWarRoomDispatchRequest, request: Request):
     """Bridge to the Concurrent War Room Dispatcher."""
     import asyncio
     try:
@@ -375,11 +375,11 @@ Provide a concise, 2-to-3 sentence technical architectural breakdown explaining 
         logger.error(f"Socratic Explain Error: {e}")
         return JSONResponse(status_code=500, content={"error": str(e)})
 
-class RefineRequest(BaseModel):
+class SystemRefineRequest(BaseModel):
     app_name: str
 
 @app.post("/api/system/refine")
-async def system_refine(req: RefineRequest):
+async def system_refine(req: SystemRefineRequest):
     try:
         from refine_engine import refine_and_apply
         import threading
@@ -1087,8 +1087,8 @@ async def claudeay_diagnose(request: Request):
         return JSONResponse({"status": "no errors"})
 
     try:
-        from claude_mcp_bridge.dispatcher import AntigravityDispatcher
-        from claude_mcp_bridge.loop_engine import load_recent_telemetry
+        from dispatcher import AntigravityDispatcher
+        from loop_engine import load_recent_telemetry
 
         dispatcher = AntigravityDispatcher()
         telemetry = {"critical_events": errors, "total_events": len(errors), "other": []}
@@ -1121,7 +1121,7 @@ async def claudeay_diagnose(request: Request):
         )
 
         # Import and call AY client
-        from claude_mcp_bridge.ay_client import send_mandate
+        from ay_client import send_mandate
         diagnosis = send_mandate(mandate)
 
         # Store pending fix for approval
@@ -1190,7 +1190,7 @@ async def claudeay_approve(request: Request):
 
     # Approve — dispatch to AY
     try:
-        from claude_mcp_bridge.ay_client import send_mandate
+        from ay_client import send_mandate
         pending_fixes[fix_id]["status"] = "executing"
 
         # Broadcast execution start
@@ -5102,59 +5102,7 @@ async def warroom_execute_outcome(request: Request):
     return {"status": "ok", "plan": plan_text, "path": plan_path}
 
 
-@app.post("/api/warroom/intervene")
-async def warroom_intervene(request: Request):
-    """REST endpoint for posting interventions (fallback for non-WS clients)."""
-    body = await request.json()
-    msg = body.get("message", "")
-    await _broadcast({
-        "type": "dialogue",
-        "agent": "COMMANDER",
-        "icon": "⚡",
-        "color": "#f97316",
-        "message": msg,
-        "timestamp": _dt.now().isoformat(),
-        "is_user": True,
-    })
-    
-    # ── Operator Agent Intercept (Fallback Route) ──
-    operator_msg = body.get("operator_override_message", "")
-    if operator_msg:
-        await _broadcast({
-            "type": "dialogue", "agent": "Operator_Agent", "icon": "⚙️", "color": "#10b981",
-            "message": f"**Operator Protocol Execution**\n\n{operator_msg}",
-            "timestamp": _dt.now().isoformat()
-        })
-        return {"status": "ok", "routed_to": "Operator_Agent"}
 
-    if msg.lower().startswith("@operator") or msg.lower().startswith("operator,") or msg.lower().startswith("operator "):
-        async def _call_operator_fallback(m):
-            try:
-                await _broadcast({"type": "agent_working", "agent": "Operator_Agent", "timestamp": _dt.now().isoformat()})
-                import httpx
-                async with httpx.AsyncClient() as client:
-                    await client.post(
-                        "http://localhost:5100/api/operator/command",
-                        json={"directive": m},
-                        timeout=5.0
-                    )
-            except Exception as e:
-                pass
-        asyncio.create_task(_call_operator_fallback(msg))
-        return {"status": "ok", "routed_to": "Operator_Agent"}
-    asyncio.create_task(_simulate_response(msg))
-
-    # Record all user interventions as institutional lessons
-    record_lesson(
-        category="user_feedback",
-        summary=f"Commander intervention: {msg[:120]}",
-        details=msg,
-        source_agent="COMMANDER",
-        severity="normal",
-        tags=["intervention", "user-feedback"],
-    )
-
-    return {"status": "ok", "message": "Intervention dispatched"}
 
 
 @app.get("/api/warroom/state")
@@ -6922,15 +6870,74 @@ import asyncio
 import json
 from datetime import datetime
 
+from typing import Optional
+
 class ChallengeOverridePayload(BaseModel):
     challenge_id: str
     reason: str
-    original_mandate: str
+    original_mandate: Optional[str] = None
+
+async def _get_last_mandate_from_logs() -> str:
+    """Heuristically retrieve the last user mandate from War Room logs."""
+    import os
+    import json
+    import aiofiles
+    try:
+        latest_msg = None
+        latest_ts = ""
+        # 1. Search in-memory _warroom_logs first
+        for project, logs in _warroom_logs.items():
+            for msg in logs:
+                if msg.get("is_user") or msg.get("agent") == "COMMANDER" or (msg.get("agent") == "SYSTEM" and "Topic: " in msg.get("message", "")):
+                    ts = msg.get("timestamp", "")
+                    if ts > latest_ts:
+                        latest_ts = ts
+                        if msg.get("agent") == "SYSTEM" and "Topic: " in msg.get("message", ""):
+                            latest_msg = msg.get("message").split("Topic: ")[-1].strip('"')
+                        else:
+                            latest_msg = msg.get("message")
+
+        if latest_msg:
+            return latest_msg
+
+        # 2. Search disk history logs
+        projects_dir = os.path.join(SCRIPT_DIR, "projects")
+        if os.path.exists(projects_dir):
+            for project in os.listdir(projects_dir):
+                hpath = os.path.join(projects_dir, project, "warroom_history.json")
+                if os.path.exists(hpath):
+                    try:
+                        async with aiofiles.open(hpath, "r", encoding="utf-8") as f:
+                            data = json.loads(await f.read())
+                            messages = data.get("messages", [])
+                            for msg in messages:
+                                if msg.get("is_user") or msg.get("agent") == "COMMANDER" or (msg.get("agent") == "SYSTEM" and "Topic: " in msg.get("message", "")):
+                                    ts = msg.get("timestamp", "")
+                                    if ts > latest_ts:
+                                        latest_ts = ts
+                                        if msg.get("agent") == "SYSTEM" and "Topic: " in msg.get("message", ""):
+                                            latest_msg = msg.get("message").split("Topic: ")[-1].strip('"')
+                                        else:
+                                            latest_msg = msg.get("message")
+                    except Exception:
+                        pass
+
+        if latest_msg:
+            return latest_msg
+
+    except Exception as e:
+        logger.warning(f"Error in _get_last_mandate_from_logs: {e}")
+    return ""
 
 @app.post("/api/challenge/override")
 async def challenge_override(payload: ChallengeOverridePayload):
     # Log override and justification
     logger.warning(f"[OVERRIDE DETECTED] Challenge {payload.challenge_id} overridden. Justification: {payload.reason}")
+
+    original_mandate = payload.original_mandate
+    # If original_mandate is empty, try session logs, then use placeholder
+    if not original_mandate:
+        original_mandate = await _get_last_mandate_from_logs() or "OVERRIDE: No mandate context available" 
     
     # 1. Update Socratic Challenger ledger
     try:
@@ -6948,7 +6955,7 @@ async def challenge_override(payload: ChallengeOverridePayload):
     
     # Heuristically resolve target file and read content
     target_file = "api.py"
-    matches = re.findall(r"[\w\-]+\.(?:py|jsx|js|tsx|ts)", payload.original_mandate)
+    matches = re.findall(r"[\w\-]+\.(?:py|jsx|js|tsx|ts)", original_mandate)
     if matches:
         target_file = matches[0]
         
@@ -6963,7 +6970,7 @@ async def challenge_override(payload: ChallengeOverridePayload):
 
     # Compile rigid payload using doctrine
     from alpha_orchestrator import rigid_compile_payload
-    compiled_prompt = rigid_compile_payload(payload.original_mandate, target_content, target_file)
+    compiled_prompt = rigid_compile_payload(original_mandate, target_content, target_file)
     
     # Configure and Invoke Gemini API (CTO Node: gemini-2.5-pro)
     api_key = os.getenv("GEMINI_API_KEY")
