@@ -1,6 +1,6 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
+import aiofiles
 import os
-import shutil
 import uuid
 from pathlib import Path
 
@@ -25,13 +25,27 @@ async def ingest_document(file: UploadFile = File(...)):
     safe_filename = f"{safe_id}_{file.filename}"
     file_path = STAGING_VAULT / safe_filename
     
+    MAX_SIZE_BYTES = 50 * 1024 * 1024  # 50MB Cap
+    bytes_written = 0
+
     try:
-        with file_path.open("wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+        async with aiofiles.open(file_path, "wb") as buffer:
+            while True:
+                chunk = await file.read(1024 * 1024)  # 1MB chunks
+                if not chunk:
+                    break
+                bytes_written += len(chunk)
+                if bytes_written > MAX_SIZE_BYTES:
+                    # Clean up partial file on threshold breach
+                    file_path.unlink(missing_ok=True)
+                    raise HTTPException(status_code=413, detail="Payload Too Large: Max file size is 50MB")
+                await buffer.write(chunk)
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Vault write fracture: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
     finally:
-        file.file.close()
+        await file.close()
         
     return {
         "status": "STAGED",
