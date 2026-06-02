@@ -1078,7 +1078,7 @@ export default function BuilderChat() {
             <div className="text-xs text-slate-300 font-mono space-y-2">
               <p>The Critic has flagged significant strategic gaps. You must provide data-driven evidence or click Hard Override to proceed.</p>
               <div className="flex flex-col space-y-2 mt-2">
-                {socraticChallenge.weaknesses.map((w, idx) => (
+                {(socraticChallenge.weaknesses || []).map((w, idx) => (
                   <div key={idx} className="p-3 bg-slate-900/80 border border-slate-800 rounded">
                     <div className="flex justify-between text-[11px] font-bold text-orange-400 mb-1">
                       <span>{w.category} ({w.severity})</span>
