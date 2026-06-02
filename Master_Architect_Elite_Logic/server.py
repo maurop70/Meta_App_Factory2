@@ -1135,7 +1135,9 @@ async def review(req: ReviewRequest):
                                 except Exception as e:
                                     logger.error(f"Error staging binary document {safe_doc_id} to Google: {e}")
                     if document_context:
-                        user_query += f"\n\n[ATTACHED FOUNDATIONAL DOCUMENTS]:\n{document_context}"
+                        active_query = user_query + f"\n\n[ATTACHED FOUNDATIONAL DOCUMENTS]:\n{document_context}"
+                    else:
+                        active_query = user_query
 
                 # 1. CIO Deep Research Pre-flight Sweep (Port 5090)
                 yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CIO', 'content': '🔍 [CIO Sweep] Initiating live market research sensor sweep...\\n'})}\n\n"
@@ -1143,7 +1145,7 @@ async def review(req: ReviewRequest):
                 intel_brief_str = "No live intelligence gathered."
                 try:
                     async with httpx.AsyncClient(timeout=10.0) as client:
-                        resp = await client.post("http://127.0.0.1:5090/api/cio/deep_research", json={"query": user_query})
+                        resp = await client.post("http://127.0.0.1:5090/api/cio/deep_research", json={"query": active_query})
                         if resp.status_code == 200:
                             data = resp.json()
                             intel_brief_str = data.get("intelligence_brief", "No live intelligence gathered.")
@@ -1161,7 +1163,7 @@ async def review(req: ReviewRequest):
                     yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CMO', 'content': '📊 [CMO Agent] Launching competitor landscape DuckDuckGo scans...\\n'})}\n\n"
                     async with httpx.AsyncClient(timeout=10.0) as client:
                         resp = await client.post("http://127.0.0.1:5020/api/warroom/respond", json={
-                            "topic": user_query,
+                            "topic": active_query,
                             "context": "CEO War Room Directive",
                             "agents_present": ["CEO", "CFO", "CIO", "CMO"]
                         })
@@ -1175,7 +1177,7 @@ async def review(req: ReviewRequest):
                     try:
                         from cmo_agent import CMOAgent
                         cmo = CMOAgent()
-                        cmo_res = await asyncio.to_thread(cmo.run, user_query)
+                        cmo_res = await asyncio.to_thread(cmo.run, active_query)
                         cmo_summary = cmo_res.get("summary", "")
                     except Exception as fallback_err:
                         cmo_summary = f"[CMO local analysis fell back. Error: {fallback_err}]"
@@ -1190,7 +1192,7 @@ async def review(req: ReviewRequest):
                     yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CFO', 'content': '💵 [CFO Agent] Ingesting operational costs and calculating projected IRR...\\n'})}\n\n"
                     async with httpx.AsyncClient(timeout=15.0) as client:
                         resp = await client.post("http://127.0.0.1:5070/api/consult", data={
-                            "instruction": f"CEO DIRECTIVE: {user_query}\n\n=== CIO INTELLIGENCE BRIEF ===\n{intel_brief_str}"
+                            "instruction": f"CEO DIRECTIVE: {active_query}\n\n=== CIO INTELLIGENCE BRIEF ===\n{intel_brief_str}"
                         })
                         if resp.status_code == 200:
                             cfo_data = resp.json()
@@ -1246,7 +1248,7 @@ async def review(req: ReviewRequest):
                     yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CIO', 'content': '💻 [CIO Agent] Auditing system constraints and estimating resource capacity...\\n'})}\n\n"
                     async with httpx.AsyncClient(timeout=10.0) as client:
                         resp = await client.post("http://127.0.0.1:5090/api/cio/process", json={
-                            "focus_areas": [user_query]
+                            "focus_areas": [active_query]
                         })
                         if resp.status_code == 200:
                             cio_data = resp.json()
@@ -1257,7 +1259,7 @@ async def review(req: ReviewRequest):
                     try:
                         from cio_agent import CIOAgent
                         cio = CIOAgent()
-                        cio_res = await asyncio.to_thread(cio.run, user_query)
+                        cio_res = await asyncio.to_thread(cio.run, active_query)
                         try:
                             validate_cio_output(cio_res)
                         except ValueError as schema_err:
@@ -1357,7 +1359,7 @@ async def review(req: ReviewRequest):
                     logger.error(f"Semantic Recall Hook query failure: {query_err}")
 
                 ceo_prompt = (
-                    f"You are the CEO of the Antigravity Meta App Factory. Ingest the following physical division reports for intent: '{user_query}':\n\n"
+                    f"You are the CEO of the Antigravity Meta App Factory. Ingest the following physical division reports for intent: '{active_query}':\n\n"
                     f"=== CMO Market Trend analysis ===\n{cmo_summary}\n\n"
                     f"=== CFO Capex and IRR models ===\n{cfo_report}\n\n"
                     f"=== CIO Feasibility Assessment ===\n{cio_feasibility}\n\n"
