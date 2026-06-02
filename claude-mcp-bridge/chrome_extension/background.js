@@ -11,6 +11,11 @@ let recentErrors = [];
 
 const requestUrlMap = new Map();
 
+function isLocalTraffic(url) {
+  if (!url) return false;
+  return url.includes('localhost') || url.includes('127.0.0.1') || url.includes('0.0.0.0');
+}
+
 function connectWS() {
   if (isConnecting || (socket && socket.readyState === WebSocket.OPEN)) return;
   isConnecting = true;
@@ -87,6 +92,8 @@ chrome.debugger.onEvent.addListener((source, method, params) => {
     requestUrlMap.delete(params.requestId);
   }
   if (method === "Network.loadingFailed") {
+    const eventUrl = params.response?.url || params.request?.url || requestUrlMap.get(params.requestId) || '';
+    if (!isLocalTraffic(eventUrl)) return;
     const sourceUrl = requestUrlMap.get(params.requestId) || "";
     socket.send(JSON.stringify({
         type: "request_failed",
@@ -97,6 +104,8 @@ chrome.debugger.onEvent.addListener((source, method, params) => {
     requestUrlMap.delete(params.requestId);
   }
   if (method === "Network.responseReceived" && params.response?.status >= 400) {
+    const eventUrl = params.response?.url || params.request?.url || requestUrlMap.get(params.requestId) || '';
+    if (!isLocalTraffic(eventUrl)) return;
     send({ type: "request_failed", tabId, timestamp: ts,
            url: params.response.url, status: params.response.status });
   }
