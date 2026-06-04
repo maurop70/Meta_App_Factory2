@@ -5,12 +5,16 @@ import subprocess
 import asyncio
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, status, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-# Assume 'app' is already initialized in server.py.
-# For demonstration purposes, we'll initialize it here if it's a standalone snippet.
-# In a real application, 'app' would be the existing FastAPI instance.
-app = FastAPI() # Uncomment if this is a new file, otherwise assume 'app' exists.
+app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"],
+)
 
 # --- Configuration for Ledger Ingestion ---
 INGEST_DIR = "/tmp/cfo_ingest/"
