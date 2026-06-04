@@ -1098,14 +1098,25 @@ export default function BuilderChat() {
             </div>
             
             <div className="text-xs text-slate-300 font-mono space-y-2">
+              {socraticChallenge.critic_score !== undefined && (
+                <div className="px-3 py-2 bg-red-950/60 border border-red-700/50 rounded text-[11px] font-bold text-red-300 font-mono">
+                  Critic Score: {Number(socraticChallenge.critic_score).toFixed(1)} / 10.0
+                  {' — '}Below ≥9.5 threshold
+                </div>
+              )}
               <p>The Critic has flagged significant strategic gaps. You must provide data-driven evidence or click Hard Override to proceed.</p>
-              <div className="flex flex-col space-y-2 mt-2">
+              <div className="max-h-64 overflow-y-auto space-y-2 mt-2 pr-1 scrollbar-thin scrollbar-thumb-slate-600">
                 {(socraticChallenge.weaknesses || []).map((w, idx) => (
                   <div key={idx} className="p-3 bg-slate-900/80 border border-slate-800 rounded">
                     <div className="flex justify-between text-[11px] font-bold text-orange-400 mb-1">
                       <span>{w.category} ({w.severity})</span>
                     </div>
                     <p className="text-[11px] leading-relaxed text-slate-400">{w.challenge}</p>
+                    {(w.description || w.detail || w.reasoning || w.content) && (
+                      <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                        {w.description || w.detail || w.reasoning || w.content}
+                      </p>
+                    )}
                     <p className="text-[10px] text-cyan-400 mt-1">→ {w.required_evidence}</p>
                   </div>
                 ))}

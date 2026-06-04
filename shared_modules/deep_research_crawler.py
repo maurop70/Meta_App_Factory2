@@ -25,19 +25,23 @@ import httpx
 
 import aiohttp
 
+from dotenv import load_dotenv
+from pathlib import Path
+load_dotenv(Path(__file__).parent.parent / ".env")
+
 logger = logging.getLogger("DeepResearch")
 
-FIRECRAWL_KEY = os.getenv("FIRECRAWL_API_KEY", "")
 
 async def _firecrawl_search(query: str) -> str:
-    if not FIRECRAWL_KEY:
+    key = os.getenv("FIRECRAWL_API_KEY", "")
+    if not key:
         return ""
     try:
         async with httpx.AsyncClient(timeout=20.0) as client:
             resp = await client.post(
                 "https://api.firecrawl.dev/v1/search",
                 headers={
-                    "Authorization": f"Bearer {FIRECRAWL_KEY}",
+                    "Authorization": f"Bearer {key}",
                     "Content-Type": "application/json"
                 },
                 json={
