@@ -24,7 +24,10 @@ from datetime import datetime
 # Add bridge root to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from ay_client import send_mandate
+try:
+    from claude_code_client import send_mandate
+except ImportError:
+    from ay_client import send_mandate  # fallback
 from dispatcher import AntigravityDispatcher
 
 # MCP bridge imports (telemetry access)

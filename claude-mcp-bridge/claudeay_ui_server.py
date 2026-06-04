@@ -127,7 +127,14 @@ async def execute_intent(request: Request):
     async def stream():
         try:
             from dispatcher import AntigravityDispatcher
-            from ay_client import send_mandate
+            try:
+                from claude_code_client import send_mandate
+                import logging
+                logging.getLogger("ClaudeAY").info(
+                    "[EXECUTOR] Claude Code Client active"
+                )
+            except ImportError:
+                from ay_client import send_mandate  # fallback
             from loop_engine import load_recent_telemetry
             from intent_router import classify_intent
 

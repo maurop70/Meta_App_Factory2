@@ -360,7 +360,7 @@ async def socratic_explain(req: ExplainRequest):
             return JSONResponse(status_code=500, content={"error": "GEMINI_API_KEY missing from environment"})
             
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel("gemini-2.5-flash")
+        model = genai.GenerativeModel("gemini-1.5-flash")
         
         prompt = f"""You are the Master Architect. The Commander clicked the Socratic Explain button for the child app '{req.app_name}'.
 
@@ -7106,8 +7106,11 @@ async def get_telemetry_stream():
         try:
             yield f"data: {json.dumps({'type': 'connection', 'status': 'connected'})}\n\n"
             while True:
-                event = await queue.get()
-                yield f"data: {json.dumps(event)}\n\n"
+                try:
+                    event = await asyncio.wait_for(queue.get(), timeout=20.0)
+                    yield f"data: {json.dumps(event)}\n\n"
+                except asyncio.TimeoutError:
+                    yield ": ping\n\n"
         except asyncio.CancelledError:
             logger.info("UI client disconnected from Telemetry SSE stream.")
         finally:
