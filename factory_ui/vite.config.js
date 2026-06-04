@@ -114,16 +114,11 @@ export default defineConfig({
         secure: false
       },
       '/api/ingest': {
-        target: 'http://127.0.0.1:5050',
+        target: 'http://127.0.0.1:5000',
         changeOrigin: true,
         secure: false,
-        timeout: 600000,       // 10 minute timeout for large multipart bodies
-        proxyTimeout: 600000,
-        configure: (proxy, _options) => {
-          proxy.on('proxyReq', (proxyReq, req, _res) => {
-            proxyReq.setHeader('Connection', 'keep-alive');
-          });
-        }
+        timeout: 600000,
+        proxyTimeout: 600000
       },
       '/api/challenge/override': {
         target: 'http://127.0.0.1:5000',
