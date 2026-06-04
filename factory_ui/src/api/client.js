@@ -4,9 +4,26 @@ import axios from 'axios';
 // Centralized API Client Interception System (Antigravity Synthesis Node)
 // ============================================================================
 
+const SILENT_URLS = [
+  '/api/health',
+  '/api/status',
+  '/api/telemetry/stream',
+  '/api/bridge/stream',
+  '/api/war-room/stream',
+  '/api/loop/status',
+  'favicon.ico',
+];
+
+function isSilentUrl(url = '') {
+  return SILENT_URLS.some(u => url.includes(u));
+}
+
 // Intercept the default global axios instance (and all custom instances that import from axios)
 axios.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    window.dispatchEvent(new CustomEvent('global-api-success'));
+    return response;
+  },
   (error) => {
     const status = error.response ? error.response.status : null;
     const is5xx = status && status >= 500 && status < 600;
@@ -24,8 +41,10 @@ axios.interceptors.response.use(
       };
 
       console.warn('⚠️ [API INTERCEPTOR] Global Error Trapped:', payload);
-      // Dispatch a custom event globally to trigger the blocking overlay instantly
-      window.dispatchEvent(new CustomEvent('global-api-error', { detail: payload }));
+      const errorUrl = error?.config?.url || '';
+      if (!isSilentUrl(errorUrl)) {
+        window.dispatchEvent(new CustomEvent('global-api-error', { detail: payload }));
+      }
     }
 
     return Promise.reject(error);
@@ -59,9 +78,13 @@ window.fetch = async (...args) => {
       };
 
       console.warn('⚠️ [FETCH INTERCEPTOR] Global Error Trapped:', payload);
-      window.dispatchEvent(new CustomEvent('global-api-error', { detail: payload }));
+      if (!isSilentUrl(payload.url)) {
+        window.dispatchEvent(new CustomEvent('global-api-error', { detail: payload }));
+      }
+    } else {
+      window.dispatchEvent(new CustomEvent('global-api-success'));
     }
-    
+
     return response;
   } catch (error) {
     const isTimeout = error.name === 'TimeoutError' || error.message?.toLowerCase().includes('timeout') || error.message?.toLowerCase().includes('failed to fetch') || error.message?.toLowerCase().includes('network');
@@ -78,7 +101,9 @@ window.fetch = async (...args) => {
       };
 
       console.warn('⚠️ [FETCH INTERCEPTOR] Timeout Trapped:', payload);
-      window.dispatchEvent(new CustomEvent('global-api-error', { detail: payload }));
+      if (!isSilentUrl(payload.url)) {
+        window.dispatchEvent(new CustomEvent('global-api-error', { detail: payload }));
+      }
     }
     throw error;
   }

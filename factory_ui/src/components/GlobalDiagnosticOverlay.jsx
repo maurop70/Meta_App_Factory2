@@ -14,14 +14,23 @@ export default function GlobalDiagnosticOverlay() {
   const [healLogs, setHealLogs] = useState([]);
 
   useEffect(() => {
-    // Listen for intercepted network and 5xx errors globally
+    let errorCount = 0;
+
     const handleGlobalError = (e) => {
+      errorCount += 1;
+      if (errorCount < 3) return; // Require 3 consecutive errors before blocking UI
       setError(e.detail);
     };
 
+    const handleGlobalSuccess = () => {
+      errorCount = 0;
+    };
+
     window.addEventListener('global-api-error', handleGlobalError);
+    window.addEventListener('global-api-success', handleGlobalSuccess);
     return () => {
       window.removeEventListener('global-api-error', handleGlobalError);
+      window.removeEventListener('global-api-success', handleGlobalSuccess);
     };
   }, []);
 
