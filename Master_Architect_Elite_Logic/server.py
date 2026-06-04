@@ -672,6 +672,49 @@ async def loop_approve(request: Request):
     return {"status": "directive received"}
 
 
+@app.post("/api/loop/architect")
+async def loop_architect_decision(request: Request):
+    try:
+        body = await request.json()
+        ledger = body.get("ledger", "")
+        context = body.get("context", "")
+        iteration = body.get("iteration", 0)
+        if not ledger:
+            return JSONResponse(status_code=400, content={"error": "ledger is required"})
+        architect_prompt = (
+            f"You are the Senior Architect of the Meta App Factory.\n\n"
+            f"ITERATION: {iteration}\n\n"
+            f"EXECUTION CONTEXT:\n{context}\n\n"
+            f"LEDGER FROM LAST EXECUTION:\n{ledger}\n\n"
+            f"Respond with ONLY this JSON object:\n"
+            f'{{"decision": "COMPLETE"|"ITERATE"|"ESCALATE"|"ERROR", '
+            f'"reasoning": "one sentence", '
+            f'"next_mandate": "full mandate if ITERATE else null", '
+            f'"escalation_reason": "reason if ESCALATE else null"}}\n'
+            f"No markdown. JSON only."
+        )
+        from google import genai
+        import os, json as json_mod
+        client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=architect_prompt,
+            config={"temperature": 0.0}
+        )
+        raw = response.text.strip().strip("```").strip("json").strip()
+        decision = json_mod.loads(raw)
+        loop_status_buffer.append({
+            "type": "architect_decision",
+            "decision": decision.get("decision"),
+            "reasoning": decision.get("reasoning"),
+            "iteration": iteration
+        })
+        return JSONResponse(content=decision)
+    except Exception as e:
+        logger.error(f"[ARCHITECT] Decision endpoint failed: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
 # ── Triad Review ─────────────────────────────────────────
 
 @app.post("/api/genesis/synthesize")
