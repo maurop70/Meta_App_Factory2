@@ -21,12 +21,42 @@ import asyncio
 
 import aiofiles
 
+import httpx
+
 from datetime import datetime
 
 
 # Setup Logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
 logger = logging.getLogger("PhantomSRE")
+log = logger  # alias used by _trigger_claudeay_loop
+
+async def _trigger_claudeay_loop(incident: dict):
+    """Auto-triggers ClaudeAY loop when PhantomSRE detects an incident."""
+    try:
+        mandate = (
+            f"SELF-HEALING MANDATE — AUTO-TRIGGERED BY PhantomSRE\n\n"
+            f"Incident detected:\n"
+            f"Source: {incident.get('source', 'unknown')}\n"
+            f"Severity: {incident.get('severity', 'unknown')}\n"
+            f"Message: {incident.get('message', 'unknown')}\n\n"
+            f"DIRECTIVE: Diagnose the root cause of this incident. "
+            f"Read the relevant log files, identify the exact failure, "
+            f"and implement a surgical fix. Verify the fix with "
+            f"py_compile and report the result."
+        )
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(
+                "http://127.0.0.1:5050/api/loop/start",
+                json={"intent": mandate}
+            )
+            if resp.status_code == 200:
+                log.info(f"[PHANTOM SRE] Auto-triggered ClaudeAY loop for incident")
+            else:
+                log.warning(f"[PHANTOM SRE] Loop trigger failed: {resp.status_code}")
+    except Exception as e:
+        log.warning(f"[PHANTOM SRE] Could not trigger ClaudeAY loop: {e}")
+
 
 app = FastAPI(
     title="PhantomSRE",
@@ -150,10 +180,17 @@ async def startup_event():
                             "timestamp": timestamp,
                             "agent_id": agent_name,
                             "error": error_msg,
+                            "severity": "HIGH",
+                            "source": agent_name,
+                            "message": error_msg,
                             "status": "PATCHING",
                             "blueprint": blueprint_filename
                         }
                         incidents.append(incident)
+
+                        # Auto-trigger ClaudeAY loop for HIGH/CRITICAL incidents only
+                        if incident.get("severity") in ("HIGH", "CRITICAL"):
+                            asyncio.create_task(_trigger_claudeay_loop(incident))
                         
                         # Spool direct remediation bypass blueprint (Strategic_Pause: false)
                         blueprint_data = {
