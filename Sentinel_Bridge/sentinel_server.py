@@ -557,6 +557,10 @@ if UI_DIST.exists():
 #  API ROUTES
 # ═══════════════════════════════════════════════════════════════════
 
+@app.get("/api/health")
+async def health_check():
+    return {"status": "healthy", "service": "Sentinel_Bridge", "port": PORT}
+
 @app.get("/")
 async def root():
     """Health check / welcome."""
