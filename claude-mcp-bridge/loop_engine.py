@@ -18,6 +18,7 @@ Flow:
 import json
 import sys
 import asyncio
+import threading
 from pathlib import Path
 from datetime import datetime
 
@@ -29,6 +30,7 @@ try:
 except ImportError:
     from ay_client import send_mandate  # fallback
 from dispatcher import AntigravityDispatcher
+from ledger_evaluator import evaluate_and_log, LedgerStatus
 
 # MCP bridge imports (telemetry access)
 BRIDGE_ROOT = Path(__file__).parent
@@ -37,6 +39,11 @@ TELEMETRY_LOG = BRIDGE_ROOT / "logs" / "telemetry.jsonl"
 LOOP_LOG    = BRIDGE_ROOT / "logs" / "loop_history.jsonl"
 
 dispatcher = AntigravityDispatcher(rules_path=RULES_PATH)
+
+# ── Shared state for web-driven loop approval signalling ──────────────────
+loop_status_buffer: list = []
+_approval_event = threading.Event()
+_approval_response: list = [""]
 
 # ── Section 11 triggers — require user input before continuing ─────────────
 SECTION_11_TRIGGERS = [
@@ -177,29 +184,76 @@ class AutonomousLoop:
             print(f"[ANTIGRAVITY] Ledger received ({len(ledger)} chars)")
             log_loop_event("LEDGER_RECEIVED", ledger)
 
-            # 6. Analyze ledger
-            ledger_lower = ledger.lower()
+            # 6. Analyze ledger via LedgerEvaluator
+            result = evaluate_and_log(
+                ledger, mandate_id=f"iteration_{self.iteration}"
+            )
+            log_loop_event("LEDGER_EVALUATED",
+                           f"{result.status.value}: {result.summary}")
 
-            if "fully operational" in ledger_lower or \
-               "task complete" in ledger_lower or \
-               "no further action" in ledger_lower:
-                print("\n[ARCHITECT] ✅ Task complete. Loop closing.")
+            if result.status == LedgerStatus.COMPLETE:
+                loop_status_buffer.append({
+                    "type": "complete",
+                    "msg": result.summary,
+                    "confidence": result.confidence
+                })
+                print(f"\n[ARCHITECT] ✅ {result.summary}")
                 self.task_complete = True
                 break
 
-            if "[halt" in ledger_lower or "anomal" in ledger_lower:
-                print("\n[ARCHITECT] ⚠ AY reported anomaly or halt condition.")
-                print("[ARCHITECT] Ledger excerpt:")
-                print(ledger[:500])
-                print("\n[ARCHITECT] Your intervention required.")
-                user_response = input("Your directive: ").strip()
-                if not user_response:
+            elif result.status == LedgerStatus.ESCALATE:
+                loop_status_buffer.append({
+                    "type": "approval_required",
+                    "msg": result.next_action or result.summary
+                })
+                print(f"\n[ARCHITECT] ⏸ {result.summary}")
+                print("[ARCHITECT] Awaiting approval (web) or type directive...")
+                while not _approval_event.is_set():
+                    import time; time.sleep(0.5)
+                _approval_event.clear()
+                directive = _approval_response[0]
+                if directive.lower() in ("stop", "halt", "abort"):
                     break
-                current_instruction = user_response
-                log_loop_event("USER_INTERVENTION", user_response)
+                current_instruction = directive
+                log_loop_event("ESCALATE_DIRECTIVE", directive)
                 continue
 
-            # 7. Continue loop — next instruction derived from ledger
+            elif result.status == LedgerStatus.ERROR:
+                loop_status_buffer.append({
+                    "type": "error",
+                    "msg": result.error_detail or result.summary
+                })
+                print(f"\n[ARCHITECT] ❌ {result.summary}")
+                log_loop_event("ERROR_DETECTED",
+                               result.error_detail or result.summary)
+                try:
+                    import httpx
+
+                    async def _alert():
+                        async with httpx.AsyncClient(timeout=5.0) as client:
+                            await client.post(
+                                "http://127.0.0.1:5030/api/qa/alerts",
+                                json={
+                                    "source": "LOOP_ENGINE",
+                                    "severity": "HIGH",
+                                    "message": result.error_detail,
+                                    "ledger_snippet": ledger[:500]
+                                }
+                            )
+                    asyncio.run(_alert())
+                except Exception:
+                    pass
+                break
+
+            elif result.status == LedgerStatus.ITERATE:
+                loop_status_buffer.append({
+                    "type": "iterate",
+                    "msg": result.summary
+                })
+                print(f"\n[ARCHITECT] 🔄 {result.summary}")
+                # Continue loop — next iteration generates follow-up mandate
+
+            # 7. Derive next instruction from ledger
             current_instruction = (
                 f"Continue execution based on this completed ledger:\n\n"
                 f"{ledger[:3000]}\n\n"
