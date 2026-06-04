@@ -7,8 +7,8 @@ from pathlib import Path
 router = APIRouter(prefix="/api/ingest", tags=["Ingestion"])
 
 # Absolute path resolution to the staging vault
-BASE_DIR = Path.cwd()
-STAGING_VAULT = BASE_DIR / "vault" / "staging"
+BASE_DIR = Path(__file__).parent.parent.parent.parent.resolve()
+STAGING_VAULT = BASE_DIR / "Master_Architect_Elite_Logic" / "vault" / "staging"
 STAGING_VAULT.mkdir(parents=True, exist_ok=True)
 
 # Strict extension validation matrix
