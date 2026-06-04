@@ -114,7 +114,7 @@ export default defineConfig({
         secure: false
       },
       '/api/ingest': {
-        target: 'http://127.0.0.1:5000',
+        target: 'http://127.0.0.1:5050',
         changeOrigin: true,
         secure: false,
         timeout: 600000,
