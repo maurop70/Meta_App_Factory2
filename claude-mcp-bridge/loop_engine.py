@@ -252,6 +252,14 @@ class AutonomousLoop:
                 })
                 print(f"\n[ARCHITECT] 🔄 {result.summary}")
                 # Continue loop — next iteration generates follow-up mandate
+                try:
+                    architect = asyncio.run(_consult_architect(ledger, current_instruction, self.iteration))
+                    if architect.get("next_mandate"):
+                        current_instruction = architect["next_mandate"]
+                    if architect.get("decision") == "ESCALATE":
+                        loop_status_buffer.append({"type": "approval_required", "msg": architect.get("escalation_reason", "Escalation required")})
+                except Exception:
+                    pass
 
             # 7. Derive next instruction from ledger
             current_instruction = (
@@ -263,6 +271,21 @@ class AutonomousLoop:
         print("\n[ARCHITECT] Loop session ended.")
         print(f"[ARCHITECT] Total iterations: {self.iteration}")
         print(f"[ARCHITECT] Full log: {LOOP_LOG}")
+
+
+async def _consult_architect(ledger, context, iteration):
+    try:
+        import httpx
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(
+                "http://127.0.0.1:5050/api/loop/architect",
+                json={"ledger": ledger, "context": context, "iteration": iteration}
+            )
+            if resp.status_code == 200:
+                return resp.json()
+    except Exception:
+        pass
+    return {"decision": "COMPLETE", "reasoning": "Architect unavailable"}
 
 
 if __name__ == "__main__":
