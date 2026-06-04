@@ -1,9 +1,11 @@
 """
-Claude Code Client
-------------------
-Replaces ay_client.py as the MAF executor.
-Sends mandates to Claude Code CLI and returns ledgers.
-Direct local filesystem access — no cloud sandbox dependency.
+Claude Code Client — Primary Executor with Antigravity Fallback
+---------------------------------------------------------------
+Execution priority:
+  1. Claude Code CLI (primary — direct local filesystem access)
+  2. Antigravity API (fallback — when Claude quota exhausted)
+Automatic failover: if Claude Code returns quota/rate-limit error,
+falls through to Antigravity transparently.
 """
 
 import os
@@ -16,7 +18,18 @@ from pathlib import Path
 log = logging.getLogger("ClaudeCodeClient")
 
 MAF_ROOT = Path(__file__).parent.parent.resolve()
+
 MAX_ITERATIONS = 5  # Safety cap inherited from ay_client circuit breaker
+
+CLAUDE_QUOTA_ERRORS = [
+    "rate limit",
+    "quota",
+    "overloaded",
+    "529",
+    "too many requests",
+    "usage limit",
+    "credit balance",
+]
 
 
 def _resolve_claude() -> str:
@@ -30,7 +43,6 @@ def _resolve_claude() -> str:
             found = shutil.which(candidate)
             if found:
                 return found
-        # Hard-coded fallback for nvm4w layout
         fallback = Path(r"C:\nvm4w\nodejs\claude.cmd")
         if fallback.exists():
             return str(fallback)
@@ -40,57 +52,100 @@ def _resolve_claude() -> str:
 _CLAUDE_BIN = _resolve_claude()
 
 
+class QuotaExhaustedError(Exception):
+    """Raised when Claude Code CLI hits quota/rate limits."""
+    pass
+
+
+def _is_quota_error(text: str) -> bool:
+    """Returns True if the error indicates Claude quota exhaustion."""
+    text_lower = text.lower()
+    return any(signal in text_lower for signal in CLAUDE_QUOTA_ERRORS)
+
+
+def _send_via_claude_code(mandate: str, timeout: int) -> str:
+    """Primary: Claude Code CLI execution."""
+    result = subprocess.run(
+        [_CLAUDE_BIN, "-p", mandate, "--dangerously-skip-permissions"],
+        capture_output=True,
+        text=True,
+        cwd=str(MAF_ROOT),
+        timeout=timeout,
+        encoding="utf-8",
+        errors="replace"
+    )
+    if result.returncode != 0:
+        stderr = result.stderr.strip()
+        if _is_quota_error(stderr) or _is_quota_error(result.stdout):
+            raise QuotaExhaustedError(
+                f"Claude quota exhausted: {stderr[:200]}"
+            )
+        raise RuntimeError(
+            f"[CLAUDE CODE] Exit {result.returncode}: {stderr}\n"
+            f"Halting per CLAUDE_RULES.md Section 3.1."
+        )
+    ledger = result.stdout.strip()
+    return ledger if ledger else "LEDGER: Execution complete."
+
+
+def _send_via_antigravity(mandate: str, timeout: int) -> str:
+    """Fallback: Antigravity API execution."""
+    log.warning(
+        "[EXECUTOR] Claude quota exhausted — falling back to Antigravity"
+    )
+    from ay_client import send_mandate as ay_send
+    return ay_send(mandate, timeout=timeout)
+
+
 def send_mandate(mandate: str, timeout: int = 300) -> str:
     """
-    Sends a structured mandate to Claude Code CLI.
-    Returns the full output ledger as a string.
+    Sends mandate to Claude Code CLI.
+    Falls back to Antigravity if Claude quota is exhausted.
+    Automatically returns to Claude Code on next call once available.
     """
+    # ── Primary: Claude Code ──────────────────────────────────────
     try:
-        log.info(f"[CLAUDE CODE] Dispatching mandate ({len(mandate)} chars)")
-        result = subprocess.run(
-            [
-                _CLAUDE_BIN,
-                "-p",
-                mandate,
-                "--dangerously-skip-permissions"
-            ],
-            capture_output=True,
-            text=True,
-            cwd=str(MAF_ROOT),
-            timeout=timeout,
-            encoding="utf-8",
-            errors="replace"
+        log.info(
+            f"[EXECUTOR] Claude Code — dispatching mandate "
+            f"({len(mandate)} chars)"
         )
-        if result.returncode != 0:
-            stderr = result.stderr.strip()
-            raise RuntimeError(
-                f"[CLAUDE CODE] CLI returned non-zero exit code {result.returncode}.\n"
-                f"STDERR: {stderr}\n"
-                f"Halting per CLAUDE_RULES.md Section 3.1."
-            )
-        ledger = result.stdout.strip()
-        log.info(f"[CLAUDE CODE] Ledger received ({len(ledger)} chars)")
-        return ledger if ledger else "LEDGER: Execution complete. No output returned."
+        ledger = _send_via_claude_code(mandate, timeout)
+        log.info(
+            f"[EXECUTOR] Claude Code — ledger received "
+            f"({len(ledger)} chars)"
+        )
+        return ledger
+    except QuotaExhaustedError as qe:
+        log.warning(f"[EXECUTOR] {qe}")
     except subprocess.TimeoutExpired:
         raise RuntimeError(
-            f"[CLAUDE CODE] Mandate timed out after {timeout}s.\n"
-            f"Halting per CLAUDE_RULES.md Section 3.1."
+            f"[CLAUDE CODE] Timed out after {timeout}s."
         )
     except FileNotFoundError:
-        raise RuntimeError(
-            "[CLAUDE CODE] Claude CLI not found. "
-            "Ensure 'claude' is installed and on PATH.\n"
-            "Install: npm install -g @anthropic-ai/claude-code"
+        log.warning(
+            "[EXECUTOR] Claude CLI not found — falling back to Antigravity"
         )
-    except Exception as e:
+
+    # ── Fallback: Antigravity ─────────────────────────────────────
+    try:
+        return _send_via_antigravity(mandate, timeout)
+    except Exception as ay_err:
         raise RuntimeError(
-            f"[CLAUDE CODE] Unexpected error: {e}\n"
+            f"[EXECUTOR] Both Claude Code and Antigravity failed.\n"
+            f"Antigravity error: {ay_err}\n"
             f"Halting per CLAUDE_RULES.md Section 3.1."
         )
 
 
-def test_connection() -> bool:
-    """Tests that Claude Code CLI is operational."""
+def test_connection() -> dict:
+    """
+    Tests both executors and returns their status.
+    Returns: {"claude_code": bool, "antigravity": bool, "active": str}
+    """
+    claude_ok = False
+    ay_ok = False
+
+    # Test Claude Code
     try:
         result = subprocess.run(
             [_CLAUDE_BIN, "-p", "respond with exactly: BRIDGE OK",
@@ -102,15 +157,33 @@ def test_connection() -> bool:
             encoding="utf-8",
             errors="replace"
         )
-        return result.returncode == 0 and "BRIDGE OK" in result.stdout
+        claude_ok = (
+            result.returncode == 0 and "BRIDGE OK" in result.stdout
+        )
     except Exception as e:
-        log.error(f"[CLAUDE CODE] Connection test failed: {e}")
-        return False
+        log.warning(f"[EXECUTOR] Claude Code test failed: {e}")
+
+    # Test Antigravity
+    try:
+        from ay_client import test_connection as ay_test
+        ay_ok = ay_test()
+    except Exception as e:
+        log.warning(f"[EXECUTOR] Antigravity test failed: {e}")
+
+    active = (
+        "Claude Code" if claude_ok
+        else ("Antigravity" if ay_ok else "NONE")
+    )
+    return {
+        "claude_code": claude_ok,
+        "antigravity": ay_ok,
+        "active": active
+    }
 
 
 if __name__ == "__main__":
-    print("Testing Claude Code Client...")
-    if test_connection():
-        print("[OK] Claude Code Client is operational.")
-    else:
-        print("[FAIL] Claude Code Client failed.")
+    print("Testing Executor Cascade...")
+    status = test_connection()
+    print(f"Claude Code:  {'OK' if status['claude_code'] else 'UNAVAILABLE'}")
+    print(f"Antigravity:  {'OK' if status['antigravity'] else 'UNAVAILABLE'}")
+    print(f"Active Executor: {status['active']}")
