@@ -15,7 +15,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 import concurrent.futures
 from itertools import islice
-from fastapi import FastAPI, HTTPException, Query, UploadFile, File, BackgroundTasks, Header, Body, Depends, Security, Response, Path
+from fastapi import FastAPI, APIRouter, HTTPException, Query, UploadFile, File, BackgroundTasks, Header, Body, Depends, Security, Response, Path
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse
@@ -115,6 +115,7 @@ async def lifespan(app: FastAPI):
     # Application teardown logic executes here
 
 app = FastAPI(title="Maintenance Work Order API - Global ERP Connected", lifespan=lifespan)
+api_router = APIRouter(prefix="/api")
 
 def is_jti_revoked(jti: str) -> bool:
     conn = get_db_connection()
@@ -356,12 +357,11 @@ class MWOIngestionRecord(BaseModel):
 
 class MWOUpdate(BaseModel):
     status: Optional[str] = None
-    consumed_sku: Optional[str] = None
     manual_log: Optional[str] = None
     assigned_tech: Optional[str] = None
     hm_priority: Optional[str] = None
 
-    @field_validator('consumed_sku', 'manual_log', mode='before')
+    @field_validator('manual_log', mode='before')
     @classmethod
     def empty_string_to_none(cls, v):
         if isinstance(v, str) and not v.strip():
@@ -456,7 +456,7 @@ def verify_rbac_pipeline(
 # have been fully delegated to the Module 0 Gateway on port 9000.
 
 # [PHASE 34.5 INJECTION] Provide HM routing matrix to the UI
-@app.get("/admin/hms")
+@api_router.get("/admin/hms")
 def get_hms(
     department_id: str = Query(..., description="Target department ID to filter HMs"),
     limit: int = Query(50, ge=1, le=100),
@@ -485,7 +485,7 @@ def get_hms(
         conn.close()
 
 # [PHASE 34.5 INJECTION]
-@app.post("/admin/ingest/single-user")
+@api_router.post("/admin/ingest/single-user")
 async def ingest_single_user(payload: EmployeeIngestionRecord, jwt_payload: dict = Depends(verify_jwt_token)):
     # 1. RBAC Adherence
     role = jwt_payload.get("role")
@@ -539,7 +539,7 @@ async def ingest_single_user(payload: EmployeeIngestionRecord, jwt_payload: dict
             conn.close()
 
 # [PHASE 35.1 INJECTION — FK-NORMALIZED]
-@app.post("/admin/ingest/equipment")
+@api_router.post("/admin/ingest/equipment")
 def ingest_equipment(payload: EquipmentIngestionRecord, jwt_payload: dict = Depends(verify_jwt_token)):
     role = jwt_payload.get("role")
     if role not in ["ADMINISTRATOR", "ADMIN"]:
@@ -656,7 +656,7 @@ def generate_xlsx_template(headers, template_name, categories=[], departments=[]
     )
 
 # [PHASE 35.1.1] Bulk CSV Ingestion Endpoints
-@app.get("/admin/ingest/equipment/template")
+@api_router.get("/admin/ingest/equipment/template")
 def get_equipment_ingestion_template(jwt_payload: dict = Depends(verify_jwt_token)):
     role = jwt_payload.get("role")
     if role not in ["ADMINISTRATOR", "ADMIN", "HM"]:
@@ -679,7 +679,7 @@ def get_equipment_ingestion_template(jwt_payload: dict = Depends(verify_jwt_toke
     headers = ["nomenclature", "category_name", "status", "department_name", "location", "hm_name"]
     return generate_xlsx_template(headers, "equipment_ingestion_template", categories, departments, locations, hms)
 
-@app.post("/admin/ingest/equipment/bulk")
+@api_router.post("/admin/ingest/equipment/bulk")
 async def bulk_ingest_equipment(file: UploadFile = File(...), jwt_payload: dict = Depends(verify_jwt_token)):
     role = jwt_payload.get("role")
     if role not in ["ADMINISTRATOR", "ADMIN"]:
@@ -807,7 +807,7 @@ async def bulk_ingest_equipment(file: UploadFile = File(...), jwt_payload: dict 
     finally:
         conn.close()
 
-@app.get("/admin/equipment")
+@api_router.get("/admin/equipment")
 def get_equipment(
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
@@ -845,7 +845,7 @@ def get_equipment(
         conn.close()
 
 # [PHASE 35.1] Paginated Lookup Routes
-@app.get("/admin/lookups/categories")
+@api_router.get("/admin/lookups/categories")
 def get_categories(
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
@@ -862,9 +862,24 @@ def get_categories(
     finally:
         conn.close()
 
-@app.get("/admin/lookups/departments")
+@api_router.get("/admin/lookups/departments")
+def get_departments(
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    jwt_payload: dict = Depends(verify_jwt_token)
+):
+    role = jwt_payload.get("role")
+    if role not in ["ADMINISTRATOR", "ADMIN", "HM"]:
+        raise HTTPException(status_code=403, detail="RBAC Violation.")
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, name FROM erp_departments ORDER BY name LIMIT ? OFFSET ?", (limit, offset))
+        return {"data": [dict(r) for r in cursor.fetchall()]}
+    finally:
+        conn.close()
 
-@app.get("/admin/lookups/locations")
+@api_router.get("/admin/lookups/locations")
 def get_locations(
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
@@ -878,7 +893,7 @@ def get_locations(
     finally:
         conn.close()
 
-@app.post("/admin/ingest/department")
+@api_router.post("/admin/ingest/department")
 def ingest_department(payload: dict = Body(...), jwt_payload: dict = Depends(verify_jwt_token)):
     role = jwt_payload.get("role")
     if role not in ["ADMINISTRATOR", "ADMIN"]:
@@ -900,7 +915,7 @@ def ingest_department(payload: dict = Body(...), jwt_payload: dict = Depends(ver
     finally:
         conn.close()
 
-@app.post("/admin/ingest/location")
+@api_router.post("/admin/ingest/location")
 def ingest_location(payload: dict = Body(...), jwt_payload: dict = Depends(verify_jwt_token)):
     role = jwt_payload.get("role")
     if role not in ["ADMINISTRATOR", "ADMIN"]:
@@ -922,23 +937,7 @@ def ingest_location(payload: dict = Body(...), jwt_payload: dict = Depends(verif
     finally:
         conn.close()
 
-def get_departments(
-    limit: int = Query(100, ge=1, le=500),
-    offset: int = Query(0, ge=0),
-    jwt_payload: dict = Depends(verify_jwt_token)
-):
-    role = jwt_payload.get("role")
-    if role not in ["ADMINISTRATOR", "ADMIN", "HM"]:
-        raise HTTPException(status_code=403, detail="RBAC Violation.")
-    conn = get_db_connection()
-    try:
-        cursor = conn.cursor()
-        cursor.execute("SELECT id, name FROM erp_departments ORDER BY name LIMIT ? OFFSET ?", (limit, offset))
-        return {"data": [dict(r) for r in cursor.fetchall()]}
-    finally:
-        conn.close()
-
-@app.get("/admin/lookups/technicians")
+@api_router.get("/admin/lookups/technicians")
 def get_technicians(
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
@@ -959,7 +958,7 @@ def get_technicians(
         conn.close()
 
 # [PHASE 35.2] Equipment Actuation Gateway
-@app.put("/admin/equipment/{equipment_id}/actuate")
+@api_router.put("/admin/equipment/{equipment_id}/actuate")
 def actuate_equipment(
     equipment_id: str,
     payload: EquipmentActuationPayload,
@@ -1018,7 +1017,7 @@ def actuate_equipment(
     finally:
         conn.close()
 
-@app.post("/admin/ingest/part")
+@api_router.post("/admin/ingest/part")
 def ingest_part(payload: PartIngestionRecord, jwt_payload: dict = Depends(verify_jwt_token)):
     role = jwt_payload.get("role")
     if role not in ["ADMINISTRATOR", "ADMIN"]:
@@ -1051,7 +1050,7 @@ def ingest_part(payload: PartIngestionRecord, jwt_payload: dict = Depends(verify
     finally:
         conn.close()
 
-@app.get("/admin/parts")
+@api_router.get("/admin/parts")
 def get_parts(
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
@@ -1143,7 +1142,7 @@ def worker_evaluate_threshold(part_id: str):
         conn.close()
 
 
-@app.get("/inventory/available")
+@api_router.get("/inventory/available")
 def get_available_inventory(
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
@@ -1175,7 +1174,7 @@ def get_available_inventory(
         raise HTTPException(status_code=500, detail="Catalog extraction error.")
 # [PHASE 37] Procurement Authorization Matrix
 
-@app.put("/admin/procurement/{procurement_id}/actuate")
+@api_router.put("/admin/procurement/{procurement_id}/actuate")
 def actuate_procurement(
     procurement_id: str,
     payload: ProcurementActuation,
@@ -1274,7 +1273,7 @@ def actuate_procurement(
 
 
 # [PHASE 40] Technician Execution Matrix
-@app.patch("/mwo/{mwo_id}/execute")
+@api_router.patch("/mwo/{mwo_id}/execute")
 def execute_mwo(
     mwo_id: str,
     payload: MWOExecutePayload,
@@ -1368,14 +1367,14 @@ def execute_mwo(
     finally:
         conn.close()
 
-@app.get("/system/directive")
+@api_router.get("/system/directive")
 def get_system_directive():
     """Exposes the Orchestration Boundary context to external agents."""
     if not GLOBAL_AI_DIRECTIVE_CONTEXT:
         raise HTTPException(status_code=503, detail="Directive context unavailable or not loaded.")
     return {"status": "success", "directive": GLOBAL_AI_DIRECTIVE_CONTEXT}
 
-@app.get("/mwo/technicians")
+@api_router.get("/mwo/technicians")
 def get_technicians(jwt_payload: dict = Depends(verify_jwt_token)):
     role = jwt_payload.get("role")
     if role not in ["ADMINISTRATOR", "ADMIN", "HM"]:
@@ -1393,7 +1392,7 @@ def get_technicians(jwt_payload: dict = Depends(verify_jwt_token)):
     finally:
         conn.close()
 
-@app.get("/mwo/hms")
+@api_router.get("/mwo/hms")
 def get_hms(jwt_payload: dict = Depends(verify_jwt_token)):
     role = jwt_payload.get("role")
     if role not in ["ADMINISTRATOR", "ADMIN"]:
@@ -1411,7 +1410,7 @@ def get_hms(jwt_payload: dict = Depends(verify_jwt_token)):
     finally:
         conn.close()
 
-@app.get("/mwo")
+@api_router.get("/mwo")
 def get_mwo(limit: int = 50, offset: int = 0, jwt_payload: dict = Depends(verify_jwt_token)):
     role = jwt_payload.get("role")
     user_id = jwt_payload.get("sub")
@@ -1423,8 +1422,8 @@ def get_mwo(limit: int = 50, offset: int = 0, jwt_payload: dict = Depends(verify
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cols = "w.mwo_id, w.status, w.dm_urgency, w.hm_priority, w.description, w.assigned_tech, w.assigned_hm_id, w.consumed_sku, w.manual_log, w.created_at, w.triaged_at, w.execution_start, w.execution_end, w.completed_at, w.start_date, w.equipment_id, e.nomenclature as equipment_nomenclature, w.location_id, w.material_cost, w.archival_pdf_path"
-        
+        cols = "w.mwo_id, w.status, w.dm_urgency, w.hm_priority, w.description, w.assigned_tech, w.assigned_hm_id, w.manual_log, w.created_at, w.triaged_at, w.execution_start, w.execution_end, w.completed_at, w.start_date, w.equipment_id, e.nomenclature as equipment_nomenclature, w.location_id, w.material_cost, w.archival_pdf_path, w.labor_hours"
+
         base_query = f"SELECT {cols} FROM work_orders w LEFT JOIN erp_equipment e ON w.equipment_id = e.equipment_id WHERE w.status IN ('UNASSIGNED', 'ASSIGNED', 'PENDING_REVIEW')"
         params = []
         
@@ -1489,7 +1488,7 @@ def reconcile_inventory_ledger(mwo_id: str, consumed_sku: str):
         if conn:
             conn.close()
 
-@app.get("/mwo/assigned")
+@api_router.get("/mwo/assigned")
 def get_assigned_mwo(
     limit: int = Query(50), 
     offset: int = Query(0), 
@@ -1677,7 +1676,7 @@ def archive_mwo_pdf_worker(mwo_id: str, resolution_notes: str, labor_hours: floa
     finally:
         conn.close()
 
-@app.get("/mwo/archive/list")
+@api_router.get("/mwo/archive/list")
 def get_archive_list(jwt_payload: dict = Depends(verify_jwt_token)):
     role = jwt_payload.get("role")
     user_id = jwt_payload.get("sub")
@@ -1713,7 +1712,7 @@ def get_archive_list(jwt_payload: dict = Depends(verify_jwt_token)):
     finally:
         conn.close()
 
-@app.get("/mwo/{mwo_id}/archive")
+@api_router.get("/mwo/{mwo_id}/archive")
 def retrieve_mwo_archive(mwo_id: str, jwt_payload: dict = Depends(verify_jwt_token)):
     role = jwt_payload.get("role")
     user_id = jwt_payload.get("sub")
@@ -1782,7 +1781,7 @@ def retrieve_mwo_archive(mwo_id: str, jwt_payload: dict = Depends(verify_jwt_tok
     finally:
         conn.close()
 
-@app.post("/mwo/{mwo_id}/complete", status_code=202)
+@api_router.post("/mwo/{mwo_id}/complete", status_code=202)
 def complete_mwo(
     mwo_id: str, 
     payload: TechCompletePayload, 
@@ -1832,7 +1831,7 @@ def complete_mwo(
     finally:
         conn.close()
 
-@app.patch("/mwo/{mwo_id}")
+@api_router.patch("/mwo/{mwo_id}")
 async def update_mwo_v2(mwo_id: str, payload: MWOUpdate, background_tasks: BackgroundTasks, rbac_verified_mwo: dict = Depends(verify_rbac_pipeline)):
     conn = None
     try:
@@ -1896,7 +1895,7 @@ async def update_mwo_v2(mwo_id: str, payload: MWOUpdate, background_tasks: Backg
         
         # Terminal State Actuation: Atomic Drop Protocol
         if update_data.get("status") == "COMPLETED":
-            cols = "mwo_id, status, dm_urgency, hm_priority, description, assigned_tech, consumed_sku, manual_log, created_at, triaged_at, execution_start, execution_end, completed_at, start_date, equipment_id, location_id, material_cost, archival_pdf_path"
+            cols = "mwo_id, status, dm_urgency, hm_priority, description, assigned_tech, manual_log, created_at, triaged_at, execution_start, execution_end, completed_at, start_date, equipment_id, location_id, material_cost, archival_pdf_path, labor_hours"
             cursor.execute(f"SELECT {cols} FROM work_orders WHERE mwo_id = ?", (mwo_id,))
             final_row = cursor.fetchone()
             if final_row:
@@ -1923,7 +1922,7 @@ async def sync_memory_bus():
         conn = get_db_connection()
         cursor = conn.cursor()
         # Fix 3: Query Safety (COLLATE NOCASE)
-        cols = "mwo_id, status, dm_urgency, hm_priority, description, assigned_tech, consumed_sku, manual_log, created_at, triaged_at, execution_start, execution_end, completed_at, start_date, equipment_id, location_id, material_cost, archival_pdf_path"
+        cols = "mwo_id, status, dm_urgency, hm_priority, description, assigned_tech, manual_log, created_at, triaged_at, execution_start, execution_end, completed_at, start_date, equipment_id, location_id, material_cost, archival_pdf_path, labor_hours"
         cursor.execute(f"SELECT {cols} FROM work_orders WHERE status != 'COMPLETED' COLLATE NOCASE")
         raw_rows = [dict(row) for row in cursor.fetchall()]
         
@@ -1964,12 +1963,12 @@ async def sync_memory_bus():
         if conn:
             conn.close()
 
-@app.post("/mwo/broadcast")
+@api_router.post("/mwo/broadcast")
 async def broadcast_mwo_state():
     await sync_memory_bus()
     return {"status": "success", "message": "Broadcast written to shared memory."}
 
-@app.post("/orders/submit")
+@api_router.post("/orders/submit")
 async def submit_order(order: WorkOrderSubmit):
     conn = get_db_connection()
     try:
@@ -2004,7 +2003,7 @@ class AssignUpdate(BaseModel):
     order_id: str
     technician_id: str
 
-@app.post("/orders/assign")
+@api_router.post("/orders/assign")
 async def assign_order(payload: AssignUpdate):
     conn = get_db_connection()
     try:
@@ -2053,6 +2052,7 @@ class NewMWO(BaseModel):
     urgency: str
     assigned_tech: Optional[str] = None
     status: Optional[str] = "PENDING_REVIEW"
+    impersonated_creator_id: Optional[str] = None
 
     @field_validator('equipment_id', 'location_id')
     @classmethod
@@ -2061,7 +2061,7 @@ class NewMWO(BaseModel):
             raise ValueError("Foreign Keys must be absolute IDs, not concatenated display strings.")
         return v
 
-@app.post("/mwo")
+@api_router.post("/mwo")
 async def create_mwo(payload: NewMWO, jwt_payload: dict = Depends(verify_jwt_token)):
     role = jwt_payload.get("role")
     creator_id = jwt_payload.get("sub")
@@ -2072,6 +2072,20 @@ async def create_mwo(payload: NewMWO, jwt_payload: dict = Depends(verify_jwt_tok
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
+        
+        final_creator_id = creator_id
+        if payload.impersonated_creator_id and role == "DM":
+            # Security check: Verify the impersonated user is in the DM's department
+            cursor.execute("SELECT department_id FROM erp_employees WHERE id = ?", (creator_id,))
+            dm_dept_row = cursor.fetchone()
+            cursor.execute("SELECT department_id FROM erp_employees WHERE id = ?", (payload.impersonated_creator_id,))
+            impersonated_dept_row = cursor.fetchone()
+
+            if not dm_dept_row or not impersonated_dept_row or dm_dept_row['department_id'] != impersonated_dept_row['department_id']:
+                raise HTTPException(status_code=403, detail="RBAC Violation: Cannot impersonate users outside your department.")
+            
+            final_creator_id = payload.impersonated_creator_id
+
         current_time = time.time()
         
         # Auto-generate ID autonomously without client input
@@ -2103,7 +2117,7 @@ async def create_mwo(payload: NewMWO, jwt_payload: dict = Depends(verify_jwt_tok
             (mwo_id, description, equipment_id, location_id, dm_urgency, assigned_tech, assigned_hm_id, status, hm_priority, execution_start, created_by) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (final_mwo_id, payload.description, payload.equipment_id, payload.location_id, payload.urgency, payload.assigned_tech, assigned_hm_id, "UNASSIGNED", "Normal", current_time, creator_id)
+            (final_mwo_id, payload.description, payload.equipment_id, payload.location_id, payload.urgency, payload.assigned_tech, assigned_hm_id, "UNASSIGNED", "Normal", current_time, final_creator_id)
         )
         conn.commit()
         
@@ -2264,7 +2278,7 @@ def process_employee_csv_background(file_path: str):
         if os.path.exists(file_path):
             os.remove(file_path)
 
-@app.post("/admin/employees/bulk-upload", status_code=202)
+@api_router.post("/admin/employees/bulk-upload", status_code=202)
 async def bulk_upload_employees(background_tasks: BackgroundTasks, jwt_payload: dict = Depends(verify_jwt_token), file: UploadFile = File(...)):
     if jwt_payload.get("role") not in ["ADMINISTRATOR", "ADMIN"]:
         raise HTTPException(status_code=403, detail="RBAC Violation: ADMIN clearance required.")
@@ -2375,7 +2389,7 @@ def process_mwo_csv_background(file_path: str):
         if os.path.exists(file_path):
             os.remove(file_path)
 
-@app.post("/admin/mwo/bulk-upload", status_code=202)
+@api_router.post("/admin/mwo/bulk-upload", status_code=202)
 async def bulk_upload_mwos(background_tasks: BackgroundTasks, jwt_payload: dict = Depends(verify_jwt_token), file: UploadFile = File(...)):
     if jwt_payload.get("role") not in ["ADMINISTRATOR", "ADMIN", "DM", "HM"]:
         raise HTTPException(status_code=403, detail="RBAC Violation: Insufficient clearance for bulk MWO ingestion.")
@@ -2398,7 +2412,7 @@ async def bulk_upload_mwos(background_tasks: BackgroundTasks, jwt_payload: dict 
     
     return {"status": "accepted", "message": "MWO payload queued for secure validation and processing."}
 
-@app.post("/admin/users/bulk-upload", status_code=202)
+@api_router.post("/admin/users/bulk-upload", status_code=202)
 async def bulk_upload_users(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
     if not file.filename.endswith(".csv"):
         raise HTTPException(status_code=400, detail="Strictly CSV payloads authorized.")
@@ -2420,7 +2434,7 @@ async def bulk_upload_users(background_tasks: BackgroundTasks, file: UploadFile 
     
     return {"status": "accepted", "message": "Payload queued for validation and processing."}
 
-@app.get("/orders/active")
+@api_router.get("/orders/active")
 async def get_active_orders():
     """
     Retrieves all non-closed maintenance work orders, ordered newest first.
@@ -2473,7 +2487,7 @@ async def get_active_orders():
             conn.close()
 
 
-@app.get("/admin/users")
+@api_router.get("/admin/users")
 async def get_admin_users(
     page: int = Query(1, ge=1),
     limit: int = Query(50, ge=1, le=100),
@@ -2521,7 +2535,7 @@ async def get_admin_users(
         if conn:
             conn.close()
             
-@app.get("/admin/users/{user_id}/audit-log")
+@api_router.get("/admin/users/{user_id}/audit-log")
 async def get_user_audit_log(
     user_id: str = Path(..., description="The target user's enterprise ID"),
     jwt_payload: dict = Depends(verify_jwt_token)
@@ -2553,7 +2567,7 @@ async def get_user_audit_log(
     finally:
         conn.close()
 
-@app.delete("/admin/users/{user_id}", status_code=204)
+@api_router.delete("/admin/users/{user_id}", status_code=204)
 async def terminate_user_access(
     user_id: str = Path(..., description="The target user's enterprise ID to terminate"),
     jwt_payload: dict = Depends(verify_jwt_token)
@@ -2613,7 +2627,7 @@ class UserEscalationPayload(BaseModel):
     role: Literal['ADMIN', 'DM', 'HM', 'TECH']
     department: str
 
-@app.put("/admin/users/{user_id}/escalate")
+@api_router.put("/admin/users/{user_id}/escalate")
 async def escalate_user(
     payload: UserEscalationPayload,
     response: Response,
@@ -2680,7 +2694,7 @@ async def escalate_user(
 
 # [PHASE 36.1] MWO Queue & Assignment Dispatch
 
-@app.get("/work-orders/queue")
+@api_router.get("/work-orders/queue")
 def get_work_orders_queue(
     limit: int = Query(25, ge=1, le=100),
     offset: int = Query(0, ge=0),
@@ -2735,7 +2749,7 @@ class AssignMWOPayload(BaseModel):
     assigned_tech_id: str
     hm_priority: str = "Normal"
 
-@app.patch("/mwo/{mwo_id}/assign")
+@api_router.patch("/mwo/{mwo_id}/assign")
 def assign_mwo(
     mwo_id: str,
     payload: AssignMWOPayload,
@@ -2794,7 +2808,7 @@ def assign_mwo(
     finally:
         conn.close()
 
-@app.get("/employees")
+@api_router.get("/employees")
 def get_employees(
     role: Optional[str] = Query(None),
     is_active: Optional[int] = Query(None),
@@ -2818,14 +2832,8 @@ def get_employees(
     finally:
         conn.close()
 
-# --- FRONTEND DEPLOYMENT ---
-frontend_dist_path = os.path.join(_erp, 'maintenance_frontend', 'dist')
-
-if os.path.exists(frontend_dist_path):
-    app.mount("/assets", StaticFiles(directory=os.path.join(frontend_dist_path, "assets")), name="assets")
-    
 # Personnel Bulk
-@app.get("/admin/ingest/personnel/template")
+@api_router.get("/admin/ingest/personnel/template")
 def get_personnel_ingestion_template(jwt_payload: dict = Depends(verify_jwt_token)):
     role = jwt_payload.get("role")
     if role not in ["ADMINISTRATOR", "ADMIN"]:
@@ -2844,7 +2852,7 @@ def get_personnel_ingestion_template(jwt_payload: dict = Depends(verify_jwt_toke
     headers = ["name", "role", "pin_code", "department_name", "reports_to_hm_name"]
     return generate_xlsx_template(headers, "personnel_ingestion_template", departments=departments, hms=hms)
 
-@app.post("/admin/ingest/personnel/bulk")
+@api_router.post("/admin/ingest/personnel/bulk")
 async def bulk_ingest_personnel(file: UploadFile = File(...), jwt_payload: dict = Depends(verify_jwt_token)):
     role = jwt_payload.get("role")
     if role not in ["ADMINISTRATOR", "ADMIN"]:
@@ -2949,7 +2957,7 @@ async def bulk_ingest_personnel(file: UploadFile = File(...), jwt_payload: dict 
         conn.close()
 
 # Parts Bulk
-@app.get("/admin/ingest/part/template")
+@api_router.get("/admin/ingest/part/template")
 def get_part_ingestion_template(jwt_payload: dict = Depends(verify_jwt_token)):
     role = jwt_payload.get("role")
     if role not in ["ADMINISTRATOR", "ADMIN"]:
@@ -2966,7 +2974,7 @@ def get_part_ingestion_template(jwt_payload: dict = Depends(verify_jwt_token)):
     headers = ["nomenclature", "category_name", "quantity_on_hand", "reorder_threshold", "unit_cost"]
     return generate_xlsx_template(headers, "part_ingestion_template", categories=categories)
 
-@app.post("/admin/ingest/part/bulk")
+@api_router.post("/admin/ingest/part/bulk")
 async def bulk_ingest_part(file: UploadFile = File(...), jwt_payload: dict = Depends(verify_jwt_token)):
     role = jwt_payload.get("role")
     if role not in ["ADMINISTRATOR", "ADMIN"]:
@@ -3028,7 +3036,7 @@ async def bulk_ingest_part(file: UploadFile = File(...), jwt_payload: dict = Dep
         conn.close()
 
 # --- PHASE 44 SKU INGESTION & LEDGER ---
-@app.post("/inventory/skus", status_code=201)
+@api_router.post("/inventory/skus", status_code=201)
 def ingest_sku(payload: SKUCreate, jwt_payload: dict = Depends(verify_jwt_token)):
     conn = get_db_connection()
     try:
@@ -3052,7 +3060,7 @@ def ingest_sku(payload: SKUCreate, jwt_payload: dict = Depends(verify_jwt_token)
     finally:
         conn.close()
 
-@app.get("/inventory/skus")
+@api_router.get("/inventory/skus")
 def get_skus(
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
@@ -3079,7 +3087,7 @@ def get_skus(
     finally:
         conn.close()
 
-@app.post("/inventory/parts", status_code=201)
+@api_router.post("/inventory/parts", status_code=201)
 def ingest_part(payload: PartCreate, token_payload: dict = Depends(verify_jwt_token)):
     part_id = f"PRT-{uuid.uuid4().hex[:8].upper()}"
     conn = get_db_connection()
@@ -3111,7 +3119,7 @@ def ingest_part(payload: PartCreate, token_payload: dict = Depends(verify_jwt_to
 
     return {"status": "success", "message": f"Part {part_id} physically instantiated."}
 
-@app.get("/inventory/parts")
+@api_router.get("/inventory/parts")
 def get_paginated_parts(
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
@@ -3143,7 +3151,7 @@ def get_paginated_parts(
     finally:
         conn.close()
 
-@app.post("/inventory/mutate")
+@api_router.post("/inventory/mutate")
 def mutate_inventory(payload: InventoryMutation, jwt_payload: dict = Depends(verify_jwt_token)):
     conn = get_db_connection()
     try:
@@ -3176,7 +3184,7 @@ def mutate_inventory(payload: InventoryMutation, jwt_payload: dict = Depends(ver
     finally:
         conn.close()
 
-@app.get("/users")
+@api_router.get("/users")
 def get_paginated_users(
     limit: int = Query(50, ge=1, le=100, description="Strict pagination limit"),
     offset: int = Query(0, ge=0, description="Strict pagination offset"),
@@ -3214,7 +3222,7 @@ def get_paginated_users(
     finally:
         conn.close()
 
-@app.post("/work-orders/{mwo_id}/consume", status_code=201)
+@api_router.post("/work-orders/{mwo_id}/consume", status_code=201)
 def ingest_mwo_consumption(
     mwo_id: str,
     payload: MwoConsumptionPayload,
@@ -3285,7 +3293,7 @@ def ingest_mwo_consumption(
     finally:
         conn.close()
 
-@app.get("/admin/procurement", response_model=Dict[str, Any])
+@api_router.get("/admin/procurement", response_model=Dict[str, Any])
 def get_procurement_ledger(
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
@@ -3384,7 +3392,7 @@ class Phase48EquipmentCreate(BaseModel):
 
 # --- LEVEL 0 ROUTES ---
 
-@app.post("/locations", status_code=201)
+@api_router.post("/locations", status_code=201)
 def hydrate_location(payload: LocationCreate, jwt_payload: dict = Depends(verify_jwt_token)):
     role = jwt_payload.get("role")
     if role not in ["ADMINISTRATOR", "ADMIN"]:
@@ -3408,7 +3416,7 @@ def hydrate_location(payload: LocationCreate, jwt_payload: dict = Depends(verify
     finally:
         conn.close()
 
-@app.post("/departments", status_code=201)
+@api_router.post("/departments", status_code=201)
 def hydrate_department(payload: DepartmentCreate, jwt_payload: dict = Depends(verify_jwt_token)):
     role = jwt_payload.get("role")
     if role not in ["ADMINISTRATOR", "ADMIN"]:
@@ -3432,7 +3440,7 @@ def hydrate_department(payload: DepartmentCreate, jwt_payload: dict = Depends(ve
     finally:
         conn.close()
 
-@app.post("/categories", status_code=201)
+@api_router.post("/categories", status_code=201)
 def hydrate_category(payload: CategoryCreate, jwt_payload: dict = Depends(verify_jwt_token)):
     role = jwt_payload.get("role")
     if role not in ["ADMINISTRATOR", "ADMIN"]:
@@ -3459,7 +3467,7 @@ def hydrate_category(payload: CategoryCreate, jwt_payload: dict = Depends(verify
 
 # --- LEVEL 1 ROUTES ---
 
-@app.post("/employees", status_code=201)
+@api_router.post("/employees", status_code=201)
 def hydrate_employee(payload: Phase48EmployeeCreate, jwt_payload: dict = Depends(verify_jwt_token)):
     role = jwt_payload.get("role")
     if role not in ["ADMINISTRATOR", "ADMIN"]:
@@ -3488,7 +3496,7 @@ def hydrate_employee(payload: Phase48EmployeeCreate, jwt_payload: dict = Depends
     finally:
         conn.close()
 
-@app.post("/skus", status_code=201)
+@api_router.post("/skus", status_code=201)
 def hydrate_sku(payload: Phase48SkuCreate, jwt_payload: dict = Depends(verify_jwt_token)):
     role = jwt_payload.get("role")
     if role not in ["ADMINISTRATOR", "ADMIN"]:
@@ -3518,7 +3526,7 @@ def hydrate_sku(payload: Phase48SkuCreate, jwt_payload: dict = Depends(verify_jw
 
 # --- LEVEL 2 ROUTES ---
 
-@app.post("/equipment", status_code=201)
+@api_router.post("/equipment", status_code=201)
 def hydrate_equipment(payload: Phase48EquipmentCreate, jwt_payload: dict = Depends(verify_jwt_token)):
     role = jwt_payload.get("role")
     if role not in ["ADMINISTRATOR", "ADMIN"]:
@@ -3545,3 +3553,43 @@ def hydrate_equipment(payload: Phase48EquipmentCreate, jwt_payload: dict = Depen
     finally:
         conn.close()
 
+@api_router.get("/dm/personnel")
+def get_department_personnel(jwt_payload: dict = Depends(verify_jwt_token)):
+    role = jwt_payload.get("role")
+    user_id = jwt_payload.get("sub")
+
+    if role not in ["DM", "ADMIN", "ADMINISTRATOR"]:
+        raise HTTPException(status_code=403, detail="RBAC Violation: DM clearance required.")
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        
+        # First, get the DM's department ID
+        cursor.execute("SELECT department_id FROM erp_employees WHERE id = ?", (user_id,))
+        user_record = cursor.fetchone()
+        
+        if not user_record:
+            raise HTTPException(status_code=404, detail="DM record not found.")
+        
+        department_id = user_record['department_id']
+        
+        # Then, get all employees in that department
+        cursor.execute("SELECT id, name, role FROM erp_employees WHERE department_id = ? AND is_active = 1", (department_id,))
+        personnel = [dict(row) for row in cursor.fetchall()]
+        
+        return {"status": "success", "data": personnel}
+    except Exception as e:
+        logger.error(f"Failed to fetch department personnel: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error.")
+    finally:
+        conn.close()
+
+app.include_router(api_router)
+
+# --- FRONTEND DEPLOYMENT ---
+frontend_dist_path = os.path.join(_erp, 'maintenance_frontend', 'dist')
+
+if os.path.exists(frontend_dist_path):
+    app.mount("/assets", StaticFiles(directory=os.path.join(frontend_dist_path, "assets")), name="assets")
+    
