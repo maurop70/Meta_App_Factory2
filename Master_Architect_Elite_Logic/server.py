@@ -7,6 +7,10 @@ The central API server for the Master Architect Elite Logic app.
 Exposes Triad review, Adversarial Gate management, pattern memory,
 and War Room integration endpoints.
 """
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
 # ── V3.0 Resilience Integration ──────────────────────────
 import os as _os, sys as _sys
@@ -46,6 +50,8 @@ from typing import Optional, List, Dict
 import threading
 from collections import deque
 from loop_engine import AutonomousLoop
+from intent_router import classify_intent
+from shared_modules.agent_schemas import validate_cfo_output, validate_cio_output, validate_critic_output
 
 # Shared loop status ring buffer — last 50 messages
 loop_status_buffer: deque = deque(maxlen=50)
@@ -497,7 +503,7 @@ DIRECT_AGENT_PERSONAS = {
     ),
 }
 
-async def classify_intent(prompt: str, history: List[dict] = None) -> str:
+async def classify_builder_venture_intent(prompt: str, history: List[dict] = None) -> str:
     api_key = os.getenv("GEMINI_API_KEY", "")
     if api_key:
         api_key = api_key.strip("'\"")
@@ -666,6 +672,49 @@ async def loop_approve(request: Request):
     return {"status": "directive received"}
 
 
+@app.post("/api/loop/architect")
+async def loop_architect_decision(request: Request):
+    try:
+        body = await request.json()
+        ledger = body.get("ledger", "")
+        context = body.get("context", "")
+        iteration = body.get("iteration", 0)
+        if not ledger:
+            return JSONResponse(status_code=400, content={"error": "ledger is required"})
+        architect_prompt = (
+            f"You are the Senior Architect of the Meta App Factory.\n\n"
+            f"ITERATION: {iteration}\n\n"
+            f"EXECUTION CONTEXT:\n{context}\n\n"
+            f"LEDGER FROM LAST EXECUTION:\n{ledger}\n\n"
+            f"Respond with ONLY this JSON object:\n"
+            f'{{"decision": "COMPLETE"|"ITERATE"|"ESCALATE"|"ERROR", '
+            f'"reasoning": "one sentence", '
+            f'"next_mandate": "full mandate if ITERATE else null", '
+            f'"escalation_reason": "reason if ESCALATE else null"}}\n'
+            f"No markdown. JSON only."
+        )
+        from google import genai
+        import os, json as json_mod
+        client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=architect_prompt,
+            config={"temperature": 0.0}
+        )
+        raw = response.text.strip().strip("```").strip("json").strip()
+        decision = json_mod.loads(raw)
+        loop_status_buffer.append({
+            "type": "architect_decision",
+            "decision": decision.get("decision"),
+            "reasoning": decision.get("reasoning"),
+            "iteration": iteration
+        })
+        return JSONResponse(content=decision)
+    except Exception as e:
+        logger.error(f"[ARCHITECT] Decision endpoint failed: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
 # ── Triad Review ─────────────────────────────────────────
 
 @app.post("/api/genesis/synthesize")
@@ -697,13 +746,7 @@ async def review(req: ReviewRequest):
     # Branch A: Conversational Query Bypass
     if classification == "CONVERSATIONAL_QUERY":
         # ── ClaudeAY Dual-Engine Router ─────────────────────
-        import sys as _cay_sys
-        import os as _cay_os
-        _cay_sys.path.insert(0, _cay_os.path.dirname(
-            _cay_os.path.dirname(_cay_os.path.abspath(__file__))
-        ))
         try:
-            from claude_mcp_bridge.intent_router import classify_intent
             _routing_engine = await classify_intent(user_query)
         except Exception as _cay_err:
             import logging
@@ -721,9 +764,9 @@ async def review(req: ReviewRequest):
                     os.path.dirname(os.path.abspath(__file__))
                 ))
                 try:
-                    from claude_mcp_bridge.dispatcher import AntigravityDispatcher
-                    from claude_mcp_bridge.ay_client import send_mandate
-                    from claude_mcp_bridge.loop_engine import load_recent_telemetry
+                    from dispatcher import AntigravityDispatcher
+                    from ay_client import send_mandate
+                    from loop_engine import load_recent_telemetry
 
                     dispatcher = AntigravityDispatcher()
                     telemetry = load_recent_telemetry()
@@ -856,7 +899,7 @@ async def review(req: ReviewRequest):
             genai.configure(api_key=api_key)
 
             # Step A: Run classify_intent
-            intent = await classify_intent(user_query, req.history)
+            intent = await classify_builder_venture_intent(user_query, req.history)
             if intent == "BUILDER":
                 if user_query.strip().startswith("/genesis "):
                     # Genesis Architect Mode!
@@ -1111,14 +1154,41 @@ async def review(req: ReviewRequest):
                 
                 # ── PHYSICAL MULTI-AGENT SWARM execution ──
                 import httpx
-                
+
+                # VAULT EXTRACTION SPLICE — bind foundational documents to C-Suite context
+                if req.document_ids:
+                    for doc_id in req.document_ids:
+                        safe_doc_id = os.path.basename(doc_id)
+                        doc_path = os.path.normpath(os.path.join(_SCRIPT_DIR, "vault", "staging", safe_doc_id))
+                        if os.path.exists(doc_path):
+                            ext = os.path.splitext(safe_doc_id)[1].lower()
+                            if ext in [".txt", ".md", ".csv", ".json"]:
+                                try:
+                                    async with aiofiles.open(doc_path, "r", encoding="utf-8", errors="ignore") as f:
+                                        content = await f.read()
+                                        document_context += f"\n--- DOCUMENT: {safe_doc_id} ---\n" + content + "\n"
+                                except Exception as e:
+                                    logger.error(f"Error reading vault document {safe_doc_id}: {e}")
+                            else:
+                                try:
+                                    logger.info(f"Staging binary document {safe_doc_id} to Google File API...")
+                                    uploaded_file = genai.upload_file(doc_path)
+                                    google_uploaded_files.append(uploaded_file)
+                                    document_context += f"\n[Staged Binary Payload: {safe_doc_id} (Google URI: {uploaded_file.name})]\n"
+                                except Exception as e:
+                                    logger.error(f"Error staging binary document {safe_doc_id} to Google: {e}")
+                    if document_context:
+                        active_query = user_query + f"\n\n[ATTACHED FOUNDATIONAL DOCUMENTS]:\n{document_context}"
+                    else:
+                        active_query = user_query
+
                 # 1. CIO Deep Research Pre-flight Sweep (Port 5090)
                 yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CIO', 'content': '🔍 [CIO Sweep] Initiating live market research sensor sweep...\\n'})}\n\n"
                 
                 intel_brief_str = "No live intelligence gathered."
                 try:
                     async with httpx.AsyncClient(timeout=10.0) as client:
-                        resp = await client.post("http://127.0.0.1:5090/api/cio/deep_research", json={"query": user_query})
+                        resp = await client.post("http://127.0.0.1:5090/api/cio/deep_research", json={"query": active_query})
                         if resp.status_code == 200:
                             data = resp.json()
                             intel_brief_str = data.get("intelligence_brief", "No live intelligence gathered.")
@@ -1136,7 +1206,7 @@ async def review(req: ReviewRequest):
                     yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CMO', 'content': '📊 [CMO Agent] Launching competitor landscape DuckDuckGo scans...\\n'})}\n\n"
                     async with httpx.AsyncClient(timeout=10.0) as client:
                         resp = await client.post("http://127.0.0.1:5020/api/warroom/respond", json={
-                            "topic": user_query,
+                            "topic": active_query,
                             "context": "CEO War Room Directive",
                             "agents_present": ["CEO", "CFO", "CIO", "CMO"]
                         })
@@ -1150,7 +1220,7 @@ async def review(req: ReviewRequest):
                     try:
                         from cmo_agent import CMOAgent
                         cmo = CMOAgent()
-                        cmo_res = await asyncio.to_thread(cmo.run, user_query)
+                        cmo_res = await asyncio.to_thread(cmo.run, active_query)
                         cmo_summary = cmo_res.get("summary", "")
                     except Exception as fallback_err:
                         cmo_summary = f"[CMO local analysis fell back. Error: {fallback_err}]"
@@ -1165,7 +1235,7 @@ async def review(req: ReviewRequest):
                     yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CFO', 'content': '💵 [CFO Agent] Ingesting operational costs and calculating projected IRR...\\n'})}\n\n"
                     async with httpx.AsyncClient(timeout=15.0) as client:
                         resp = await client.post("http://127.0.0.1:5070/api/consult", data={
-                            "instruction": f"CEO DIRECTIVE: {user_query}\n\n=== CIO INTELLIGENCE BRIEF ===\n{intel_brief_str}"
+                            "instruction": f"CEO DIRECTIVE: {active_query}\n\n=== CIO INTELLIGENCE BRIEF ===\n{intel_brief_str}"
                         })
                         if resp.status_code == 200:
                             cfo_data = resp.json()
@@ -1193,12 +1263,18 @@ async def review(req: ReviewRequest):
                             {"marketing_cost": 25000, "sentiment": "neutral"},
                             {"infrastructure_cost_monthly": 500, "complexity": "medium"}
                         )
+                        try:
+                            validate_cfo_output(cfo_res)
+                        except ValueError as schema_err:
+                            logger.error(f"[SCHEMA GATE] CFO output rejected: {schema_err}")
+                            raise
                         if cfo_res.get("status") == "success":
+                            metrics = cfo_res.get('metrics', cfo_res)
                             cfo_report = (
-                                f"Generated Spreadsheet Model: {cfo_res.get('file_path')}\n"
-                                f"Projected IRR: {cfo_res.get('metrics', {}).get('irr_pct', 0)}%\n"
-                                f"Break-Even Timeline: {cfo_res.get('metrics', {}).get('breakeven_months', 0)} Months\n"
-                                f"Year 1 Net Profit: ${cfo_res.get('metrics', {}).get('net_income_y1', 0):,.2f}"
+                                f"Generated Spreadsheet Model: {cfo_res.get('file_path', cfo_res.get('file_name', 'None'))}\n"
+                                f"Projected IRR: {metrics.get('irr_pct', metrics.get('roi_percentage', 0))}%\n"
+                                f"Break-Even Timeline: {metrics.get('breakeven_months', 0)} Months\n"
+                                f"Year 1 Net Profit: ${metrics.get('net_income_y1', metrics.get('projected_revenue', 0)):,.2f}"
                             )
                         else:
                             cfo_report = f"[CFO modeling issue: {cfo_res.get('message')}]"
@@ -1215,7 +1291,7 @@ async def review(req: ReviewRequest):
                     yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CIO', 'content': '💻 [CIO Agent] Auditing system constraints and estimating resource capacity...\\n'})}\n\n"
                     async with httpx.AsyncClient(timeout=10.0) as client:
                         resp = await client.post("http://127.0.0.1:5090/api/cio/process", json={
-                            "focus_areas": [user_query]
+                            "focus_areas": [active_query]
                         })
                         if resp.status_code == 200:
                             cio_data = resp.json()
@@ -1226,8 +1302,13 @@ async def review(req: ReviewRequest):
                     try:
                         from cio_agent import CIOAgent
                         cio = CIOAgent()
-                        cio_res = await asyncio.to_thread(cio.run, user_query)
-                        cio_feasibility = cio_res.get("feasibility_analysis", "")
+                        cio_res = await asyncio.to_thread(cio.run, active_query)
+                        try:
+                            validate_cio_output(cio_res)
+                        except ValueError as schema_err:
+                            logger.error(f"[SCHEMA GATE] CIO output rejected: {schema_err}")
+                            raise
+                        cio_feasibility = cio_res.get("feasibility_analysis", "") or cio_res.get("data", "")
                     except Exception as cio_err:
                         cio_feasibility = f"[CIO feasibility assessment failed: {cio_err}]"
 
@@ -1321,7 +1402,7 @@ async def review(req: ReviewRequest):
                     logger.error(f"Semantic Recall Hook query failure: {query_err}")
 
                 ceo_prompt = (
-                    f"You are the CEO of the Antigravity Meta App Factory. Ingest the following physical division reports for intent: '{user_query}':\n\n"
+                    f"You are the CEO of the Antigravity Meta App Factory. Ingest the following physical division reports for intent: '{active_query}':\n\n"
                     f"=== CMO Market Trend analysis ===\n{cmo_summary}\n\n"
                     f"=== CFO Capex and IRR models ===\n{cfo_report}\n\n"
                     f"=== CIO Feasibility Assessment ===\n{cio_feasibility}\n\n"
@@ -1385,6 +1466,11 @@ async def review(req: ReviewRequest):
                     critic_data = json.loads(critic_resp.text.strip())
                     critic_score = float(critic_data.get("score", 7.5))
                     objections = critic_data.get("objections", [])
+                    try:
+                        validate_critic_output({"score": critic_score, "objections": objections})
+                    except ValueError as schema_err:
+                        logger.error(f"[SCHEMA GATE] Critic output rejected: {schema_err}")
+                        raise
                 except Exception as critic_err:
                     logger.error(f"Critic scoring failed: {critic_err}")
                 

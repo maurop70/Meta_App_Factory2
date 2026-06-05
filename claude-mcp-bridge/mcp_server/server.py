@@ -50,10 +50,23 @@ async def ws_handler(websocket):
 
                 # ── Telemetry filter: exclude claude.ai traffic ──────────
                 _url = event.get("url") or event.get("data", {}).get("url", "")
-                if "claude.ai" in str(_url):
-                    log.debug(f"[TELEMETRY FILTER] Skipped claude.ai event: {str(event)[:80]}")
+                if any(domain in str(_url) for domain in 
+                       ("claude.ai", "anthropic.com", "assets-proxy.anthropic.com")):
+                    log.debug(f"[TELEMETRY FILTER] Skipped external domain event: {str(event)[:80]}")
                     continue
                 # ─────────────────────────────────────────────────────────
+
+                # Drop console_error and page_error from external tabs
+                if event.get("type") in ("console_error", "page_error"):
+                    _url = (
+                        event.get("url") or
+                        event.get("data", {}).get("url", "") or
+                        ""
+                    )
+                    if not _url or any(domain in str(_url) for domain in 
+                                       ("claude.ai", "anthropic.com", "assets-proxy.anthropic.com")):
+                        log.debug(f"[FILTER] Skipped external tab error: {event.get('type')}")
+                        continue
 
                 telemetry_buffer.append(event)
                 TELEMETRY_LOG.parent.mkdir(parents=True, exist_ok=True)

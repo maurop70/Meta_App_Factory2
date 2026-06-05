@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Claude MCP Bridge",
+  "version": "1.0.0",
+  "description": "Captures browser telemetry and streams to local Claude MCP Bridge Server",
+  "permissions": ["debugger", "tabs", "activeTab", "storage", "scripting"],
+  "host_permissions": ["<all_urls>"],
+  "background": { "service_worker": "background.js" },
+  "action": { "default_popup": "popup.html" }
+}

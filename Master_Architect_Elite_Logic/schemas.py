@@ -122,8 +122,8 @@ class AgentOntology(BaseModel):
     )
     role_summary: str = Field(
         ...,
-        max_length=280,
-        description="280-char max summary of the agent's role and primary directive"
+        max_length=2000,
+        description="2000-char max summary of the agent's role and primary directive"
     )
     primary_capabilities: List[str] = Field(
         ...,

@@ -51,15 +51,21 @@ def _error_signature(event: dict) -> str:
     return f"{event.get('type')}::{event.get('message','')[:80]}::{event.get('url','')}"
 
 
+def _is_local_url(url: str) -> bool:
+    """Return True for localhost/loopback URLs or events with no URL (pure JS errors)."""
+    return not url or "localhost" in url or "127.0.0.1" in url or "::1" in url
+
+
 def _read_recent_critical(n: int = 20) -> list:
-    """Read the most recent N critical telemetry events."""
+    """Read the most recent N critical telemetry events from local origins only."""
     if not TELEMETRY_LOG.exists():
         return []
     try:
         lines = TELEMETRY_LOG.read_text(encoding="utf-8").strip().splitlines()
         events = [json.loads(l) for l in lines[-n:] if l.strip()]
         return [e for e in events if e.get("type") in
-                ("console_error", "page_error", "request_failed")]
+                ("console_error", "page_error", "request_failed")
+                and _is_local_url(e.get("url", ""))]
     except Exception:
         return []
 

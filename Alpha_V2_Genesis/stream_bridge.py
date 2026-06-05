@@ -244,8 +244,8 @@ def stream_chat(prompt: str, project_name: str = "General", dashboard_context=No
     # Model fallback chain (confirmed via ListModels API)
     models_with_api = [
         ("gemini-2.5-flash", "v1beta"),
-        ("gemini-2.0-flash", "v1beta"),
-        ("gemini-2.0-flash-lite", "v1beta"),
+        ("gemini-2.5-flash", "v1beta"),
+        ("gemini-2.5-flash", "v1beta"),
     ]
     resp = None
     last_error = ""
