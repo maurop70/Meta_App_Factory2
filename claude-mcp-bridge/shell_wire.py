@@ -45,6 +45,9 @@ MAX_TIMEOUT     = 120
 # Refused immediately — no subprocess is ever spawned for a blocked command.
 
 _BLOCK_SPECS: list[tuple[str, str]] = [
+    # Patch 1 — Git bypass: raw git commands must go through git_wire
+    (r"^\s*git\b",
+     "raw git blocked; use git_wire.git_operation instead"),
     # No-preserve-root (no legitimate use in autonomous context)
     (r"--no-preserve-root",
      "--no-preserve-root flag"),
