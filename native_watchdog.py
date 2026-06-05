@@ -11,6 +11,7 @@ import threading
 import logging
 import subprocess
 import csv
+import platform
 from datetime import datetime
 
 sys_path_added = False
@@ -266,38 +267,54 @@ class AetherNativeWatchdog:
         self._consecutive_failures = 0
 
     def _run_memory_guard(self):
-        """Uses subprocess tasklist to track memory footprint of potential zombie processes."""
+        """Track memory footprint of potential zombie node processes (cross-platform)."""
         try:
-            # We filter specifically for node.exe processes spawned by playwright.
-            # Avoid killing actual Chrome processes used by the user.
-            out = subprocess.check_output('tasklist /FI "IMAGENAME eq node.exe" /FO CSV /NH', shell=True).decode('utf-8')
-            reader = csv.reader(out.splitlines())
-            
             total_mb = 0
-            for row in reader:
-                if len(row) >= 5 and row[1].isdigit():
-                    pid = int(row[1])
-                    mem_str = row[4].replace(' K', '').replace(',', '').strip()
-                    if mem_str.isdigit():
-                        mem_mb = int(mem_str) / 1024.0
+            if platform.system() == "Windows":
+                out = subprocess.check_output(
+                    'tasklist /FI "IMAGENAME eq node.exe" /FO CSV /NH', shell=True
+                ).decode('utf-8')
+                reader = csv.reader(out.splitlines())
+                for row in reader:
+                    if len(row) >= 5 and row[1].isdigit():
+                        pid = int(row[1])
+                        mem_str = row[4].replace(' K', '').replace(',', '').strip()
+                        if mem_str.isdigit():
+                            mem_mb = int(mem_str) / 1024.0
+                            total_mb += mem_mb
+                            if mem_mb > self._memory_threshold_mb:
+                                logger.error(f"Memory Guard Triggered: PID {pid} using {mem_mb:.1f}MB (Threshold {self._memory_threshold_mb}MB)")
+                                subprocess.run(f"taskkill /PID {pid} /F", shell=True)
+                                _log_heal_event(
+                                    "NativeWatchdog",
+                                    "Memory Guard Triggered",
+                                    {"pid": pid, "mem_mb": mem_mb},
+                                    "SYSTEM_RECOVERY"
+                                )
+            else:
+                # Linux/macOS: ps -eo pid,rss,comm — rss is in KB
+                out = subprocess.check_output(
+                    "ps -eo pid,rss,comm --no-headers | grep 'node$'",
+                    shell=True, stderr=subprocess.DEVNULL
+                ).decode('utf-8')
+                for line in out.splitlines():
+                    parts = line.split()
+                    if len(parts) >= 2:
+                        pid = int(parts[0])
+                        mem_mb = int(parts[1]) / 1024.0
                         total_mb += mem_mb
-                        
-                        # Playwright node worker shouldn't exceed massive RAM spikes
                         if mem_mb > self._memory_threshold_mb:
                             logger.error(f"Memory Guard Triggered: PID {pid} using {mem_mb:.1f}MB (Threshold {self._memory_threshold_mb}MB)")
-                            subprocess.run(f"taskkill /PID {pid} /F", shell=True)
+                            subprocess.run(["kill", "-9", str(pid)])
                             _log_heal_event(
-                                "NativeWatchdog", 
-                                "Memory Guard Triggered", 
-                                {"pid": pid, "mem_mb": mem_mb}, 
+                                "NativeWatchdog",
+                                "Memory Guard Triggered",
+                                {"pid": pid, "mem_mb": mem_mb},
                                 "SYSTEM_RECOVERY"
                             )
-                            
             self._telemetry["system_ram"] = f"Node Workers: {total_mb:.1f}MB"
-            
         except Exception as e:
             self._telemetry["system_ram"] = f"Guard Error: {str(e)}"
-            pass
 
     def _trigger_v3_recovery(self):
         """Fires when internal components fail to respond to 3 pings."""
