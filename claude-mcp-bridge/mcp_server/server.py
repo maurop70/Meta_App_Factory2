@@ -12,9 +12,14 @@ import asyncio
 import json
 import logging
 import os
+import sys
 from collections import deque
 from datetime import datetime
 from pathlib import Path
+
+# ── Shell Wire import ─────────────────────────────────────
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from shell_wire import execute as _shell_execute, AUDIT_LOG as _SHELL_AUDIT_LOG, LIVE_LOG as _SHELL_LIVE_LOG
 
 import websockets
 from mcp.server import Server
@@ -147,6 +152,51 @@ async def list_tools():
                 "section": {"type": "string"}
             }, "required": ["section"]},
         ),
+        # ── Shell Wire ─────────────────────────────────────────
+        Tool(
+            name="execute_shell",
+            description=(
+                "Execute a shell command on the local Windows/Linux machine. "
+                "Returns stdout, stderr, exit_code, duration_ms, timed_out, blocked. "
+                "Subject to a hard blocklist (destructive OS commands refused). "
+                "Working directory must be within SHELL_WIRE_ALLOWED_ROOTS. "
+                "Use for: git, pip, npm, pytest, uvicorn, deploy scripts, curl."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "command": {
+                        "type": "string",
+                        "description": "Raw command string to execute."
+                    },
+                    "cwd": {
+                        "type": "string",
+                        "description": "Working directory. Defaults to MAF root if omitted."
+                    },
+                    "timeout_seconds": {
+                        "type": "integer",
+                        "default": 30,
+                        "description": "Max execution time in seconds (1–120)."
+                    },
+                    "shell": {
+                        "type": "string",
+                        "enum": ["auto", "powershell", "cmd", "bash"],
+                        "default": "auto",
+                        "description": "'auto' uses PowerShell on Windows, bash elsewhere."
+                    },
+                },
+                "required": ["command"],
+            },
+        ),
+        Tool(
+            name="get_shell_log",
+            description=(
+                "Returns the live output log from the most recent shell_wire execution. "
+                "Poll this during long-running commands (pip install, npm, deploys) "
+                "to check progress without waiting for the call to return."
+            ),
+            inputSchema={"type": "object", "properties": {}},
+        ),
     ]
 
 @mcp.call_tool()
@@ -176,6 +226,30 @@ async def call_tool(name: str, arguments: dict):
         with open(RULES_PATH, "a", encoding="utf-8") as f:
             f.write(f"\n\n{section}\n")
         return [TextContent(type="text", text=f"Rule appended to {RULES_PATH}")]
+    # ── Shell Wire handlers ───────────────────────────────
+    if name == "execute_shell":
+        command = arguments.get("command", "").strip()
+        if not command:
+            return [TextContent(type="text",
+                                text=json.dumps({"error": "No command provided"}))]
+        loop   = asyncio.get_event_loop()
+        result = await loop.run_in_executor(
+            None,
+            lambda: _shell_execute(
+                command=command,
+                cwd=arguments.get("cwd"),
+                timeout_seconds=int(arguments.get("timeout_seconds", 30)),
+                shell=arguments.get("shell", "auto"),
+            ),
+        )
+        return [TextContent(type="text", text=json.dumps(result, indent=2))]
+    if name == "get_shell_log":
+        content = (
+            _SHELL_LIVE_LOG.read_text(encoding="utf-8")
+            if _SHELL_LIVE_LOG.exists()
+            else "[no shell activity yet]"
+        )
+        return [TextContent(type="text", text=content)]
     raise ValueError(f"Unknown tool: {name}")
 
 # ── Entry point ───────────────────────────────────────────
