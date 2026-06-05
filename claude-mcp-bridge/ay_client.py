@@ -1,5 +1,4 @@
 import os
-import subprocess
 import warnings
 from pathlib import Path
 from dotenv import load_dotenv
@@ -15,21 +14,26 @@ client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 
 
 def execute_local_shell(command: str) -> str:
-    """Executes a shell command on the local Windows OS in the MAF root directory."""
-    try:
-        result = subprocess.run(
-            command,
-            shell=True,
-            capture_output=True,
-            text=True,
-            cwd=str(MAF_ROOT),
-            timeout=120
+    """
+    Executes a shell command via shell_wire — the single safety layer for both
+    the Gemini plane (this function) and the MCP plane (mcp_server/server.py).
+    Preserves the STDOUT:/STDERR: return format expected by existing callers.
+    """
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.insert(0, str(_Path(__file__).parent))
+    from shell_wire import execute as _shell_execute
+
+    result = _shell_execute(command=command, cwd=str(MAF_ROOT), timeout_seconds=120)
+
+    if result["blocked"]:
+        return f"EXECUTION BLOCKED: {result['block_reason']}"
+    if result["timed_out"]:
+        return (
+            f"EXECUTION FAILED: Command timed out after 120 seconds\n"
+            f"STDOUT:\n{result['stdout']}\nSTDERR:\n{result['stderr']}"
         )
-        return f"STDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
-    except subprocess.TimeoutExpired:
-        return "EXECUTION FAILED: Command timed out after 120 seconds"
-    except Exception as e:
-        return f"EXECUTION FAILED: {str(e)}"
+    return f"STDOUT:\n{result['stdout']}\nSTDERR:\n{result['stderr']}"
 
 
 def write_local_file(relative_path: str, content: str) -> str:
