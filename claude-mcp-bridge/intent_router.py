@@ -68,9 +68,8 @@ async def classify_intent(prompt: str) -> str:
         if not api_key:
             raise RuntimeError("GEMINI_API_KEY missing")
 
-        import google.generativeai as genai
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel("gemini-2.0-flash")
+        from google import genai
+        client = genai.Client(api_key=api_key)
 
         classification_prompt = (
             "You are a routing classifier. Reply with exactly one word: CLAUDE or GEMINI.\n\n"
@@ -82,7 +81,10 @@ async def classify_intent(prompt: str) -> str:
             "One word only:"
         )
 
-        response = model.generate_content(classification_prompt)
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=classification_prompt,
+        )
         result = response.text.strip().upper()
 
         if result in ("CLAUDE", "GEMINI"):

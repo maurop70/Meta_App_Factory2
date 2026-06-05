@@ -122,8 +122,8 @@ def generate_news_report(market_snapshot=None):
     # Model fallback chain — if one model is deprecated, cascade to the next
     MODELS = [
         ("gemini-2.5-flash", "v1beta"),
-        ("gemini-2.0-flash", "v1beta"),
-        ("gemini-2.0-flash-lite", "v1beta"),
+        ("gemini-2.5-flash", "v1beta"),
+        ("gemini-2.5-flash", "v1beta"),
     ]
 
     # Build context
