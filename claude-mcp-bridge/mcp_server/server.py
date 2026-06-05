@@ -21,6 +21,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from shell_wire import execute as _shell_execute, AUDIT_LOG as _SHELL_AUDIT_LOG, LIVE_LOG as _SHELL_LIVE_LOG
 from git_wire import execute_async as _git_execute_async
+from ssh_wire import execute_async as _ssh_execute_async
 
 import websockets
 from mcp.server import Server
@@ -235,6 +236,41 @@ async def list_tools():
                 "required": ["operation"],
             },
         ),
+        # ── SSH Wire ─────────────────────────────────────────
+        Tool(
+            name="execute_remote_shell",
+            description=(
+                "Execute a shell command on an approved remote production server via SSH. "
+                "Approved hosts: maf-production-nyc1 (104.248.233.220), "
+                "mwo-production-nyc1 (68.183.30.128). "
+                "Any other host_ip is blocked. "
+                "Subject to a remote command blocklist (rm -rf /, reboot, shutdown, mkfs, etc.). "
+                "Network failures return exit_code 502 (Gateway Unreachable). "
+                "Auth: root user, key-based only."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "host_ip": {
+                        "type": "string",
+                        "description": (
+                            "IP address of the target server. "
+                            "Must be in the approved host list."
+                        ),
+                    },
+                    "command": {
+                        "type": "string",
+                        "description": "Shell command to execute on the remote host.",
+                    },
+                    "timeout": {
+                        "type": "integer",
+                        "default": 60,
+                        "description": "Command timeout in seconds.",
+                    },
+                },
+                "required": ["host_ip", "command"],
+            },
+        ),
     ]
 
 @mcp.call_tool()
@@ -298,6 +334,19 @@ async def call_tool(name: str, arguments: dict):
             operation=operation,
             args=arguments.get("args") or {},
             cwd=arguments.get("cwd"),
+        )
+        return [TextContent(type="text", text=json.dumps(result, indent=2))]
+    # ── SSH Wire handler ──────────────────────────────────
+    if name == "execute_remote_shell":
+        host_ip = arguments.get("host_ip", "").strip()
+        command = arguments.get("command", "").strip()
+        if not host_ip or not command:
+            return [TextContent(type="text",
+                                text=json.dumps({"error": "host_ip and command are required"}))]
+        result = await _ssh_execute_async(
+            host_ip=host_ip,
+            command=command,
+            timeout=int(arguments.get("timeout", 60)),
         )
         return [TextContent(type="text", text=json.dumps(result, indent=2))]
     raise ValueError(f"Unknown tool: {name}")

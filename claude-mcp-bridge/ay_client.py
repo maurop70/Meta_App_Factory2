@@ -56,6 +56,34 @@ def read_local_file(relative_path: str) -> str:
         return f"READ FAILED: {str(e)}"
 
 
+def execute_remote_shell(host_ip: str, command: str, timeout: int = 60) -> str:
+    """
+    Executes a shell command on an approved remote server via ssh_wire.
+    Preserves the STDOUT:/STDERR: return format expected by Gemini callers.
+    """
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.insert(0, str(_Path(__file__).parent))
+    from ssh_wire import execute as _ssh_execute
+
+    result = _ssh_execute(host_ip=host_ip, command=command, timeout=timeout)
+
+    if result["blocked"]:
+        return f"EXECUTION BLOCKED: {result['block_reason']}"
+    if result["exit_code"] == 502:
+        return f"EXECUTION FAILED: {result['stderr']}"
+    if result["timed_out"]:
+        return (
+            f"EXECUTION FAILED: Remote command timed out after {timeout} seconds\n"
+            f"STDOUT:\n{result['stdout']}\nSTDERR:\n{result['stderr']}"
+        )
+    host_label = f"{result['host_name']} ({host_ip})" if result["host_name"] else host_ip
+    return (
+        f"REMOTE [{host_label}] exit={result['exit_code']}\n"
+        f"STDOUT:\n{result['stdout']}\nSTDERR:\n{result['stderr']}"
+    )
+
+
 def send_mandate(mandate: str, timeout: int = 300) -> str:
     """
     Sends a structured mandate to the native local execution bridge.
@@ -69,7 +97,8 @@ def send_mandate(mandate: str, timeout: int = 300) -> str:
             chat = client.chats.create(
                 model="gemini-2.5-pro",
                 config=types.GenerateContentConfig(
-                    tools=[execute_local_shell, write_local_file, read_local_file],
+                    tools=[execute_local_shell, write_local_file, read_local_file,
+                           execute_remote_shell],
                     temperature=0.0
                 )
             )
@@ -99,6 +128,8 @@ def send_mandate(mandate: str, timeout: int = 300) -> str:
                         result = write_local_file(**fc.args)
                     elif fc.name == "read_local_file":
                         result = read_local_file(**fc.args)
+                    elif fc.name == "execute_remote_shell":
+                        result = execute_remote_shell(**fc.args)
                     else:
                         result = f"Unknown tool: {fc.name}"
                     tool_results.append(
