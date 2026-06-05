@@ -11,31 +11,41 @@ const CreateMWOForm = ({ onMWOCreated }) => {
   const [statusMsg, setStatusMsg] = useState('');
   const [equipments, setEquipments] = useState([]);
   const [locations, setLocations] = useState([]);
+  const [personnel, setPersonnel] = useState([]);
+  const [impersonatedCreatorId, setImpersonatedCreatorId] = useState('');
 
   const { userRole, jwtPayload } = useAuth();
   const currentUserId = jwtPayload?.sub || 'Unknown DM';
+  const currentUserName = jwtPayload?.name || 'Unknown DM';
 
   const navigate = useNavigate();
 
-  // Auto-ID Generation and Data Fetching on mount
   useEffect(() => {
     const fetchLookups = async () => {
       try {
-        const [eqRes, locRes] = await Promise.all([
+        const [eqRes, locRes, personnelRes] = await Promise.all([
           api.get('/admin/equipment'),
-          api.get('/admin/lookups/locations')
+          api.get('/admin/lookups/locations'),
+          api.get('/dm/personnel')
         ]);
         setEquipments(eqRes.data.data || []);
         setLocations(locRes.data.data || []);
+        
+        const personnelData = personnelRes.data.data || [];
+        // Ensure the current DM is in the list for selection
+        if (!personnelData.find(p => p.id === currentUserId)) {
+          personnelData.unshift({ id: currentUserId, name: `${currentUserName} (Myself)` });
+        }
+        setPersonnel(personnelData);
+        setImpersonatedCreatorId(currentUserId); // Default to self
+
       } catch (err) {
         console.error("Failed to load dynamic dropdowns", err);
       }
     };
 
     fetchLookups();
-  }, []);
-
-  // Auto-ID Generation and Data Fetching on mount
+  }, [currentUserId, currentUserName]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -46,11 +56,11 @@ const CreateMWOForm = ({ onMWOCreated }) => {
         equipment_id: equipmentId,
         location_id: location,
         urgency: urgency,
-        status: 'PENDING_REVIEW'
+        status: 'PENDING_REVIEW',
+        impersonated_creator_id: impersonatedCreatorId === currentUserId ? null : impersonatedCreatorId
       });
       setStatusMsg('Work Order created successfully.');
       
-      // Reset logic
       setDescription('');
       setEquipmentId('');
       setLocation('');
@@ -67,6 +77,8 @@ const CreateMWOForm = ({ onMWOCreated }) => {
     display: 'block', textAlign: 'left', fontSize: '0.75rem', textTransform: 'uppercase', 
     letterSpacing: '0.05em', color: '#ffffff', marginBottom: '0.4rem', fontWeight: '600'
   };
+  
+  const selectedUser = personnel.find(p => p.id === impersonatedCreatorId);
 
   return (
     <div style={{ background: 'var(--bg-card, rgba(15, 23, 42, 0.85))', border: '1px solid var(--border, rgba(99, 102, 241, 0.15))', borderRadius: '12px', padding: '1.5rem', backdropFilter: 'blur(8px)', fontFamily: "var(--font, Inter)", maxWidth: '800px', margin: '0 auto', textAlign: 'left' }}>
@@ -108,16 +120,39 @@ const CreateMWOForm = ({ onMWOCreated }) => {
         <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#ffffff', margin: 0 }}>Create Maintenance Work Order (DM)</h3>
       </div>
       
-      {/* Metadata Bar */}
-      <div style={{ display: 'flex', gap: '1rem', color: '#94a3b8', fontSize: '0.8rem', borderBottom: '1px solid var(--border, rgba(99, 102, 241, 0.15))', paddingBottom: '1.5rem', marginBottom: '1.5rem', fontWeight: '500' }}>
-        <span>[Requester: {currentUserId}]</span>
-        <span>|</span>
-        <span>[Dept: Operations]</span>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border, rgba(99, 102, 241, 0.15))', paddingBottom: '1.5rem', marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', gap: '1rem', color: '#94a3b8', fontSize: '0.8rem', fontWeight: '500', alignItems: 'center' }}>
+          <span>[DM: {currentUserName}]</span>
+          {impersonatedCreatorId !== currentUserId && selectedUser && (
+            <>
+              <span>|</span>
+              <span style={{ color: '#fbbf24', fontWeight: 700 }}>Acting as: {selectedUser.name}</span>
+            </>
+          )}
+        </div>
+        <div>
+          <label style={{...labelStyle, marginBottom: '0.2rem', fontSize: '0.65rem'}}>Submit As:</label>
+          <select 
+            value={impersonatedCreatorId} 
+            onChange={(e) => setImpersonatedCreatorId(e.target.value)}
+            className="modern-input"
+            style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem' }}
+          >
+            {personnel.map(p => (
+              <option key={p.id} value={p.id}>{p.name}{p.id === currentUserId ? ' (Myself)' : ''}</option>
+            ))}
+          </select>
+        </div>
       </div>
       
+      {impersonatedCreatorId !== currentUserId && selectedUser && (
+        <div style={{ width: '100%', background: 'rgba(251, 191, 36, 0.1)', border: '1px solid rgba(251, 191, 36, 0.3)', color: '#fbbf24', padding: '0.75rem 1rem', borderRadius: '8px', marginBottom: '1.5rem', fontSize: '0.85rem', fontWeight: 600 }}>
+          ⚠️ Acting as: {selectedUser.name}
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem', alignItems: 'flex-start', width: '100%' }}>
         
-        {/* Row 1: Equipment & Location & Urgency */}
         <div className="responsive-grid">
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '0.4rem' }}>
@@ -177,7 +212,6 @@ const CreateMWOForm = ({ onMWOCreated }) => {
           </div>
         </div>
 
-        {/* Row 2: Description */}
         <div style={{ width: '100%' }}>
           <label style={labelStyle}>Issue Description</label>
           <textarea 
@@ -190,7 +224,6 @@ const CreateMWOForm = ({ onMWOCreated }) => {
           />
         </div>
 
-        {/* Submit Row */}
         <div style={{ width: '100%', display: 'flex', justifyContent: 'flex-start', alignItems: 'center', gap: '1.5rem', marginTop: '1rem' }}>
           <button type="submit" style={{ padding: '0.7rem 2rem', background: 'linear-gradient(145deg, #6366f1, #4338ca)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem', transition: 'all 0.2s', boxShadow: '0 4px 6px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255, 255, 255, 0.3)' }}>
             Submit MWO
