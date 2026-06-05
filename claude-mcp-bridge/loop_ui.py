@@ -71,6 +71,14 @@ def main():
     start_background()
     console.print("[dim]Auto-trigger: watching telemetry every 30s[/dim]\n")
 
+    # Phase 5: autonomy trigger — full autonomous fix/deploy loop
+    try:
+        from autonomy_trigger import start_background as start_autonomy
+        start_autonomy()
+        console.print("[dim]Autonomy-trigger: watching conditions every 60s[/dim]\n")
+    except Exception as _e:
+        console.print(f"[yellow]Autonomy-trigger failed to start: {_e}[/yellow]\n")
+
     console.print("[bold]You are the CEO. Type what you want built.[/bold]")
     console.print("[dim]Type 'exit' to quit. "
                   "Interrupt anytime by typing your directive.[/dim]\n")

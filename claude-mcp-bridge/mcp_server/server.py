@@ -24,6 +24,8 @@ from git_wire import execute_async as _git_execute_async
 from ssh_wire import execute_async as _ssh_execute_async
 from fs_wire  import execute_async as _fs_execute_async
 
+AUTONOMY_LOG = Path(__file__).parent.parent / "logs" / "autonomy_events.jsonl"
+
 import websockets
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
@@ -237,6 +239,21 @@ async def list_tools():
                 "required": ["operation"],
             },
         ),
+        # ── Autonomy Trigger log ──────────────────────────────
+        Tool(
+            name="get_autonomy_log",
+            description=(
+                "Returns the last N entries from logs/autonomy_events.jsonl. "
+                "Shows autonomy trigger events: conditions evaluated, dry-run "
+                "entries, mandates fired, circuit breakers opened, and mandate "
+                "results. Use to audit what the autonomy trigger has done or "
+                "would have done."
+            ),
+            inputSchema={"type": "object", "properties": {
+                "last_n": {"type": "integer", "default": 20,
+                           "description": "Number of most-recent entries to return."}
+            }},
+        ),
         # ── File System Wire ─────────────────────────────────
         Tool(
             name="file_operation",
@@ -386,6 +403,18 @@ async def call_tool(name: str, arguments: dict):
             cwd=arguments.get("cwd"),
         )
         return [TextContent(type="text", text=json.dumps(result, indent=2))]
+    # ── Autonomy log handler ──────────────────────────────
+    if name == "get_autonomy_log":
+        n = int(arguments.get("last_n", 20))
+        entries = []
+        if AUTONOMY_LOG.exists():
+            for line in AUTONOMY_LOG.read_text(encoding="utf-8").splitlines():
+                if line.strip():
+                    try:
+                        entries.append(json.loads(line))
+                    except Exception:
+                        entries.append({"raw": line})
+        return [TextContent(type="text", text=json.dumps(entries[-n:], indent=2))]
     # ── File System Wire handler ──────────────────────────
     if name == "file_operation":
         operation = arguments.get("operation", "").strip()
