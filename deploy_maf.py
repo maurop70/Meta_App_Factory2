@@ -17,6 +17,12 @@ import tempfile
 import time
 from pathlib import Path
 
+# Reconfigure stdout/stderr to UTF-8 so remote systemctl output (● etc.) prints cleanly
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 # ── Config ────────────────────────────────────────────────────────────────────
 REMOTE_USER = "root"
 REMOTE_HOST = "104.248.233.220"
@@ -96,7 +102,7 @@ def _build_archive() -> tuple[str, int]:
             file_count += 1
 
     size = os.path.getsize(tmp_path)
-    print(f"    {file_count} files  →  {size / 1024 / 1024:.1f} MB compressed")
+    print(f"    {file_count} files  ->  {size / 1024 / 1024:.1f} MB compressed")
     return tmp_path, size
 
 
