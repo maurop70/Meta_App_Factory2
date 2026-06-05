@@ -17,9 +17,10 @@ from collections import deque
 from datetime import datetime
 from pathlib import Path
 
-# ── Shell Wire import ─────────────────────────────────────
+# ── Wire imports ──────────────────────────────────────────
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from shell_wire import execute as _shell_execute, AUDIT_LOG as _SHELL_AUDIT_LOG, LIVE_LOG as _SHELL_LIVE_LOG
+from git_wire import execute_async as _git_execute_async
 
 import websockets
 from mcp.server import Server
@@ -197,6 +198,43 @@ async def list_tools():
             ),
             inputSchema={"type": "object", "properties": {}},
         ),
+        # ── Git Wire ────────────────────────────────────────────
+        Tool(
+            name="git_operation",
+            description=(
+                "Execute a safe, audited git operation via git_wire. "
+                "Supports: status, log, diff, add, commit, push, pull, branch, reset_file, stash. "
+                "Enforces: no force-push, no push to prod/production, no reset --hard/clean. "
+                "Push/pull failures caused by network errors return exit_code 502. "
+                "Use this instead of execute_shell for all git work."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "type": "string",
+                        "enum": ["status", "log", "diff", "add", "commit", "push",
+                                 "pull", "branch", "reset_file", "stash"],
+                        "description": "Git operation to perform.",
+                    },
+                    "args": {
+                        "type": "object",
+                        "description": (
+                            "Operation-specific arguments. "
+                            "commit: {message}, push/pull: {branch}, "
+                            "add: {paths: []}, log: {n}, diff: {staged: bool}, "
+                            "branch: {name}, reset_file: {file}, stash: {action: push|pop}."
+                        ),
+                        "default": {},
+                    },
+                    "cwd": {
+                        "type": "string",
+                        "description": "Repository path. Defaults to MAF root if omitted.",
+                    },
+                },
+                "required": ["operation"],
+            },
+        ),
     ]
 
 @mcp.call_tool()
@@ -250,6 +288,18 @@ async def call_tool(name: str, arguments: dict):
             else "[no shell activity yet]"
         )
         return [TextContent(type="text", text=content)]
+    # ── Git Wire handler ──────────────────────────────────
+    if name == "git_operation":
+        operation = arguments.get("operation", "").strip()
+        if not operation:
+            return [TextContent(type="text",
+                                text=json.dumps({"error": "No operation provided"}))]
+        result = await _git_execute_async(
+            operation=operation,
+            args=arguments.get("args") or {},
+            cwd=arguments.get("cwd"),
+        )
+        return [TextContent(type="text", text=json.dumps(result, indent=2))]
     raise ValueError(f"Unknown tool: {name}")
 
 # ── Entry point ───────────────────────────────────────────
