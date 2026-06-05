@@ -16,3 +16,4 @@ jinja2
 anthropic==0.102.0
 aiofiles==25.1.0
 chromadb==1.5.0
+paramiko
