@@ -37,23 +37,48 @@ def execute_local_shell(command: str) -> str:
 
 
 def write_local_file(relative_path: str, content: str) -> str:
-    """Writes string content to a local file within the MAF workspace."""
-    try:
-        target_path = MAF_ROOT / relative_path
-        target_path.parent.mkdir(parents=True, exist_ok=True)
-        target_path.write_text(content, encoding="utf-8")
-        return f"SUCCESS: Wrote {len(content)} bytes to {relative_path}"
-    except Exception as e:
-        return f"WRITE FAILED: {str(e)}"
+    """
+    Writes string content to a local file within the MAF workspace.
+    Delegates to fs_wire so path sandbox and write blocklist are enforced.
+    """
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.insert(0, str(_Path(__file__).parent))
+    from fs_wire import execute as _fs_execute
+
+    result = _fs_execute(
+        operation="write",
+        path=relative_path,
+        content=content,
+        cwd=str(MAF_ROOT),
+    )
+    if result["blocked"]:
+        return f"WRITE BLOCKED: {result['block_reason']}"
+    if result["exit_code"] != 0:
+        return f"WRITE FAILED: {result['stderr']}"
+    return f"SUCCESS: {result['content']} to {relative_path}"
 
 
 def read_local_file(relative_path: str) -> str:
-    """Reads the text content of a local file within the MAF workspace."""
-    try:
-        target_path = MAF_ROOT / relative_path
-        return target_path.read_text(encoding="utf-8")
-    except Exception as e:
-        return f"READ FAILED: {str(e)}"
+    """
+    Reads the text content of a local file within the MAF workspace.
+    Delegates to fs_wire so path sandbox and size limits are enforced.
+    """
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.insert(0, str(_Path(__file__).parent))
+    from fs_wire import execute as _fs_execute
+
+    result = _fs_execute(
+        operation="read",
+        path=relative_path,
+        cwd=str(MAF_ROOT),
+    )
+    if result["blocked"]:
+        return f"READ BLOCKED: {result['block_reason']}"
+    if result["exit_code"] != 0:
+        return f"READ FAILED: {result['stderr']}"
+    return result["content"]
 
 
 def execute_remote_shell(host_ip: str, command: str, timeout: int = 60) -> str:

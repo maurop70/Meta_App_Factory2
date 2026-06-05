@@ -22,6 +22,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from shell_wire import execute as _shell_execute, AUDIT_LOG as _SHELL_AUDIT_LOG, LIVE_LOG as _SHELL_LIVE_LOG
 from git_wire import execute_async as _git_execute_async
 from ssh_wire import execute_async as _ssh_execute_async
+from fs_wire  import execute_async as _fs_execute_async
 
 import websockets
 from mcp.server import Server
@@ -236,6 +237,55 @@ async def list_tools():
                 "required": ["operation"],
             },
         ),
+        # ── File System Wire ─────────────────────────────────
+        Tool(
+            name="file_operation",
+            description=(
+                "Read, write, append, delete, list, check existence, create directories, "
+                "or move files on the local filesystem. "
+                "All paths must resolve within SHELL_WIRE_ALLOWED_ROOTS (sandbox). "
+                "Blocked: .env deletion, .db/.sqlite deletion, .git deletion, "
+                "write/append to deploy_maf.py/deploy_erp.py, system paths. "
+                "Size limits: read 2 MB, write 5 MB, list 500 entries. "
+                "Audit logged. Use for code inspection, edits, and new file creation."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "type": "string",
+                        "enum": ["read", "write", "append", "delete",
+                                 "list", "exists", "mkdir", "move"],
+                        "description": "File system operation to perform.",
+                    },
+                    "path": {
+                        "type": "string",
+                        "description": (
+                            "File or directory path. Relative paths are resolved "
+                            "against 'cwd' (defaults to MAF root)."
+                        ),
+                    },
+                    "content": {
+                        "type": "string",
+                        "description": "Content string for write/append operations.",
+                    },
+                    "destination": {
+                        "type": "string",
+                        "description": "Destination path for move operation.",
+                    },
+                    "cwd": {
+                        "type": "string",
+                        "description": "Base directory for relative paths. Defaults to MAF root.",
+                    },
+                    "recursive": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": "For list: recurse into subdirectories.",
+                    },
+                },
+                "required": ["operation", "path"],
+            },
+        ),
         # ── SSH Wire ─────────────────────────────────────────
         Tool(
             name="execute_remote_shell",
@@ -334,6 +384,22 @@ async def call_tool(name: str, arguments: dict):
             operation=operation,
             args=arguments.get("args") or {},
             cwd=arguments.get("cwd"),
+        )
+        return [TextContent(type="text", text=json.dumps(result, indent=2))]
+    # ── File System Wire handler ──────────────────────────
+    if name == "file_operation":
+        operation = arguments.get("operation", "").strip()
+        path      = arguments.get("path", "").strip()
+        if not operation or not path:
+            return [TextContent(type="text",
+                                text=json.dumps({"error": "operation and path are required"}))]
+        result = await _fs_execute_async(
+            operation=operation,
+            path=path,
+            content=arguments.get("content"),
+            destination=arguments.get("destination"),
+            cwd=arguments.get("cwd"),
+            recursive=bool(arguments.get("recursive", False)),
         )
         return [TextContent(type="text", text=json.dumps(result, indent=2))]
     # ── SSH Wire handler ──────────────────────────────────
