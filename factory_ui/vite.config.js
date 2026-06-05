@@ -116,7 +116,9 @@ export default defineConfig({
       '/api/ingest': {
         target: 'http://127.0.0.1:5050',
         changeOrigin: true,
-        secure: false
+        secure: false,
+        timeout: 600000,
+        proxyTimeout: 600000
       },
       '/api/challenge/override': {
         target: 'http://127.0.0.1:5000',

@@ -2,35 +2,35 @@ $WshShell = New-Object -ComObject WScript.Shell
 $DesktopPath = [Environment]::GetFolderPath('Desktop')
 $ShortcutPath = "$DesktopPath\Meta App Factory.lnk"
 
-# Auto-detect Google Drive Root
-$PossibleRoots = @(
-    "$env:USERPROFILE\My Drive (maurotgs@gmail.com)",
-    "$env:USERPROFILE\My Drive",
-    "$env:USERPROFILE\Google Drive",
-    "G:\My Drive",
-    "H:\My Drive"
+# Auto-detect Base Path
+$PossiblePaths = @(
+    "C:\Dev\Antigravity_AI_Agents\Meta_App_Factory",
+    "$env:USERPROFILE\My Drive (maurotgs@gmail.com)\Antigravity-AI Agents\Meta_App_Factory",
+    "$env:USERPROFILE\My Drive\Antigravity-AI Agents\Meta_App_Factory",
+    "$env:USERPROFILE\Google Drive\Antigravity-AI Agents\Meta_App_Factory",
+    "G:\My Drive\Antigravity-AI Agents\Meta_App_Factory",
+    "H:\My Drive\Antigravity-AI Agents\Meta_App_Factory"
 )
 
 $BaseDir = ""
-foreach ($Root in $PossibleRoots) {
-    $TestDir = "$Root\Antigravity-AI Agents\Meta_App_Factory"
-    if (Test-Path $TestDir) {
-        $BaseDir = $TestDir
+foreach ($Path in $PossiblePaths) {
+    if (Test-Path $Path) {
+        $BaseDir = $Path
         break
     }
 }
 
 if ($BaseDir -eq "") {
-    Write-Error "Meta App Factory directory not found in Google Drive roots."
+    Write-Error "Meta App Factory directory not found."
     exit 1
 }
 
 $Shortcut = $WshShell.CreateShortcut($ShortcutPath)
-$Shortcut.TargetPath = "$BaseDir\Launch_Meta_App_Factory_V3.bat"
+$Shortcut.TargetPath = "$BaseDir\Launch_ClaudeAY.bat"
 $Shortcut.WorkingDirectory = "$BaseDir"
-$Shortcut.IconLocation = "$BaseDir\factory_icon.ico"
+$Shortcut.IconLocation = "$BaseDir\claudeay_icon.ico"
 $Shortcut.Save()
 
-Write-Host "CLEANUP: Redirected 'Meta App Factory' shortcut to V3 WEB UI."
-Write-Host "Target: $BaseDir\Launch_Meta_App_Factory_V3.bat"
+Write-Host "CLEANUP: Redirected 'Meta App Factory' shortcut to Launch_ClaudeAY.bat."
+Write-Host "Target: $BaseDir\Launch_ClaudeAY.bat"
 

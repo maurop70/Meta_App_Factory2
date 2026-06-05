@@ -28,8 +28,11 @@ async def register_client():
         yield f"data: {json.dumps({'type': 'connection', 'status': 'connected'})}\n\n"
         
         while True:
-            event = await queue.get()
-            yield f"data: {json.dumps(event)}\n\n"
+            try:
+                event = await asyncio.wait_for(queue.get(), timeout=20.0)
+                yield f"data: {json.dumps(event)}\n\n"
+            except asyncio.TimeoutError:
+                yield ": ping\n\n"
     except asyncio.CancelledError:
         logger.info("Client disconnected from IPC Bridge event stream.")
     finally:

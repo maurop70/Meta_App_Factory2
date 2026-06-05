@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ClaudeAY — Architect Terminal</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;700;800&display=swap');
+  
 
   :root {
     --bg:        #060610;
@@ -32,7 +32,7 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     background: var(--bg);
     color: var(--text);
     height: 100vh;
@@ -96,7 +96,7 @@
   }
 
   .logo-title {
-    font-family: 'Syne', sans-serif;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     font-size: 18px;
     font-weight: 800;
     letter-spacing: -0.02em;
@@ -201,7 +201,7 @@
   }
 
   .welcome-title {
-    font-family: 'Syne', sans-serif;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     font-size: 28px;
     font-weight: 800;
     letter-spacing: -0.03em;
@@ -294,12 +294,13 @@
     line-height: 1.6;
     white-space: pre-wrap;
     word-break: break-word;
+    color: #e5e7eb !important;
   }
 
   .msg-bubble.user {
     background: rgba(34,211,238,0.06);
     border: 1px solid rgba(34,211,238,0.15);
-    color: var(--text);
+    color: #e5e7eb !important;
     align-self: flex-end;
     max-width: 80%;
   }
@@ -307,20 +308,20 @@
   .msg-bubble.claude {
     background: rgba(99,102,241,0.06);
     border: 1px solid var(--border);
-    color: var(--text);
+    color: #e5e7eb !important;
   }
 
   .msg-bubble.system {
     background: var(--bg3);
     border: 1px solid var(--border);
-    color: var(--text2);
+    color: var(--text2) !important;
     font-size: 10px;
   }
 
   .msg-bubble.error {
     background: rgba(248,113,113,0.06);
     border: 1px solid rgba(248,113,113,0.2);
-    color: var(--red);
+    color: var(--red) !important;
     font-size: 10px;
   }
 
@@ -384,7 +385,7 @@
     border: none;
     outline: none;
     color: var(--text);
-    font-family: 'JetBrains Mono', monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     font-size: 12px;
     line-height: 1.5;
     resize: none;
@@ -466,7 +467,7 @@
   /* ── New session btn ── */
   .new-session-btn {
     font-size: 9px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -486,7 +487,7 @@
 
   .telem-btn {
     font-size: 9px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     color: var(--text3);
     background: transparent;
     border: 1px solid var(--border);
@@ -533,7 +534,7 @@
   }
 
   .loop-title {
-    font-family: 'Syne', sans-serif;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     font-size: 14px;
     font-weight: 700;
     color: var(--indigo3);
@@ -598,7 +599,7 @@
     border: 1px solid var(--border);
     border-radius: 8px;
     color: var(--text);
-    font-family: 'JetBrains Mono', monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     font-size: 11px;
     padding: 10px;
     outline: none;
@@ -616,7 +617,7 @@
     border: none;
     border-radius: 8px;
     color: white;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     font-size: 11px;
     font-weight: 700;
     cursor: pointer;
@@ -641,7 +642,7 @@
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 12px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     font-size: 10px;
     color: #a7f3d0; /* Soft terminal green */
     overflow-y: auto;
@@ -710,7 +711,7 @@
     border: 1px solid rgba(251,191,36,0.3);
     border-radius: 6px;
     color: var(--text);
-    font-family: 'JetBrains Mono', monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     font-size: 11px;
     padding: 8px;
     outline: none;
@@ -727,7 +728,7 @@
     border: none;
     border-radius: 6px;
     color: var(--bg);
-    font-family: 'JetBrains Mono', monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     font-size: 11px;
     font-weight: 700;
     cursor: pointer;
@@ -744,7 +745,7 @@
   /* ── Header toggle button style ── */
   .loop-toggle-btn {
     font-size: 9px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     color: var(--indigo3);
     background: rgba(99,102,241,0.08);
     border: 1px solid var(--border);
@@ -1093,7 +1094,19 @@
                 engine
               );
               outputBubble.classList.add('streaming-cursor');
-            } else if (data.type === 'output' && outputBubble) {
+            } else if (data.type === 'output') {
+              // Defensive: create outputBubble if engine event was missed
+              if (!outputBubble) {
+                engine = engine || 'CLAUDE';
+                currentEngine = engine;
+                try { sysMsg.remove(); } catch(_) {}
+                outputBubble = addMessage(
+                  engine === 'CLAUDE' ? 'claude' : 'gemini',
+                  '',
+                  engine
+                );
+                outputBubble.classList.add('streaming-cursor');
+              }
               outputBubble.textContent += data.content + '\n';
               document.getElementById('chatArea').scrollTop =
                 document.getElementById('chatArea').scrollHeight;

@@ -20,8 +20,9 @@ export default function ClaudeAYStatus() {
   }, []);
 
   const cay = status?.claudeay;
+  const isLocalUrl = (url) => !url || url.startsWith('http://localhost') || url.startsWith('http://127.0.0.1') || url.startsWith('http://::1');
   const recentErrors = (status?.recent_telemetry || [])
-    .filter(e => e.type === 'console_error' || e.type === 'page_error')
+    .filter(e => (e.type === 'console_error' || e.type === 'page_error') && isLocalUrl(e.url))
     .slice(-2);
   const lastLoop = (status?.recent_loop || []).slice(-1)[0];
 

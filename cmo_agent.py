@@ -3,7 +3,8 @@ cmo_agent.py — CMO Intelligence Agent V3 (Live Fire)
 ═════════════════════════════════════════════════════
 Market intelligence via Gemini 2.5 Pro Function Calling.
 
-Search backend: DuckDuckGo HTML scraper (requests + BeautifulSoup, no API key)
+Search backend: Firecrawl (primary, richer markdown content) →
+                DuckDuckGo HTML scraper (fallback, no API key)
 Resilience:     generate_with_backoff_sync wraps every HTTP call.
 Fallback:       Deterministic hash-seeded simulation if scraper or API fails.
 """
@@ -13,6 +14,7 @@ import json
 import hashlib
 import random
 import requests
+import httpx
 import logging
 from google import genai
 from google.genai import types
@@ -40,6 +42,8 @@ class CMOGeminiOutput(BaseModel):
     sources: list[str] = []
 
 
+FIRECRAWL_KEY = os.getenv("FIRECRAWL_API_KEY", "")
+
 _DDG_URL = "https://html.duckduckgo.com/html/"
 _HEADERS = {
     "User-Agent": (
@@ -49,6 +53,43 @@ _HEADERS = {
     ),
     "Accept-Language": "en-US,en;q=0.9",
 }
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FIRECRAWL PRIMARY SEARCH (sync, keyed via FIRECRAWL_API_KEY env var)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _firecrawl_search(query: str) -> list:
+    """
+    Primary search via Firecrawl /v1/search. Returns a list of
+    {title, snippet, url} dicts, or [] if unavailable/failed.
+    """
+    if not FIRECRAWL_KEY:
+        return []
+    try:
+        with httpx.Client(timeout=20.0) as client:
+            resp = client.post(
+                "https://api.firecrawl.dev/v1/search",
+                headers={
+                    "Authorization": f"Bearer {FIRECRAWL_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={"query": query, "limit": 5, "scrapeOptions": {"formats": ["markdown"]}},
+            )
+            if resp.status_code == 200:
+                results = resp.json().get("data", [])
+                if results:
+                    return [
+                        {
+                            "title": r.get("title", ""),
+                            "snippet": r.get("markdown", r.get("description", ""))[:500],
+                            "url": r.get("url", ""),
+                        }
+                        for r in results
+                    ]
+    except Exception as e:
+        logger.warning(f"[CMO Agent] Firecrawl search failed: {e}")
+    return []
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # NATIVE PYTHON TOOLS (declared to Gemini 2.5 Pro via function calling)
@@ -66,10 +107,19 @@ def search_market_sentiment(query: str) -> dict:
     Returns:
         dict with keys: query, results (list of {title, snippet, url}), source, count
     """
+    enhanced_query = query + " market trend analysis 2025"
+
+    # ── Primary: Firecrawl ────────────────────────────────────────────────────
+    firecrawl_results = _firecrawl_search(enhanced_query)
+    if firecrawl_results:
+        logger.info(f"[CMO Agent] Firecrawl market search → {len(firecrawl_results)} results for: {query!r}")
+        return {"query": query, "results": firecrawl_results, "source": "Firecrawl", "count": len(firecrawl_results)}
+
+    # ── Fallback: DuckDuckGo HTML scraper ────────────────────────────────────
     def _fetch():
         resp = requests.post(
             _DDG_URL,
-            data={"q": query + " market trend analysis 2025", "b": ""},
+            data={"q": enhanced_query, "b": ""},
             headers=_HEADERS,
             timeout=15,
         )
@@ -119,10 +169,19 @@ def search_competitor_landscape(market_segment: str) -> dict:
     Returns:
         dict with keys: segment, results (list of {title, snippet, url}), source, count
     """
+    enhanced_query = market_segment + " competitors market leaders enterprise 2025"
+
+    # ── Primary: Firecrawl ────────────────────────────────────────────────────
+    firecrawl_results = _firecrawl_search(enhanced_query)
+    if firecrawl_results:
+        logger.info(f"[CMO Agent] Firecrawl competitor search → {len(firecrawl_results)} results for: {market_segment!r}")
+        return {"segment": market_segment, "results": firecrawl_results, "source": "Firecrawl", "count": len(firecrawl_results)}
+
+    # ── Fallback: DuckDuckGo HTML scraper ────────────────────────────────────
     def _fetch():
         resp = requests.post(
             _DDG_URL,
-            data={"q": market_segment + " competitors market leaders enterprise 2025", "b": ""},
+            data={"q": enhanced_query, "b": ""},
             headers=_HEADERS,
             timeout=15,
         )

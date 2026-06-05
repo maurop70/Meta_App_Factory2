@@ -5,8 +5,11 @@ Lightweight FastAPI server serving the ClaudeAY standalone
 web interface on port 9002. Bridges the browser UI to the
 MCP bridge, loop engine, and Antigravity API.
 """
-
 import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+
 import json
 import asyncio
 import logging
@@ -23,6 +26,8 @@ BRIDGE_ROOT = Path(__file__).parent
 sys.path.insert(0, str(BRIDGE_ROOT))
 sys.path.insert(0, str(BRIDGE_ROOT.parent))
 
+from shared_modules.dispatch_queue import dispatch_mandate
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ClaudeAY-UI")
 
@@ -36,6 +41,15 @@ RULES_PATH     = BRIDGE_ROOT / "rules" / "CLAUDE_RULES.md"
 
 # SSE clients for streaming loop output to browser
 sse_clients: list = []
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Clear stale telemetry log on startup."""
+    import os
+    telemetry_log = TELEMETRY_LOG
+    if telemetry_log.exists():
+        telemetry_log.write_text("")  # clear stale events on startup
 
 
 def _read_jsonl(path: Path, n: int) -> list:
@@ -71,8 +85,24 @@ async def get_status():
 
     telemetry = _read_jsonl(TELEMETRY_LOG, 20)
     loop_events = _read_jsonl(LOOP_LOG, 10)
-    critical = [e for e in telemetry if e.get("type") in
-                ("console_error", "page_error", "request_failed")]
+
+    def _is_maf_critical(e):
+        if e.get("type") not in ("console_error", "page_error", "request_failed"):
+            return False
+        url = (
+            e.get("url") or
+            e.get("data", {}).get("url", "") or
+            e.get("params", {}).get("response", {}).get("url", "") or
+            ""
+        )
+        if any(domain in str(url) for domain in 
+               ("claude.ai", "anthropic.com", "assets-proxy.anthropic.com")):
+            return False
+        if not url and e.get("type") in ("console_error", "page_error"):
+            return False
+        return True
+
+    critical = [e for e in telemetry if _is_maf_critical(e)]
 
     return JSONResponse({
         "mcp_online": mcp_online,
@@ -96,10 +126,17 @@ async def execute_intent(request: Request):
 
     async def stream():
         try:
-            from claude_mcp_bridge.dispatcher import AntigravityDispatcher
-            from claude_mcp_bridge.ay_client import send_mandate
-            from claude_mcp_bridge.loop_engine import load_recent_telemetry
-            from claude_mcp_bridge.intent_router import classify_intent
+            from dispatcher import AntigravityDispatcher
+            try:
+                from claude_code_client import send_mandate
+                import logging
+                logging.getLogger("ClaudeAY").info(
+                    "[EXECUTOR] Claude Code Client active"
+                )
+            except ImportError:
+                from ay_client import send_mandate  # fallback
+            from loop_engine import load_recent_telemetry
+            from intent_router import classify_intent
 
             yield f"data: {json.dumps({'type': 'status', 'content': 'Classifying intent...'})}\n\n"
 
@@ -117,7 +154,7 @@ async def execute_intent(request: Request):
 
             yield f"data: {json.dumps({'type': 'status', 'content': 'Sending mandate to Antigravity...'})}\n\n"
 
-            ledger = send_mandate(mandate)
+            ledger = await asyncio.to_thread(send_mandate, mandate)
 
             for line in ledger.split("\n"):
                 if line.strip():
@@ -180,6 +217,35 @@ async def loop_approve_proxy(request: Request):
             return JSONResponse(status_code=resp.status_code, content=resp.json())
         except Exception as e:
             return JSONResponse(status_code=500, content={"error": f"Failed to reach loop server: {e}"})
+
+
+@app.post("/api/dispatch")
+async def dispatch_to_queue(request: Request):
+    """
+    Allows ClaudeAY to dispatch mandates directly to ay2_dispatch_queue
+    without human transport between UI instances.
+    """
+    try:
+        body = await request.json()
+        mandate_text = body.get("mandate", "").strip()
+
+        if not mandate_text:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "mandate is required"}
+            )
+
+        filename = dispatch_mandate(mandate_text, source="ClaudeAY")
+
+        return JSONResponse(content={
+            "status": "queued",
+            "blueprint": filename
+        })
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": str(e)}
+        )
 
 
 if __name__ == "__main__":
