@@ -257,11 +257,10 @@ class AetherEngine:
         Falls back to a structured template if Gemini is unavailable.
         """
         try:
-            import google.generativeai as genai
+            from google import genai
             api_key = os.environ.get("GEMINI_API_KEY")
             if api_key:
-                genai.configure(api_key=api_key)
-                model = genai.GenerativeModel("gemini-2.0-flash")
+                client = genai.Client(api_key=api_key)
 
                 full_prompt = (
                     f"{self._context_prompt}\n\n"
@@ -275,7 +274,10 @@ class AetherEngine:
                     f"- No hardcoded secrets or file paths\n"
                 )
 
-                response = model.generate_content(full_prompt)
+                response = client.models.generate_content(
+                    model="gemini-2.5-flash",
+                    contents=full_prompt
+                )
                 return response.text
         except Exception as e:
             logger.warning("Gemini API unavailable for draft: %s", e)
@@ -345,11 +347,10 @@ class AetherEngine:
         reason = verdict.get("reason", "Unknown issue")
 
         try:
-            import google.generativeai as genai
+            from google import genai
             api_key = os.environ.get("GEMINI_API_KEY")
             if api_key:
-                genai.configure(api_key=api_key)
-                model = genai.GenerativeModel("gemini-2.0-flash")
+                client = genai.Client(api_key=api_key)
 
                 refine_prompt = (
                     f"{self._context_prompt}\n\n"
@@ -364,7 +365,10 @@ class AetherEngine:
                     f"Maintain Aether conventions.\n"
                 )
 
-                response = model.generate_content(refine_prompt)
+                response = client.models.generate_content(
+                    model="gemini-2.5-flash",
+                    contents=refine_prompt
+                )
                 return response.text
         except Exception as e:
             logger.warning("Gemini unavailable for refinement: %s", e)

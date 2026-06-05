@@ -201,7 +201,7 @@ class CreativeContext:
         self.style_profile = {
             "system": "Meta App Factory — Aether Creative Protocol",
             "architecture": {
-                "preferred_models": sorted(all_models) or ["models/gemini-2.0-flash"],
+                "preferred_models": sorted(all_models) or ["models/gemini-2.5-flash"],
                 "node_types": sorted(all_node_types)[:10],
                 "blueprints_available": blueprint_names,
                 "flow_patterns": all_patterns[:10],

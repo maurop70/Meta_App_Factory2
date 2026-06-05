@@ -1049,9 +1049,14 @@ async def get_claudeay_status():
 
     _telemetry  = _read_jsonl(_tlog, 10)
     _loop       = _read_jsonl(_llog, 5)
+
+    def _is_local_url(url: str) -> bool:
+        return not url or "localhost" in url or "127.0.0.1" in url or "::1" in url
+
     _critical   = sum(1 for e in _telemetry
                       if e.get("type") in
-                      ("console_error", "page_error", "request_failed"))
+                      ("console_error", "page_error", "request_failed")
+                      and _is_local_url(e.get("url", "")))
 
     return JSONResponse({
         "claudeay": {
@@ -1063,7 +1068,7 @@ async def get_claudeay_status():
             "telemetry_events": len(_telemetry),
             "critical_errors": _critical,
         },
-        "recent_telemetry": _telemetry[-5:],
+        "recent_telemetry": [e for e in _telemetry if _is_local_url(e.get("url", ""))][-5:],
         "recent_loop": _loop,
     })
 
@@ -1225,7 +1230,7 @@ class WarRoomExecuteRequest(BaseModel):
 async def war_room_execute_endpoint(req: WarRoomExecuteRequest, request: Request):
     import asyncio
     project_id = req.project_id
-    is_architecture_phase = any(kw in req.intent.lower() for kw in [
+    is_architecture_phase = (any(kw in req.intent.lower() for kw in [
         # Original keywords
         "initialize", "architect", "genesis", "@operator",
         # CIO / upgrade directives (from CIO Frontier Report)
@@ -1236,7 +1241,10 @@ async def war_room_execute_endpoint(req: WarRoomExecuteRequest, request: Request
         # War Room authorization keywords
         "authorize", "authorized", "authorization", "memo", "directive",
         "findings", "integrate findings",
-    ])
+    ]) and not any(kw in req.intent.lower() for kw in [
+        # Business-related keywords that force full QA validation
+        "business plan", "brand identity", "financial model", "cmo", "cfo", "market", "venture", "customer"
+    ]))
 
     async def native_sequence():
         try:

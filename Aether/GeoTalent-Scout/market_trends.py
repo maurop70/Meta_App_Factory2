@@ -88,7 +88,7 @@ MARKET_INTELLIGENCE = {
             "released": "2026-02",
             "capabilities": ["1M context", "multimodal", "code generation"],
             "status": "available",
-            "recommendation": "Upgrade from gemini-2.0-flash for complex reasoning tasks",
+            "recommendation": "Upgrade from gemini-2.5-flash for complex reasoning tasks",
         },
         {
             "name": "Gemini 2.5 Flash",
@@ -96,7 +96,7 @@ MARKET_INTELLIGENCE = {
             "released": "2026-03",
             "capabilities": ["fast inference", "cost-effective", "streaming"],
             "status": "available",
-            "recommendation": "Use for high-throughput tasks replacing gemini-2.0-flash",
+            "recommendation": "Use for high-throughput tasks replacing gemini-2.5-flash",
         },
         {
             "name": "Claude 4 Opus",
