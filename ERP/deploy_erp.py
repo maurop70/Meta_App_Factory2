@@ -66,19 +66,24 @@ def deploy():
     # 4. Remote Execution
     remote_script = f"""
     set -e
-    
+
     cd {REMOTE_DIR}
-    tar -xzf payload.tar.gz
+    tar -xzf payload.tar.gz \\
+        --transform='s|^Maintenance_Work_Order|backend|' \\
+        --transform='s|^maintenance_frontend/dist|frontend|'
     rm payload.tar.gz
-    
-    cd {REMOTE_DIR}/Maintenance_Work_Order
+
+    cd {REMOTE_DIR}/backend
     source venv/bin/activate || python3 -m venv venv && source venv/bin/activate
     pip install -r requirements.txt
-    
-    echo "Cycling structural daemons..."
-    systemctl restart erp-maintenance-backend.service
-    systemctl restart erp-iam-gateway.service
+
+    echo "Restarting erp-backend..."
+    systemctl restart erp-backend.service
     systemctl restart nginx.service
+
+    sleep 2
+    HTTP_STATUS=$(curl -s -o /dev/null -w "%{{http_code}}" http://localhost/)
+    echo "HTTP status: $HTTP_STATUS"
     """
     
     run_command(
