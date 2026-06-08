@@ -66,6 +66,12 @@ async def ws_handler(websocket):
                     continue
                 # ─────────────────────────────────────────────────────────
 
+                # Drop ERR_NETWORK_IO_SUSPENDED — browser power-management, not a real error
+                _msg = str(event.get("message") or event.get("data", {}).get("message", ""))
+                if "ERR_NETWORK_IO_SUSPENDED" in _msg:
+                    log.debug(f"[TELEMETRY FILTER] Skipped ERR_NETWORK_IO_SUSPENDED (browser power management)")
+                    continue
+
                 # Drop console_error and page_error from external tabs
                 if event.get("type") in ("console_error", "page_error"):
                     _url = (
@@ -73,7 +79,7 @@ async def ws_handler(websocket):
                         event.get("data", {}).get("url", "") or
                         ""
                     )
-                    if not _url or any(domain in str(_url) for domain in 
+                    if not _url or any(domain in str(_url) for domain in
                                        ("claude.ai", "anthropic.com", "assets-proxy.anthropic.com")):
                         log.debug(f"[FILTER] Skipped external tab error: {event.get('type')}")
                         continue

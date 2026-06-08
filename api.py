@@ -1070,6 +1070,12 @@ async def get_claudeay_status():
         },
         "recent_telemetry": [e for e in _telemetry if _is_local_url(e.get("url", ""))][-5:],
         "recent_loop": _loop,
+        "pending_fixes": [
+            {"fix_id": f["fix_id"], "diagnosis": f["diagnosis"],
+             "error_count": len(f.get("errors", []))}
+            for f in pending_fixes.values()
+            if f.get("status") == "pending"
+        ],
     })
 
 # In-memory store for pending fix proposals
