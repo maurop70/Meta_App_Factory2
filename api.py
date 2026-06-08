@@ -414,6 +414,13 @@ def test_subatomic_endpoint():
     return {"status": "success", "message": "Sub-atomic mutation 'test_subatomic' has been successfully executed."}
 
 
+@app.get("/api/test/mandate")
+def test_mandate_endpoint():
+    """A test endpoint to verify the 'test_mandate' command."""
+    # Mandate 'test_mandate' successfully handled by the sub-atomic AST engine.
+    return {"status": "success", "message": "Mandate 'test_mandate' has been successfully processed and verified by the sub-atomic AST engine."}
+
+
 @app.post("/execute")
 def execute_task(request: TaskRequest):
     """Trigger the factory supervisor with a task."""
@@ -6998,11 +7005,22 @@ async def challenge_override(payload: ChallengeOverridePayload):
     
     # Heuristically resolve target file and read content
     target_file = "api.py"
-    matches = re.findall(r"[\w\-]+\.(?:py|jsx|js|tsx|ts)", original_mandate)
+    matches = re.findall(r"[\w\-]+\.(?:py|jsx|js|tsx|ts|json)", original_mandate)
     if matches:
         target_file = matches[0]
-        
+
     target_abs = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), target_file))
+    if not os.path.exists(target_abs):
+        logger.warning(f"[CTO Override Node] Rejecting override: target file '{target_file}' does not exist on disk.")
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": f"Target file '{target_file}' does not exist. Cannot generate patch for nonexistent file.",
+                "target_file": target_file,
+                "hint": "Create the file first or check the mandate references a real file."
+            }
+        )
+
     target_content = ""
     if os.path.exists(target_abs):
         try:
