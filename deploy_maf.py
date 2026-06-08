@@ -97,12 +97,35 @@ def _build_archive() -> tuple[str, int]:
             rel = item.relative_to(MAF_ROOT)
             if _should_exclude(rel):
                 continue
-            arcname = str(rel).replace("\\", "/")   # Linux paths on the remote side
+            arcname = str(rel).replace("\\", "/")   # normalise to POSIX paths
             tar.add(item, arcname=arcname)
             file_count += 1
 
     size = os.path.getsize(tmp_path)
     print(f"    {file_count} files  ->  {size / 1024 / 1024:.1f} MB compressed")
+
+    # ── Integrity check: read the archive back before any upload ─────────────
+    print("    Verifying archive integrity...")
+    KEY_MEMBER = "claude-mcp-bridge/rules/CLAUDE_RULES.md"
+    try:
+        with tarfile.open(tmp_path, "r:gz") as verify:
+            members = verify.getnames()
+    except (tarfile.TarError, EOFError, OSError) as exc:
+        os.remove(tmp_path)
+        raise RuntimeError(f"Archive failed integrity check (corrupt gzip): {exc}") from exc
+
+    if not members:
+        os.remove(tmp_path)
+        raise RuntimeError("Archive failed integrity check: 0 members found")
+
+    if KEY_MEMBER not in members:
+        os.remove(tmp_path)
+        raise RuntimeError(
+            f"Archive failed integrity check: key file missing — {KEY_MEMBER}\n"
+            f"  (found {len(members)} members; check EXCLUDE_DIRS)"
+        )
+
+    print(f"    Archive OK — {len(members)} members, key file present")
     return tmp_path, size
 
 
