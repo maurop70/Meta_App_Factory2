@@ -97,6 +97,36 @@ export default function BuilderChat() {
     return () => clearInterval(interval);
   }, []);
 
+  // Poll /api/claudeay/status for pending fix proposals missed while SSE was suspended
+  useEffect(() => {
+    const pollPendingFixes = async () => {
+      try {
+        const res = await fetch('/api/claudeay/status');
+        if (!res.ok) return;
+        const data = await res.json();
+        const pending = data.pending_fixes || [];
+        for (const fix of pending) {
+          setChatHistory(prev => {
+            const alreadySeen = prev.some(msg => {
+              if (!msg.is_claudeay_proposal) return false;
+              try { return JSON.parse(msg.content).fix_id === fix.fix_id; } catch { return false; }
+            });
+            if (alreadySeen) return prev;
+            return [...prev, {
+              role: 'system',
+              content: JSON.stringify({ fix_id: fix.fix_id, diagnosis: fix.diagnosis, error_count: fix.error_count }),
+              agent: 'CLAUDEAY_PROPOSAL',
+              is_claudeay_proposal: true,
+            }];
+          });
+        }
+      } catch (_) {}
+    };
+    pollPendingFixes();
+    const id = setInterval(pollPendingFixes, 10000);
+    return () => clearInterval(id);
+  }, []);
+
   useEffect(() => {
     const es = new EventSource('/api/bridge/stream');
 
