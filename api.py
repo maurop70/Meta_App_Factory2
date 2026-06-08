@@ -1060,10 +1060,25 @@ async def get_claudeay_status():
     def _is_local_url(url: str) -> bool:
         return not url or "localhost" in url or "127.0.0.1" in url or "::1" in url
 
+    import time as _time
+    from datetime import datetime, timezone
+
+    def _is_recent(event: dict, max_age_seconds: int = 300) -> bool:
+        ts = event.get("timestamp") or event.get("ts") or event.get("time")
+        if not ts:
+            return False
+        try:
+            dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+            age = _time.time() - dt.timestamp()
+            return age <= max_age_seconds
+        except Exception:
+            return False
+
     _critical   = sum(1 for e in _telemetry
                       if e.get("type") in
                       ("console_error", "page_error", "request_failed")
-                      and _is_local_url(e.get("url", "")))
+                      and _is_local_url(e.get("url", ""))
+                      and _is_recent(e))
 
     return JSONResponse({
         "claudeay": {
@@ -1075,7 +1090,7 @@ async def get_claudeay_status():
             "telemetry_events": len(_telemetry),
             "critical_errors": _critical,
         },
-        "recent_telemetry": [e for e in _telemetry if _is_local_url(e.get("url", ""))][-5:],
+        "recent_telemetry": [e for e in _telemetry if _is_local_url(e.get("url", "")) and _is_recent(e)][-5:],
         "recent_loop": _loop,
         "pending_fixes": [
             {"fix_id": f["fix_id"], "diagnosis": f["diagnosis"],
