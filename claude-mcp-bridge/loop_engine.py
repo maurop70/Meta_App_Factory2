@@ -30,7 +30,7 @@ try:
 except ImportError:
     from ay_client import send_mandate  # fallback
 from dispatcher import AntigravityDispatcher
-from ledger_evaluator import evaluate_and_log, LedgerStatus
+from ledger_evaluator import evaluate_and_log, LedgerResult, LedgerStatus
 
 # MCP bridge imports (telemetry access)
 BRIDGE_ROOT = Path(__file__).parent
@@ -121,6 +121,8 @@ def log_loop_event(event_type: str, content: str):
 
 class AutonomousLoop:
 
+    MAX_ITERATIONS = 10
+
     def __init__(self):
         self.iteration = 0
         self.task_complete = False
@@ -139,6 +141,20 @@ class AutonomousLoop:
         while not self.task_complete:
             self.iteration += 1
             print(f"\n[ARCHITECT] ── Iteration {self.iteration} ──────────────")
+
+            if self.iteration >= self.MAX_ITERATIONS:
+                print(f"[LOOP] MAX_ITERATIONS ({self.MAX_ITERATIONS}) reached — escalating")
+                log_loop_event("MAX_ITERATIONS",
+                               f"Reached {self.MAX_ITERATIONS} iterations without COMPLETE signal")
+                loop_status_buffer.append({
+                    "type": "escalate",
+                    "msg": f"Max iterations ({self.MAX_ITERATIONS}) reached without COMPLETE signal"
+                })
+                return LedgerResult(
+                    status=LedgerStatus.ESCALATE,
+                    confidence=1.0,
+                    summary=f"Max iterations ({self.MAX_ITERATIONS}) reached without COMPLETE signal"
+                )
 
             # 1. Load telemetry
             telemetry = load_recent_telemetry()
