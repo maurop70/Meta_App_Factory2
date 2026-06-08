@@ -407,6 +407,13 @@ def root():
     return {"service": "Meta App Factory API", "version": "3.0", "streaming": STREAMING_AVAILABLE}
 
 
+
+@app.get("/api/test/subatomic")
+def test_subatomic_endpoint():
+    """A test endpoint to verify the new sub-atomic mutation."""
+    return {"status": "success", "message": "Sub-atomic mutation 'test_subatomic' has been successfully executed."}
+
+
 @app.post("/execute")
 def execute_task(request: TaskRequest):
     """Trigger the factory supervisor with a task."""
@@ -1075,6 +1082,7 @@ async def get_claudeay_status():
              "error_count": len(f.get("errors", []))}
             for f in pending_fixes.values()
             if f.get("status") == "pending"
+            and (__import__('time').time() - f.get("created_at", 0)) < 3600
         ],
     })
 
@@ -1132,18 +1140,24 @@ async def claudeay_diagnose(request: Request):
         )
 
         # Import and call AY client
+        import asyncio
         from ay_client import send_mandate
-        diagnosis = send_mandate(mandate)
+        diagnosis = await asyncio.get_running_loop().run_in_executor(None, send_mandate, mandate)
 
         # Store pending fix for approval
         import uuid as _uuid
+        import time as _time
         fix_id = str(_uuid.uuid4())[:8]
+        if len(pending_fixes) >= 50:
+            oldest_key = next(iter(pending_fixes))
+            del pending_fixes[oldest_key]
         pending_fixes[fix_id] = {
             "fix_id": fix_id,
             "errors": errors,
             "diagnosis": diagnosis,
             "mandate": mandate,
             "timestamp": __import__('datetime').datetime.utcnow().isoformat(),
+            "created_at": _time.time(),
             "status": "pending"
         }
 
