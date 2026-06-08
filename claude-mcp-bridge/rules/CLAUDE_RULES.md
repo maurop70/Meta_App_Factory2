@@ -436,3 +436,66 @@ Never more than three questions in a single message.
 Questions must be specific and answerable in one sentence.
 Claude never asks questions already answered in CLAUDE_RULES.md
 or derivable from the existing codebase.
+
+## ██ WIRE SYSTEM — TOOL USAGE RULES (added 2026-06-07)
+
+You have 10 MCP tools. Use them in this strict priority order:
+
+RULE 0 — TOPOLOGY CORRECTION (supersedes §9.2 LOCAL ONLY):
+§9.2 states "cloud deployment permanently forbidden."
+This applies to the MAF factory codebase itself — MAF does not
+run as a cloud service. GitHub is the only remote for MAF source.
+
+HOWEVER: MAF deploys child services to production droplets.
+This is authorized and expected:
+  deploy_maf.py → 104.248.233.220 (maf-production-nyc1)
+  deploy_erp.py → 68.183.30.128 (mwo-production-nyc1)
+These are child service deployments, not MAF factory cloud hosting.
+execute_remote_shell to these two IPs is always authorized.
+
+RULE 1 — For ALL git work: use git_operation.
+Never use execute_shell for any git command.
+git commands are blocked in shell_wire by design.
+
+RULE 2 — For ALL file reads and writes: use file_operation.
+Never use execute_shell to cat, echo, or write files.
+
+RULE 3 — For local commands that are not git or file ops:
+use execute_shell.
+
+RULE 4 — For remote server commands: use execute_remote_shell.
+Only approved hosts:
+  104.248.233.220 (maf-production-nyc1)
+  68.183.30.128   (mwo-production-nyc1)
+Never attempt any other IP.
+
+RULE 5 — To check what the autonomy trigger has done:
+use get_autonomy_log.
+
+Safety rules you must never attempt to bypass:
+  git push --force — blocked by git_wire
+  git reset --hard — blocked by git_wire
+  execute_shell with any git command — blocked by shell_wire
+  execute_remote_shell to unapproved IP — blocked by ssh_wire
+  file_operation delete on .env / .db / .git — blocked by fs_wire
+  file_operation write on deploy_maf.py or deploy_erp.py — blocked
+
+Standard deploy sequence — always follow this order:
+  1. git_operation(status) — confirm what changed
+  2. git_operation(add, paths=[<specific files, never ".">])
+  3. git_operation(commit, message="<type>(<scope>): <description>")
+  4. git_operation(push, branch="main")
+  5. execute_shell("python deploy_maf.py")    ← MAF, cwd: MAF root
+     OR execute_shell("python deploy_erp.py") ← MWO, cwd: ERP dir
+  6. execute_remote_shell — systemctl status check
+  7. execute_remote_shell — curl health endpoint → expect 200
+
+MWO service names (corrected 2026-06-07):
+  CORRECT:   erp-backend.service, erp-auth.service, nginx.service
+  DUMMY:     erp-maintenance-backend.service, erp-iam-gateway.service
+  Never restart the dummy services. They are placeholders only.
+
+Documentation rule:
+  Every new wire, agent, or phase deployment must include
+  a documentation update in the same commit.
+  Never deploy without updating AGENTS.md and claude-mcp-bridge/README.md.

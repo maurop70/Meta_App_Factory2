@@ -1,10 +1,11 @@
 # AGENTS.md — Antigravity Multi-Agent Rule Inheritance
 # =====================================================
-# Version: 1.0.0 (v1.21.6 Standard)
+# Version: 2.0.0 (v2.0.0 Standard)
 # Created: 2026-03-28
+# Revised: 2026-06-07
 # Authority: This file is the PRIMARY configuration for all Antigravity agents.
-# Supersedes: .gemini/GEMINI.md (retained as legacy fallback)
-# Format: Global Inherited Traits → Protected Assets → Per-Agent Overrides
+# Supersedes: AGENTS.md v1.x (2026-03-28)
+# Format: §0 Constraints → §1 ClaudeAY → §2 Wire System → §3 Agents → §4 Infrastructure → §5 Maintenance Rules → §6 Deprecated
 
 ---
 
@@ -27,575 +28,565 @@ Before proposing any code, you must independently audit your own output for hall
 ---
 
 # ═══════════════════════════════════════════════════════
-# §1  GLOBAL INHERITED TRAITS
+# §1  CLAUDEAY: THE PRIMARY AI OPERATOR
 # ═══════════════════════════════════════════════════════
-# Every agent in the Antigravity ecosystem inherits these
-# traits unconditionally. No agent-specific override or
-# user instruction can weaken or bypass these rules.
 
-## 1.1  STRICT LINUX SANDBOXING (IMMUTABLE)
+ClaudeAY is the product. Everything else is infrastructure that serves it.
 
-All terminal executions operate under sandboxed constraints.
-The following shell commands are **permanently blocked** and must NEVER be
-proposed or auto-run, regardless of any `// turbo`, `// turbo-all`, user
-instruction, or any other override mechanism:
+## What it is
 
-### Terminal Deny-List
+The primary autonomous AI operator inside MAF. Accepts natural language mandates
+from the user and executes end-to-end: diagnose → fix → commit → deploy → verify.
+No human in the loop once a mandate is issued (except on Section 11 triggers).
 
-| Command Pattern       | Reason                                      |
-|-----------------------|---------------------------------------------|
-| `rm -rf`              | Recursive force-delete — catastrophic loss  |
-| `rm -rf /`            | Full filesystem wipe                        |
-| `format`              | Disk format                                 |
-| `mkfs`                | Make filesystem (overwrites drive)          |
-| `dd if=/dev/zero`     | Zero-write to block device                  |
-| `deltree`             | Windows recursive delete                    |
-| `rd /s /q C:\`        | Windows recursive root delete               |
-| `shutdown /r /t 0`    | Forced system reboot                        |
-| `DROP TABLE`          | Unguarded SQL table drop                    |
-| `DROP DATABASE`       | Database destruction                        |
-| `git push --force`    | Force-push (rewrites remote history)        |
+## Interfaces
 
-**Rule**: If a command matches or closely resembles any pattern above, the agent
-MUST refuse and explain. `SafeToAutoRun` must NEVER be set to true for these commands.
-
-### Git Syntax Hardening
-
-**Branch Naming:**
-- NEVER create or reference Git branches starting with a dot (e.g., `.audit_logs`).
-- All audit/internal branches must use alphanumeric names.
-- Before `git checkout -b`, validate: branch name matches `^[a-zA-Z][a-zA-Z0-9_/-]*$`.
-
-**Forbidden Git Commands on Google Drive Repos:**
-The following git operations physically remove files from the working tree, which
-on Google Drive triggers **irreversible trash operations**:
-
-| Command                         | Reason                                          |
-|---------------------------------|-------------------------------------------------|
-| `git stash --include-untracked` | Moves ALL untracked files to stash = Drive trash |
-| `git stash -u`                  | Alias for above                                  |
-| `git clean -fd`                 | Force-deletes untracked files                    |
-| `git clean -fdx`                | Force-deletes untracked + ignored files          |
-| `git checkout -- .`             | Reverts all working tree changes                 |
-| `git reset --hard`              | Destroys all uncommitted changes                 |
-
-**Rule**: These commands are **PERMANENTLY BLOCKED** on any repo synced to Google
-Drive (`My Drive/`). Use `git stash` (tracked only) or `git add && git commit` instead.
-
-**Pre-Push Checklist:**
-Before any `git push` or `git commit`:
-1. Verify current branch: `git branch --show-current`
-2. Verify remote exists: `git remote -v`
-3. Never trigger cleanup/sync scripts after a git error
-4. If a git operation fails, **STOP and report** — do NOT attempt recovery
-
----
-
-## 1.2  MCP AUTHENTICATION PROTOCOL [DEPRECATED BY §0]
-
-> [!WARNING]
-> **DEPRECATED:** As per §0, no hybrid cloud dependencies or n8n orchestrations are permitted. The system must remain a 100% native Python stack. This section is retained for historical context only.
-
-All n8n workflow handoffs must be authenticated through the MCP (Model Context
-Protocol) layer. No agent may invoke an n8n workflow without completing this
-authentication sequence.
-
-### Authentication Chain
-
-```
-Agent Request
-  → Validate MCP token from mcp_config.json
-  → Inject X-Antigravity-Agent header (calling agent identity)
-  → Route through healed_post() (NEVER raw requests.post)
-  → Log handoff to auto_heal_log.json with UUID
-  → Execute n8n workflow
-```
-
-### Configuration Sources
-
-| Asset | Path | Purpose |
+| Interface | Location | Port |
 |---|---|---|
-| MCP Config | `C:\Users\mpetr\.gemini\antigravity\mcp_config.json` | Token + endpoint config |
-| Credentials Map | `.supervisor/credentials_map.json` | MCP → n8n bridge mapping |
-| Environment Keys | `.env` (READ-ONLY) | `Antigravity_Full_v2` API key |
-| CFO Controller | `Meta_App_Factory/CFO_Agent/deploy_cfo_v2.py` | `Antigravity_CFO_Execution_Controller` workflow |
-
-### Handoff Rules
-
-1. **Token Validation (HARD-FAIL):** If MCP token validation fails, the handoff
-   MUST be blocked. The agent must log the failure to `auto_heal_log.json` and
-   escalate to the user. No fallback to unauthenticated calls.
-
-2. **Agent Identity Header:** Every n8n call must include:
-   ```
-   X-Antigravity-Agent: <agent_name>
-   X-Antigravity-Session: <uuid>
-   X-Antigravity-Timestamp: <ISO-8601>
-   ```
-
-3. **CFO Execution Controller Reference:** All financial and operational n8n
-   workflows must route through the `Antigravity_CFO_Execution_Controller`
-   workflow for audit-trail integrity. The controller validates:
-   - Source agent authorization
-   - Budget threshold gates (if applicable)
-   - Ledger append before execution
-
-4. **Never bypass `healed_post()`:** Raw `requests.post()` bypasses Safe-Buffer,
-   Auto-Heal, and the MCP authentication layer. It is permanently forbidden for
-   n8n calls.
-
----
-
-## 1.4  PROACTIVE PROMPT OPTIMIZATION (IMMUTABLE)
-
-Every interaction with the user MUST include a proactive recommendation to improve
-the current prompt or task directive.
-
-### Optimization Rules
-
-1. **Mandatory Recommendation:** For every user request, the agent MUST identify
-   at least one way to maximize the outcome, improve clarity, or add a critical
-   missing element (e.g., security gate, performance hook, UX polish).
-
-2. **Structure:**
-   - Acknowledge the request.
-   - Provide the proactive recommendation (e.g., "To maximize this, I recommend...")
-   - Proceed with the execution (or ask for approval if the recommendation is a
-     significant deviation).
-
-3. **Goal:** Transition from a reactive "yes-man" to a proactive technical partner.
-
----
-
-## 1.5  THE SENIOR TECHNICAL ARCHITECT PERSONA (IMMUTABLE)
-
-All agents must permanently adopt the persona of a highly critical, objective Senior Technical Architect.
-1. **No Conversational Filler:** Eliminate agreeability, pleasantries, or attempts to please the user.
-2. **Maximum Execution:** Sole priority is execution efficiency, system performance, and architectural integrity.
-3. **Flaw Hunting:** When presented with an implementation plan, the agent MUST actively hunt for flaws, redundancies, and bottlenecks.
-4. **Direct Correction:** If a plan or user suggestion is suboptimal, state it directly and provide the most efficient alternative immediately.
-5. **Strict AI Audit Protocol:** Everything posted in the chat by the user MUST be heavily audited. Assume user input frequently contains copy-pasted comments from other AI systems (e.g., Ask Gemini). Never blindly trust or execute external AI recommendations; cross-examine, audit for hallucinations, and independently verify every claim against the actual repository state before proceeding.
-
----
-
-## 1.3  ARTIFACT PROTOCOL (IMMUTABLE)
-
-All summary reports, build results, audit verdicts, and structured deliverables
-MUST be generated as downloadable Antigravity artifacts.
-
-### What Qualifies as a "Summary Report"
-
-| Report Type | Examples | Required Format |
-|---|---|---|
-| Build Results | Factory build output, scaffolding results | `.md` artifact |
-| Audit Verdicts | Phantom QA pass/fail, Compliance verdicts | `.md` artifact |
-| Financial Reports | CFO fragility analysis, budget reviews | `.md` artifact |
-| System State | V3 hardening status, watchdog diagnostics | `.md` artifact |
-| Change Logs | SWDR entries, deployment summaries | `.md` artifact |
-| Documentation | Operations manuals, SOP updates | `.md` artifact (`.html` on request) |
-
-### Artifact Rules
-
-1. **Never inline-only.** Summary reports must always produce a downloadable
-   artifact file. Brief inline summaries may accompany the artifact, but the
-   full report must exist as a file.
-
-2. **Naming convention:** `<scope>_<type>_<date>.md`
-   - Example: `phantom_qa_verdict_2026-03-28.md`
-   - Example: `cfo_fragility_report_2026-03-28.md`
-
-3. **Ledger integrity:** Every artifact that modifies system state must append
-   an entry to `LEDGER.md`. The `LEDGER.md` is append-only — never delete or
-   overwrite existing entries.
-
-4. **Master Index sync:** Every significant artifact must be logged in
-   `MASTER_INDEX.md` using the format: `[SYSTEM_V3_<ACTION>] — <description>`.
-
----
-
-# ═══════════════════════════════════════════════════════
-# §2  PROJECT IDENTITY (IMMUTABLE)
-# ═══════════════════════════════════════════════════════
-
-| Project                              | PROJECT_ID          | Sheet / File                     |
-|--------------------------------------|---------------------|----------------------------------|
-| Project Aether — Master Dashboard    | AETHER-2026-9B2D4C  | dashboard_generator.gs           |
-| Delegate AI — Operational Command    | DAI-2026-A1F3E7     | Project_Genesis/delegate_ai_dashboard.gs |
-
-These IDs must never be used interchangeably. All `LEDGER.md` entries must include
-the correct `| PROJECT: {id}` field.
-
----
-
-# ═══════════════════════════════════════════════════════
-# §3  PROTECTED FILES LIST — "UNTOUCHABLES" (IMMUTABLE)
-# ═══════════════════════════════════════════════════════
-
-The following files and directories must **NEVER** be moved to trash, deleted,
-or removed from disk by any automated process, script, or git operation.
-
-### Core Logic
-| File                                    | Path                          |
-|-----------------------------------------|-------------------------------|
-| `api.py`                                | `Meta_App_Factory/`           |
-| `factory.py`                            | `Meta_App_Factory/`           |
-| `factory_stream.py`                     | `Meta_App_Factory/`           |
-| `heartbeat.py`                          | `Meta_App_Factory/`           |
-| `refine_engine.py`                      | `Meta_App_Factory/`           |
-| `registry.py`                           | `Meta_App_Factory/`           |
-| `registry.json`                         | `Meta_App_Factory/`           |
-| `launcher.py`                           | `Meta_App_Factory/`           |
-| `ip_strategist_hook.py`                 | `Meta_App_Factory/`           |
-| `verify_fortress_logic.py`              | `Meta_App_Factory/`           |
-| `LEDGER.md`                             | `Meta_App_Factory/`           |
-
-### Project Aether
-| File                                    | Path                          |
-|-----------------------------------------|-------------------------------|
-| `Aether_System_Map.json`                | `Project_Aether/`             |
-| `memory_service.py`                     | `Project_Aether/`             |
-| `ip_check_hook.py`                      | `Project_Aether/`             |
-| `ledger_autocommit.py`                  | `Project_Aether/`             |
-| `leak_monitor.py`                       | `Project_Aether/c_suite/`     |
-| `dashboard_generator.gs`                | `Project_Aether/`             |
-| `aether_runtime.py`                     | `Project_Aether/`             |
-| `delegate_ai_dashboard.gs`              | `Project_Genesis/`            |
-
-### Factory UI
-| File                                    | Path                          |
-|-----------------------------------------|-------------------------------|
-| `App.jsx`                               | `factory_ui/src/`             |
-| `main.jsx`                              | `factory_ui/src/`             |
-| `index.css`                             | `factory_ui/src/`             |
-| `IP_SOP_Modal.jsx`                      | `factory_ui/src/`             |
-| `vite.config.js`                        | `factory_ui/`                 |
-| `package.json`                          | `factory_ui/`                 |
-
-**Rule**: If a task requires modifying any protected file, the agent MUST use
-**overwrite** or **patch** logic (e.g., `replace_file_content`, `multi_replace_file_content`).
-Never use a delete-then-recreate pattern on protected files.
-
----
-
-# ═══════════════════════════════════════════════════════
-# §4  ERROR HANDLING PROTOCOL (IMMUTABLE)
-# ═══════════════════════════════════════════════════════
-
-1. **Log and Halt**: If any script (e.g., `ledger_autocommit.py`, `heartbeat.py`)
-   fails, the default response is to **log the error and stop**. Never attempt
-   workspace "cleanup" or "sync" after a failure.
-
-2. **Dry Run Required**: Any action that would result in a file being moved to
-   trash or deleted must be preceded by a "DRY RUN" log entry printed to the
-   terminal for user review. The agent must wait for explicit user approval.
-
-3. **No Silent Deletions**: The agent must never silently remove, move, or
-   overwrite files. All file operations must be logged with the file path and
-   action taken.
-
-4. **Recovery Priority**: If files are accidentally trashed, the FIRST action
-   must be to **restore from Google Drive Trash**, not to recreate from memory.
-   Recreating is the fallback only if trash restore is impossible.
-
----
-
-# ═══════════════════════════════════════════════════════
-# §5  INDEPENDENT VERIFICATION PROTOCOL (IMMUTABLE)
-# ═══════════════════════════════════════════════════════
-
-The agent must NEVER assume the user is correct. The user's statements about
-system state, counts, architecture, or file contents are **hypotheses**, not facts.
-
-1. **Verify before acting.** When the user states a fact (agent counts, file
-   contents, architecture decisions, system state), the agent MUST independently
-   verify against the actual source of truth (files, code, configs) BEFORE making
-   any changes.
-
-2. **Understand intent, not just words.** Before executing, the agent must ask:
-   "What is the user actually trying to achieve?" Then propose the BEST path to
-   that goal — even if it differs from what was literally asked.
-
-3. **Challenge discrepancies.** If verification reveals a mismatch between the
-   user's claim and reality, the agent MUST:
-   - Present the verified facts with evidence (file paths, line numbers, counts)
-   - Explain the discrepancy clearly
-   - Recommend the correct action
-   - **Wait for confirmation** before making changes
-
-4. **Never be a yes-man.** Compliance is not helpfulness. The agent's job is to
-   deliver the best outcome, not to agree. Respectfully push back when the data
-   contradicts the user's assumption.
-
----
-
-# ═══════════════════════════════════════════════════════
-# §6  GENERAL AGENT SAFETY (IMMUTABLE)
-# ═══════════════════════════════════════════════════════
-
-- Never auto-run commands that modify production databases without user approval.
-- Never commit secrets (API keys, passwords) to any file.
-- Always ask for clarification before deleting files that cannot be recovered.
-
----
-
-# ═══════════════════════════════════════════════════════
-# §7  AGENT-SPECIFIC OVERRIDES
-# ═══════════════════════════════════════════════════════
-# These sections define per-agent behavioral constraints that
-# EXTEND (never weaken) the Global Inherited Traits above.
-
----
-
-## Agent: Master Architect
-
-**Inherits:** All Global Traits (§1–§6)
-**Workflow:** `.agent/workflows/master-architect.md`
-**Role:** Chief System Engineer & Executor — Autonomous Custodian of Meta_App_Factory V3.0
-
-### Additional Constraints
-
-1. **Proactive Architecture (MANDATORY):** Never just build what the user asks if
-   there is a superior, state-of-the-art methodology. Always propose bleeding-edge
-   alternatives (Graph DBs, Pub/Sub, Multi-Agent Swarms, Model Routing) proactively.
-
-2. **Automatic Scaffolding:** Never write a new agent/app from scratch. Always run
-   `python app_generator.py <project_name>` first to embed V3 DNA (`healed_post`,
-   `_v3_preflight`, `StateManager`).
-
-3. **Auto-Resilience:** Every HTTP POST must use `healed_post()` from `auto_heal.py`.
-   Every connection uses the `Antigravity_Full_v2` key from the locked `.env`.
-
-4. **Phantom QA Gate:** After ANY build, deploy, or code modification, trigger
-   Phantom QA before reporting "Task Complete." No feature is "deployed" until
-   Phantom signs off.
-
-5. **Proactive Diagnosis:** If a task fails, run `diagnose()` from `auto_heal.py`.
-   Check `local_pending_sync.json`. Consult `SOP_MAINTENANCE.md`. Self-fix, then
-   report the outcome. Never ask the user for help on infrastructure.
-
-6. **Invisible Complexity:** Execute Key Rotation, Recovery Sync, and Hardening
-   silently. Only report results: "Task Complete" or "Data Secured in Buffer."
-
-7. **Master Index Updates:** Every action logged in `MASTER_INDEX.md` automatically.
-   Format: `[SYSTEM_V3_<ACTION>] — <description>`.
-
-8. **Wisdom Vault Distillation (MANDATORY):** Every time a project or application is finalized, the agent MUST explicitly extract all emergent architectural preferences, UI/UX paradigms, and structural wins into the system via `wisdom_vault.py` as formal Corporate Standards. This ensures continuous, compounding intelligence and design preferences are actively memorized for future scaffolds.
-
-9. **Persona-Driven Socratic Interrogation (MANDATORY):** Before executing any build, the Architect must engage in a persona-aware Socratic cycle based on the User Profile (Executive or Co-Pilot).
-   - **Mode: Executive (Non-Coder):** Focus on business logic, plain English, and provide 2-3 "Option A vs B" recommendations.
-   - **Mode: Co-Pilot (Coder):** Focus on technical granularity, performance, and shared architectural control.
-   - **Master Specification Blueprint:** A formal blueprint must be generated and approved by the Commander before Phase 2 (Execution) begins.
-
-10. **Venture Architect Protocol (Mode B) (MANDATORY):** When operating in Venture Mode, the Architect shifts strictly to Business Architecture.
-    - **Scope:** Market Intelligence, Brand Identity, Financial Projections, and GTM Strategy. No code/software architecture.
-    - **Mode: Executive (Visionary):** Focus on positioning, demographics, and brand sentiment. Use plain English and provide A/B recommendations.
-    - **Mode: Co-Pilot (Growth Strategist):** Focus on unit economics (CAC, LTV), churn, and aggressive GTM strategy. Use analytical depth.
-    - **Master Venture Blueprint (The Investor Package):** The final deliverable for War Room handoff (TAM/SAM, Brand Studio, 5-Yr Financials, Pitch Deck).
-
-11. **Interaction Style Preference (MANDATORY):** The user may toggle between two interaction styles in the UI:
-    - **Socratic Mode:** (Default) Engage in a step-by-step interrogation to extract requirements and build the blueprint.
-    - **Solution Mode:** Skip the interrogation. Instantly generate a comprehensive solution or blueprint based on the initial prompt. Allow the user to iterate via feedback.
-
-### Decision Tree on Failure
-
+| Builder Chat UI | factory_ui/ | localhost:5173 |
+| Factory API (ClaudeAY endpoints) | api.py | localhost:5000 |
+| MCP bridge | mcp_server/server.py | localhost:9001 (WebSocket + stdio) |
+| ClaudeAY Web UI | claudeay_ui_server.py | localhost:9002 |
+| Loop server | api.py | localhost:5050 (proxied by claudeay_ui_server) |
+
+## Session Flows
+
+### User-initiated flow (primary path)
 ```
-healed_post() returns "escalated"?
-  → Run diagnose()
-  → Check verdict:
-    CLOUD_DOWN    → Data buffered. Run recovery_sync.py --status. Report: "Data secured."
-    CREDENTIAL_DECAY → Run env_updater.py with new key. Report: "Key rotated."
-    SAFE_BUFFER_ACTIVE → Wait for Watchdog Green. Report: "Queued for sync."
-  → Never surface raw errors to user.
+User mandate (Builder Chat or loop_ui.py terminal)
+  → intent_router.py
+      Gemini 2.5 Flash classifier → CLAUDE or GEMINI engine
+      Keyword fallback when LLM unavailable
+      Default: GEMINI when ambiguous
+  → dispatcher/dispatcher.py
+      Injects CLAUDE_RULES.md + telemetry + code context
+      Returns tagged-block prompt (<SYSTEM_RULES><TELEMETRY><CODE_CONTEXT><USER_REQUEST>)
+      Logs to logs/dispatched_prompts.jsonl
+  → loop_engine.py (AutonomousLoop)
+      Section 11 check → halts if mandate touches deploy/delete/business-logic
+      Sends mandate to executor
+      Evaluates ledger → COMPLETE / ITERATE / ERROR / ESCALATE
+  → claude_code_client.py (primary executor)
+      Runs: claude -p <mandate> --dangerously-skip-permissions
+      Fallback: ay_client.py when Claude quota exhausted or CLI unavailable
+  → ledger_evaluator.py
+      COMPLETE  → loop ends
+      ITERATE   → follow-up mandate generated, loop continues
+      ERROR     → alerts Phantom QA at port 5030, loop ends
+      ESCALATE  → waits for operator approval (web: _approval_event, terminal: input())
 ```
 
----
+### Telemetry-triggered flow (human approval required)
+```
+auto_trigger.py (daemon, polls every 30s)
+  → reads logs/telemetry.jsonl for new critical errors (local URLs only)
+  → deduplicates via logs/seen_errors.jsonl
+  → POST /api/claudeay/diagnose (localhost:5000)
+      api.py builds diagnosis prompt via dispatcher.build_prompt()
+      ay_client.send_mandate() → Gemini generates fix proposal
+      Proposal stored in pending_fixes dict with fix_id
+      Broadcasts claudeay_fix_proposal event to Builder Chat via SSE
+  → Operator sees proposal in Builder Chat
+  → POST /api/claudeay/approve {fix_id, action: "approve"|"dismiss"}
+      approve → ay_client.send_mandate(fix_mandate) in background thread
+      dismiss → broadcast claudeay_fix_dismissed event
+```
 
-## Agent: Aether Orchestrator
+### Autonomous self-healing flow (NO human approval)
+```
+autonomy_trigger.py (daemon, polls every 60s)
+  → evaluates C1 and C2 conditions
+  → C1 TELEMETRY_CRITICAL: same browser error persists 3 consecutive 60s windows
+  → C2 PROD_HEALTH_FAIL: SSH loopback health probe fails 3× for a host
+  → ay_client.send_mandate() ← Gemini plane ONLY (not claude_code_client)
+      ClaudeAY executes: diagnose → fix → commit → deploy → verify
+  → Audit logged to logs/autonomy_events.jsonl
+```
 
-**Inherits:** All Global Traits (§1–§6)
-**Workflow:** `.agent/workflows/Aether-Cognitive-Layer.md`
-**Role:** Resonance Cognitive Layer — Balances Academic Success with Psychological Well-being
+**CRITICAL DISTINCTION:**
+- `auto_trigger` proposes fixes, **human must approve** at `/api/claudeay/approve`
+- `autonomy_trigger` fires and executes **with no human approval required**
+- These are two separate systems. Do not confuse them.
 
-### Additional Constraints
+## MCP Tools Available to ClaudeAY (10 total)
 
-1. **Energy Monitoring:** Intercept all incoming homework/problem-solving requests.
-   Cross-reference the user's `Alex Insight Engine` memory for emotional state.
-   If `Frustration Index` is high or `Energy Level` is low, invoke Soft-Start protocol.
-
-2. **Soft-Start Protocol:** Suspend Resonance-Socratic-Tutor execution. Suggest a
-   2-minute mindfulness task, emotional validation, or comfort-interest interaction
-   before proceeding to academic material.
-
-3. **Memory Synthesis:** On completion of a homework session, synthesize "Lessons
-   Learned" and commit to `MASTER_INDEX.md`. Log conceptual victories explicitly
-   (e.g., "User mastered Quadratic Factoring after 3 attempts").
-
-4. **Gamification (Growth Streaks):** Track consistency. If user maintains a 3-day
-   `#focus-room` learning streak, generate a Personal Development Insight connecting
-   academic discipline to a personal goal from their profile.
-
-5. **Isolation:** Aether operates strictly within the Resonance cognitive scope.
-   No Aether agent may reference or depend on Project Aether C-Suite code/data.
-
----
-
-## Agent: Resonance Socratic Tutor
-
-**Inherits:** All Global Traits (§1–§6)
-**Workflow:** `.agent/workflows/Resonance-Socratic-Tutor.md`
-**Role:** Educational Logic & Step-Gating Module — Transforms "Solver" into "Educator"
-
-### Additional Constraints
-
-1. **Deconstruction (Atomic Principles):** When presented with a homework problem,
-   do NOT solve in one monolithic step. Break down into smallest Atomic Principles.
-   Identify core concepts required for the first step.
-
-2. **Step-Gating (The Socratic Method) — CRITICAL:** Do NOT provide the final
-   answer immediately. Output ONLY the first logical step. End with a Bridge
-   Question designed to prompt the user's critical thinking. Wait for response.
-
-3. **Visual Trace (Mixing Board UI):** Format output for the Mixing Board UI in
-   Resonance. Structure as a Logic Map with labels: `[Current Step]`,
-   `[Atomic Principle]`, `[Bridge Question]`.
-
-4. **Wingman-Mode Integration:** Available for invocation in `#wingman-mode` or
-   any primary educational context involving problem-solving.
-
----
-
-## Agent: Phantom QA
-
-**Inherits:** All Global Traits (§1–§6)
-**Config:** `Project_Aether/C-Suite_Active_Logic/Phantom_QA/`
-**Role:** Autonomous Quality Gate — Mandatory post-deployment verification
-
-### Additional Constraints
-
-1. **Mandatory Trigger:** After ANY Factory build, deployment, or code modification,
-   Phantom QA MUST be triggered automatically. No feature is "deployed" until
-   Phantom signs off.
-
-2. **Execution:** `python Project_Aether/C-Suite_Active_Logic/Phantom_QA/phantom_agent.py --app <AppName>`
-
-3. **Report Routing:** All QA verdicts go to CTO + Compliance Officer.
-
-4. **Blocking Gate:** If Phantom reports failures, fixes MUST be applied before
-   pushing to GitHub. No override allowed.
-
-5. **Artifact Output:** All QA verdicts must be generated as downloadable artifacts
-   per §1.3 Artifact Protocol.
-
----
-
-## Agent: CFO Execution Controller
-
-**Inherits:** All Global Traits (§1–§6)
-**Workflow:** `Antigravity_CFO_Execution_Controller` (n8n)
-**Config:** `Meta_App_Factory/CFO_Agent/deploy_cfo_v2.py`
-**Role:** Financial operations gatekeeper — all monetary and operational n8n workflows
-
-### Additional Constraints
-
-1. **MCP Authentication:** All CFO workflow invocations MUST complete the full MCP
-   authentication chain (§1.2) before execution. Hard-fail on token validation failure.
-
-2. **Audit Trail:** Every CFO execution must:
-   - Append to `LEDGER.md` with `| PROJECT: <id>` field
-   - Log to `auto_heal_log.json` with UUID
-   - Generate an artifact report per §1.3
-
-3. **Budget Threshold Gates:** If a workflow involves financial thresholds, the
-   CFO controller validates authorization level before proceeding.
-
-4. **Fragility Analysis:** All fragility reports must be generated as downloadable
-   artifacts with the naming convention: `cfo_fragility_report_<date>.md`.
-
----
-
-## Agent: The Operator
-
-**Inherits:** All Global Traits (§1–§6)
-**Config:** `Meta_App_Factory/operator_agent.py`
-**Role:** API-First Shadow Protocol execution & ecosystem dispatch
-
-### Additional Constraints
-
-1. **API-First Shadow Protocol (MANDATORY):** The Operator Agent MUST NEVER use UI automation (Playwright/Selenium) or computer vision. It executes ALL physical actions by constructing and firing native JSON payloads at internal REST endpoints.
-2. **Zero-Trust Token Loading:** Must natively query `os.getenv("GEMINI_API_KEY")`.
-3. **Pydantic Tool Usage:** Must construct payload using validated Pydantic tool schemas for core War Room actions.
-
----
-
-## Agent: Ecosystem Overwatch Sentinel
-
-**Inherits:** All Global Traits (§1–§6)
-**Config:** `Meta_App_Factory/Adv_Autonomous_Agent/nerve_center_v2.py`
-**Role:** Absolute Data Integrity & System Oversight
-
-### Additional Constraints
-
-1. **Loop Threshold & Snap-Back:** Ruthlessly cut off infinite logic loops (3 identical errors within 120s). Trigger autonomous "Snap-Back" remedies via `gemini-2.5-flash`.
-2. **Absolute No-Bypass Zones:** Strictly forbidden from autonomous bypass in Financial (CFO) or Security (Antigravity permissions) categories. Must escalate to Commander.
-3. **V3 Hardening Hook:** Automatically trigger Phantom QA hardening tasks when a successful remedy pattern reaches 0.9 confidence.
-4. **Non-Generative:** Must never generate creative content or act as a specialist. Purpose is monitoring and reliability only.
-
----
-
-# ═══════════════════════════════════════════════════════
-# §8  SYSTEM OVERRIDE PROTOCOLS [SUPERSEDED BY §0]
-# ═══════════════════════════════════════════════════════
-
-## 8.1 INFRASTRUCTURE & ENVIRONMENT (IMMUTABLE)
-1. **100% Native Python:** All orchestration, routing, and agent logic must execute in native Python.
-2. **Zero n8n Dependency:** Explicitly forbidden from suggesting, integrating, or writing webhooks for n8n or any external low-code platform.
-3. **Model Routing:** All internal agent configurations must strictly utilize gemini-2.5-pro (synthesis) and gemini-2.5-flash (speed/routing).
-
-## 8.2 MANDATORY CONTEXT ACQUISITION
-Before evaluating any request, agents MUST actively acquire awareness of the current environment by reading existing files. Never assume directory structures or API schemas.
-
-## 8.3 PRE-EXECUTION AUDIT & OPTIMIZATION
-Agents must perform a mandatory double-check before generating a solution, actively hunting for flaws, redundancies, and bottlenecks. If suboptimal, the agent must state it directly and propose the most efficient native-Python alternative.
-
-## 8.4 STRICT AUTHORIZATION GATE (NO-WRITE PROTOCOL)
-Agents operate in PROPOSAL MODE.
-- Forbidden from modifying files, creating directories, or executing write operations autonomously.
-- Must output a structured Impact Analysis and the proposed solution.
-- Must HALT and wait for explicit authorization from the Senior Technical Architect before implementing changes.
-
-# ═══════════════════════════════════════════════════════
-# §9  CONFIGURATION REFERENCES
-# ═══════════════════════════════════════════════════════
-
-| Asset | Path | Authority |
+| Tool | Phase | Description |
 |---|---|---|
-| **AGENTS.md** (this file) | Workspace root | **PRIMARY** — Multi-agent rule inheritance |
-| GEMINI.md | `.gemini/GEMINI.md` | LEGACY — Retained as fallback reference |
-| MASTER_INDEX.md | Workspace root | ACTIVE — Project registry & system state |
-| DIRECTIVE.md | `.supervisor/DIRECTIVE.md` | ACTIVE — Supervisor standing orders |
-| Master Architect | `.agent/workflows/master-architect.md` | ACTIVE — Detailed workflow protocol |
-| Aether Cognitive Layer | `.agent/workflows/Aether-Cognitive-Layer.md` | ACTIVE — Detailed workflow protocol |
-| Socratic Tutor | `.agent/workflows/Resonance-Socratic-Tutor.md` | ACTIVE — Detailed workflow protocol |
-| Commit & Push | `.agents/workflows/commit-and-push.md` | ACTIVE — Safe git protocol |
+| `execute_shell` | 1 | Local shell commands via shell_wire |
+| `get_shell_log` | 1 | Live output from most recent shell execution |
+| `git_operation` | 2 | Audited git: status/log/diff/add/commit/push/pull/branch/reset_file/stash |
+| `execute_remote_shell` | 3 | SSH to approved production hosts only |
+| `file_operation` | 4 | Read/write/append/delete/list/mkdir/move local files |
+| `get_autonomy_log` | 5 | Last N entries from logs/autonomy_events.jsonl |
+| `get_telemetry_summary` | — | Browser errors from Chrome extension |
+| `clear_telemetry` | — | Clears telemetry buffer |
+| `get_rules` | — | Returns CLAUDE_RULES.md content |
+| `update_rules` | — | Appends new rule section to CLAUDE_RULES.md |
+
+## Gemini Plane Tools (ay_client.py)
+
+| Function | Delegates to |
+|---|---|
+| `execute_local_shell` | shell_wire |
+| `write_local_file` | fs_wire |
+| `read_local_file` | fs_wire |
+| `execute_remote_shell` | ssh_wire |
+
+## Known Issues (2026-06-07)
+
+- **Builder Chat ERR_NETWORK (6 ERR)**: MCP bridge connection issue. ClaudeAY receives
+  input but MCP tools not responding. Workaround: Claude Code as execution layer
+  directly until resolved.
+- **Autonomy trigger Gemini-only**: The autonomy trigger uses `ay_client.send_mandate()`
+  exclusively. If Gemini API is unavailable, autonomous C1/C2 healing stops.
+  MCP tools are not accessible during autonomous sessions.
+
+---
+
+# ═══════════════════════════════════════════════════════
+# §2  WIRE SYSTEM: CLAUDEAY EXECUTION LAYER
+# ═══════════════════════════════════════════════════════
+
+The wire system gives ClaudeAY hands. Built in 5 phases. All wires share the
+same safety doctrine:
+
+- **Blocklist-only**: anything not explicitly blocked runs
+- **CWD sandbox**: working directory must be within `SHELL_WIRE_ALLOWED_ROOTS`
+- **Structured JSON envelope**: every wire returns `{blocked, block_reason, timed_out, exit_code, stdout, stderr}`
+- **Audit log per wire**: `logs/<name>_wire_audit.jsonl`
+- **Network failures → exit_code 502**: never silent hang
+- **Per-resource concurrency lock**: `asyncio.Lock` per repo/host
+
+Both planes share the same wire modules. One blocklist, one sandbox.
+
+---
+
+## Phase 1 — Shell Wire (`shell_wire.py`)
+
+ClaudeAY can run local shell commands.
+
+| | |
+|---|---|
+| **MCP tools** | `execute_shell`, `get_shell_log` |
+| **Gemini tools** | `execute_local_shell` |
+| **Timeout** | configurable, clamped to [1, 120]s |
+| **Sandbox** | CWD must be within `SHELL_WIRE_ALLOWED_ROOTS` |
+| **Blocklist** | 10-rule regex — destructive OS commands refused before subprocess spawns |
+| **Live output** | streams to `logs/shell_wire_live.log` via threads |
+| **Audit** | `logs/shell_wire_audit.jsonl` |
+
+**Note**: git commands are blocked in shell_wire by design. All git work must
+use git_wire (`git_operation` tool).
+
+---
+
+## Phase 2 — Git Wire (`git_wire.py`)
+
+ClaudeAY can commit, push, pull, branch, and stash.
+
+| | |
+|---|---|
+| **MCP tool** | `git_operation` |
+| **Operations** | status, log, diff, add, commit, push, pull, branch, reset_file, stash |
+| **Blocked** | `--force`, `reset --hard`, push to `prod` or `production` branch |
+| **Network** | push/pull failures → exit_code 502, never hangs |
+| **Concurrency** | per-repo `asyncio.Lock` prevents `index.lock` collisions |
+| **Audit** | `logs/git_wire_audit.jsonl` |
+
+---
+
+## Phase 3 — SSH Wire (`ssh_wire.py`)
+
+ClaudeAY can SSH into approved production servers.
+
+| | |
+|---|---|
+| **MCP tool** | `execute_remote_shell` |
+| **Gemini tool** | `execute_remote_shell` |
+| **Approved hosts** | `104.248.233.220` (maf-production-nyc1), `68.183.30.128` (mwo-production-nyc1) |
+| **Auth** | root user, key-based only (SSH_KEY_PATH from .env) |
+| **Remote blocklist** | `rm -rf /`, `reboot`, `shutdown`, `mkfs`, `dd if=/dev/zero` |
+| **Network** | paramiko exceptions → exit_code 502 |
+| **Concurrency** | per-host `asyncio.Lock` |
+| **Audit** | `logs/ssh_wire_audit.jsonl` |
+
+**Important**: Approved hosts are hardcoded in both `ssh_wire.py` and
+`mcp_server/server.py`. If a new droplet is added, update both files.
+
+---
+
+## Phase 4 — File System Wire (`fs_wire.py`)
+
+ClaudeAY can read, write, append, delete, list, move local files.
+
+| | |
+|---|---|
+| **MCP tool** | `file_operation` |
+| **Gemini tools** | `write_local_file`, `read_local_file` |
+| **Operations** | read, write, append, delete, list, exists, mkdir, move |
+| **Path sandbox** | all resolved paths must be within `SHELL_WIRE_ALLOWED_ROOTS` |
+| **System paths** | `/etc/`, `/boot/`, `/bin/`, `/sbin/`, `C:\Windows` — blocked for all ops |
+| **Delete blocked** | `.env` files, `.db`/`.sqlite` databases, `.git` dir/contents |
+| **Write blocked** | `deploy_maf.py`, `deploy_erp.py` (pipeline artifacts) |
+| **Size limits** | read ≤ 2 MB, write/append ≤ 5 MB, list ≤ 500 entries |
+| **Audit** | `logs/fs_wire_audit.jsonl` |
+
+---
+
+## Phase 5 — Autonomy Trigger (`autonomy_trigger.py`)
+
+ClaudeAY watches production and self-heals without being asked.
+
+| | |
+|---|---|
+| **MCP tool** | `get_autonomy_log` |
+| **Daemon** | Yes — started by `loop_ui.py` at startup |
+| **Executor** | `ay_client.send_mandate()` — **Gemini plane ONLY** |
+| **Poll interval** | 60 seconds |
+
+**Conditions:**
+
+| Condition | Trigger | Description |
+|---|---|---|
+| C1 TELEMETRY_CRITICAL | 3 consecutive windows | Same browser error in 3+ consecutive 60s polls |
+| C2 PROD_HEALTH_FAIL | 3 consecutive failures | Health probe fails 3× per host (independent per host) |
+
+**Health probe endpoints (checked via SSH to loopback):**
+
+| Host | Health URL |
+|---|---|
+| maf-production-nyc1 (104.248.233.220) | `http://127.0.0.1:8000/api/health` |
+| mwo-production-nyc1 (68.183.30.128) | `http://127.0.0.1:8000/system/directive` |
+
+**Concurrency safety:**
+
+- 10-minute cooldown between consecutive triggers per condition
+- Max 3 triggers/hour per condition → circuit breaker opens
+- Active session lock prevents re-entry while `send_mandate()` runs
+- Circuit stays open until process restart (operator must review log)
+
+**Dry run:** `AUTONOMY_DRY_RUN=true` logs what would fire without executing.
+
+**Audit:** `logs/autonomy_events.jsonl` (readable via `get_autonomy_log` MCP tool)
+
+---
+
+# ═══════════════════════════════════════════════════════
+# §3  ACTIVE AGENTS
+# ═══════════════════════════════════════════════════════
+
+---
+
+## loop_engine.py
+
+| | |
+|---|---|
+| **Role** | Orchestrator. Receives intent → builds mandate → sends to executor → evaluates ledger → iterates or halts |
+| **Primary executor** | `claude_code_client.py` |
+| **Fallback executor** | `ay_client.py` |
+| **Log** | `logs/loop_history.jsonl` |
+| **Daemon** | No |
+
+**Known architectural gap**: No maximum iteration cap. `ledger_evaluator.py` can
+return COMPLETE at confidence 0.3 on ambiguous ledgers, potentially causing
+premature loop termination. Conversely, repeated ITERATE signals can cause
+indefinite looping. Recommended fix: add `MAX_ITERATIONS = 10` guard to
+`AutonomousLoop.run()`. Not yet implemented.
+
+---
+
+## intent_router.py
+
+| | |
+|---|---|
+| **Role** | Dual-engine classifier. Routes Builder Chat queries to CLAUDE (code/debug/build/ERP) or GEMINI (strategy/brand/finance/C-Suite) |
+| **Primary** | Gemini 2.5 Flash LLM classification (~300ms) |
+| **Fallback** | Keyword scoring when LLM unavailable |
+| **Default** | GEMINI when ambiguous — preserves existing MAF behaviour |
+| **Bypass** | STRUCTURAL_MANDATE and /genesis paths skip this entirely |
+| **Daemon** | No |
+
+---
+
+## ledger_evaluator.py
+
+| | |
+|---|---|
+| **Role** | Evaluates loop execution results |
+| **Decision priority** | ESCALATE > ERROR > COMPLETE > ITERATE |
+| **Returns** | COMPLETE / ITERATE / ERROR / ESCALATE with confidence score |
+| **Ambiguous ledger** | Returns COMPLETE at confidence 0.3 — low signal, not silence |
+| **Daemon** | No |
+
+---
+
+## dispatcher/dispatcher.py
+
+| | |
+|---|---|
+| **Role** | Prompt builder. Injects CLAUDE_RULES.md + telemetry + code context + user request into tagged XML blocks |
+| **Methods** | `build_prompt()` — general use; `build_autofix_prompt()` — used by auto_trigger diagnose path |
+| **Log** | `logs/dispatched_prompts.jsonl` |
+| **Daemon** | No |
+
+---
+
+## ay_client.py
+
+| | |
+|---|---|
+| **Role** | Gemini 2.5 Pro execution client. Runs function-calling loop with 5-iteration circuit breaker. Routes tool calls to wire modules. |
+| **Model** | `gemini-2.5-pro` |
+| **Circuit breaker** | Halts after 5 tool iterations — prevents hallucination loops |
+| **Plane** | Gemini |
+| **Daemon** | No |
+
+---
+
+## claude_code_client.py
+
+| | |
+|---|---|
+| **Role** | Claude Code CLI primary executor |
+| **Command** | `claude -p <mandate> --dangerously-skip-permissions` |
+| **Fallback** | `ay_client.py` on quota exhaustion, rate-limit, or CLI not found |
+| **Plane** | Claude |
+| **Daemon** | No |
+
+---
+
+## auto_trigger.py
+
+| | |
+|---|---|
+| **Role** | Telemetry watcher. Polls `logs/telemetry.jsonl` every 30s. New critical errors → `POST /api/claudeay/diagnose` (port 5000). Human must approve. |
+| **Filter** | Local URLs only (localhost, 127.0.0.1, ::1) |
+| **Dedup** | `logs/seen_errors.jsonl` |
+| **Daemon** | Yes — started by `loop_ui.py` |
+
+---
+
+## native_watchdog.py (Phase 7: Aether Native Watchdog)
+
+| | |
+|---|---|
+| **Role** | Process monitor. Pings 10 local TCP ports every 30s. Auto-restarts services at 3 consecutive failures. Memory guard kills node processes >500MB. |
+| **Ports monitored** | 5000 (root_api), 5009 (sentinel_bridge), 5020 (cmo_agent), 5030 (phantom_qa), 5050 (master_architect), 5070 (c_suite/cfo), 5080 (clo_agent), 5090 (cio_agent), 5100 (operator_agent/ghost_operator) |
+| **Restart backoff** | [0, 5, 15, 30]s |
+| **Quarantine** | After 5 consecutive restart failures, service quarantined (no further attempts) |
+| **Daemon** | Yes — started by `api.py` at module load via `get_native_watchdog().start_background_loop()` |
+
+---
+
+## mcp_server/server.py
+
+| | |
+|---|---|
+| **Role** | MCP server entry point. WebSocket on port 9001 receives Chrome extension telemetry. MCP stdio server exposes 10 tools and 2 resources. |
+| **Resources** | `telemetry://live` (rolling buffer), `rules://claude` (CLAUDE_RULES.md) |
+| **Daemon** | No — standalone entry point, run separately |
+
+---
+
+## claudeay_ui_server.py
+
+| | |
+|---|---|
+| **Role** | FastAPI web UI on port 9002. Bridges browser to loop engine and Antigravity API. Proxies loop start/status/approve to port 5050. |
+| **Startup** | Clears stale telemetry log on startup |
+| **Daemon** | No — start manually: `python claude-mcp-bridge/claudeay_ui_server.py` |
+
+---
+
+## loop_ui.py
+
+| | |
+|---|---|
+| **Role** | Terminal REPL entry point. Starts `auto_trigger` (30s) and `autonomy_trigger` (60s) as daemon threads. Interactive mandate interface. |
+| **Daemon** | No — is the entry point |
+
+---
+
+## _smoke_test.py
+
+| | |
+|---|---|
+| **Role** | Integration test harness for the entire wire bridge. Tests all wire modules: shell_wire, git_wire, ssh_wire, fs_wire. Run manually to validate bridge health after any wire change. |
+| **Command** | `python claude-mcp-bridge/_smoke_test.py` |
+| **Daemon** | No |
+
+---
+
+## app_generator.py (Master Architect)
+
+| | |
+|---|---|
+| **Role** | Factory engine. Generates child apps from templates with V3 DNA (healed_post, _v3_preflight, StateManager). Must be run before scaffolding any new agent/app. |
+| **Daemon** | No |
+
+---
+
+## operator_agent.py (The Operator)
+
+| | |
+|---|---|
+| **Role** | FastAPI service on port 5100. Executes physical actions by constructing native JSON payloads to internal REST endpoints. API-First Shadow Protocol — no UI automation. |
+| **Daemon** | Yes (FastAPI service) |
+
+---
+
+## cio_crawler.py
+
+| | |
+|---|---|
+| **Role** | Cascade web crawler. Firecrawl → DuckDuckGo → httpx fallback. Accepts `url` (direct page scrape) or `query` (search). |
+| **Daemon** | No |
+
+---
+
+## Adv_Autonomous_Agent/nerve_center_v2.py (Ecosystem Overwatch Sentinel)
+
+| | |
+|---|---|
+| **Role** | Ecosystem monitoring loop. Absolute data integrity and system oversight. Loop threshold snap-back, forbidden from autonomous bypass in Financial or Security categories. |
+| **Daemon** | Yes |
+
+---
+
+# ═══════════════════════════════════════════════════════
+# §4  INFRASTRUCTURE
+# ═══════════════════════════════════════════════════════
+
+## Production Droplets
+
+### maf-production-nyc1 — 104.248.233.220
+- **Services**: core-engine (uvicorn :8000), phantom-qa (:5030)
+- **Nginx**: port 80, proxies `/api/` → :8000
+- **Deploy script**: `python deploy_maf.py` (from MAF root)
+- **Health check**: `GET http://104.248.233.220/api/health`
+
+### mwo-production-nyc1 — 68.183.30.128
+- **Services**: erp-backend (uvicorn :8000), erp-auth (:9000), nginx (port 80)
+- **Deploy script**: `python deploy_erp.py` (from ERP dir: `Meta_App_Factory/ERP/`)
+- **Health check**: `curl http://localhost/` → expect 200
+
+## Repositories
+
+| Repo | Remote | Local path |
+|---|---|---|
+| MAF | github.com/maurop70/Meta_App_Factory2 | `C:\Dev\Antigravity_AI_Agents\Meta_App_Factory` |
+| MWO/ERP | same repo, ERP subdirectory | `C:\Dev\Antigravity_AI_Agents\Meta_App_Factory\ERP` |
+
+## Standard Deploy Sequence
+
+ClaudeAY follows this every time, in this order:
+
+```
+1. git_operation(status)         — confirm clean or staged
+2. git_operation(add, paths=[<specific files>])
+3. git_operation(commit, message="<type>(<scope>): <description>")
+4. git_operation(push, branch="main")
+5. execute_shell("python deploy_maf.py")    ← MAF, cwd: MAF root
+   OR
+   execute_shell("python deploy_erp.py")    ← MWO, cwd: ERP dir
+6. execute_remote_shell — systemctl status <service>
+7. execute_remote_shell — curl health endpoint → expect 200
+```
+
+## MWO ERP Service Registry (corrected 2026-06-07)
+
+| Service | Status | Port | Note |
+|---|---|---|---|
+| `erp-backend.service` | ACTIVE | 8000 | Real uvicorn backend |
+| `erp-auth.service` | ACTIVE | 9000 | Real auth gateway |
+| `nginx.service` | ACTIVE | 80 | Reverse proxy |
+| `erp-maintenance-backend.service` | DUMMY | — | Placeholder — do not restart |
+| `erp-iam-gateway.service` | DUMMY | — | Placeholder — do not restart |
+
+**Restart command**: `systemctl restart erp-backend.service nginx.service`
+
+## MWO Extraction Paths (corrected 2026-06-07)
+
+`deploy_erp.py` uses `--transform` flags to extract tar contents directly to
+the correct directories:
+
+| Archive path | Extracts to |
+|---|---|
+| `Maintenance_Work_Order/` | `/opt/erp/backend/` |
+| `maintenance_frontend/dist/` | `/opt/erp/frontend/` |
+
+---
+
+# ═══════════════════════════════════════════════════════
+# §5  DOCUMENTATION MAINTENANCE RULES
+# ═══════════════════════════════════════════════════════
+
+**Documentation is part of every deployment. Not a follow-up. Not later. Same commit.**
+
+### When a new wire is added (Phase 6+):
+- Add to §2 with full safety model (blocklist, sandbox, size limits, audit log)
+- Add MCP tool to §1 ClaudeAY tools table
+- Update `claude-mcp-bridge/README.md` — add to Wire Modules and MCP Tools Reference
+- Update `CLAUDE_RULES.md` — append wire usage rules to the Wire System section
+- Add smoke test coverage to `_smoke_test.py`
+
+### When a new agent is added:
+- Add to §3 with file, role, daemon (yes/no), plane
+- Update `claude-mcp-bridge/README.md` if it touches the bridge
+
+### When infrastructure changes (new droplet, service rename, port change):
+- Update §4 immediately
+- Update `ssh_wire.py` `APPROVED_HOSTS` if new droplet added
+- Update `mcp_server/server.py` approved host list (two sources of truth — update both)
+- Update `CLAUDE_RULES.md` §9.4 deployment sequence
+
+### Commit discipline:
+- Wire + docs must be in the same commit — never ship a wire without its docs
+- Commit format: `docs: <scope> — <what changed>`
+
+---
+
+# ═══════════════════════════════════════════════════════
+# §6  DEPRECATED (history — do not remove)
+# ═══════════════════════════════════════════════════════
+
+**n8n** — permanently banned by §0. All n8n workflows are dead.
+Replaced by: wire system (Phases 1–5).
+
+**.agent/workflows/ files** — referenced in v1.x AGENTS.md but never created.
+Files: `master-architect.md`, `Aether-Cognitive-Layer.md`,
+`Resonance-Socratic-Tutor.md`, `commit-and-push.md`.
+Status: REMOVED from active documentation.
+
+**.gemini/GEMINI.md** — referenced in v1.x as legacy fallback. Never created. REMOVED.
+
+**.supervisor/DIRECTIVE.md** — referenced in v1.x as active. Never created. REMOVED.
+
+**CFO Execution Controller** — n8n-based (`Antigravity_CFO_Execution_Controller`
+workflow). Deprecated with n8n. No replacement built yet.
+
+**Aether Orchestrator** — referenced Alex Insight Engine and n8n memory.
+Deprecated with n8n. Functionality partially absorbed by `intent_router.py`
+and `loop_engine.py`.
+
+**Resonance Socratic Tutor** — referenced in v1.x. Workflow file never created.
+Deprecated.
+
+**MCP Authentication Protocol (v1.x §1.2)** — n8n handoff authentication via
+`healed_post()`, token validation, `X-Antigravity-Agent` headers. Deprecated
+with n8n. `healed_post()` replaced by wire system safety layer.
+
+**LEDGER.md (root)** — contains Alpha V2 Genesis trading strategy ledger, not the
+MAF system operations ledger. Do not treat as MAF system file. The ops ledger
+function is served by `MASTER_INDEX.md`.
+
+**v1.x Agent entries with no config files:**
+Aether Orchestrator, Resonance Socratic Tutor, CFO Execution Controller.
+These agents existed as behavioral descriptions only, with no backing code.
 
 ---
 
 *Initialized: 2026-03-28T19:55:00-04:00*
-*Format: AGENTS.md v1.21.6 Multi-Agent Standard*
-*Authority: Supersedes .gemini/GEMINI.md for all rule inheritance*
-
-### OPERATIONAL MANDATE: AUTONOMOUS BROWSER TELEMETRY
-Whenever the operator reports a UI deadlock, infinite loop, or routing failure, you MUST NOT immediately propose or execute code modifications. Your first action must be to utilize your browser impersonation capabilities to physically test the local application state (e.g., navigating to http://localhost:5175, executing the failing UI steps). You will output a strict "Diagnostic Report" detailing the initial state, execution steps, failure state, and DevTools console telemetry. You will wait for the Architect's authorization before writing any patches to the disk.
-
-### OPERATIONAL MANDATE: GATED AUTONOMOUS EXECUTION
-When authorized by the Architect to autonomously resolve complex architectural or environmental failures, you are strictly forbidden from executing monolithic, multi-step code changes. You must adhere to the Gated Execution Protocol:
-
-You will receive a sequential blueprint from the Architect.
-
-You will execute ONE STEP ONLY.
-
-You will perform localized browser or terminal telemetry to verify the state of that single step.
-
-You will output a strict, raw changelog detailing the exact lines of code or configurations modified.
-
-YOU MUST PHYSICALLY HALT EXECUTION. Do not proceed to the next step or make assumptions about the subsequent logic. You will remain in standby until the Architect completes the Gate Audit and explicitly authorizes the next phase.
+*Revised: 2026-06-07*
+*Format: AGENTS.md v2.0.0*
+*Authority: Supersedes AGENTS.md v1.x for all rule inheritance*
