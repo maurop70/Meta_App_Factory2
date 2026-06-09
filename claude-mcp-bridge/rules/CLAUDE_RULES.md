@@ -472,6 +472,16 @@ Never attempt any other IP.
 RULE 5 — To check what the autonomy trigger has done:
 use get_autonomy_log.
 
+RULE 6 — For browser automation and UI testing: use playwright_operation.
+  Approved URLs only — see APPROVED_URL_PREFIXES in playwright_wire.py:
+    http://localhost, http://127.0.0.1, http://68.183.30.128,
+    http://104.248.233.220, http://localhost:5173/5175/8000/5000
+  Never use evaluate with cookie/localStorage/fetch/XMLHttpRequest/eval scripts.
+  Use get_computed_style to validate UI — never assert correctness by DOM
+  class name alone (Strict UI Validation Doctrine, CLAUDE_RULES §6.1).
+  Always close sessions when done: playwright_operation(operation="close", session_id=...).
+  On new server: run 'playwright install-deps chromium' before first use.
+
 Safety rules you must never attempt to bypass:
   git push --force — blocked by git_wire
   git reset --hard — blocked by git_wire

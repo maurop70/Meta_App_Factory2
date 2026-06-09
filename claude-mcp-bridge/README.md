@@ -41,16 +41,17 @@ Both planes share the same safety layer. One blocklist, one sandbox, one audit t
 │                               ▼                                   │
 │              ┌─────────────────────────────────┐                  │
 │              │  WIRE MODULES (shared)           │                  │
-│              │  shell_wire.py  (Phase 1)        │                  │
-│              │  git_wire.py    (Phase 2)        │                  │
-│              │  ssh_wire.py    (Phase 3)        │                  │
-│              │  fs_wire.py     (Phase 4)        │                  │
+│              │  shell_wire.py      (Phase 1)    │                  │
+│              │  git_wire.py        (Phase 2)    │                  │
+│              │  ssh_wire.py        (Phase 3)    │                  │
+│              │  fs_wire.py         (Phase 4)    │                  │
+│              │  playwright_wire.py (Phase 6)    │                  │
 │              └─────────────────────────────────┘                  │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
 **MCP plane**: Claude calls tools via the MCP protocol. `mcp_server/server.py`
-is the stdio server that registers 10 tools and 2 resources. The WebSocket
+is the stdio server that registers 11 tools and 2 resources. The WebSocket
 listener on port 9001 receives telemetry events from the Chrome extension.
 
 **Gemini plane**: `ay_client.py` runs a Gemini 2.5 Pro function-calling loop.
@@ -118,6 +119,28 @@ and `.git`. Writes blocked for `deploy_maf.py` and `deploy_erp.py` (pipeline
 artifacts — must be edited via Claude Code directly). Size limits prevent OOM
 on large reads/writes.
 
+### Phase 6 — Playwright Wire (`playwright_wire.py`)
+
+Headless Chromium browser automation. ClaudeAY can open URLs, click, fill forms,
+screenshot pages, extract console errors and failed network requests, run
+JavaScript expressions, and extract actual computed CSS property values.
+
+The `get_computed_style` operation implements the Strict UI Validation Doctrine:
+verify real CSS values (e.g. `backdropFilter`, `display`, `color`) instead of
+asserting DOM class names that may be purged by Tailwind/Vite.
+
+Sessions are keyed by UUID, persist for 300 seconds, and are fully cleaned up
+on process exit via atexit and SIGTERM/SIGINT handlers — no Chromium zombies.
+
+**Linux install note**: headless Ubuntu VPS requires:
+```
+pip install playwright
+playwright install chromium
+playwright install-deps chromium   # installs OS-level libs: libnss3, libgbm1, etc.
+```
+
+---
+
 ### Phase 5 — Autonomy Trigger (`autonomy_trigger.py`)
 
 Proactive self-healing loop. Monitors two condition types:
@@ -143,6 +166,7 @@ condition, 600s cooldown between triggers.
 | `execute_remote_shell` | ssh_wire | Approved hosts only (2 IPs) | ssh_wire_audit.jsonl |
 | `file_operation` | fs_wire | No .env/.db delete, no deploy write | fs_wire_audit.jsonl |
 | `get_autonomy_log` | — | Read-only — returns JSONL entries | autonomy_events.jsonl |
+| `playwright_operation` | playwright_wire | URL allowlist + eval blocklist | playwright_wire_audit.jsonl |
 | `get_telemetry_summary` | — | Reads in-memory telemetry buffer | telemetry.jsonl |
 | `clear_telemetry` | — | Clears in-memory buffer | — |
 | `get_rules` | — | Read-only CLAUDE_RULES.md | — |
@@ -165,6 +189,7 @@ condition, 600s cooldown between triggers.
 | `write_local_file(relative_path, content)` | fs_wire | `file_operation` (write) |
 | `read_local_file(relative_path)` | fs_wire | `file_operation` (read) |
 | `execute_remote_shell(host_ip, command, timeout)` | ssh_wire | `execute_remote_shell` |
+| `playwright_operation(operation, ...)` | playwright_wire | `playwright_operation` |
 
 All four functions preserve the `STDOUT:\n...\nSTDERR:\n...` return format
 expected by Gemini function-calling callers.
@@ -209,6 +234,7 @@ All logs written to `claude-mcp-bridge/logs/`:
 | `ssh_wire_audit.jsonl` | ssh_wire | Every remote execution: host_ip, command, exit_code, duration |
 | `fs_wire_audit.jsonl` | fs_wire | Every file operation: op, path, exit_code, bytes |
 | `autonomy_events.jsonl` | autonomy_trigger | Every autonomy trigger event: condition, mandate, result |
+| `playwright_wire_audit.jsonl` | playwright_wire | Every browser operation: op, session_id, exit_code, duration |
 | `telemetry.jsonl` | mcp_server/server.py | Chrome extension events: console_error, page_error, request_failed |
 | `loop_history.jsonl` | loop_engine | Every mandate sent/received by the autonomous loop |
 | `dispatched_prompts.jsonl` | dispatcher | Every prompt built: instruction, length, timestamp |
