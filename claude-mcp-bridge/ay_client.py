@@ -81,6 +81,55 @@ def read_local_file(relative_path: str) -> str:
     return result["content"]
 
 
+def playwright_operation(
+    operation: str,
+    url: str = "",
+    selector: str = "",
+    text: str = "",
+    value: str = "",
+    script: str = "",
+    css_property: str = "",
+    timeout_ms: int = 5000,
+    session_id: str = "",
+    name: str = "",
+) -> str:
+    """
+    Execute a headless Chromium browser operation via playwright_wire.
+    URL allowlist and evaluate blocklist enforced inside playwright_wire.
+    Returns the JSON response envelope as a string for Gemini function calling.
+    """
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.insert(0, str(_Path(__file__).parent))
+    from playwright_wire import execute as _pw_execute
+
+    result = _pw_execute({
+        "operation":    operation,
+        "url":          url,
+        "selector":     selector,
+        "text":         text,
+        "value":        value,
+        "script":       script,
+        "css_property": css_property,
+        "timeout_ms":   timeout_ms,
+        "session_id":   session_id or None,
+        "name":         name,
+    })
+
+    if result["blocked"]:
+        return f"PLAYWRIGHT BLOCKED: {result['block_reason']}"
+    if result["timed_out"]:
+        return (
+            f"PLAYWRIGHT TIMEOUT: operation={operation}\n"
+            f"STDOUT:\n{result['stdout']}\nSTDERR:\n{result['stderr']}"
+        )
+    return (
+        f"PLAYWRIGHT [{operation}] exit={result['exit_code']} "
+        f"session={result['session_id']}\n"
+        f"STDOUT:\n{result['stdout']}\nSTDERR:\n{result['stderr']}"
+    )
+
+
 def execute_remote_shell(host_ip: str, command: str, timeout: int = 60) -> str:
     """
     Executes a shell command on an approved remote server via ssh_wire.
@@ -123,7 +172,7 @@ def send_mandate(mandate: str, timeout: int = 300) -> str:
                 model="gemini-2.5-pro",
                 config=types.GenerateContentConfig(
                     tools=[execute_local_shell, write_local_file, read_local_file,
-                           execute_remote_shell],
+                           execute_remote_shell, playwright_operation],
                     temperature=0.0
                 )
             )
@@ -155,6 +204,8 @@ def send_mandate(mandate: str, timeout: int = 300) -> str:
                         result = read_local_file(**fc.args)
                     elif fc.name == "execute_remote_shell":
                         result = execute_remote_shell(**fc.args)
+                    elif fc.name == "playwright_operation":
+                        result = playwright_operation(**fc.args)
                     else:
                         result = f"Unknown tool: {fc.name}"
                     tool_results.append(

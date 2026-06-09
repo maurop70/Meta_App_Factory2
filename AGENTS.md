@@ -108,7 +108,7 @@ autonomy_trigger.py (daemon, polls every 60s)
 - `autonomy_trigger` fires and executes **with no human approval required**
 - These are two separate systems. Do not confuse them.
 
-## MCP Tools Available to ClaudeAY (10 total)
+## MCP Tools Available to ClaudeAY (11 total)
 
 | Tool | Phase | Description |
 |---|---|---|
@@ -118,6 +118,7 @@ autonomy_trigger.py (daemon, polls every 60s)
 | `execute_remote_shell` | 3 | SSH to approved production hosts only |
 | `file_operation` | 4 | Read/write/append/delete/list/mkdir/move local files |
 | `get_autonomy_log` | 5 | Last N entries from logs/autonomy_events.jsonl |
+| `playwright_operation` | 6 | Headless Chromium: navigate, screenshot, click, fill, get_computed_style, etc. |
 | `get_telemetry_summary` | — | Browser errors from Chrome extension |
 | `clear_telemetry` | — | Clears telemetry buffer |
 | `get_rules` | — | Returns CLAUDE_RULES.md content |
@@ -131,6 +132,7 @@ autonomy_trigger.py (daemon, polls every 60s)
 | `write_local_file` | fs_wire |
 | `read_local_file` | fs_wire |
 | `execute_remote_shell` | ssh_wire |
+| `playwright_operation` | playwright_wire |
 
 ## Known Issues (2026-06-07)
 
@@ -268,6 +270,30 @@ ClaudeAY watches production and self-heals without being asked.
 **Dry run:** `AUTONOMY_DRY_RUN=true` logs what would fire without executing.
 
 **Audit:** `logs/autonomy_events.jsonl` (readable via `get_autonomy_log` MCP tool)
+
+---
+
+## Phase 6 — Playwright Wire (`playwright_wire.py`)
+
+ClaudeAY can open URLs, click, fill forms, screenshot, extract console errors,
+and validate computed CSS properties in headless Chromium.
+
+| | |
+|---|---|
+| **MCP tool** | `playwright_operation` |
+| **Gemini tool** | `playwright_operation` |
+| **Operations** | navigate, screenshot, click, fill, select, get_text, get_console, get_network, wait, evaluate, get_computed_style, close |
+| **URL safety** | Allowlist-only: localhost, 127.0.0.1, 68.183.30.128, 104.248.233.220, common dev ports |
+| **Script safety** | Evaluate blocklist: document.cookie, localStorage, sessionStorage, fetch(, XMLHttpRequest, eval( |
+| **Session TTL** | 300 seconds — auto-close on expiry |
+| **Concurrency** | per-session threading.Lock prevents concurrent page mutations |
+| **Zombie prevention** | atexit + SIGTERM/SIGINT handlers — every Chromium process tracked and killed on shutdown |
+| **Audit** | `logs/playwright_wire_audit.jsonl` |
+| **Screenshots** | saved to `logs/playwright_screenshots/<timestamp>_<name>.png` |
+| **Linux note** | Requires `playwright install-deps chromium` on headless Ubuntu VPS |
+
+**Strict UI Validation Doctrine**: always use `get_computed_style` to verify
+actual CSS values — never assert UI correctness by DOM class name alone.
 
 ---
 

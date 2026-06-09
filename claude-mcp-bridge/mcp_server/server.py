@@ -19,10 +19,11 @@ from pathlib import Path
 
 # ── Wire imports ──────────────────────────────────────────
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from shell_wire import execute as _shell_execute, AUDIT_LOG as _SHELL_AUDIT_LOG, LIVE_LOG as _SHELL_LIVE_LOG
-from git_wire import execute_async as _git_execute_async
-from ssh_wire import execute_async as _ssh_execute_async
-from fs_wire  import execute_async as _fs_execute_async
+from shell_wire      import execute as _shell_execute, AUDIT_LOG as _SHELL_AUDIT_LOG, LIVE_LOG as _SHELL_LIVE_LOG
+from git_wire        import execute_async as _git_execute_async
+from ssh_wire        import execute_async as _ssh_execute_async
+from fs_wire         import execute_async as _fs_execute_async
+from playwright_wire import execute_async as _pw_execute_async
 
 AUTONOMY_LOG = Path(__file__).parent.parent / "logs" / "autonomy_events.jsonl"
 
@@ -309,6 +310,71 @@ async def list_tools():
                 "required": ["operation", "path"],
             },
         ),
+        # ── Playwright Wire ──────────────────────────────────
+        Tool(
+            name="playwright_operation",
+            description=(
+                "Headless Chromium browser automation via playwright_wire. "
+                "Supports: navigate, screenshot, click, fill, select, get_text, "
+                "get_console, get_network, wait, evaluate, get_computed_style, close. "
+                "URL allowlist enforced — only approved hosts accepted. "
+                "Evaluate blocklist — cookie/localStorage/fetch scripts refused. "
+                "Sessions persist by session_id (UUID); TTL 300s. "
+                "Use get_computed_style to validate UI — never assert by class name."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "type": "string",
+                        "enum": [
+                            "navigate", "screenshot", "click", "fill", "select",
+                            "get_text", "get_console", "get_network", "wait",
+                            "evaluate", "get_computed_style", "close",
+                        ],
+                        "description": "Browser operation to perform.",
+                    },
+                    "url": {
+                        "type": "string",
+                        "description": "URL for navigate. Must start with an approved prefix.",
+                    },
+                    "selector": {
+                        "type": "string",
+                        "description": "CSS selector for click/fill/select/get_text/wait/get_computed_style.",
+                    },
+                    "text": {
+                        "type": "string",
+                        "description": "Visible text for click (alternative to selector).",
+                    },
+                    "value": {
+                        "type": "string",
+                        "description": "Input value for fill/select.",
+                    },
+                    "script": {
+                        "type": "string",
+                        "description": "JS expression for evaluate. Cookie/localStorage/fetch blocked.",
+                    },
+                    "css_property": {
+                        "type": "string",
+                        "description": "CSS property name for get_computed_style (e.g. 'display', 'color').",
+                    },
+                    "timeout_ms": {
+                        "type": "integer",
+                        "default": 5000,
+                        "description": "Operation timeout in milliseconds.",
+                    },
+                    "session_id": {
+                        "type": "string",
+                        "description": "UUID of an existing session to reuse. Omit to create new.",
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "Optional label appended to screenshot filename.",
+                    },
+                },
+                "required": ["operation"],
+            },
+        ),
         # ── SSH Wire ─────────────────────────────────────────
         Tool(
             name="execute_remote_shell",
@@ -436,6 +502,25 @@ async def call_tool(name: str, arguments: dict):
             cwd=arguments.get("cwd"),
             recursive=bool(arguments.get("recursive", False)),
         )
+        return [TextContent(type="text", text=json.dumps(result, indent=2))]
+    # ── Playwright Wire handler ───────────────────────────
+    if name == "playwright_operation":
+        operation = arguments.get("operation", "").strip()
+        if not operation:
+            return [TextContent(type="text",
+                                text=json.dumps({"error": "operation is required"}))]
+        result = await _pw_execute_async({
+            "operation":    operation,
+            "url":          arguments.get("url", ""),
+            "selector":     arguments.get("selector", ""),
+            "text":         arguments.get("text", ""),
+            "value":        arguments.get("value", ""),
+            "script":       arguments.get("script", ""),
+            "css_property": arguments.get("css_property", ""),
+            "timeout_ms":   int(arguments.get("timeout_ms", 5000)),
+            "session_id":   arguments.get("session_id"),
+            "name":         arguments.get("name", ""),
+        })
         return [TextContent(type="text", text=json.dumps(result, indent=2))]
     # ── SSH Wire handler ──────────────────────────────────
     if name == "execute_remote_shell":
