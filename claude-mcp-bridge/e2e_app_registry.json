@@ -10,10 +10,14 @@
       "db_path": "mwo_database.db",
       "deploy_script": "deploy_erp.py",
       "auth_config": {
+        "hm_employee_id": "ERP-2000",
         "hm_pin": "1234",
+        "tech_employee_id": "ERP-3000",
         "tech_pin": "2345",
+        "dm_employee_id": "ERP-4000",
         "dm_pin": "4567",
-        "dm_employee_id": "ERP-4000"
+        "admin_employee_id": "ERP-1000",
+        "admin_pin": "1234"
       }
     }
   ]
