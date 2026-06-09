@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import json
 import httpx
@@ -253,7 +254,10 @@ def test_auto_ghost(playwright: Playwright):
             raise ValueError("Gemini returned empty test code")
         logger.info(f"[QA ORCHESTRATOR] Live Gemini synthesis succeeded ({len(raw_code)} chars).")
     except Exception as e:
-        logger.error(f"[QA ORCHESTRATOR] Cognitive Fracture: {str(e)} — falling back to hardcoded CLO_Agent template.")
+        err_msg = str(e)
+        if "key=" in err_msg:
+            err_msg = re.sub(r'key=[a-zA-Z0-9_\-]+', 'key=MASKED', err_msg)
+        logger.error(f"[QA ORCHESTRATOR] Cognitive Fracture: {err_msg} — falling back to hardcoded CLO_Agent template.")
         raw_code = fallback_code.strip()
 
     # PHASE 2: ZERO-TRUST WRITE (The Atomizer Bridge)
