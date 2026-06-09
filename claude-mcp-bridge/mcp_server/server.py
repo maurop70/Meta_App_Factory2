@@ -375,6 +375,33 @@ async def list_tools():
                 "required": ["operation"],
             },
         ),
+        # ── E2E Orchestrator ─────────────────────────────────
+        Tool(
+            name="run_e2e_evaluation",
+            description=(
+                "Run a full E2E evaluation on a registered app. "
+                "Inspector reads code+docs → builds test plan. "
+                "Seed Agent prepares DB. "
+                "Playwright Agent runs all tests. "
+                "ClaudeAY fixes failures autonomously (max 5 cycles). "
+                "Escalates to operator on architectural decisions. "
+                "Returns EvaluationReport with pass/fail + screenshots."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "app_name": {
+                        "type": "string",
+                        "description": "App name from e2e_app_registry.json",
+                    },
+                    "run_id": {
+                        "type": "string",
+                        "description": "Optional run_id to resume. If omitted a new run is created.",
+                    },
+                },
+                "required": ["app_name"],
+            },
+        ),
         # ── SSH Wire ─────────────────────────────────────────
         Tool(
             name="execute_remote_shell",
@@ -535,6 +562,30 @@ async def call_tool(name: str, arguments: dict):
             timeout=int(arguments.get("timeout", 60)),
         )
         return [TextContent(type="text", text=json.dumps(result, indent=2))]
+    # ── E2E Orchestrator handler ───────────────────────────
+    if name == "run_e2e_evaluation":
+        import uuid as _uuid_mod
+        app_name = arguments.get("app_name", "").strip()
+        if not app_name:
+            return [TextContent(type="text",
+                                text=json.dumps({"error": "app_name is required"}))]
+        run_id = arguments.get("run_id") or str(_uuid_mod.uuid4())[:8]
+        bridge_dir = str(Path(__file__).parent.parent)
+        if bridge_dir not in sys.path:
+            sys.path.insert(0, bridge_dir)
+        from e2e_orchestrator import E2EOrchestrator
+        orch = E2EOrchestrator()
+        loop = asyncio.get_event_loop()
+        report = await loop.run_in_executor(None, lambda: orch.run(app_name, run_id))
+        if hasattr(report, "__dict__"):
+            report_dict = {k: v for k, v in report.__dict__.items()}
+        elif hasattr(report, "_asdict"):
+            report_dict = report._asdict()
+        elif isinstance(report, dict):
+            report_dict = report
+        else:
+            report_dict = {"raw": str(report)}
+        return [TextContent(type="text", text=json.dumps(report_dict, indent=2, default=str))]
     raise ValueError(f"Unknown tool: {name}")
 
 # ── Entry point ───────────────────────────────────────────

@@ -509,3 +509,14 @@ Documentation rule:
   Every new wire, agent, or phase deployment must include
   a documentation update in the same commit.
   Never deploy without updating AGENTS.md and claude-mcp-bridge/README.md.
+
+
+## SECTION 9 — E2E QUALITY GATE
+9.1 — E2E EVALUATION REQUIRED BEFORE PRODUCTION
+Use run_e2e_evaluation to test any child app before declaring it production-ready.
+Command: tool call run_e2e_evaluation with app_name from e2e_app_registry.json.
+Do NOT mark an app as production-ready if run_e2e_evaluation returns status != READY.
+9.2 — E2E ORCHESTRATOR ENTRY POINT
+All E2E evaluation requests flow through e2e_orchestrator.py.
+Do NOT call inspector_agent, seed_agent, or playwright_agent directly from mandates.
+Use the orchestrator so run state is persisted and the QA Lab UI receives live events.

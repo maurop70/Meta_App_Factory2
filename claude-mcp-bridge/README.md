@@ -171,6 +171,7 @@ condition, 600s cooldown between triggers.
 | `clear_telemetry` | — | Clears in-memory buffer | — |
 | `get_rules` | — | Read-only CLAUDE_RULES.md | — |
 | `update_rules` | — | Append-only to CLAUDE_RULES.md | — |
+| `run_e2e_evaluation` | e2e_orchestrator | Inspector→Seed→Playwright pipeline | logs/e2e_reports/ |
 
 **MCP Resources:**
 

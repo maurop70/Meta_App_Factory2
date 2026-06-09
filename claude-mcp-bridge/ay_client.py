@@ -1,4 +1,6 @@
 import os
+import json
+import uuid
 import warnings
 from pathlib import Path
 from dotenv import load_dotenv
@@ -158,6 +160,34 @@ def execute_remote_shell(host_ip: str, command: str, timeout: int = 60) -> str:
     )
 
 
+def run_e2e_evaluation(app_name: str, run_id: str = None) -> str:
+    """
+    Run full E2E evaluation pipeline for a registered app.
+    Inspector reads code+docs → builds test plan.
+    Seed Agent prepares DB.
+    Playwright Agent runs all tests with autonomous fix cycles.
+    Returns JSON-encoded EvaluationReport.
+    """
+    bridge_dir = str(Path(__file__).parent)
+    import sys as _sys
+    if bridge_dir not in _sys.path:
+        _sys.path.insert(0, bridge_dir)
+    from e2e_orchestrator import E2EOrchestrator
+    orch = E2EOrchestrator()
+    if not run_id:
+        run_id = str(uuid.uuid4())[:8]
+    report = orch.run(app_name, run_id)
+    if hasattr(report, "__dict__"):
+        report_dict = {k: v for k, v in report.__dict__.items()}
+    elif hasattr(report, "_asdict"):
+        report_dict = report._asdict()
+    elif isinstance(report, dict):
+        report_dict = report
+    else:
+        report_dict = {"raw": str(report)}
+    return json.dumps(report_dict, default=str, indent=2)
+
+
 def send_mandate(mandate: str, timeout: int = 300) -> str:
     """
     Sends a structured mandate to the native local execution bridge.
@@ -172,7 +202,8 @@ def send_mandate(mandate: str, timeout: int = 300) -> str:
                 model="gemini-2.5-pro",
                 config=types.GenerateContentConfig(
                     tools=[execute_local_shell, write_local_file, read_local_file,
-                           execute_remote_shell, playwright_operation],
+                           execute_remote_shell, playwright_operation,
+                           run_e2e_evaluation],
                     temperature=0.0
                 )
             )
@@ -206,6 +237,8 @@ def send_mandate(mandate: str, timeout: int = 300) -> str:
                         result = execute_remote_shell(**fc.args)
                     elif fc.name == "playwright_operation":
                         result = playwright_operation(**fc.args)
+                    elif fc.name == "run_e2e_evaluation":
+                        result = run_e2e_evaluation(**fc.args)
                     else:
                         result = f"Unknown tool: {fc.name}"
                     tool_results.append(
