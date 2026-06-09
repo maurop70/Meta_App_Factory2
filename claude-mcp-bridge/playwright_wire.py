@@ -101,11 +101,12 @@ def _signal_cleanup(signum, frame) -> None:
 
 
 atexit.register(_cleanup_all_sessions)
-try:
-    signal.signal(signal.SIGTERM, _signal_cleanup)
-    signal.signal(signal.SIGINT, _signal_cleanup)
-except (AttributeError, OSError):
-    pass  # Not all signals available on all platforms
+if threading.current_thread() is threading.main_thread():
+    try:
+        signal.signal(signal.SIGTERM, _signal_cleanup)
+        signal.signal(signal.SIGINT, _signal_cleanup)
+    except (AttributeError, OSError, ValueError):
+        pass  # Not all signals available on all platforms or interpreter contexts
 
 
 # ── Audit ─────────────────────────────────────────────────────────────────────
