@@ -1,0 +1,20 @@
+{
+  "apps": [
+    {
+      "name": "MWO ERP",
+      "base_url": "http://68.183.30.128",
+      "local_path": "C:/Dev/Antigravity_AI_Agents/Meta_App_Factory/ERP",
+      "docs_paths": ["README.md"],
+      "backend_file": "Maintenance_Work_Order/maintenance_backend.py",
+      "frontend_dir": "maintenance_frontend/src",
+      "db_path": "mwo_database.db",
+      "deploy_script": "deploy_erp.py",
+      "auth_config": {
+        "hm_pin": "1234",
+        "tech_pin": "2345",
+        "dm_pin": "4567",
+        "dm_employee_id": "ERP-4000"
+      }
+    }
+  ]
+}
