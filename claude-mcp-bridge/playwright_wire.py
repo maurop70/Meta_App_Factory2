@@ -189,9 +189,20 @@ def _get_or_create_session(session_id: str | None) -> tuple[str, dict]:
         if session_id and session_id in _SESSIONS:
             return session_id, _SESSIONS[session_id]
 
-        pw      = sync_playwright().start()
-        browser = pw.chromium.launch(headless=True)
-        page    = browser.new_page()
+        pw = sync_playwright().start()
+        try:
+            browser = pw.chromium.launch(headless=True)
+            page    = browser.new_page()
+        except Exception:
+            # A started-but-unstopped sync_playwright leaves its event loop
+            # registered as "running" in this thread, which makes every later
+            # sync_playwright().start() here fail with the misleading
+            # "Sync API inside the asyncio loop" error. Stop it before re-raising.
+            try:
+                pw.stop()
+            except Exception:
+                pass
+            raise
 
         console_errors: list[dict] = []
         network_errors: list[dict] = []
