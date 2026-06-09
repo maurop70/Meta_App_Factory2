@@ -7190,6 +7190,11 @@ import glob as _glob
 from datetime import datetime as _datetime
 from pathlib import Path as _Path
 
+# Ensure claude-mcp-bridge is on the import path so E2EOrchestrator can be imported
+_BRIDGE_DIR = str(_Path(SCRIPT_DIR) / "claude-mcp-bridge")
+if _BRIDGE_DIR not in sys.path:
+    sys.path.insert(0, _BRIDGE_DIR)
+
 _QA_RUNS_DIR = _Path(SCRIPT_DIR) / "logs" / "qa_runs"
 _QA_SCREENSHOTS_DIR = _Path(SCRIPT_DIR) / "logs" / "playwright_screenshots"
 _E2E_REGISTRY_PATH = _Path(SCRIPT_DIR) / "claude-mcp-bridge" / "e2e_app_registry.json"
@@ -7264,132 +7269,12 @@ def _update_run_fields(run_id: str, fields: dict) -> None:
 def _run_qa_background(run_id: str, app_config: dict, max_cycles: int) -> None:
     """
     Background QA runner thread.
-    Simulates a multi-cycle test run against the target app.
-    In production this would invoke playwright_wire / ClaudeAY.
+    Delegates to E2EOrchestrator: Inspector → Seed → Playwright.
     """
     try:
-        app_name = app_config.get("name", "Unknown App")
-        base_url = app_config.get("base_url", "")
-
-        # Simulated test suite
-        test_cases = [
-            "Login flow — valid credentials",
-            "Login flow — invalid PIN rejection",
-            "Dashboard loads all widgets",
-            "Work order creation form",
-            "Work order status update",
-            "Search and filter functionality",
-            "Mobile responsive layout",
-            "API health endpoint",
-        ]
-
-        total = len(test_cases)
-        _update_run_fields(run_id, {
-            "total_tests": total,
-            "status": "running",
-        })
-        _append_event(run_id, {
-            "type": "run_start",
-            "message": f"QA run started for {app_name} ({base_url})",
-            "ts": _datetime.utcnow().isoformat(),
-        })
-
-        passed = 0
-        failed = 0
-        test_results = []
-
-        for i, test_name in enumerate(test_cases):
-            _update_run_fields(run_id, {"current_test": test_name})
-            _append_event(run_id, {
-                "type": "test_start",
-                "test_name": test_name,
-                "index": i,
-                "ts": _datetime.utcnow().isoformat(),
-            })
-            _time.sleep(1.5)
-
-            # Simple heuristic: first 6 pass, last 2 fail to show fixing cycle
-            success = i < 6
-            duration_ms = 800 + i * 120
-
-            result = {
-                "name": test_name,
-                "status": "pass" if success else "fail",
-                "duration_ms": duration_ms,
-                "error": None if success else f"Assertion failed: expected element not found on {base_url}",
-                "screenshot": None,
-            }
-            test_results.append(result)
-
-            if success:
-                passed += 1
-            else:
-                failed += 1
-
-            _update_run_fields(run_id, {
-                "passed": passed,
-                "failed": failed,
-                "test_results": test_results,
-            })
-            _append_event(run_id, {
-                "type": "test_result",
-                "test_name": test_name,
-                "status": result["status"],
-                "duration_ms": duration_ms,
-                "error": result["error"],
-                "ts": _datetime.utcnow().isoformat(),
-            })
-
-        # If failures exist, simulate a fix cycle
-        if failed > 0:
-            run = _read_run(run_id)
-            current_cycle = run.get("cycle", 1)
-
-            if current_cycle < max_cycles:
-                _update_run_fields(run_id, {"status": "running", "cycle": current_cycle + 1})
-                _append_event(run_id, {
-                    "type": "fix_cycle",
-                    "cycle": current_cycle + 1,
-                    "message": f"ClaudeAY attempting fix — Cycle {current_cycle + 1}/{max_cycles}",
-                    "ts": _datetime.utcnow().isoformat(),
-                })
-                _time.sleep(2)
-
-                # Fix the failures
-                fixed_results = []
-                for r in test_results:
-                    if r["status"] == "fail":
-                        r = dict(r, status="pass", error=None)
-                        passed += 1
-                        failed -= 1
-                    fixed_results.append(r)
-
-                test_results = fixed_results
-                _update_run_fields(run_id, {
-                    "passed": passed,
-                    "failed": failed,
-                    "test_results": test_results,
-                })
-                _append_event(run_id, {
-                    "type": "fix_applied",
-                    "message": "Auto-fix applied successfully",
-                    "ts": _datetime.utcnow().isoformat(),
-                })
-
-        final_status = "complete" if failed == 0 else "escalate"
-        _update_run_fields(run_id, {
-            "status": final_status,
-            "current_test": None,
-        })
-        _append_event(run_id, {
-            "type": "run_complete",
-            "status": final_status,
-            "passed": passed,
-            "failed": failed,
-            "message": f"QA run complete: {passed}/{total} passed",
-            "ts": _datetime.utcnow().isoformat(),
-        })
-
+        from e2e_orchestrator import E2EOrchestrator
+        orch = E2EOrchestrator()
+        orch.run(app_config.get("name", ""), run_id)
     except Exception as exc:
         logger.error(f"QA background run {run_id} failed: {exc}")
         try:
@@ -7418,13 +7303,19 @@ class QAEscalationChoice(BaseModel):
 
 @app.get("/api/qa-lab/apps")
 async def qa_lab_apps():
-    """Return the list of registered E2E test apps."""
+    """Return the list of registered E2E test apps via E2EOrchestrator."""
     try:
-        if _E2E_REGISTRY_PATH.exists():
-            data = json.loads(_E2E_REGISTRY_PATH.read_text(encoding="utf-8"))
-            return data
-        return {"apps": []}
+        from e2e_orchestrator import E2EOrchestrator
+        orch = E2EOrchestrator()
+        return {"apps": orch.get_app_list()}
     except Exception as exc:
+        # Fallback: read registry directly
+        try:
+            if _E2E_REGISTRY_PATH.exists():
+                data = json.loads(_E2E_REGISTRY_PATH.read_text(encoding="utf-8"))
+                return data
+        except Exception:
+            pass
         raise HTTPException(status_code=500, detail=str(exc))
 
 
@@ -7536,9 +7427,13 @@ async def qa_lab_stream(run_id: str):
 
 @app.post("/api/qa-lab/escalation/{run_id}")
 async def qa_lab_escalation(run_id: str, body: QAEscalationChoice):
-    """Record user escalation choice (A/B/C) for the run."""
+    """Record user escalation choice (A/B/C) for the run via E2EOrchestrator."""
     try:
-        _update_run_fields(run_id, {"escalation_response": body.choice})
+        from e2e_orchestrator import E2EOrchestrator
+        orch = E2EOrchestrator()
+        ok = orch.respond_to_escalation(run_id, body.choice)
+        if not ok:
+            raise FileNotFoundError(f"Run {run_id} not found")
         return {"status": "ok", "run_id": run_id, "choice": body.choice}
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Run {run_id} not found")

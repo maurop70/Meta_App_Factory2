@@ -6,6 +6,7 @@ You type what you want. The loop does the rest.
 """
 
 import sys
+import threading
 from pathlib import Path
 from rich.console import Console
 from rich.panel import Panel
@@ -95,6 +96,36 @@ def main():
             break
 
         if not intent:
+            continue
+
+        # ── "test <app_name>" command ─────────────────────────────────────────
+        if intent.strip().lower().startswith("test "):
+            app_name   = intent[5:].strip()
+            bridge_dir = str(Path(__file__).parent)
+            if bridge_dir not in sys.path:
+                sys.path.insert(0, bridge_dir)
+            from e2e_orchestrator import E2EOrchestrator
+            orch = E2EOrchestrator()
+            try:
+                apps = [a["name"] for a in orch.get_app_list()]
+            except Exception:
+                apps = []
+            # Case-insensitive match
+            matched = None
+            for a in apps:
+                if a.lower() == app_name.lower():
+                    matched = a
+                    break
+            if matched is None:
+                console.print(f"[red]Unknown app:[/red] {app_name}")
+                console.print(f"[dim]Available: {', '.join(apps)}[/dim]")
+                continue
+            import uuid as _uuid_mod
+            run_id = str(_uuid_mod.uuid4())[:8]
+            console.print(f"[bold green]Starting E2E evaluation:[/bold green] {matched} (run_id: {run_id})")
+            console.print(f"[dim]Monitor at: http://104.248.233.220/qa-lab[/dim]")
+            t = threading.Thread(target=orch.run, args=(matched, run_id), daemon=True)
+            t.start()
             continue
 
         loop = AutonomousLoop()
