@@ -121,7 +121,7 @@ async def execute_autonomous_qa_loop(payload: OrchestrationPayload):
     )
     user_prompt = f"TARGET URL: {payload.target_url}\nAPP NAME: {payload.app_name}\nSynthesize the strict pytest-playwright validation script."
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
     gemini_payload = {
         "system_instruction": {"parts": [{"text": system_prompt}]},
         "contents": [{"role": "user", "parts": [{"text": user_prompt}]}],
@@ -238,7 +238,11 @@ def test_auto_ghost(playwright: Playwright):
     # legacy template only if the API interaction fails.
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(url, json=gemini_payload)
+            response = await client.post(
+                url,
+                json=gemini_payload,
+                headers={"x-goog-api-key": api_key}
+            )
             response.raise_for_status()
             resp_json = response.json()
             raw_code = resp_json['candidates'][0]['content']['parts'][0]['text']
