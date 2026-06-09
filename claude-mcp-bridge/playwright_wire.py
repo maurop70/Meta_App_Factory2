@@ -155,57 +155,18 @@ def _check_script(script: str) -> str | None:
 
 # ── Session management ────────────────────────────────────────────────────────
 
-def _expire_old_sessions() -> None:
-    """Must be called with _SESSIONS_LOCK held."""
-    now = time.monotonic()
-    expired = [
-        sid for sid, s in _SESSIONS.items()
-        if now - s["created_at"] > SESSION_TTL
-    ]
-    for sid in expired:
-        try:
-            _SESSIONS[sid]["browser"].close()
-        except Exception:
-            pass
-        try:
-            _SESSIONS[sid]["pw"].stop()
-        except Exception:
-            pass
-        del _SESSIONS[sid]
-        _audit({"event": "session_expired", "session_id": sid})
+import queue
 
-
-def _get_or_create_session(session_id: str | None) -> tuple[str, dict]:
-    """
-    Returns (session_id, session_data).
-    Reuses existing session if session_id given and alive; creates new otherwise.
-    Callers must acquire session["lock"] before touching page/browser.
-    """
+def _session_worker(task_queue: queue.Queue, session_id: str, console_errors: list, network_errors: list, startup_queue: queue.Queue) -> None:
+    """Dedicated background worker thread for a single browser session."""
     from playwright.sync_api import sync_playwright
 
-    with _SESSIONS_LOCK:
-        _expire_old_sessions()
-
-        if session_id and session_id in _SESSIONS:
-            return session_id, _SESSIONS[session_id]
-
+    pw = None
+    browser = None
+    try:
         pw = sync_playwright().start()
-        try:
-            browser = pw.chromium.launch(headless=True)
-            page    = browser.new_page()
-        except Exception:
-            # A started-but-unstopped sync_playwright leaves its event loop
-            # registered as "running" in this thread, which makes every later
-            # sync_playwright().start() here fail with the misleading
-            # "Sync API inside the asyncio loop" error. Stop it before re-raising.
-            try:
-                pw.stop()
-            except Exception:
-                pass
-            raise
-
-        console_errors: list[dict] = []
-        network_errors: list[dict] = []
+        browser = pw.chromium.launch(headless=True)
+        page = browser.new_page()
 
         def _on_console(msg) -> None:
             if msg.type == "error":
@@ -218,8 +179,178 @@ def _get_or_create_session(session_id: str | None) -> tuple[str, dict]:
         page.on("console", _on_console)
         page.on("response", _on_response)
 
-        new_id  = session_id or str(uuid.uuid4())
+        startup_queue.put(("success", pw, browser, page))
+    except Exception as exc:
+        startup_queue.put(("error", exc))
+        if browser:
+            try:
+                browser.close()
+            except Exception:
+                pass
+        if pw:
+            try:
+                pw.stop()
+            except Exception:
+                pass
+        return
+
+    while True:
+        task = task_queue.get()
+        if task is None:
+            break
+
+        operation = task["operation"]
+        rq = task["rq"]
+
+        try:
+            res = _execute_on_worker(page, operation, task)
+            rq.put(("success", res))
+        except Exception as exc:
+            rq.put(("error", exc))
+
+    try:
+        browser.close()
+    except Exception:
+        pass
+    try:
+        pw.stop()
+    except Exception:
+        pass
+
+
+def _execute_on_worker(page, operation: str, task: dict) -> dict:
+    url          = task.get("url")
+    selector     = task.get("selector")
+    text         = task.get("text")
+    value        = task.get("value")
+    script       = task.get("script")
+    css_property = task.get("css_property")
+    timeout_ms   = task.get("timeout_ms")
+    name         = task.get("name")
+
+    stdout          = ""
+    stderr          = ""
+    exit_code       = 0
+    timed_out       = False
+    screenshot_path = None
+
+    if operation == "navigate":
+        page.goto(url, timeout=timeout_ms)
+
+    elif operation == "screenshot":
+        SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
+        ts    = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        fname = f"{ts}_{name}.png" if name else f"{ts}.png"
+        path  = str(SCREENSHOT_DIR / fname)
+        page.screenshot(path=path, full_page=True)
+        screenshot_path = path
+        stdout = path
+
+    elif operation == "click":
+        target = f"text={text}" if text else selector
+        if not target:
+            raise ValueError("click requires selector or text")
+        page.click(target, timeout=timeout_ms)
+
+    elif operation == "fill":
+        if not selector:
+            raise ValueError("fill requires selector")
+        page.fill(selector, value, timeout=timeout_ms)
+
+    elif operation == "select":
+        if not selector:
+            raise ValueError("select requires selector")
+        page.select_option(selector, value=value, timeout=timeout_ms)
+
+    elif operation == "get_text":
+        if not selector:
+            raise ValueError("get_text requires selector")
+        stdout = page.inner_text(selector, timeout=timeout_ms)
+
+    elif operation == "wait":
+        if not selector:
+            raise ValueError("wait requires selector")
+        page.wait_for_selector(selector, timeout=timeout_ms)
+
+    elif operation == "evaluate":
+        if not script:
+            raise ValueError("evaluate requires script")
+        result = page.evaluate(script)
+        stdout = json.dumps(result) if result is not None else ""
+
+    elif operation == "get_computed_style":
+        if not selector or not css_property:
+            raise ValueError("get_computed_style requires selector and css_property")
+        result = page.evaluate(
+            """([sel, prop]) => {
+                const el = document.querySelector(sel);
+                if (!el) return null;
+                return window.getComputedStyle(el).getPropertyValue(prop);
+            }""",
+            [selector, css_property],
+        )
+        stdout = str(result) if result is not None else ""
+
+    return {
+        "stdout":          stdout,
+        "stderr":          stderr,
+        "exit_code":       exit_code,
+        "timed_out":       timed_out,
+        "screenshot_path": screenshot_path,
+    }
+
+
+def _expire_old_sessions() -> None:
+    """Must be called with _SESSIONS_LOCK held."""
+    now = time.monotonic()
+    expired = [
+        sid for sid, s in _SESSIONS.items()
+        if now - s["created_at"] > SESSION_TTL
+    ]
+    for sid in expired:
+        session = _SESSIONS.pop(sid, None)
+        if session:
+            try:
+                session["queue"].put(None)
+            except Exception:
+                pass
+            _audit({"event": "session_expired", "session_id": sid})
+
+
+def _get_or_create_session(session_id: str | None) -> tuple[str, dict]:
+    """
+    Returns (session_id, session_data).
+    Reuses existing session if session_id given and alive; creates new otherwise.
+    """
+    with _SESSIONS_LOCK:
+        _expire_old_sessions()
+
+        if session_id and session_id in _SESSIONS:
+            return session_id, _SESSIONS[session_id]
+
+        new_id = session_id or str(uuid.uuid4())
+        task_queue = queue.Queue()
+        console_errors = []
+        network_errors = []
+        startup_queue = queue.Queue()
+
+        t = threading.Thread(
+            target=_session_worker,
+            args=(task_queue, new_id, console_errors, network_errors, startup_queue),
+            daemon=True
+        )
+        t.start()
+
+        # Wait for playwright startup on the worker thread
+        status, *res = startup_queue.get()
+        if status == "error":
+            raise res[0]
+
+        pw, browser, page = res
+
         session = {
+            "queue":          task_queue,
+            "thread":         t,
             "pw":             pw,
             "browser":        browser,
             "page":           page,
@@ -238,11 +369,6 @@ def _get_or_create_session(session_id: str | None) -> tuple[str, dict]:
 def execute(request: dict) -> dict:
     """
     Execute a single Playwright browser operation.
-
-    Supported operations: navigate, screenshot, click, fill, select, get_text,
-    get_console, get_network, wait, evaluate, get_computed_style, close.
-
-    Returns the standard wire response envelope.
     """
     operation    = (request.get("operation") or "").strip()
     url          = (request.get("url") or "").strip()
@@ -299,19 +425,17 @@ def execute(request: dict) -> dict:
     _audit({"event": "execute", "operation": operation,
             "session_id": sid, "url": url or None})
 
-    # ── Close: handled separately — no page operations, no session lock ───────
+    # ── Close: handled separately — no page operations, stop worker thread ──
     if operation == "close":
         with _SESSIONS_LOCK:
             if sid in _SESSIONS:
-                try:
-                    session["browser"].close()
-                except Exception:
-                    pass
-                try:
-                    session["pw"].stop()
-                except Exception:
-                    pass
-                _SESSIONS.pop(sid, None)
+                s = _SESSIONS.pop(sid, None)
+                if s:
+                    try:
+                        s["queue"].put(None)
+                        s["thread"].join(timeout=5)
+                    except Exception:
+                        pass
         _audit({"event": "session_closed", "session_id": sid})
         duration_ms = int((time.monotonic() - start) * 1000)
         return {
@@ -329,7 +453,42 @@ def execute(request: dict) -> dict:
             "session_id":      sid,
         }
 
-    page            = session["page"]
+    # ── Get logs directly if requested ──────────────────────────────────────
+    if operation == "get_console":
+        duration_ms = int((time.monotonic() - start) * 1000)
+        return {
+            "stdout":          json.dumps(session["console_errors"]),
+            "stderr":          "",
+            "exit_code":       0,
+            "duration_ms":     duration_ms,
+            "timed_out":       False,
+            "blocked":         False,
+            "block_reason":    None,
+            "operation":       operation,
+            "screenshot_path": None,
+            "console_errors":  session["console_errors"],
+            "network_errors":  session["network_errors"],
+            "session_id":      sid,
+        }
+
+    if operation == "get_network":
+        duration_ms = int((time.monotonic() - start) * 1000)
+        return {
+            "stdout":          json.dumps(session["network_errors"]),
+            "stderr":          "",
+            "exit_code":       0,
+            "duration_ms":     duration_ms,
+            "timed_out":       False,
+            "blocked":         False,
+            "block_reason":    None,
+            "operation":       operation,
+            "screenshot_path": None,
+            "console_errors":  session["console_errors"],
+            "network_errors":  session["network_errors"],
+            "session_id":      sid,
+        }
+
+    # ── Delegate other operations to worker thread ──────────────────────────
     stdout          = ""
     stderr          = ""
     exit_code       = 0
@@ -337,83 +496,37 @@ def execute(request: dict) -> dict:
     screenshot_path = None
 
     with session["lock"]:
-        try:
-            if operation == "navigate":
-                page.goto(url, timeout=timeout_ms)
+        rq = queue.Queue()
+        session["queue"].put({
+            "operation":    operation,
+            "url":          url,
+            "selector":     selector,
+            "text":         text,
+            "value":        value,
+            "script":       script,
+            "css_property": css_property,
+            "timeout_ms":   timeout_ms,
+            "name":         name,
+            "rq":           rq
+        })
 
-            elif operation == "screenshot":
-                SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
-                ts    = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-                fname = f"{ts}_{name}.png" if name else f"{ts}.png"
-                path  = str(SCREENSHOT_DIR / fname)
-                page.screenshot(path=path, full_page=True)
-                screenshot_path = path
-                stdout = path
-
-            elif operation == "click":
-                target = f"text={text}" if text else selector
-                if not target:
-                    raise ValueError("click requires selector or text")
-                page.click(target, timeout=timeout_ms)
-
-            elif operation == "fill":
-                if not selector:
-                    raise ValueError("fill requires selector")
-                page.fill(selector, value, timeout=timeout_ms)
-
-            elif operation == "select":
-                if not selector:
-                    raise ValueError("select requires selector")
-                page.select_option(selector, value=value, timeout=timeout_ms)
-
-            elif operation == "get_text":
-                if not selector:
-                    raise ValueError("get_text requires selector")
-                stdout = page.inner_text(selector, timeout=timeout_ms)
-
-            elif operation == "get_console":
-                stdout = json.dumps(session["console_errors"])
-
-            elif operation == "get_network":
-                stdout = json.dumps(session["network_errors"])
-
-            elif operation == "wait":
-                if not selector:
-                    raise ValueError("wait requires selector")
-                page.wait_for_selector(selector, timeout=timeout_ms)
-
-            elif operation == "evaluate":
-                if not script:
-                    raise ValueError("evaluate requires script")
-                result = page.evaluate(script)
-                stdout = json.dumps(result) if result is not None else ""
-
-            elif operation == "get_computed_style":
-                if not selector or not css_property:
-                    raise ValueError("get_computed_style requires selector and css_property")
-                # Args passed as JSON — no string interpolation into JS, no injection risk
-                result = page.evaluate(
-                    """([sel, prop]) => {
-                        const el = document.querySelector(sel);
-                        if (!el) return null;
-                        return window.getComputedStyle(el).getPropertyValue(prop);
-                    }""",
-                    [selector, css_property],
-                )
-                stdout = str(result) if result is not None else ""
-
-            else:
-                return _blocked_result(operation, f"unsupported operation: {operation!r}")
-
-        except Exception as exc:
+        status, res = rq.get()
+        if status == "error":
+            exc = res
             err_str = str(exc)
-            stderr  = err_str
+            stderr = err_str
             if "timeout" in err_str.lower() or "timed out" in err_str.lower():
                 timed_out = True
                 exit_code = -1
             else:
                 exit_code = -2
             log.warning("[PW_WIRE] op=%s error: %s", operation, err_str[:200])
+        else:
+            stdout          = res["stdout"]
+            stderr          = res["stderr"]
+            exit_code       = res["exit_code"]
+            timed_out       = res["timed_out"]
+            screenshot_path = res["screenshot_path"]
 
     duration_ms = int((time.monotonic() - start) * 1000)
     log.info("[PW_WIRE] op=%s exit=%d dur=%dms session=%s",
