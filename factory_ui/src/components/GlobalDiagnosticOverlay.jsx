@@ -6,6 +6,14 @@ import axios from 'axios';
 // GLOBAL DIAGNOSTIC OVERLAY — HIGH-FIDELITY ENGINE OVERRIDE PORTAL
 // ============================================================================
 
+// Only failures of these core engine APIs justify blocking the whole UI.
+// Secondary telemetry polling (e.g. QA Lab status/stream) must never block.
+const CORE_API_PREFIXES = ['/api/cio', '/api/operator', '/api/health'];
+
+function isCoreApiUrl(url = '') {
+  return CORE_API_PREFIXES.some((u) => url.includes(u));
+}
+
 export default function GlobalDiagnosticOverlay() {
   const [error, setError] = useState(null);
   const [rebooting, setRebooting] = useState(false);
@@ -17,6 +25,7 @@ export default function GlobalDiagnosticOverlay() {
     let errorCount = 0;
 
     const handleGlobalError = (e) => {
+      if (!isCoreApiUrl(e.detail?.url)) return; // Ignore secondary/telemetry endpoints
       errorCount += 1;
       if (errorCount < 3) return; // Require 3 consecutive errors before blocking UI
       setError(e.detail);

@@ -11,6 +11,8 @@ const SILENT_URLS = [
   '/api/bridge/stream',
   '/api/war-room/stream',
   '/api/loop/status',
+  '/api/qa-lab/status',
+  '/api/qa-lab/stream',
   'favicon.ico',
 ];
 
