@@ -75,7 +75,7 @@ def deploy():
 
     cd {REMOTE_DIR}/backend
     source venv/bin/activate || python3 -m venv venv && source venv/bin/activate
-    pip install -r requirements.txt
+    venv/bin/python3 -m pip install -r requirements.txt
 
     # Patch stale venv path in all venv scripts (prevents crash loop if deployed from old Maintenance_Work_Order path)
     grep -rl '/opt/erp/Maintenance_Work_Order/venv/bin/python3' {REMOTE_DIR}/backend/venv/bin/ 2>/dev/null | xargs -r sed -i 's|#!/opt/erp/Maintenance_Work_Order/venv/bin/python3|#!/opt/erp/backend/venv/bin/python3|g' || true
