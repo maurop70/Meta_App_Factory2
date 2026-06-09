@@ -256,7 +256,7 @@ def test_auto_ghost(playwright: Playwright):
     except Exception as e:
         err_msg = str(e)
         if "key=" in err_msg:
-            err_msg = re.sub(r'key=[a-zA-Z0-9_\-]+', 'key=MASKED', err_msg)
+            err_msg = re.sub(r'key=[^&\s\'"]+', 'key=MASKED', err_msg)
         logger.error(f"[QA ORCHESTRATOR] Cognitive Fracture: {err_msg} — falling back to hardcoded CLO_Agent template.")
         raw_code = fallback_code.strip()
 
