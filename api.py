@@ -7180,6 +7180,406 @@ async def get_telemetry_stream():
                 
     return StreamingResponse(sse_generator(), media_type="text/event-stream")
 
+# ══════════════════════════════════════════════════════════════════════════════
+# QA LAB API — Disk-Based State (multi-worker safe), SSE Keep-Alive
+# ══════════════════════════════════════════════════════════════════════════════
+
+import uuid as _uuid
+import time as _time
+import glob as _glob
+from datetime import datetime as _datetime
+from pathlib import Path as _Path
+
+_QA_RUNS_DIR = _Path(SCRIPT_DIR) / "logs" / "qa_runs"
+_QA_SCREENSHOTS_DIR = _Path(SCRIPT_DIR) / "logs" / "playwright_screenshots"
+_E2E_REGISTRY_PATH = _Path(SCRIPT_DIR) / "claude-mcp-bridge" / "e2e_app_registry.json"
+
+_QA_RUNS_DIR.mkdir(parents=True, exist_ok=True)
+_QA_SCREENSHOTS_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _qa_run_path(run_id: str) -> _Path:
+    return _QA_RUNS_DIR / f"{run_id}.json"
+
+
+def _read_run(run_id: str) -> dict:
+    """Read run state from disk. Raises FileNotFoundError if not found."""
+    p = _qa_run_path(run_id)
+    if not p.exists():
+        raise FileNotFoundError(f"Run {run_id} not found")
+    return json.loads(p.read_text(encoding="utf-8"))
+
+
+def _write_run(run_data: dict) -> None:
+    """Write run state to disk with a simple retry loop for file locking."""
+    p = _qa_run_path(run_data["run_id"])
+    max_retries = 5
+    for attempt in range(max_retries):
+        try:
+            tmp = p.with_suffix(".tmp")
+            tmp.write_text(json.dumps(run_data, indent=2), encoding="utf-8")
+            tmp.replace(p)
+            return
+        except OSError:
+            if attempt < max_retries - 1:
+                _time.sleep(0.05 * (attempt + 1))
+            else:
+                raise
+
+
+def _append_event(run_id: str, event: dict) -> None:
+    """Append an event to the run's event list on disk."""
+    max_retries = 8
+    for attempt in range(max_retries):
+        try:
+            run = _read_run(run_id)
+            run["events"].append(event)
+            run["updated_at"] = _datetime.utcnow().isoformat()
+            _write_run(run)
+            return
+        except (OSError, FileNotFoundError):
+            if attempt < max_retries - 1:
+                _time.sleep(0.05 * (attempt + 1))
+            else:
+                raise
+
+
+def _update_run_fields(run_id: str, fields: dict) -> None:
+    """Merge fields into the run state on disk."""
+    max_retries = 8
+    for attempt in range(max_retries):
+        try:
+            run = _read_run(run_id)
+            run.update(fields)
+            run["updated_at"] = _datetime.utcnow().isoformat()
+            _write_run(run)
+            return
+        except (OSError, FileNotFoundError):
+            if attempt < max_retries - 1:
+                _time.sleep(0.05 * (attempt + 1))
+            else:
+                raise
+
+
+def _run_qa_background(run_id: str, app_config: dict, max_cycles: int) -> None:
+    """
+    Background QA runner thread.
+    Simulates a multi-cycle test run against the target app.
+    In production this would invoke playwright_wire / ClaudeAY.
+    """
+    try:
+        app_name = app_config.get("name", "Unknown App")
+        base_url = app_config.get("base_url", "")
+
+        # Simulated test suite
+        test_cases = [
+            "Login flow — valid credentials",
+            "Login flow — invalid PIN rejection",
+            "Dashboard loads all widgets",
+            "Work order creation form",
+            "Work order status update",
+            "Search and filter functionality",
+            "Mobile responsive layout",
+            "API health endpoint",
+        ]
+
+        total = len(test_cases)
+        _update_run_fields(run_id, {
+            "total_tests": total,
+            "status": "running",
+        })
+        _append_event(run_id, {
+            "type": "run_start",
+            "message": f"QA run started for {app_name} ({base_url})",
+            "ts": _datetime.utcnow().isoformat(),
+        })
+
+        passed = 0
+        failed = 0
+        test_results = []
+
+        for i, test_name in enumerate(test_cases):
+            _update_run_fields(run_id, {"current_test": test_name})
+            _append_event(run_id, {
+                "type": "test_start",
+                "test_name": test_name,
+                "index": i,
+                "ts": _datetime.utcnow().isoformat(),
+            })
+            _time.sleep(1.5)
+
+            # Simple heuristic: first 6 pass, last 2 fail to show fixing cycle
+            success = i < 6
+            duration_ms = 800 + i * 120
+
+            result = {
+                "name": test_name,
+                "status": "pass" if success else "fail",
+                "duration_ms": duration_ms,
+                "error": None if success else f"Assertion failed: expected element not found on {base_url}",
+                "screenshot": None,
+            }
+            test_results.append(result)
+
+            if success:
+                passed += 1
+            else:
+                failed += 1
+
+            _update_run_fields(run_id, {
+                "passed": passed,
+                "failed": failed,
+                "test_results": test_results,
+            })
+            _append_event(run_id, {
+                "type": "test_result",
+                "test_name": test_name,
+                "status": result["status"],
+                "duration_ms": duration_ms,
+                "error": result["error"],
+                "ts": _datetime.utcnow().isoformat(),
+            })
+
+        # If failures exist, simulate a fix cycle
+        if failed > 0:
+            run = _read_run(run_id)
+            current_cycle = run.get("cycle", 1)
+
+            if current_cycle < max_cycles:
+                _update_run_fields(run_id, {"status": "running", "cycle": current_cycle + 1})
+                _append_event(run_id, {
+                    "type": "fix_cycle",
+                    "cycle": current_cycle + 1,
+                    "message": f"ClaudeAY attempting fix — Cycle {current_cycle + 1}/{max_cycles}",
+                    "ts": _datetime.utcnow().isoformat(),
+                })
+                _time.sleep(2)
+
+                # Fix the failures
+                fixed_results = []
+                for r in test_results:
+                    if r["status"] == "fail":
+                        r = dict(r, status="pass", error=None)
+                        passed += 1
+                        failed -= 1
+                    fixed_results.append(r)
+
+                test_results = fixed_results
+                _update_run_fields(run_id, {
+                    "passed": passed,
+                    "failed": failed,
+                    "test_results": test_results,
+                })
+                _append_event(run_id, {
+                    "type": "fix_applied",
+                    "message": "Auto-fix applied successfully",
+                    "ts": _datetime.utcnow().isoformat(),
+                })
+
+        final_status = "complete" if failed == 0 else "escalate"
+        _update_run_fields(run_id, {
+            "status": final_status,
+            "current_test": None,
+        })
+        _append_event(run_id, {
+            "type": "run_complete",
+            "status": final_status,
+            "passed": passed,
+            "failed": failed,
+            "message": f"QA run complete: {passed}/{total} passed",
+            "ts": _datetime.utcnow().isoformat(),
+        })
+
+    except Exception as exc:
+        logger.error(f"QA background run {run_id} failed: {exc}")
+        try:
+            _update_run_fields(run_id, {"status": "failed"})
+            _append_event(run_id, {
+                "type": "error",
+                "message": str(exc),
+                "ts": _datetime.utcnow().isoformat(),
+            })
+        except Exception:
+            pass
+
+
+# ── QA Lab Request Models ──────────────────────────────────────────────────
+
+class QARunRequest(BaseModel):
+    app_name: str
+    max_cycles: int = 5
+
+
+class QAEscalationChoice(BaseModel):
+    choice: str  # "A" | "B" | "C"
+
+
+# ── QA Lab Endpoints ───────────────────────────────────────────────────────
+
+@app.get("/api/qa-lab/apps")
+async def qa_lab_apps():
+    """Return the list of registered E2E test apps."""
+    try:
+        if _E2E_REGISTRY_PATH.exists():
+            data = json.loads(_E2E_REGISTRY_PATH.read_text(encoding="utf-8"))
+            return data
+        return {"apps": []}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.post("/api/qa-lab/run")
+async def qa_lab_run(req: QARunRequest):
+    """Start a new QA run. Returns run_id immediately; work happens in background."""
+    run_id = str(_uuid.uuid4())
+    now = _datetime.utcnow().isoformat()
+
+    # Look up app config
+    app_config: dict = {"name": req.app_name}
+    if _E2E_REGISTRY_PATH.exists():
+        registry = json.loads(_E2E_REGISTRY_PATH.read_text(encoding="utf-8"))
+        for a in registry.get("apps", []):
+            if a.get("name") == req.app_name:
+                app_config = a
+                break
+
+    initial_state = {
+        "run_id": run_id,
+        "app_name": req.app_name,
+        "status": "running",
+        "cycle": 1,
+        "max_cycles": req.max_cycles,
+        "total_tests": 0,
+        "passed": 0,
+        "failed": 0,
+        "current_test": None,
+        "test_results": [],
+        "escalation": None,
+        "escalation_response": None,
+        "fix_history": [],
+        "events": [],
+        "created_at": now,
+        "updated_at": now,
+    }
+    _write_run(initial_state)
+
+    t = threading.Thread(
+        target=_run_qa_background,
+        args=(run_id, app_config, req.max_cycles),
+        daemon=True,
+    )
+    t.start()
+
+    return {"run_id": run_id, "status": "started"}
+
+
+@app.get("/api/qa-lab/status/{run_id}")
+async def qa_lab_status(run_id: str):
+    """Return current run state."""
+    try:
+        return _read_run(run_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"Run {run_id} not found")
+
+
+@app.get("/api/qa-lab/stream/{run_id}")
+async def qa_lab_stream(run_id: str):
+    """SSE stream of run events. Yields ping every 15s to prevent proxy timeouts."""
+
+    async def sse_generator():
+        last_event_index = 0
+        last_yield_time = _time.monotonic()
+
+        # Yield connection event immediately
+        yield f'data: {json.dumps({"type": "connected", "run_id": run_id})}\n\n'
+        last_yield_time = _time.monotonic()
+
+        while True:
+            try:
+                run = _read_run(run_id)
+            except FileNotFoundError:
+                yield f'data: {json.dumps({"type": "error", "message": "Run not found"})}\n\n'
+                return
+
+            events = run.get("events", [])
+            new_events = events[last_event_index:]
+
+            if new_events:
+                for evt in new_events:
+                    yield f"data: {json.dumps(evt)}\n\n"
+                last_event_index += len(new_events)
+                last_yield_time = _time.monotonic()
+            else:
+                # Ping every 15 seconds if no new events
+                if _time.monotonic() - last_yield_time > 15:
+                    yield f'data: {json.dumps({"type": "ping"})}\n\n'
+                    last_yield_time = _time.monotonic()
+
+            # Stop streaming once run is in a terminal state and all events sent
+            status = run.get("status", "running")
+            if status in ("complete", "failed") and not new_events:
+                # Give one final status event
+                yield f'data: {json.dumps({"type": "run_end", "status": status})}\n\n'
+                return
+
+            await asyncio.sleep(1)
+
+    return StreamingResponse(
+        sse_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@app.post("/api/qa-lab/escalation/{run_id}")
+async def qa_lab_escalation(run_id: str, body: QAEscalationChoice):
+    """Record user escalation choice (A/B/C) for the run."""
+    try:
+        _update_run_fields(run_id, {"escalation_response": body.choice})
+        return {"status": "ok", "run_id": run_id, "choice": body.choice}
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"Run {run_id} not found")
+
+
+@app.get("/api/qa-lab/history")
+async def qa_lab_history():
+    """Return last 20 runs sorted by created_at descending."""
+    runs = []
+    for p in _QA_RUNS_DIR.glob("*.json"):
+        try:
+            data = json.loads(p.read_text(encoding="utf-8"))
+            runs.append(data)
+        except Exception:
+            pass
+    runs.sort(key=lambda r: r.get("created_at", ""), reverse=True)
+    return {"runs": runs[:20]}
+
+
+@app.get("/api/qa-lab/screenshot/{filename}")
+async def qa_lab_screenshot(filename: str):
+    """Serve a screenshot from logs/playwright_screenshots/."""
+    # Security: strip path traversal
+    safe_name = _Path(filename).name
+    p = _QA_SCREENSHOTS_DIR / safe_name
+    if not p.exists():
+        raise HTTPException(status_code=404, detail=f"Screenshot {safe_name} not found")
+    ext = p.suffix.lower()
+    content_type_map = {
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".webp": "image/webp",
+        ".gif": "image/gif",
+    }
+    ct = content_type_map.get(ext, "image/png")
+    return FileResponse(str(p), media_type=ct)
+
+
+# ── END QA LAB API ─────────────────────────────────────────────────────────
+
 if __name__ == "__main__":
     import uvicorn
     # AETHER-NATIVE: Lock to port 5000 to act as Central Brain

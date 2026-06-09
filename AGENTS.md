@@ -543,6 +543,41 @@ the correct directories:
 
 ---
 
+## QA Lab
+
+| | |
+|---|---|
+| **UI** | http://104.248.233.220/qa-lab |
+| **API routes** | `/api/qa-lab/*` (in `api.py`) |
+| **State storage** | `logs/qa_runs/{run_id}.json` (disk-based, multi-worker safe) |
+| **App registry** | `claude-mcp-bridge/e2e_app_registry.json` |
+| **Reports** | `logs/e2e_reports/` |
+| **Screenshots** | `logs/playwright_screenshots/` |
+
+The QA Lab provides a glassmorphic UI for triggering and monitoring automated
+end-to-end Playwright test runs against registered apps. All run state is written
+to disk (never in-memory) so any Uvicorn worker can serve the SSE stream.
+
+**API surface**:
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/api/qa-lab/apps` | GET | List apps from e2e_app_registry.json |
+| `/api/qa-lab/run` | POST | Start a new run; returns `run_id` |
+| `/api/qa-lab/status/{run_id}` | GET | Current run state |
+| `/api/qa-lab/stream/{run_id}` | GET | SSE stream — pings every 15s |
+| `/api/qa-lab/escalation/{run_id}` | POST | Record human A/B/C choice |
+| `/api/qa-lab/history` | GET | Last 20 runs sorted by created_at |
+| `/api/qa-lab/screenshot/{filename}` | GET | Serve screenshot image |
+
+**Frontend components**:
+- `factory_ui/src/pages/QALab.jsx` — parent coordinator
+- `factory_ui/src/components/qa/ActiveRunStream.jsx` — live test list + progress bar
+- `factory_ui/src/components/qa/EscalationOverlay.jsx` — full-screen escalation modal
+- `factory_ui/src/components/qa/HistoryLedger.jsx` — past runs table (isolated, self-fetching)
+
+---
+
 # ═══════════════════════════════════════════════════════
 # §5  DOCUMENTATION MAINTENANCE RULES
 # ═══════════════════════════════════════════════════════

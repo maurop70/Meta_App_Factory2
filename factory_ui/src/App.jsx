@@ -11,6 +11,7 @@ import ModeSelectionScreen from './ModeSelectionScreen'
 import VentureSuite from './VentureSuite'
 import PhantomQA from './PhantomQA'
 import Atomizer from './components/Atomizer.jsx'
+import QALab from './pages/QALab'
 import BuilderChat from './components/BuilderChat';
 import ErrorBoundary from './components/ErrorBoundary';
 import InventoryGrid from './components/InventoryGrid.jsx';
@@ -1591,6 +1592,7 @@ function App() {
     { icon: '🔬', label: 'CIO Intel', view: 'cio', badge: '24H' },
     { icon: '📦', label: 'App Registry', view: 'registry' },
     { icon: '🛡️', label: 'QA Command Center', view: 'qa', badge: 'LIVE' },
+    { icon: '🧪', label: 'QA Lab', view: 'qa-lab', badge: 'NEW' },
     { icon: '🎮', label: 'Command Palette', view: 'commands' },
     { icon: '🧠', label: 'Agent Status', view: 'agents' },
     { icon: '🎨', label: 'Brand Studio', view: 'brand', badge: 'NEW' },
@@ -1629,6 +1631,7 @@ function App() {
               cio: '/cio-intel',
               registry: '/registry',
               qa: '/qa',
+              'qa-lab': '/qa-lab',
               commands: '/commands',
               agents: '/agents',
               brand: '/brand',
@@ -1772,6 +1775,7 @@ function App() {
           <Route path="/cio-intel" element={<CIOIntel />} />
           <Route path="/registry" element={<AppRegistry />} />
           <Route path="/qa" element={<PhantomQA setActiveView={(view) => window.location.hash = `#/${view}`} />} />
+          <Route path="/qa-lab" element={<QALab />} />
           <Route path="/commands" element={<CommandPalette onCommand={handleCommand} />} />
           <Route path="/agents" element={<TelemetryPanel />} />
           <Route path="/telemetry" element={<TelemetryPanel />} />
