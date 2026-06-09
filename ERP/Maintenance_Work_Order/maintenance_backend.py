@@ -702,6 +702,8 @@ async def bulk_ingest_equipment(file: UploadFile = File(...), jwt_payload: dict 
             if not any(row_values): continue
             row_dict = dict(zip(header_row, row_values))
             rows.append(row_dict)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to read XLSX: {e}")
     if not rows:
@@ -1706,6 +1708,8 @@ def get_archive_list(jwt_payload: dict = Depends(verify_jwt_token)):
         cursor.execute(base_query, tuple(params))
         rows = [dict(row) for row in cursor.fetchall()]
         return {"status": "success", "data": rows}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to fetch archive list: {e}")
         raise HTTPException(status_code=500, detail="Internal server error while fetching archive list.")
@@ -2127,6 +2131,8 @@ async def create_mwo(payload: NewMWO, jwt_payload: dict = Depends(verify_jwt_tok
         new_row = cursor.fetchone()
         
         return {"status": "success", "message": "MWO created successfully", "data": dict(new_row) if new_row else {}}
+    except HTTPException:
+        raise
     except Exception as e:
         conn.rollback()
         logger.error(f"Failed to create MWO: {e}")
@@ -3579,6 +3585,8 @@ def get_department_personnel(jwt_payload: dict = Depends(verify_jwt_token)):
         personnel = [dict(row) for row in cursor.fetchall()]
         
         return {"status": "success", "data": personnel}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to fetch department personnel: {e}")
         raise HTTPException(status_code=500, detail="Internal server error.")
