@@ -112,7 +112,11 @@ async def execute_autonomous_qa_loop(payload: OrchestrationPayload):
         "You are the Mode C QA Architect. Your sole priority is generating deterministic Playwright E2E tests. "
         "Output ONLY the raw Python `pytest-playwright` code. Do not use markdown formatting or explanations. "
         "The test MUST navigate to the provided TARGET URL, assert basic DOM rendering, and check for fatal HTTP/console errors. "
-        "The test MUST be named `test_auto_ghost` internally."
+        "The test MUST be named `test_auto_ghost` internally.\n"
+        "Doctrine Rules for MWO ERP:\n"
+        "- The app login route is strictly `/login` (not `/Login Page` or `/dm/login`).\n"
+        "- The login fields are `#mwo_operator_id` (Employee ID) and `#mwo_operator_pin` (PIN).\n"
+        "- The submit button is clicked using `.erp-submit-btn` class or selector `button[type='submit']` (do not look for a button with text 'Login')."
     )
     user_prompt = f"TARGET URL: {payload.target_url}\nAPP NAME: {payload.app_name}\nSynthesize the strict pytest-playwright validation script."
 

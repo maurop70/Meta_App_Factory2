@@ -202,8 +202,7 @@ def send_mandate(mandate: str, timeout: int = 300) -> str:
                 model="gemini-2.5-pro",
                 config=types.GenerateContentConfig(
                     tools=[execute_local_shell, write_local_file, read_local_file,
-                           execute_remote_shell, playwright_operation,
-                           run_e2e_evaluation],
+                           execute_remote_shell, playwright_operation],
                     temperature=0.0
                 )
             )
@@ -237,8 +236,6 @@ def send_mandate(mandate: str, timeout: int = 300) -> str:
                         result = execute_remote_shell(**fc.args)
                     elif fc.name == "playwright_operation":
                         result = playwright_operation(**fc.args)
-                    elif fc.name == "run_e2e_evaluation":
-                        result = run_e2e_evaluation(**fc.args)
                     else:
                         result = f"Unknown tool: {fc.name}"
                     tool_results.append(
