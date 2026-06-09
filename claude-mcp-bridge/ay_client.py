@@ -1,5 +1,7 @@
 import os
 import json
+import time
+import random
 import uuid
 import warnings
 from pathlib import Path
@@ -12,7 +14,45 @@ load_dotenv(Path(__file__).parent.parent / ".env")
 MAF_ROOT = Path(__file__).parent.parent.resolve()
 MAX_ITERATIONS = 5
 
+BACKOFF_BASE_SECONDS = 2.0
+BACKOFF_MAX_RETRIES = 5
+
 client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+
+
+def _is_rate_limit_error(exc: Exception) -> bool:
+    """True for HTTP 429 / quota exhaustion errors from the Gemini API."""
+    if type(exc).__name__ in ("ResourceExhausted", "TooManyRequests"):
+        return True
+    if getattr(exc, "code", None) == 429 or getattr(exc, "status_code", None) == 429:
+        return True
+    msg = str(exc)
+    return "429" in msg or "RESOURCE_EXHAUSTED" in msg or "rate limit" in msg.lower()
+
+
+def _execute_with_backoff(func, *args, **kwargs):
+    """
+    Calls func(*args, **kwargs), retrying rate-limiting failures (429 /
+    ResourceExhausted) with exponential backoff and jitter. Non-rate-limit
+    exceptions propagate immediately; the final rate-limit exception is
+    escalated after BACKOFF_MAX_RETRIES attempts.
+    """
+    last_exc = None
+    for attempt in range(BACKOFF_MAX_RETRIES + 1):
+        try:
+            return func(*args, **kwargs)
+        except Exception as exc:
+            if not _is_rate_limit_error(exc):
+                raise
+            last_exc = exc
+            if attempt == BACKOFF_MAX_RETRIES:
+                break
+            delay = BACKOFF_BASE_SECONDS * (2 ** attempt) + random.uniform(0, 1)
+            print(f"[AY CLIENT] Rate limited (attempt {attempt + 1}/"
+                  f"{BACKOFF_MAX_RETRIES}); backing off {delay:.1f}s: "
+                  f"{str(exc)[:120]}")
+            time.sleep(delay)
+    raise last_exc
 
 
 def execute_local_shell(command: str) -> str:
@@ -198,7 +238,8 @@ def send_mandate(mandate: str, timeout: int = 300) -> str:
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            chat = client.chats.create(
+            chat = _execute_with_backoff(
+                client.chats.create,
                 model="gemini-2.5-pro",
                 config=types.GenerateContentConfig(
                     tools=[execute_local_shell, write_local_file, read_local_file,
@@ -206,7 +247,7 @@ def send_mandate(mandate: str, timeout: int = 300) -> str:
                     temperature=0.0
                 )
             )
-            response = chat.send_message(mandate)
+            response = _execute_with_backoff(chat.send_message, mandate)
 
             # Tool execution loop — handle all function calls until
             # Gemini returns a final text response
@@ -244,17 +285,13 @@ def send_mandate(mandate: str, timeout: int = 300) -> str:
                             response={"result": result}
                         )
                     )
-                response = chat.send_message(tool_results)
+                response = _execute_with_backoff(chat.send_message, tool_results)
 
             final_text = getattr(response, 'text', None) or str(response)
             return final_text if final_text else "LEDGER: Execution complete. No text output returned."
 
     except Exception as e:
-        raise RuntimeError(
-            f"[AY CLIENT] Local Execution Bridge failed: {e}\n"
-            f"Halting per CLAUDE_RULES.md Section 3.1 — "
-            f"raw exception surfaced, not swallowed."
-        )
+        return json.dumps({"error": "Gateway Unreachable", "detail": f"[AY CLIENT FRACTURE] Gemini API interaction failed: {str(e)}"})
 
 
 def test_connection() -> bool:
@@ -262,21 +299,23 @@ def test_connection() -> bool:
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            chat = client.chats.create(
+            chat = _execute_with_backoff(
+                client.chats.create,
                 model="gemini-2.5-pro",
                 config=types.GenerateContentConfig(
                     tools=[execute_local_shell],
                     temperature=0.0
                 )
             )
-            response = chat.send_message(
+            response = _execute_with_backoff(
+                chat.send_message,
                 "Run this exact command and return the output: echo BRIDGE_OK"
             )
             # Handle tool call if fired
             if getattr(response, 'function_calls', None):
                 fc = response.function_calls[0]
                 result = execute_local_shell(**fc.args)
-                response = chat.send_message([
+                response = _execute_with_backoff(chat.send_message, [
                     types.Part.from_function_response(
                         name=fc.name,
                         response={"result": result}

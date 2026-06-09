@@ -127,8 +127,9 @@ async def execute_autonomous_qa_loop(payload: OrchestrationPayload):
         "generationConfig": {"temperature": 0.1}
     }
 
-    try:
-        raw_code = f"""import os
+    # Fallback template (legacy CLO_Agent fuzz test) — used only if live
+    # Gemini synthesis fails.
+    fallback_code = f"""import os
 import time
 import requests
 import traceback
@@ -231,10 +232,29 @@ def test_auto_ghost(playwright: Playwright):
         if request_context:
             request_context.dispose()
 """
+
+    # PHASE 1 (live): synthesize the test via Gemini; fall back to the
+    # legacy template only if the API interaction fails.
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(url, json=gemini_payload)
+            response.raise_for_status()
+            resp_json = response.json()
+            raw_code = resp_json['candidates'][0]['content']['parts'][0]['text']
+
+        # Strip markdown fences if the model wrapped the code
         raw_code = raw_code.strip()
+        if raw_code.startswith("```"):
+            raw_code = raw_code.split("\n", 1)[1] if "\n" in raw_code else ""
+        if raw_code.rstrip().endswith("```"):
+            raw_code = raw_code.rstrip()[: -len("```")]
+        raw_code = raw_code.strip()
+        if not raw_code:
+            raise ValueError("Gemini returned empty test code")
+        logger.info(f"[QA ORCHESTRATOR] Live Gemini synthesis succeeded ({len(raw_code)} chars).")
     except Exception as e:
-        logger.error(f"[QA ORCHESTRATOR] Cognitive Fracture: {str(e)}")
-        raise HTTPException(status_code=500, detail="Cognitive generation catastrophically failed.")
+        logger.error(f"[QA ORCHESTRATOR] Cognitive Fracture: {str(e)} — falling back to hardcoded CLO_Agent template.")
+        raw_code = fallback_code.strip()
 
     # PHASE 2: ZERO-TRUST WRITE (The Atomizer Bridge)
     TEST_DIR.mkdir(exist_ok=True)
