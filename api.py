@@ -7197,10 +7197,15 @@ if _BRIDGE_DIR not in sys.path:
 
 _QA_RUNS_DIR = _Path(SCRIPT_DIR) / "logs" / "qa_runs"
 _QA_SCREENSHOTS_DIR = _Path(SCRIPT_DIR) / "logs" / "playwright_screenshots"
+_E2E_REPORTS_DIR = _Path(SCRIPT_DIR) / "logs" / "e2e_reports"
 _E2E_REGISTRY_PATH = _Path(SCRIPT_DIR) / "claude-mcp-bridge" / "e2e_app_registry.json"
 
-_QA_RUNS_DIR.mkdir(parents=True, exist_ok=True)
-_QA_SCREENSHOTS_DIR.mkdir(parents=True, exist_ok=True)
+try:
+    _QA_RUNS_DIR.mkdir(parents=True, exist_ok=True)
+    _QA_SCREENSHOTS_DIR.mkdir(parents=True, exist_ok=True)
+    _E2E_REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+except PermissionError:
+    pass  # directories pre-created on prod with correct ownership
 
 
 def _qa_run_path(run_id: str) -> _Path:
