@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import HMAssignmentModal from './HMAssignmentModal';
 import HMReviewModal from './HMReviewModal';
+import HODWorkspace from './HODWorkspace';
 import { useAuth } from '../context/AuthContext';
 
 const HMDashboard = () => {
@@ -24,6 +25,9 @@ const HMDashboard = () => {
   
   const [hmRoster, setHmRoster] = useState([]);
   const [targetHm, setTargetHm] = useState('');
+
+  // [BACK OFFICE INVENTORY] Command console view switcher
+  const [activeView, setActiveView] = useState('mwo');
 
   const fetchHms = async () => {
     try {
@@ -104,16 +108,49 @@ const HMDashboard = () => {
     .filter(o => o.status === 'PENDING_REVIEW')
     .filter(applyFilters);
 
-  if (status.type === 'loading') {
+  if (status.type === 'loading' && activeView === 'mwo') {
     return <div className="erp-status-message loading">{status.message}</div>;
   }
 
-  if (status.type === 'error') {
-    return <div className="erp-status-message error">{status.message}</div>;
+  if (status.type === 'error' && activeView === 'mwo') {
+    return (
+      <div>
+        <div className="erp-status-message error">{status.message}</div>
+        <button onClick={() => setActiveView('inventory')} style={{ margin: '1rem', padding: '0.5rem 1rem', background: 'rgba(99, 102, 241, 0.15)', color: '#818cf8', border: '1px solid rgba(99, 102, 241, 0.3)', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem' }}>
+          Open Inventory & Procurement
+        </button>
+      </div>
+    );
+  }
+
+  if (activeView === 'inventory') {
+    return (
+      <div style={{ background: 'var(--bg-card, rgba(15, 23, 42, 0.85))', border: '1px solid var(--border, rgba(99, 102, 241, 0.15))', borderRadius: '12px', padding: '1.5rem', backdropFilter: 'blur(8px)', fontFamily: "var(--font, Inter)" }}>
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
+          <button onClick={() => setActiveView('mwo')} style={{ padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid var(--border, rgba(99,102,241,0.15))', background: 'rgba(15, 23, 42, 0.5)', color: 'var(--text-muted, #64748b)', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem', transition: 'all 0.2s' }}>
+            Work Orders
+          </button>
+          <button style={{ padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid var(--accent, #6366f1)', background: 'rgba(99, 102, 241, 0.15)', color: 'var(--text-primary, #e2e8f0)', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>
+            Inventory & Procurement
+          </button>
+        </div>
+        <HODWorkspace />
+      </div>
+    );
   }
 
   return (
     <div style={{ background: 'var(--bg-card, rgba(15, 23, 42, 0.85))', border: '1px solid var(--border, rgba(99, 102, 241, 0.15))', borderRadius: '12px', padding: '1.5rem', backdropFilter: 'blur(8px)', fontFamily: "var(--font, Inter)" }}>
+      {/* HOD Command Console Tabs */}
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
+        <button style={{ padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid var(--accent, #6366f1)', background: 'rgba(99, 102, 241, 0.15)', color: 'var(--text-primary, #e2e8f0)', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>
+          Work Orders
+        </button>
+        <button onClick={() => setActiveView('inventory')} style={{ padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid var(--border, rgba(99,102,241,0.15))', background: 'rgba(15, 23, 42, 0.5)', color: 'var(--text-muted, #64748b)', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem', transition: 'all 0.2s' }}>
+          Inventory & Procurement
+        </button>
+      </div>
+
       {/* Mobile-First CSS Reflow Matrix */}
       <style>{`
         .btn-inspect {

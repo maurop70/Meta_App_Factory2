@@ -102,6 +102,8 @@ server/
 src/
 !factory_ui/src/
 !factory_ui/src/**
+!ERP/maintenance_frontend/src/
+!ERP/maintenance_frontend/src/**
 check_execution_status.py
 check_manifest.py
 diagnose_ui_state.py

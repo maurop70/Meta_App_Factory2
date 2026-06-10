@@ -10,6 +10,7 @@ import Login from './pages/Login';
 import HMDashboard from './components/HMDashboard'; // HM Feed
 import CreateMWOForm from './components/CreateMWOForm'; // DM Submission
 import ArchiveDashboard from './components/ArchiveDashboard'; // Unified Archive
+import CFODashboard from './pages/CFODashboard'; // CFO PO Approval Gateway
 
 // Strict Role-Gating Security Component
 const ProtectedRoute = ({ allowedRoles, children }) => {
@@ -47,6 +48,8 @@ const RoleRouter = () => {
       return <Navigate to="/dm" replace />;
     case 'HM':
       return <Navigate to="/hm" replace />;
+    case 'CFO':
+      return <Navigate to="/cfo" replace />;
     case 'TECHNICIAN':
     case 'TECH':
       return <Navigate to="/tech" replace />;
@@ -104,6 +107,16 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={['HM']}>
                   <HMDashboard />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* CFO Financial Actuation Gateway */}
+            <Route
+              path="/cfo/*"
+              element={
+                <ProtectedRoute allowedRoles={['CFO']}>
+                  <CFODashboard />
                 </ProtectedRoute>
               }
             />

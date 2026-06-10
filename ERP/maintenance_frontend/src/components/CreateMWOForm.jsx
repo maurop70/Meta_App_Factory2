@@ -23,10 +23,16 @@ const CreateMWOForm = ({ onMWOCreated }) => {
   useEffect(() => {
     const fetchLookups = async () => {
       try {
+        // Decoupled promise chain: one failing lookup (RBAC / connectivity)
+        // degrades to an empty list instead of rejecting every dropdown.
+        const safeGet = (path) => api.get(path).catch(err => {
+          console.warn(`Lookup degraded for ${path}:`, err.response?.status || err.message);
+          return { data: { data: [] } };
+        });
         const [eqRes, locRes, personnelRes] = await Promise.all([
-          api.get('/admin/equipment'),
-          api.get('/admin/lookups/locations'),
-          api.get('/dm/personnel')
+          safeGet('/admin/equipment'),
+          safeGet('/admin/lookups/locations'),
+          safeGet('/dm/personnel')
         ]);
         setEquipments(eqRes.data.data || []);
         setLocations(locRes.data.data || []);
