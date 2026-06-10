@@ -123,7 +123,74 @@ def init_tables():
         # Mandatory indexing for cross-referencing consumption by MWO and reporting
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_ledger_mwo ON erp_inventory_ledger(mwo_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_ledger_part ON erp_inventory_ledger(part_id)")
-        
+
+        # [BACK OFFICE INVENTORY MODULE] Supplier directory
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS erp_suppliers (
+                supplier_id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                email TEXT NOT NULL,
+                phone TEXT,
+                address TEXT,
+                default_lead_time_days INTEGER DEFAULT 7,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
+        # Incremental alteration safeguard for live databases created before
+        # the supplier contact-detail expansion (phone / address).
+        cursor.execute("PRAGMA table_info(erp_suppliers)")
+        supplier_columns = {row[1] for row in cursor.fetchall()}
+        if "phone" not in supplier_columns:
+            cursor.execute("ALTER TABLE erp_suppliers ADD COLUMN phone TEXT")
+        if "address" not in supplier_columns:
+            cursor.execute("ALTER TABLE erp_suppliers ADD COLUMN address TEXT")
+
+        # [BACK OFFICE INVENTORY MODULE] Purchase order master tracking
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS erp_purchase_orders (
+                po_id TEXT PRIMARY KEY,
+                supplier_id TEXT REFERENCES erp_suppliers(supplier_id),
+                status TEXT CHECK(status IN ('DRAFT', 'PENDING_CFO', 'APPROVED', 'HOLD', 'REJECTED', 'FULFILLED')) DEFAULT 'DRAFT',
+                priority INTEGER DEFAULT 0,
+                eta_date TEXT,
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                submitted_at TIMESTAMP,
+                decided_at TIMESTAMP
+            )
+        ''')
+        cursor.execute('''
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_po_one_draft_per_supplier
+            ON erp_purchase_orders(supplier_id) WHERE status = 'DRAFT'
+        ''')
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_po_status ON erp_purchase_orders(status)")
+
+        # [BACK OFFICE INVENTORY MODULE] PO detail line items
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS erp_purchase_order_items (
+                po_id TEXT REFERENCES erp_purchase_orders(po_id) ON DELETE CASCADE,
+                sku_id TEXT NOT NULL,
+                quantity INTEGER NOT NULL CHECK(quantity > 0),
+                unit_cost REAL NOT NULL,
+                PRIMARY KEY (po_id, sku_id)
+            )
+        ''')
+
+        # [BACK OFFICE INVENTORY MODULE] Zero-trust manual stock adjustment log
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS erp_inventory_manual_logs (
+                log_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sku_id TEXT NOT NULL,
+                direction TEXT CHECK(direction IN ('IN', 'OUT')) NOT NULL,
+                quantity INTEGER NOT NULL CHECK(quantity > 0),
+                comment TEXT,
+                logged_by TEXT NOT NULL,
+                logged_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_manual_logs_sku ON erp_inventory_manual_logs(sku_id)")
+
         conn.commit()
     except Exception as e:
         logger.error(f"Failed to initialize tables: {e}")

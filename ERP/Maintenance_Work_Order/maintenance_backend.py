@@ -93,6 +93,10 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Failed to ingest GLOBAL_AI_DIRECTIVE.md: {e}")
 
+    # Guard against schema drift (e.g. Phase 46 DDL applied but code stale)
+    _assert_work_orders_schema()
+    logger.info("[SCHEMA] work_orders projection verified against live database.")
+
     # NGINX DOCTRINE: Trailing slash strictly enforced
     url = "http://127.0.0.1:9000/api/v1/auth/public-key" 
     
@@ -276,11 +280,47 @@ class PartConsumptionPayload(BaseModel):
     part_id: str = Field(..., description="The physical part identifier from erp_parts")
     quantity_consumed: int = Field(..., gt=0, description="Strictly positive integer")
 
+class SupplierCreate(BaseModel):
+    supplier_id: str = Field(..., min_length=2, max_length=50)
+    name: str = Field(..., min_length=2, max_length=200)
+    email: str = Field(..., max_length=254)
+    phone: Optional[str] = Field(None, max_length=50)
+    address: Optional[str] = Field(None, max_length=500)
+    default_lead_time_days: int = Field(default=7, ge=0, le=365)
+
+    @field_validator('email', mode='before')
+    @classmethod
+    def validate_email(cls, v):
+        import re
+        v = str(v).strip()
+        if not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', v):
+            raise ValueError("Structural Violation: email must be a valid address (user@domain.tld)")
+        return v
+
+    @field_validator('supplier_id', 'name', mode='before')
+    @classmethod
+    def strip_compulsory(cls, v):
+        v = str(v).strip()
+        if not v:
+            raise ValueError("Structural Violation: compulsory field cannot be blank")
+        return v
+
+    @field_validator('phone', 'address', mode='before')
+    @classmethod
+    def blank_to_none(cls, v):
+        if isinstance(v, str) and not v.strip():
+            return None
+        return v
+
 class SKUCreate(BaseModel):
     sku_id: str
     nomenclature: str
     unit_cost: float
     reorder_threshold: int
+    supplier_id: Optional[str] = None
+    # Atomic inline registration: supplier + SKU land in ONE transaction,
+    # eliminating the orphan-supplier window of the old two-call chain.
+    new_supplier: Optional[SupplierCreate] = None
 
 class PartCreate(BaseModel):
     sku_id: str
@@ -389,12 +429,37 @@ def sanitize_user(user: dict) -> dict:
     sanitized["has_pin"] = has_pin
     return sanitized
 
+# Canonical work_orders projection — single source of truth for all
+# SELECTs. consumed_sku was dropped in Phase 46 (apply_phase46_ddl.py);
+# part consumption now lives in mwo_consumed_parts. Verified against the
+# live schema at startup by _assert_work_orders_schema().
+WORK_ORDER_COLS = (
+    "mwo_id, status, dm_urgency, hm_priority, description, assigned_tech, "
+    "manual_log, created_at, triaged_at, execution_start, execution_end, "
+    "completed_at, start_date, equipment_id, location_id, material_cost, "
+    "archival_pdf_path"
+)
+
+def _assert_work_orders_schema():
+    """Fail loudly at boot if code and DB schema have drifted."""
+    conn = get_db_connection()
+    try:
+        live = {row[1] for row in conn.execute("PRAGMA table_info(work_orders)")}
+        expected = {c.strip() for c in WORK_ORDER_COLS.split(",")}
+        missing = expected - live
+        if missing:
+            raise RuntimeError(
+                f"work_orders schema drift: code references missing column(s) "
+                f"{sorted(missing)}. Re-run pending DDL or fix WORK_ORDER_COLS."
+            )
+    finally:
+        conn.close()
+
 def get_current_mwo(mwo_id: str):
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
-        cols = "mwo_id, status, dm_urgency, hm_priority, description, assigned_tech, consumed_sku, manual_log, created_at, triaged_at, execution_start, execution_end, completed_at, start_date, equipment_id, location_id, material_cost, archival_pdf_path"
-        cursor.execute(f"SELECT {cols} FROM work_orders WHERE mwo_id = ?", (mwo_id,))
+        cursor.execute(f"SELECT {WORK_ORDER_COLS} FROM work_orders WHERE mwo_id = ?", (mwo_id,))
         row = cursor.fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="MWO not found.")
@@ -1448,47 +1513,10 @@ def get_mwo(limit: int = 50, offset: int = 0, jwt_payload: dict = Depends(verify
 
 
 
-def reconcile_inventory_ledger(mwo_id: str, consumed_sku: str):
-    # REMOVED: async keyword (Forces Starlette threadpool delegation)
-    # REMOVED: import asyncio
-    conn = None
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        # 1. Extract the unit_cost of the consumed SKU
-        cursor.execute("SELECT stock_level, unit_cost FROM warehouse_inventory WHERE sku = ?", (consumed_sku,))
-        row = cursor.fetchone()
-        
-        if not row:
-            logger.warning(f"Reconciliation Failed: SKU '{consumed_sku}' not found in warehouse ledger.")
-            return
-            
-        unit_cost = row['unit_cost']
-        stock_level = row['stock_level']
-        
-        if stock_level <= 0:
-            logger.warning(f"Reconciliation Warning: SKU '{consumed_sku}' stock level is already 0 or below.")
-            
-        # 2. Execute an UPDATE to decrement the stock_level by exactly 1
-        cursor.execute("UPDATE warehouse_inventory SET stock_level = stock_level - 1 WHERE sku = ?", (consumed_sku,))
-        
-        # 3. Bind the operational drain directly to the MWO ledger record
-        operational_drain = unit_cost * 1
-        cursor.execute("UPDATE work_orders SET material_cost = ? WHERE mwo_id = ?", (operational_drain, mwo_id))
-        
-        # 4. Commit atomic transaction
-        conn.commit()
-        
-        logger.info(f"Reconciliation Success [MWO: {mwo_id}]: SKU '{consumed_sku}' decremented. Ledger Updated: ${operational_drain:.2f}")
-        
-    except Exception as e:
-        logger.error(f"Reconciliation Error [MWO: {mwo_id}]: {e}")
-        if conn:
-            conn.rollback()
-    finally:
-        if conn:
-            conn.close()
+# NOTE: reconcile_inventory_ledger() was removed in the Phase 46 cleanup.
+# It decremented warehouse_inventory by free-text SKU and had no callers;
+# part consumption and SKU ledger math now live in ingest_mwo_consumption
+# (POST /work-orders/{mwo_id}/consume) against mwo_consumed_parts.
 
 @api_router.get("/mwo/assigned")
 def get_assigned_mwo(
@@ -1508,7 +1536,8 @@ def get_assigned_mwo(
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cols = "w.mwo_id, w.status, w.dm_urgency, w.hm_priority, w.description, w.assigned_tech, w.consumed_sku, w.manual_log, w.created_at, w.triaged_at, w.execution_start, w.execution_end, w.completed_at, w.start_date, w.equipment_id, e.nomenclature as equipment_nomenclature, w.location_id, l.name as location_nomenclature, w.material_cost, w.archival_pdf_path"
+        cols = ", ".join(f"w.{c.strip()}" for c in WORK_ORDER_COLS.split(",")) + \
+               ", e.nomenclature as equipment_nomenclature, l.name as location_nomenclature"
         cursor.execute(
             f"SELECT {cols} FROM work_orders w LEFT JOIN erp_equipment e ON w.equipment_id = e.equipment_id LEFT JOIN erp_locations l ON w.location_id = l.id WHERE w.assigned_tech = ? AND w.status IN ('ASSIGNED', 'IN_PROGRESS', 'PAUSED', 'PENDING_REVIEW', 'COMPLETED') ORDER BY w.mwo_id DESC LIMIT ? OFFSET ?",
             (user_id, limit, offset)
@@ -1936,8 +1965,6 @@ async def sync_memory_bus():
             mapped_row = dict(row)
             if 'technician' in mapped_row:
                 mapped_row['assigned_tech'] = mapped_row.pop('technician')
-            if 'consumed_sku' in mapped_row:
-                mapped_row['sku_consumed'] = mapped_row.pop('consumed_sku')
             mapped_rows.append(mapped_row)
         
         payload_data = {
@@ -1972,7 +1999,9 @@ async def broadcast_mwo_state():
     await sync_memory_bus()
     return {"status": "success", "message": "Broadcast written to shared memory."}
 
-@api_router.post("/orders/submit")
+# DEPRECATED: targets the defunct erp_maintenance_logs table (absent from the live schema).
+# Re-pathed under /orders/legacy/ so /orders/submit can serve the PO module (Back Office Inventory).
+@api_router.post("/orders/legacy/submit")
 async def submit_order(order: WorkOrderSubmit):
     conn = get_db_connection()
     try:
@@ -2126,8 +2155,7 @@ async def create_mwo(payload: NewMWO, jwt_payload: dict = Depends(verify_jwt_tok
         conn.commit()
         
         # Fetch the newly created record
-        cols = "mwo_id, status, dm_urgency, hm_priority, description, assigned_tech, consumed_sku, manual_log, created_at, triaged_at, execution_start, execution_end, completed_at, start_date, equipment_id, location_id, material_cost, archival_pdf_path"
-        cursor.execute(f"SELECT {cols} FROM work_orders WHERE mwo_id = ?", (final_mwo_id,))
+        cursor.execute(f"SELECT {WORK_ORDER_COLS} FROM work_orders WHERE mwo_id = ?", (final_mwo_id,))
         new_row = cursor.fetchone()
         
         return {"status": "success", "message": "MWO created successfully", "data": dict(new_row) if new_row else {}}
@@ -2313,11 +2341,14 @@ def validate_mwo_chunk(raw_chunk: list) -> tuple:
     for raw_row in raw_chunk:
         try:
             r = MWOIngestionRecord(**raw_row)
+            # consumed_sku stays on the model so legacy CSVs still
+            # validate, but is no longer bound — Phase 46 moved
+            # consumption to mwo_consumed_parts.
             valid.append((
                 r.mwo_id, r.status, r.dm_urgency, r.hm_priority,
-                r.description, r.assigned_tech, r.consumed_sku,
-                r.manual_log, 
-                r.start_date.isoformat() if r.start_date else None, 
+                r.description, r.assigned_tech,
+                r.manual_log,
+                r.start_date.isoformat() if r.start_date else None,
                 r.equipment_id
             ))
         except Exception:
@@ -2365,16 +2396,15 @@ def process_mwo_csv_background(file_path: str):
                 try:
                     cursor.executemany("""
                         INSERT INTO work_orders (
-                            mwo_id, status, dm_urgency, hm_priority, description, 
-                            assigned_tech, consumed_sku, manual_log, start_date, equipment_id
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            mwo_id, status, dm_urgency, hm_priority, description,
+                            assigned_tech, manual_log, start_date, equipment_id
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                         ON CONFLICT(mwo_id) DO UPDATE SET
                             status=excluded.status,
                             dm_urgency=excluded.dm_urgency,
                             hm_priority=excluded.hm_priority,
                             description=excluded.description,
                             assigned_tech=excluded.assigned_tech,
-                            consumed_sku=excluded.consumed_sku,
                             manual_log=excluded.manual_log,
                             start_date=excluded.start_date,
                             equipment_id=excluded.equipment_id
@@ -3044,22 +3074,55 @@ async def bulk_ingest_part(file: UploadFile = File(...), jwt_payload: dict = Dep
 # --- PHASE 44 SKU INGESTION & LEDGER ---
 @api_router.post("/inventory/skus", status_code=201)
 def ingest_sku(payload: SKUCreate, jwt_payload: dict = Depends(verify_jwt_token)):
+    # HOD clearance: HM operators manage the back-office catalog alongside admins
+    if jwt_payload.get("role") not in ["ADMINISTRATOR", "ADMIN", "HM"]:
+        raise HTTPException(status_code=403, detail="RBAC Violation: HOD clearance required.")
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
-        # Ensure the matrix exists or gracefully fail
+        cursor.execute("BEGIN IMMEDIATE TRANSACTION")
+
+        supplier_id = payload.supplier_id
+        supplier_created = False
+        if payload.new_supplier:
+            # Atomic inline registration: supplier insert + SKU insert share this
+            # transaction; an SKU failure rolls the supplier back (no orphans).
+            sup = payload.new_supplier
+            supplier_id = sup.supplier_id
+            cursor.execute("SELECT 1 FROM erp_suppliers WHERE supplier_id = ?", (supplier_id,))
+            if cursor.fetchone():
+                raise HTTPException(status_code=409, detail=f"Supplier {supplier_id} already exists.")
+            cursor.execute("""
+                INSERT INTO erp_suppliers (supplier_id, name, email, phone, address, default_lead_time_days)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (supplier_id, sup.name, sup.email, sup.phone, sup.address, sup.default_lead_time_days))
+            supplier_created = True
+        elif supplier_id:
+            cursor.execute("SELECT 1 FROM erp_suppliers WHERE supplier_id = ?", (supplier_id,))
+            if not cursor.fetchone():
+                raise HTTPException(status_code=400, detail=f"Structural Violation: supplier {supplier_id} is not registered.")
+
+        cursor.execute("SELECT 1 FROM erp_skus WHERE sku_id = ?", (payload.sku_id,))
+        if cursor.fetchone():
+            raise HTTPException(status_code=409, detail="SKU already exists.")
         cursor.execute(
             """
-            INSERT INTO erp_skus (sku_id, nomenclature, unit_cost, reorder_threshold, quantity_on_hand)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO erp_skus (sku_id, nomenclature, unit_cost, reorder_threshold, quantity_on_hand, supplier_id)
+            VALUES (?, ?, ?, ?, ?, ?)
             """,
-            (payload.sku_id, payload.nomenclature, payload.unit_cost, payload.reorder_threshold, 0)
+            (payload.sku_id, payload.nomenclature, payload.unit_cost, payload.reorder_threshold, 0, supplier_id)
         )
         conn.commit()
-        return {"status": "success", "message": f"SKU {payload.sku_id} ingested."}
+        if supplier_created:
+            logger.info(f"[SUPPLIER] {jwt_payload.get('sub')} atomically registered supplier {supplier_id} with SKU {payload.sku_id}.")
+        return {"status": "success", "message": f"SKU {payload.sku_id} ingested.",
+                "supplier_id": supplier_id, "supplier_created": supplier_created}
     except sqlite3.IntegrityError:
         conn.rollback()
         raise HTTPException(status_code=409, detail="SKU already exists.")
+    except HTTPException:
+        conn.rollback()
+        raise
     except Exception as e:
         conn.rollback()
         raise HTTPException(status_code=500, detail=f"Database insertion failed: {e}")
@@ -3079,7 +3142,13 @@ def get_skus(
         total_row = cursor.fetchone()
         total = total_row["count"] if total_row else 0
         
-        cursor.execute("SELECT sku_id, nomenclature, unit_cost, reorder_threshold, quantity_on_hand FROM erp_skus LIMIT ? OFFSET ?", (limit, offset))
+        cursor.execute("""
+            SELECT s.sku_id, s.nomenclature, s.unit_cost, s.reorder_threshold, s.quantity_on_hand,
+                   s.supplier_id, sup.name AS supplier_name
+            FROM erp_skus s
+            LEFT JOIN erp_suppliers sup ON s.supplier_id = sup.supplier_id
+            LIMIT ? OFFSET ?
+        """, (limit, offset))
         rows = [dict(row) for row in cursor.fetchall()]
         return {
             "items": rows,
@@ -3570,26 +3639,814 @@ def get_department_personnel(jwt_payload: dict = Depends(verify_jwt_token)):
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
-        
-        # First, get the DM's department ID
-        cursor.execute("SELECT department_id FROM erp_employees WHERE id = ?", (user_id,))
-        user_record = cursor.fetchone()
-        
-        if not user_record:
-            raise HTTPException(status_code=404, detail="DM record not found.")
-        
-        department_id = user_record['department_id']
-        
-        # Then, get all employees in that department
-        cursor.execute("SELECT id, name, role FROM erp_employees WHERE department_id = ? AND is_active = 1", (department_id,))
+
+        # Global clearance: administrators see the full active roster
+        department_id = None
+        if role not in ["ADMIN", "ADMINISTRATOR"]:
+            cursor.execute("SELECT department_id FROM erp_employees WHERE id = ?", (user_id,))
+            user_record = cursor.fetchone()
+            if not user_record:
+                raise HTTPException(status_code=404, detail="DM record not found.")
+            department_id = user_record['department_id']
+
+        if department_id is None:
+            # Graceful fallback: DMs without a department assignment (and admins)
+            # receive all active personnel instead of an invalid `= NULL` filter.
+            cursor.execute("SELECT id, name, role FROM erp_employees WHERE is_active = 1")
+        else:
+            cursor.execute("SELECT id, name, role FROM erp_employees WHERE department_id = ? AND is_active = 1", (department_id,))
         personnel = [dict(row) for row in cursor.fetchall()]
-        
+
         return {"status": "success", "data": personnel}
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Failed to fetch department personnel: {e}")
         raise HTTPException(status_code=500, detail="Internal server error.")
+    finally:
+        conn.close()
+
+# =====================================================================
+# [BACK OFFICE INVENTORY MODULE] Suppliers / Purchase Orders / Manual Logs
+# =====================================================================
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from collections import deque
+from typing import List
+
+# --- Inventory Event Bus (SSE) ---
+# Bounded in-memory ring buffer; SSE clients poll for events newer than their cursor.
+_inventory_events = deque(maxlen=200)
+_inventory_event_seq = 0
+_inventory_event_lock = __import__("threading").Lock()
+
+def emit_inventory_event(event_type: str, payload: dict):
+    global _inventory_event_seq
+    with _inventory_event_lock:
+        _inventory_event_seq += 1
+        _inventory_events.append({
+            "id": _inventory_event_seq,
+            "type": event_type,
+            "payload": payload,
+            "ts": datetime.now(timezone.utc).isoformat()
+        })
+
+@api_router.get("/notifications/stream")
+async def inventory_notification_stream(token: str = Query(...)):
+    """SSE feed for inventory/PO events. EventSource cannot set headers, so the JWT rides a query param."""
+    if not PUBLIC_KEY:
+        raise HTTPException(status_code=503, detail="Cryptographic Gateway Unavailable.")
+    try:
+        payload = jwt.decode(token, PUBLIC_KEY, algorithms=[ALGORITHM])
+        if is_jti_revoked(payload.get("jti")):
+            raise HTTPException(status_code=401, detail="Token Revoked.")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=403, detail="Cryptographic Verification Failed.")
+
+    async def event_generator():
+        cursor = _inventory_event_seq
+        yield "event: connected\ndata: {}\n\n"
+        while True:
+            with _inventory_event_lock:
+                fresh = [e for e in _inventory_events if e["id"] > cursor]
+                if fresh:
+                    cursor = fresh[-1]["id"]
+            for e in fresh:
+                yield f"id: {e['id']}\nevent: {e['type']}\ndata: {json.dumps(e)}\n\n"
+            await asyncio.sleep(2)
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+# --- Data Models ---
+
+class ManualLogPayload(BaseModel):
+    sku_id: str
+    direction: str = Field(..., description="IN (stock received) or OUT (write-off / consumption)")
+    quantity: int = Field(..., gt=0)
+    comment: Optional[str] = Field(None, max_length=500)
+
+    @field_validator('direction', mode='before')
+    @classmethod
+    def validate_direction(cls, v):
+        v = str(v).upper()
+        if v not in {"IN", "OUT"}:
+            raise ValueError("Structural Violation: direction must be IN or OUT")
+        return v
+
+class POItemQuantity(BaseModel):
+    sku_id: str
+    quantity: int = Field(..., gt=0)
+
+class DraftPOUpdatePayload(BaseModel):
+    items: Optional[List[POItemQuantity]] = None
+    notes: Optional[str] = Field(None, max_length=1000)
+    priority: Optional[int] = Field(None, ge=0, le=1)
+    eta_date: Optional[str] = None
+
+class POSubmitPayload(BaseModel):
+    po_id: str
+
+class AddDraftItemPayload(BaseModel):
+    sku_id: str
+    quantity: int = Field(..., gt=0)
+    notes: Optional[str] = Field(None, max_length=1000)
+
+class SupplierUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=2, max_length=200)
+    email: Optional[str] = Field(None, max_length=254)
+    phone: Optional[str] = Field(None, max_length=50)
+    address: Optional[str] = Field(None, max_length=500)
+    default_lead_time_days: Optional[int] = Field(None, ge=0, le=365)
+
+    @field_validator('email', mode='before')
+    @classmethod
+    def validate_email(cls, v):
+        if v is None:
+            return v
+        import re
+        v = str(v).strip()
+        if not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', v):
+            raise ValueError("Structural Violation: email must be a valid address (user@domain.tld)")
+        return v
+
+    @field_validator('phone', 'address', mode='before')
+    @classmethod
+    def blank_to_none(cls, v):
+        if isinstance(v, str) and not v.strip():
+            return None
+        return v
+
+class SkuSupplierAssign(BaseModel):
+    supplier_id: Optional[str] = None  # null explicitly unassigns
+
+    @field_validator('supplier_id', mode='before')
+    @classmethod
+    def blank_to_none(cls, v):
+        if isinstance(v, str) and not v.strip():
+            return None
+        return v
+
+class BulkActuationPayload(BaseModel):
+    po_ids: List[str] = Field(..., min_length=1)
+    action: str = Field(..., description="APPROVE / HOLD / REJECT")
+
+    @field_validator('action', mode='before')
+    @classmethod
+    def validate_action(cls, v):
+        v = str(v).upper()
+        if v not in {"APPROVE", "HOLD", "REJECT"}:
+            raise ValueError("Structural Violation: action must be APPROVE, HOLD or REJECT")
+        return v
+
+INVENTORY_OPERATOR_ROLES = ["ADMINISTRATOR", "ADMIN", "HM", "DM", "TECH"]
+HOD_ROLES = ["ADMINISTRATOR", "ADMIN", "HM"]
+CFO_ROLES = ["CFO"]
+
+# --- Threshold Evaluation Worker (Auto-Drafting) ---
+
+def worker_evaluate_sku_threshold(sku_id: str):
+    """
+    Threshold breach evaluator. When quantity_on_hand <= reorder_threshold,
+    appends the SKU to the supplier's open DRAFT purchase order, or synthesizes
+    a new draft when none exists. Executes off the HTTP response cycle.
+    """
+    conn = get_db_connection()
+    try:
+        c = conn.cursor()
+        c.execute("""
+            SELECT s.sku_id, s.nomenclature, s.quantity_on_hand, s.reorder_threshold,
+                   s.unit_cost, s.supplier_id, sup.default_lead_time_days
+            FROM erp_skus s
+            LEFT JOIN erp_suppliers sup ON s.supplier_id = sup.supplier_id
+            WHERE s.sku_id = ?
+        """, (sku_id,))
+        sku = c.fetchone()
+        if not sku:
+            logger.error(f"[PO WORKER] sku_id {sku_id} not found. Terminating evaluation.")
+            return
+        if sku["quantity_on_hand"] > sku["reorder_threshold"]:
+            return
+        if not sku["supplier_id"]:
+            logger.warning(f"[PO WORKER] {sku_id} breached threshold but has no designated supplier. Skipping auto-draft.")
+            return
+
+        # Reorder heuristic: restore to 2x threshold coverage
+        reorder_qty = max((sku["reorder_threshold"] * 2) - sku["quantity_on_hand"], 1)
+
+        c.execute("BEGIN IMMEDIATE TRANSACTION")
+        c.execute("SELECT po_id FROM erp_purchase_orders WHERE supplier_id = ? AND status = 'DRAFT'", (sku["supplier_id"],))
+        draft = c.fetchone()
+
+        if draft:
+            po_id = draft["po_id"]
+            c.execute("""
+                INSERT INTO erp_purchase_order_items (po_id, sku_id, quantity, unit_cost)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(po_id, sku_id) DO UPDATE SET quantity = excluded.quantity
+            """, (po_id, sku_id, reorder_qty, sku["unit_cost"]))
+            conn.commit()
+            emit_inventory_event("po_draft_updated", {"po_id": po_id, "sku_id": sku_id, "quantity": reorder_qty})
+            logger.warning(f"[PO WORKER] Low stock {sku_id}: appended to existing draft {po_id} (qty {reorder_qty}).")
+        else:
+            po_id = f"PO-{uuid.uuid4().hex[:8].upper()}"
+            lead_days = sku["default_lead_time_days"] if sku["default_lead_time_days"] is not None else 7
+            eta = (datetime.now(timezone.utc) + timedelta(days=lead_days)).date().isoformat()
+            c.execute("""
+                INSERT INTO erp_purchase_orders (po_id, supplier_id, status, priority, eta_date)
+                VALUES (?, ?, 'DRAFT', 0, ?)
+            """, (po_id, sku["supplier_id"], eta))
+            c.execute("""
+                INSERT INTO erp_purchase_order_items (po_id, sku_id, quantity, unit_cost)
+                VALUES (?, ?, ?, ?)
+            """, (po_id, sku_id, reorder_qty, sku["unit_cost"]))
+            conn.commit()
+            emit_inventory_event("po_draft_created", {"po_id": po_id, "supplier_id": sku["supplier_id"], "sku_id": sku_id, "quantity": reorder_qty})
+            logger.warning(f"[PO WORKER] Low stock {sku_id}: new draft {po_id} synthesized for {sku['supplier_id']}.")
+    except sqlite3.IntegrityError as e:
+        # idx_po_one_draft_per_supplier intercepted a concurrent draft creation race
+        conn.rollback()
+        logger.info(f"[PO WORKER] Concurrency lock engaged for {sku_id}: {e}")
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"[PO WORKER] Fatal evaluation error for {sku_id}: {e}")
+    finally:
+        conn.close()
+
+# --- Manual Log Ingestion ---
+
+@api_router.post("/inventory/manual-log", status_code=201)
+def ingest_manual_log(payload: ManualLogPayload, background_tasks: BackgroundTasks, jwt_payload: dict = Depends(verify_jwt_token)):
+    role = jwt_payload.get("role")
+    operator_id = jwt_payload.get("sub")
+    if role not in INVENTORY_OPERATOR_ROLES:
+        raise HTTPException(status_code=403, detail="RBAC Violation: Inventory operator clearance required.")
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("BEGIN IMMEDIATE TRANSACTION")
+        cursor.execute("SELECT quantity_on_hand FROM erp_skus WHERE sku_id = ?", (payload.sku_id,))
+        sku = cursor.fetchone()
+        if not sku:
+            raise HTTPException(status_code=404, detail=f"SKU {payload.sku_id} not found in master catalog.")
+
+        if payload.direction == "OUT":
+            if sku["quantity_on_hand"] < payload.quantity:
+                raise HTTPException(status_code=400, detail=f"Structural Violation: Stock-Out of {payload.quantity} exceeds on-hand quantity ({sku['quantity_on_hand']}).")
+            cursor.execute("UPDATE erp_skus SET quantity_on_hand = quantity_on_hand - ? WHERE sku_id = ?", (payload.quantity, payload.sku_id))
+        else:
+            cursor.execute("UPDATE erp_skus SET quantity_on_hand = quantity_on_hand + ? WHERE sku_id = ?", (payload.quantity, payload.sku_id))
+
+        cursor.execute("""
+            INSERT INTO erp_inventory_manual_logs (sku_id, direction, quantity, comment, logged_by)
+            VALUES (?, ?, ?, ?, ?)
+        """, (payload.sku_id, payload.direction, payload.quantity, payload.comment, operator_id))
+        cursor.execute("SELECT quantity_on_hand FROM erp_skus WHERE sku_id = ?", (payload.sku_id,))
+        new_qty = cursor.fetchone()["quantity_on_hand"]
+        conn.commit()
+
+        # Threshold evaluation strictly decoupled from the response cycle
+        if payload.direction == "OUT":
+            background_tasks.add_task(worker_evaluate_sku_threshold, payload.sku_id)
+
+        return {"status": "success", "sku_id": payload.sku_id, "direction": payload.direction,
+                "quantity": payload.quantity, "new_quantity_on_hand": new_qty, "logged_by": operator_id}
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Manual log ingestion error: {e}")
+        raise HTTPException(status_code=500, detail="Manual log ingestion failed.")
+    finally:
+        conn.close()
+
+@api_router.get("/inventory/skus/search")
+def search_skus(q: str = Query("", max_length=100), limit: int = Query(20, ge=1, le=100), jwt_payload: dict = Depends(verify_jwt_token)):
+    """SKU autocomplete feed for the manual log widget (maintenance parts + admin supplies)."""
+    if jwt_payload.get("role") not in INVENTORY_OPERATOR_ROLES:
+        raise HTTPException(status_code=403, detail="RBAC Violation: Inventory operator clearance required.")
+    conn = get_db_connection()
+    try:
+        rows = conn.execute("""
+            SELECT s.sku_id, s.nomenclature, s.quantity_on_hand, s.reorder_threshold, s.unit_cost,
+                   s.category_id, c.name AS category_name, s.supplier_id, sup.name AS supplier_name
+            FROM erp_skus s
+            LEFT JOIN erp_categories c ON s.category_id = c.id
+            LEFT JOIN erp_suppliers sup ON s.supplier_id = sup.supplier_id
+            WHERE s.sku_id LIKE ? OR s.nomenclature LIKE ?
+            ORDER BY s.nomenclature LIMIT ?
+        """, (f"%{q}%", f"%{q}%", limit)).fetchall()
+        return {"status": "success", "data": [dict(r) for r in rows]}
+    finally:
+        conn.close()
+
+@api_router.get("/inventory/manual-log")
+def get_manual_logs(limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0), jwt_payload: dict = Depends(verify_jwt_token)):
+    """Zero-trust audit trail of manual stock adjustments."""
+    if jwt_payload.get("role") not in HOD_ROLES + CFO_ROLES:
+        raise HTTPException(status_code=403, detail="RBAC Violation: HOD clearance required.")
+    conn = get_db_connection()
+    try:
+        rows = conn.execute("""
+            SELECT l.log_id, l.sku_id, s.nomenclature, l.direction, l.quantity, l.comment, l.logged_by, l.logged_at
+            FROM erp_inventory_manual_logs l
+            LEFT JOIN erp_skus s ON l.sku_id = s.sku_id
+            ORDER BY l.log_id DESC LIMIT ? OFFSET ?
+        """, (limit, offset)).fetchall()
+        return {"status": "success", "data": [dict(r) for r in rows]}
+    finally:
+        conn.close()
+
+# --- Purchase Order Hydration Helper ---
+
+def _hydrate_purchase_orders(conn, statuses: list):
+    placeholders = ",".join("?" * len(statuses))
+    pos = conn.execute(f"""
+        SELECT po.po_id, po.supplier_id, sup.name AS supplier_name, sup.email AS supplier_email,
+               sup.phone AS supplier_phone, sup.address AS supplier_address,
+               sup.default_lead_time_days, po.status, po.priority, po.eta_date, po.notes,
+               po.created_at, po.submitted_at, po.decided_at
+        FROM erp_purchase_orders po
+        LEFT JOIN erp_suppliers sup ON po.supplier_id = sup.supplier_id
+        WHERE po.status IN ({placeholders})
+        ORDER BY po.priority DESC, po.created_at ASC
+    """, statuses).fetchall()
+    results = []
+    for po in pos:
+        record = dict(po)
+        items = conn.execute("""
+            SELECT i.sku_id, s.nomenclature, i.quantity, i.unit_cost,
+                   s.quantity_on_hand, s.reorder_threshold
+            FROM erp_purchase_order_items i
+            LEFT JOIN erp_skus s ON i.sku_id = s.sku_id
+            WHERE i.po_id = ? ORDER BY i.sku_id
+        """, (po["po_id"],)).fetchall()
+        record["items"] = [dict(i) for i in items]
+        record["total_cost"] = round(sum(i["quantity"] * i["unit_cost"] for i in record["items"]), 2)
+        results.append(record)
+    return results
+
+# --- HOD Draft PO Endpoints ---
+
+@api_router.get("/orders/drafts")
+def get_draft_orders(jwt_payload: dict = Depends(verify_jwt_token)):
+    if jwt_payload.get("role") not in HOD_ROLES:
+        raise HTTPException(status_code=403, detail="RBAC Violation: HOD clearance required.")
+    conn = get_db_connection()
+    try:
+        return {"status": "success", "data": _hydrate_purchase_orders(conn, ["DRAFT"])}
+    finally:
+        conn.close()
+
+@api_router.get("/orders/inbound")
+def get_inbound_orders(jwt_payload: dict = Depends(verify_jwt_token)):
+    """APPROVED POs awaiting physical receipt, plus PENDING_CFO/HOLD visibility for the HOD."""
+    if jwt_payload.get("role") not in HOD_ROLES:
+        raise HTTPException(status_code=403, detail="RBAC Violation: HOD clearance required.")
+    conn = get_db_connection()
+    try:
+        return {"status": "success", "data": _hydrate_purchase_orders(conn, ["APPROVED", "PENDING_CFO", "HOLD"])}
+    finally:
+        conn.close()
+
+# --- Supplier Directory Endpoints ---
+
+@api_router.get("/inventory/suppliers")
+def list_suppliers(jwt_payload: dict = Depends(verify_jwt_token)):
+    if jwt_payload.get("role") not in INVENTORY_OPERATOR_ROLES + CFO_ROLES:
+        raise HTTPException(status_code=403, detail="RBAC Violation: Inventory operator clearance required.")
+    conn = get_db_connection()
+    try:
+        rows = conn.execute("""
+            SELECT supplier_id, name, email, phone, address, default_lead_time_days, created_at
+            FROM erp_suppliers ORDER BY name
+        """).fetchall()
+        return {"status": "success", "data": [dict(r) for r in rows]}
+    finally:
+        conn.close()
+
+@api_router.post("/inventory/suppliers", status_code=201)
+def register_supplier(payload: SupplierCreate, jwt_payload: dict = Depends(verify_jwt_token)):
+    if jwt_payload.get("role") not in HOD_ROLES:
+        raise HTTPException(status_code=403, detail="RBAC Violation: HOD clearance required to register suppliers.")
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO erp_suppliers (supplier_id, name, email, phone, address, default_lead_time_days)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (payload.supplier_id, payload.name, payload.email, payload.phone, payload.address, payload.default_lead_time_days))
+        conn.commit()
+        logger.info(f"[SUPPLIER] {jwt_payload.get('sub')} registered supplier {payload.supplier_id} ({payload.name}).")
+        return {"status": "success", "supplier_id": payload.supplier_id,
+                "detail": f"Supplier {payload.name} registered."}
+    except sqlite3.IntegrityError:
+        conn.rollback()
+        raise HTTPException(status_code=409, detail=f"Supplier {payload.supplier_id} already exists.")
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Supplier registration error: {e}")
+        raise HTTPException(status_code=500, detail="Supplier registration failed.")
+    finally:
+        conn.close()
+
+@api_router.put("/inventory/suppliers/{supplier_id}")
+def update_supplier(supplier_id: str, payload: SupplierUpdate, jwt_payload: dict = Depends(verify_jwt_token)):
+    """HOD supplier lifecycle: amend contact details / lead time. Compulsory fields cannot be blanked."""
+    if jwt_payload.get("role") not in HOD_ROLES:
+        raise HTTPException(status_code=403, detail="RBAC Violation: HOD clearance required.")
+    mutations = {k: v for k, v in payload.model_dump(exclude_unset=True).items()}
+    if not mutations:
+        raise HTTPException(status_code=400, detail="Structural Violation: no fields supplied for update.")
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("BEGIN IMMEDIATE TRANSACTION")
+        cursor.execute("SELECT 1 FROM erp_suppliers WHERE supplier_id = ?", (supplier_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail=f"Supplier {supplier_id} not found.")
+        # Compulsory attributes may be updated but never nulled
+        for compulsory in ("name", "email"):
+            if compulsory in mutations and mutations[compulsory] is None:
+                raise HTTPException(status_code=422, detail=f"Structural Violation: {compulsory} is compulsory and cannot be removed.")
+        set_clause = ", ".join(f"{col} = ?" for col in mutations)
+        cursor.execute(f"UPDATE erp_suppliers SET {set_clause} WHERE supplier_id = ?",
+                       (*mutations.values(), supplier_id))
+        conn.commit()
+        logger.info(f"[SUPPLIER] {jwt_payload.get('sub')} updated {supplier_id}: {sorted(mutations)}")
+        return {"status": "success", "supplier_id": supplier_id, "updated_fields": sorted(mutations)}
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Supplier update error: {e}")
+        raise HTTPException(status_code=500, detail="Supplier update failed.")
+    finally:
+        conn.close()
+
+@api_router.put("/inventory/skus/{sku_id}/supplier")
+def assign_sku_supplier(sku_id: str, payload: SkuSupplierAssign, jwt_payload: dict = Depends(verify_jwt_token)):
+    """HOD supplier reassignment on an existing SKU; supplier_id=null explicitly unassigns."""
+    if jwt_payload.get("role") not in HOD_ROLES:
+        raise HTTPException(status_code=403, detail="RBAC Violation: HOD clearance required.")
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("BEGIN IMMEDIATE TRANSACTION")
+        cursor.execute("SELECT 1 FROM erp_skus WHERE sku_id = ?", (sku_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail=f"SKU {sku_id} not found.")
+        if payload.supplier_id:
+            cursor.execute("SELECT 1 FROM erp_suppliers WHERE supplier_id = ?", (payload.supplier_id,))
+            if not cursor.fetchone():
+                raise HTTPException(status_code=400, detail=f"Structural Violation: supplier {payload.supplier_id} is not registered.")
+        cursor.execute("UPDATE erp_skus SET supplier_id = ? WHERE sku_id = ?", (payload.supplier_id, sku_id))
+        conn.commit()
+        logger.info(f"[SUPPLIER] {jwt_payload.get('sub')} reassigned {sku_id} -> {payload.supplier_id or 'UNASSIGNED'}")
+        return {"status": "success", "sku_id": sku_id, "supplier_id": payload.supplier_id}
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"SKU supplier reassignment error: {e}")
+        raise HTTPException(status_code=500, detail="SKU supplier reassignment failed.")
+    finally:
+        conn.close()
+
+@api_router.post("/orders/drafts/add-item", status_code=201)
+def add_draft_item(payload: AddDraftItemPayload, jwt_payload: dict = Depends(verify_jwt_token)):
+    """
+    Manual HOD procurement: append a SKU to the supplier's open DRAFT purchase order
+    (accumulating quantity) regardless of reorder-threshold state. Synthesizes a new
+    draft when the supplier has none open.
+    """
+    if jwt_payload.get("role") not in HOD_ROLES:
+        raise HTTPException(status_code=403, detail="RBAC Violation: HOD clearance required.")
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT s.sku_id, s.unit_cost, s.supplier_id, sup.default_lead_time_days
+            FROM erp_skus s
+            LEFT JOIN erp_suppliers sup ON s.supplier_id = sup.supplier_id
+            WHERE s.sku_id = ?
+        """, (payload.sku_id,))
+        sku = cursor.fetchone()
+        if not sku:
+            raise HTTPException(status_code=404, detail=f"SKU {payload.sku_id} not found in master catalog.")
+        if not sku["supplier_id"]:
+            raise HTTPException(status_code=400, detail=f"Structural Violation: {payload.sku_id} has no designated supplier. Assign one before procuring.")
+
+        cursor.execute("BEGIN IMMEDIATE TRANSACTION")
+        cursor.execute("SELECT po_id, notes FROM erp_purchase_orders WHERE supplier_id = ? AND status = 'DRAFT'", (sku["supplier_id"],))
+        draft = cursor.fetchone()
+
+        if draft:
+            po_id, created = draft["po_id"], False
+            cursor.execute("""
+                INSERT INTO erp_purchase_order_items (po_id, sku_id, quantity, unit_cost)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(po_id, sku_id) DO UPDATE SET quantity = quantity + excluded.quantity
+            """, (po_id, payload.sku_id, payload.quantity, sku["unit_cost"]))
+            if payload.notes:
+                merged = f"{draft['notes']} | {payload.notes}" if draft["notes"] else payload.notes
+                cursor.execute("UPDATE erp_purchase_orders SET notes = ? WHERE po_id = ?", (merged, po_id))
+        else:
+            po_id, created = f"PO-{uuid.uuid4().hex[:8].upper()}", True
+            lead_days = sku["default_lead_time_days"] if sku["default_lead_time_days"] is not None else 7
+            eta = (datetime.now(timezone.utc) + timedelta(days=lead_days)).date().isoformat()
+            cursor.execute("""
+                INSERT INTO erp_purchase_orders (po_id, supplier_id, status, priority, eta_date, notes)
+                VALUES (?, ?, 'DRAFT', 0, ?, ?)
+            """, (po_id, sku["supplier_id"], eta, payload.notes))
+            cursor.execute("""
+                INSERT INTO erp_purchase_order_items (po_id, sku_id, quantity, unit_cost)
+                VALUES (?, ?, ?, ?)
+            """, (po_id, payload.sku_id, payload.quantity, sku["unit_cost"]))
+
+        cursor.execute("SELECT quantity FROM erp_purchase_order_items WHERE po_id = ? AND sku_id = ?", (po_id, payload.sku_id))
+        line_qty = cursor.fetchone()["quantity"]
+        conn.commit()
+
+        emit_inventory_event("po_draft_created" if created else "po_draft_updated",
+                             {"po_id": po_id, "sku_id": payload.sku_id, "quantity": line_qty,
+                              "requested_by": jwt_payload.get("sub"), "manual": True})
+        logger.info(f"[MANUAL PROCURE] {jwt_payload.get('sub')} added {payload.quantity}x {payload.sku_id} to {po_id} ({'new draft' if created else 'existing draft'}).")
+        return {"status": "success", "po_id": po_id, "created": created,
+                "sku_id": payload.sku_id, "line_quantity": line_qty}
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Manual procurement error: {e}")
+        raise HTTPException(status_code=500, detail="Manual procurement failed.")
+    finally:
+        conn.close()
+
+@api_router.put("/orders/{po_id}/update")
+def update_draft_order(po_id: str, payload: DraftPOUpdatePayload, jwt_payload: dict = Depends(verify_jwt_token)):
+    if jwt_payload.get("role") not in HOD_ROLES:
+        raise HTTPException(status_code=403, detail="RBAC Violation: HOD clearance required.")
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("BEGIN IMMEDIATE TRANSACTION")
+        cursor.execute("SELECT status FROM erp_purchase_orders WHERE po_id = ?", (po_id,))
+        po = cursor.fetchone()
+        if not po:
+            raise HTTPException(status_code=404, detail="Purchase order not found.")
+        if po["status"] != "DRAFT":
+            raise HTTPException(status_code=400, detail=f"State Violation: Only DRAFT orders are mutable (current: {po['status']}).")
+
+        if payload.notes is not None:
+            cursor.execute("UPDATE erp_purchase_orders SET notes = ? WHERE po_id = ?", (payload.notes, po_id))
+        if payload.priority is not None:
+            cursor.execute("UPDATE erp_purchase_orders SET priority = ? WHERE po_id = ?", (payload.priority, po_id))
+        if payload.eta_date is not None:
+            cursor.execute("UPDATE erp_purchase_orders SET eta_date = ? WHERE po_id = ?", (payload.eta_date, po_id))
+        if payload.items:
+            for item in payload.items:
+                cursor.execute(
+                    "UPDATE erp_purchase_order_items SET quantity = ? WHERE po_id = ? AND sku_id = ?",
+                    (item.quantity, po_id, item.sku_id)
+                )
+        conn.commit()
+        return {"status": "success", "detail": f"Draft {po_id} updated."}
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Draft PO update error: {e}")
+        raise HTTPException(status_code=500, detail="Draft update failed.")
+    finally:
+        conn.close()
+
+@api_router.delete("/orders/{po_id}/items/{sku_id}")
+def delete_draft_line_item(po_id: str, sku_id: str, jwt_payload: dict = Depends(verify_jwt_token)):
+    """HOD line-item exclusion. Removing the final item dissolves the draft entirely."""
+    if jwt_payload.get("role") not in HOD_ROLES:
+        raise HTTPException(status_code=403, detail="RBAC Violation: HOD clearance required.")
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("BEGIN IMMEDIATE TRANSACTION")
+        cursor.execute("SELECT status FROM erp_purchase_orders WHERE po_id = ?", (po_id,))
+        po = cursor.fetchone()
+        if not po:
+            raise HTTPException(status_code=404, detail="Purchase order not found.")
+        if po["status"] != "DRAFT":
+            raise HTTPException(status_code=400, detail="State Violation: Line items can only be excluded from DRAFT orders.")
+        cursor.execute("DELETE FROM erp_purchase_order_items WHERE po_id = ? AND sku_id = ?", (po_id, sku_id))
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail=f"Line item {sku_id} not present on {po_id}.")
+        cursor.execute("SELECT COUNT(*) AS n FROM erp_purchase_order_items WHERE po_id = ?", (po_id,))
+        dissolved = cursor.fetchone()["n"] == 0
+        if dissolved:
+            cursor.execute("DELETE FROM erp_purchase_orders WHERE po_id = ?", (po_id,))
+        conn.commit()
+        return {"status": "success", "detail": f"Item {sku_id} excluded.", "po_dissolved": dissolved}
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Line item exclusion error: {e}")
+        raise HTTPException(status_code=500, detail="Line item exclusion failed.")
+    finally:
+        conn.close()
+
+@api_router.post("/orders/submit")
+def submit_draft_order(payload: POSubmitPayload, jwt_payload: dict = Depends(verify_jwt_token)):
+    if jwt_payload.get("role") not in HOD_ROLES:
+        raise HTTPException(status_code=403, detail="RBAC Violation: HOD clearance required.")
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("BEGIN IMMEDIATE TRANSACTION")
+        cursor.execute("SELECT status FROM erp_purchase_orders WHERE po_id = ?", (payload.po_id,))
+        po = cursor.fetchone()
+        if not po:
+            raise HTTPException(status_code=404, detail="Purchase order not found.")
+        if po["status"] != "DRAFT":
+            raise HTTPException(status_code=400, detail=f"State Violation: Only DRAFT orders can be submitted (current: {po['status']}).")
+        cursor.execute("SELECT COUNT(*) AS n FROM erp_purchase_order_items WHERE po_id = ?", (payload.po_id,))
+        if cursor.fetchone()["n"] == 0:
+            raise HTTPException(status_code=400, detail="Structural Violation: Cannot submit an empty purchase order.")
+        cursor.execute(
+            "UPDATE erp_purchase_orders SET status = 'PENDING_CFO', submitted_at = ? WHERE po_id = ?",
+            (datetime.now(timezone.utc).isoformat(), payload.po_id)
+        )
+        conn.commit()
+        emit_inventory_event("po_submitted", {"po_id": payload.po_id, "submitted_by": jwt_payload.get("sub")})
+        return {"status": "success", "detail": f"{payload.po_id} routed to CFO approval queue."}
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"PO submission error: {e}")
+        raise HTTPException(status_code=500, detail="PO submission failed.")
+    finally:
+        conn.close()
+
+# --- Transactional PO Email Dispatch ---
+
+PO_EMAIL_TEMPLATE_PATH = os.path.join(_here, "po_email_template.html")
+PO_EMAIL_LOG_DIR = os.path.join(_here, "logs", "po_emails")
+
+def dispatch_po_email(po_id: str):
+    """
+    Renders the branded PO email and dispatches it to the supplier.
+    Falls back to a mock SMTP log (logs/po_emails/<po_id>.html) when no SMTP host is configured.
+    """
+    conn = get_db_connection()
+    try:
+        pos = [p for p in _hydrate_purchase_orders(conn, ["APPROVED"]) if p["po_id"] == po_id]
+    finally:
+        conn.close()
+    if not pos:
+        logger.error(f"[PO EMAIL] {po_id} not found in APPROVED state. Dispatch aborted.")
+        return
+    po = pos[0]
+
+    try:
+        from jinja2 import Template
+        with open(PO_EMAIL_TEMPLATE_PATH, "r", encoding="utf-8") as f:
+            template = Template(f.read())
+        html_body = template.render(po=po, generated_at=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"))
+    except Exception as e:
+        logger.error(f"[PO EMAIL] Template rendering failed for {po_id}: {e}")
+        return
+
+    # Mock SMTP log: always persist the rendered artifact for audit
+    try:
+        os.makedirs(PO_EMAIL_LOG_DIR, exist_ok=True)
+        artifact_path = os.path.join(PO_EMAIL_LOG_DIR, f"{po_id}.html")
+        with open(artifact_path, "w", encoding="utf-8") as f:
+            f.write(html_body)
+        logger.info(f"[PO EMAIL] Rendered artifact persisted: {artifact_path}")
+    except Exception as e:
+        logger.error(f"[PO EMAIL] Failed to persist artifact for {po_id}: {e}")
+
+    smtp_host = os.environ.get("SMTP_HOST")
+    if not smtp_host:
+        logger.warning(f"[PO EMAIL] SMTP_HOST not configured. {po_id} dispatch to {po['supplier_email']} logged in mock mode only.")
+        return
+
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = f"Purchase Order {po['po_id']} - Meta App Factory ERP"
+        msg["From"] = os.environ.get("SMTP_FROM", "procurement@meta-app-factory.example.com")
+        msg["To"] = po["supplier_email"]
+        msg.attach(MIMEText(html_body, "html"))
+        port = int(os.environ.get("SMTP_PORT", "587"))
+        with smtplib.SMTP(smtp_host, port, timeout=15) as server:
+            if os.environ.get("SMTP_USER"):
+                server.starttls()
+                server.login(os.environ["SMTP_USER"], os.environ.get("SMTP_PASSWORD", ""))
+            server.sendmail(msg["From"], [po["supplier_email"]], msg.as_string())
+        logger.info(f"[PO EMAIL] {po_id} dispatched to {po['supplier_email']} via {smtp_host}.")
+    except Exception as e:
+        logger.error(f"[PO EMAIL] SMTP dispatch failed for {po_id}: {e}")
+
+# --- CFO Actuation Endpoints ---
+
+@api_router.get("/orders/approvals")
+def get_cfo_approval_queue(jwt_payload: dict = Depends(verify_jwt_token)):
+    if jwt_payload.get("role") not in CFO_ROLES:
+        raise HTTPException(status_code=403, detail="RBAC Violation: CFO clearance required.")
+    conn = get_db_connection()
+    try:
+        # priority DESC bubbles high-priority pulses to the top (enforced in _hydrate)
+        return {"status": "success", "data": _hydrate_purchase_orders(conn, ["PENDING_CFO", "HOLD"])}
+    finally:
+        conn.close()
+
+@api_router.post("/orders/actuate-bulk")
+def actuate_orders_bulk(payload: BulkActuationPayload, background_tasks: BackgroundTasks, jwt_payload: dict = Depends(verify_jwt_token)):
+    if jwt_payload.get("role") not in CFO_ROLES:
+        raise HTTPException(status_code=403, detail="RBAC Violation: CFO clearance required to actuate purchase orders.")
+
+    target_status = {"APPROVE": "APPROVED", "HOLD": "HOLD", "REJECT": "REJECTED"}[payload.action]
+    decided_at = datetime.now(timezone.utc).isoformat()
+    results = []
+    approved_ids = []
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("BEGIN IMMEDIATE TRANSACTION")
+        for po_id in payload.po_ids:
+            cursor.execute("SELECT status FROM erp_purchase_orders WHERE po_id = ?", (po_id,))
+            po = cursor.fetchone()
+            if not po:
+                results.append({"po_id": po_id, "result": "NOT_FOUND"})
+                continue
+            if po["status"] not in ("PENDING_CFO", "HOLD"):
+                results.append({"po_id": po_id, "result": f"STATE_VIOLATION ({po['status']})"})
+                continue
+            if po["status"] == "HOLD" and target_status == "HOLD":
+                results.append({"po_id": po_id, "result": "ALREADY_HOLD"})
+                continue
+            cursor.execute(
+                "UPDATE erp_purchase_orders SET status = ?, decided_at = ? WHERE po_id = ?",
+                (target_status, decided_at, po_id)
+            )
+            results.append({"po_id": po_id, "result": target_status})
+            if target_status == "APPROVED":
+                approved_ids.append(po_id)
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Bulk actuation error: {e}")
+        raise HTTPException(status_code=500, detail="Bulk actuation failed.")
+    finally:
+        conn.close()
+
+    # Supplier email dispatch strictly decoupled from the response cycle
+    for po_id in approved_ids:
+        background_tasks.add_task(dispatch_po_email, po_id)
+
+    emit_inventory_event("po_decided", {"action": payload.action, "results": results, "decided_by": jwt_payload.get("sub")})
+    return {"status": "success", "action": payload.action, "results": results}
+
+@api_router.post("/orders/{po_id}/receive")
+def receive_purchase_order(po_id: str, jwt_payload: dict = Depends(verify_jwt_token)):
+    """HOD shipment receipt: flips APPROVED -> FULFILLED and increments physical inventory."""
+    if jwt_payload.get("role") not in HOD_ROLES:
+        raise HTTPException(status_code=403, detail="RBAC Violation: HOD clearance required to receive shipments.")
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("BEGIN IMMEDIATE TRANSACTION")
+        cursor.execute("SELECT status FROM erp_purchase_orders WHERE po_id = ?", (po_id,))
+        po = cursor.fetchone()
+        if not po:
+            raise HTTPException(status_code=404, detail="Purchase order not found.")
+        if po["status"] != "APPROVED":
+            raise HTTPException(status_code=400, detail=f"State Violation: Only APPROVED orders can be received (current: {po['status']}).")
+        items = cursor.execute("SELECT sku_id, quantity FROM erp_purchase_order_items WHERE po_id = ?", (po_id,)).fetchall()
+        for item in items:
+            cursor.execute("UPDATE erp_skus SET quantity_on_hand = quantity_on_hand + ? WHERE sku_id = ?", (item["quantity"], item["sku_id"]))
+        cursor.execute("UPDATE erp_purchase_orders SET status = 'FULFILLED' WHERE po_id = ?", (po_id,))
+        conn.commit()
+        emit_inventory_event("po_fulfilled", {"po_id": po_id, "received_by": jwt_payload.get("sub")})
+        return {"status": "success", "detail": f"{po_id} fulfilled. Physical inventory synchronized.", "items_received": len(items)}
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"PO receipt error: {e}")
+        raise HTTPException(status_code=500, detail="PO receipt failed.")
     finally:
         conn.close()
 
