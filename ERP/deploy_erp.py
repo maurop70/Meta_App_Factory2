@@ -82,6 +82,12 @@ def deploy():
     sed -i 's|Maintenance_Work_Order/venv|backend/venv|g' /etc/systemd/system/erp-backend.service || true
     systemctl daemon-reload
 
+    # Schema synchronization: idempotent inventory migration (suppliers, POs,
+    # manual logs, CFO role). set -e aborts the deploy if it fails, preventing
+    # new code from booting against an unmigrated database.
+    echo "Running inventory schema migration..."
+    venv/bin/python3 migration_inventory.py
+
     echo "Restarting erp-backend..."
     systemctl restart erp-backend.service
     systemctl restart nginx.service
