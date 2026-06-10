@@ -1,5 +1,13 @@
 $ErrorActionPreference = "Stop"
 
+# Auto-Backup C:\Dev to Google Drive before launching (non-fatal: a backup
+# problem must never block the application launch)
+try {
+    & "c:\Dev\Antigravity_AI_Agents\Meta_App_Factory\backup_dev.ps1"
+} catch {
+    Write-Warning "Dev backup skipped: $_"
+}
+
 $gatewayPath = "c:\Dev\Antigravity_AI_Agents\Meta_App_Factory\ERP\Module_0_Gateway"
 $backendPath = "c:\Dev\Antigravity_AI_Agents\Meta_App_Factory\ERP\Maintenance_Work_Order"
 $frontendPath = "c:\Dev\Antigravity_AI_Agents\Meta_App_Factory\ERP\maintenance_frontend"
