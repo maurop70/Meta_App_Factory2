@@ -4134,7 +4134,7 @@ def update_supplier(supplier_id: str, payload: SupplierUpdate, jwt_payload: dict
         conn.close()
 
 @api_router.put("/inventory/skus/{sku_id}/supplier")
-def assign_sku_supplier(sku_id: str, payload: SkuSupplierAssign, jwt_payload: dict = Depends(verify_jwt_token)):
+def assign_sku_supplier(sku_id: str, payload: SkuSupplierAssign, background_tasks: BackgroundTasks, jwt_payload: dict = Depends(verify_jwt_token)):
     """HOD supplier reassignment on an existing SKU; supplier_id=null explicitly unassigns."""
     if jwt_payload.get("role") not in HOD_ROLES:
         raise HTTPException(status_code=403, detail="RBAC Violation: HOD clearance required.")
@@ -4152,6 +4152,8 @@ def assign_sku_supplier(sku_id: str, payload: SkuSupplierAssign, jwt_payload: di
         cursor.execute("UPDATE erp_skus SET supplier_id = ? WHERE sku_id = ?", (payload.supplier_id, sku_id))
         conn.commit()
         logger.info(f"[SUPPLIER] {jwt_payload.get('sub')} reassigned {sku_id} -> {payload.supplier_id or 'UNASSIGNED'}")
+        if payload.supplier_id:
+            background_tasks.add_task(worker_evaluate_sku_threshold, sku_id)
         return {"status": "success", "sku_id": sku_id, "supplier_id": payload.supplier_id}
     except HTTPException:
         conn.rollback()
@@ -4164,7 +4166,7 @@ def assign_sku_supplier(sku_id: str, payload: SkuSupplierAssign, jwt_payload: di
         conn.close()
 
 @api_router.put("/inventory/skus/{sku_id}")
-def update_sku(sku_id: str, payload: SKUUpdate, jwt_payload: dict = Depends(verify_jwt_token)):
+def update_sku(sku_id: str, payload: SKUUpdate, background_tasks: BackgroundTasks, jwt_payload: dict = Depends(verify_jwt_token)):
     """General HOD update endpoint for existing SKUs."""
     if jwt_payload.get("role") not in HOD_ROLES:
         raise HTTPException(status_code=403, detail="RBAC Violation: HOD clearance required.")
@@ -4193,6 +4195,7 @@ def update_sku(sku_id: str, payload: SKUUpdate, jwt_payload: dict = Depends(veri
             conn.commit()
             
         logger.info(f"[SKU] {jwt_payload.get('sub')} updated SKU {sku_id}: {payload.dict(exclude_unset=True)}")
+        background_tasks.add_task(worker_evaluate_sku_threshold, sku_id)
         return {"status": "success", "sku_id": sku_id}
     except HTTPException:
         conn.rollback()

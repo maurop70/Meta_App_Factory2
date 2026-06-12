@@ -178,7 +178,40 @@ check("list exposes min_order_qty for the modal",
       listed is not None and listed.get("min_order_qty") == 30,
       f"got {listed and listed.get('min_order_qty')}")
 
+print("\n=== 7. Update Triggers Auto-Draft ===")
+# Create a SKU that is below threshold (qty 3, threshold 10) but lacks a supplier
+SKU_ALERT = f"SKU-ALERT-{uuid.uuid4().hex[:6].upper()}"
+r = client.post("/api/inventory/skus", headers=HEADERS["HM"], json={
+    "sku_id": SKU_ALERT, "nomenclature": "Alert Trigger Test Widget", "unit_cost": 2.50,
+    "reorder_threshold": 10, "supplier_id": None, "min_order_qty": 5,
+})
+check("SKU created without supplier", r.status_code == 201)
+
+# Set its quantity below threshold manually
+conn = db()
+conn.execute("UPDATE erp_skus SET quantity_on_hand = 3 WHERE sku_id = ?", (SKU_ALERT,))
+conn.commit()
+conn.close()
+
+# Verify that it shows in alerts but with no draft PO
+r = client.get("/api/inventory/alerts", headers=HEADERS["HM"])
+alerts = {a["sku_id"]: a for a in r.json().get("data", [])}
+check("breached SKU in alerts", SKU_ALERT in alerts)
+check("draft_po_id is None initially", alerts[SKU_ALERT].get("draft_po_id") is None)
+
+# Update SKU to assign a supplier (which should run background threshold evaluator)
+r = client.put(f"/api/inventory/skus/{SKU_ALERT}", headers=HEADERS["HM"], json={
+    "supplier_id": "SUP-ADMIN-01"
+})
+check("update SKU to assign supplier accepted", r.status_code == 200)
+
+# Verify that draft PO was synthesized and linked
+r = client.get("/api/inventory/alerts", headers=HEADERS["HM"])
+alerts = {a["sku_id"]: a for a in r.json().get("data", [])}
+check("draft_po_id is now populated after update", alerts[SKU_ALERT].get("draft_po_id") is not None)
+
 print("\n" + "=" * 50)
 print(f"RESULT: {_passed} passed, {_failed} failed")
 shutil.rmtree(_tmpdir, ignore_errors=True)
 sys.exit(1 if _failed else 0)
+
