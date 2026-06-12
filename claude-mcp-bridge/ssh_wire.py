@@ -142,6 +142,39 @@ def _gateway_error(host_ip: str, host_name: str, detail: str, duration_ms: int) 
     }
 
 
+# ── Host-key pinning (trust-on-first-use) ────────────────────────────────────
+
+def pinned_ssh_client(host_ip: str):
+    """
+    Returns (client, save_after_connect). Known hosts are PINNED: once a
+    host key is recorded in ~/.ssh/known_hosts, any key change is rejected
+    (MITM defense). First contact records the key (TOFU) — call
+    save_after_connect() after a successful connect to persist it.
+    Replaces the old blanket AutoAddPolicy.
+    """
+    from pathlib import Path as _Path
+    client = paramiko.SSHClient()
+    kh_path = _Path.home() / ".ssh" / "known_hosts"
+    if kh_path.exists():
+        try:
+            client.load_host_keys(str(kh_path))
+        except Exception:
+            pass
+    known = client.get_host_keys().lookup(host_ip) is not None
+    if known:
+        client.set_missing_host_key_policy(paramiko.RejectPolicy())
+        return client, (lambda: None)
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    def _save():
+        try:
+            kh_path.parent.mkdir(parents=True, exist_ok=True)
+            client.save_host_keys(str(kh_path))
+        except Exception:
+            pass
+    return client, _save
+
+
 # ── Synchronous SSH runner (runs in executor thread) ─────────────────────────
 
 def _run_ssh(host_ip: str, command: str, timeout: int) -> dict:
@@ -162,8 +195,7 @@ def _run_ssh(host_ip: str, command: str, timeout: int) -> dict:
     exit_code  = -1
     timed_out  = False
 
-    client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client, _save_host_key = pinned_ssh_client(host_ip)
 
     try:
         connect_kwargs: dict = {
@@ -177,6 +209,7 @@ def _run_ssh(host_ip: str, command: str, timeout: int) -> dict:
             connect_kwargs["key_filename"] = ssh_key
 
         client.connect(**connect_kwargs)
+        _save_host_key()  # TOFU: pin the key on first successful contact
 
         _, stdout_ch, stderr_ch = client.exec_command(command, timeout=timeout)
         chan = stdout_ch.channel

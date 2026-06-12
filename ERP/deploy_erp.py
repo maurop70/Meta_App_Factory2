@@ -1,6 +1,31 @@
+import json
 import subprocess
 import os
 import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+RECIPES_LOG = (Path(__file__).parent.parent / "claude-mcp-bridge" / "logs"
+               / "deploy_recipes.jsonl")
+
+
+def _local_git_sha() -> str:
+    try:
+        out = subprocess.run(["git", "rev-parse", "HEAD"],
+                             cwd=str(Path(__file__).parent.parent),
+                             capture_output=True, text=True, timeout=15)
+        return out.stdout.strip()[:12] or "unknown"
+    except Exception:
+        return "unknown"
+
+
+def _record_recipe(recipe: dict) -> None:
+    """Rollback recipe BEFORE mutating the target (CLAUDE_RULES 7.5)."""
+    RECIPES_LOG.parent.mkdir(parents=True, exist_ok=True)
+    with open(RECIPES_LOG, "a", encoding="utf-8") as f:
+        f.write(json.dumps(recipe) + "\n")
+    print(f"[*] Rollback recipe recorded: {json.dumps(recipe)}")
+
 
 def run_command(command, description, cwd=None):
     print(f"[*] {description}")
@@ -63,11 +88,49 @@ def deploy():
         "Transmitting encrypted payload to DigitalOcean edge cluster"
     )
     
-    # 4. Remote Execution
+    # 4. Rollback recipe BEFORE any remote mutation (CLAUDE_RULES 7.5)
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    git_sha = _local_git_sha()
+    db_backup = f"{REMOTE_DIR}/backend/archives/maintenance_erp.pre_deploy_{ts}.db"
+    _record_recipe({
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "host": REMOTE_HOST,
+        "git_sha": git_sha,
+        "db_backup": db_backup,
+        "code_snapshot": f"{REMOTE_DIR}/backend_prev",
+        "services": ["erp-backend.service", "nginx.service"],
+        "rollback": ("auto on failed probe; manual: restore backend_prev + "
+                     "frontend_prev, restart services"),
+    })
+
+    # 5. Remote Execution — snapshot → mutate → probe → auto-rollback
     remote_script = f"""
     set -e
 
     cd {REMOTE_DIR}
+
+    # Code snapshot for auto-rollback (includes pre-deploy data/ state)
+    rm -rf backend_prev frontend_prev
+    [ -d backend ]  && cp -a backend  backend_prev
+    [ -d frontend ] && cp -a frontend frontend_prev
+
+    rollback() {{
+        echo "!! DEPLOY FAILED — AUTO-ROLLBACK INITIATED (recipe ts={ts}, prev sha) !!"
+        if [ -d {REMOTE_DIR}/backend_prev ]; then
+            rm -rf {REMOTE_DIR}/backend
+            cp -a {REMOTE_DIR}/backend_prev {REMOTE_DIR}/backend
+        fi
+        if [ -d {REMOTE_DIR}/frontend_prev ]; then
+            rm -rf {REMOTE_DIR}/frontend
+            cp -a {REMOTE_DIR}/frontend_prev {REMOTE_DIR}/frontend
+        fi
+        systemctl restart erp-backend.service nginx.service || true
+        sleep 3
+        RB_STATUS=$(curl -s -o /dev/null -w "%{{http_code}}" --max-time 5 http://localhost/ || echo 000)
+        echo "ROLLBACK_STATUS: HTTP $RB_STATUS"
+    }}
+    trap 'rollback; exit 1' ERR
+
     tar -xzf payload.tar.gz \\
         --transform='s|^Maintenance_Work_Order|backend|' \\
         --transform='s|^maintenance_frontend/dist|frontend|'
@@ -85,15 +148,13 @@ def deploy():
     # Pre-migration safety net: timestamped backup of the live DB, kept in
     # archives/ until the user confirms post-deploy health. Never auto-deleted.
     mkdir -p {REMOTE_DIR}/backend/archives
-    TS=$(date +%Y%m%d_%H%M%S)
     if [ -f {REMOTE_DIR}/backend/data/maintenance_erp.db ]; then
-        cp {REMOTE_DIR}/backend/data/maintenance_erp.db {REMOTE_DIR}/backend/archives/maintenance_erp.pre_deploy_$TS.db
-        echo "Pre-migration backup: {REMOTE_DIR}/backend/archives/maintenance_erp.pre_deploy_$TS.db"
+        cp {REMOTE_DIR}/backend/data/maintenance_erp.db {db_backup}
+        echo "Pre-migration backup: {db_backup}"
     fi
 
     # Schema synchronization: idempotent inventory migration (suppliers, POs,
-    # manual logs, CFO role). set -e aborts the deploy if it fails, preventing
-    # new code from booting against an unmigrated database.
+    # manual logs, CFO role). Failure triggers the ERR trap → auto-rollback.
     echo "Running inventory schema migration..."
     venv/bin/python3 migration_inventory.py
 
@@ -101,14 +162,25 @@ def deploy():
     systemctl restart erp-backend.service
     systemctl restart nginx.service
 
-    sleep 2
-    HTTP_STATUS=$(curl -s -o /dev/null -w "%{{http_code}}" http://localhost/)
-    echo "HTTP status: $HTTP_STATUS"
+    # Closed-loop probe: 5 attempts, 3s apart. Non-200 → auto-rollback.
+    trap - ERR
+    PROBE_OK=0
+    for i in 1 2 3 4 5; do
+        sleep 3
+        HTTP_STATUS=$(curl -s -o /dev/null -w "%{{http_code}}" --max-time 5 http://localhost/ || echo 000)
+        echo "Probe $i: HTTP $HTTP_STATUS"
+        if [ "$HTTP_STATUS" = "200" ]; then PROBE_OK=1; break; fi
+    done
+    if [ "$PROBE_OK" != "1" ]; then
+        rollback
+        exit 1
+    fi
+    echo "DEPLOY_VERIFIED: HTTP 200 (sha {git_sha}, backup {db_backup})"
     """
-    
+
     run_command(
         ["ssh", "-i", SSH_KEY_PATH, f"{REMOTE_USER}@{REMOTE_HOST}", remote_script],
-        "Executing remote matrix extraction and absolute daemon cycling"
+        "Executing remote deploy with snapshot, probe, and auto-rollback"
     )
     
     # 5. Cleanup

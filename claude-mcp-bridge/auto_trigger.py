@@ -23,27 +23,42 @@ TELEMETRY_LOG  = Path(__file__).parent / "logs" / "telemetry.jsonl"
 DIAGNOSE_URL   = "http://localhost:5000/api/claudeay/diagnose"
 CHECK_INTERVAL = 30  # seconds
 SEEN_LOG       = Path(__file__).parent / "logs" / "seen_errors.jsonl"
+SEEN_TTL_SECS  = 7 * 24 * 3600  # dedup expires after 7 days so a genuine
+                                # regression of a previously-fixed error re-alerts
 
 
-def _load_seen() -> set:
-    """Load already-processed error signatures to avoid duplicates."""
+def _load_seen() -> dict:
+    """
+    Load signature → last-seen epoch, dropping entries older than the TTL.
+    Accepts both the new JSON format and legacy plain-signature lines
+    (legacy entries are stamped 'now' so they age out 7 days post-upgrade).
+    """
     if not SEEN_LOG.exists():
-        return set()
-    seen = set()
+        return {}
+    seen: dict[str, float] = {}
+    now = time.time()
     try:
         for line in SEEN_LOG.read_text(encoding="utf-8").splitlines():
-            if line.strip():
-                seen.add(line.strip())
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                entry = json.loads(line)
+                sig, ts = entry["sig"], float(entry["ts"])
+            except (json.JSONDecodeError, KeyError, TypeError, ValueError):
+                sig, ts = line, now  # legacy format
+            if now - ts < SEEN_TTL_SECS:
+                seen[sig] = ts
     except Exception:
         pass
     return seen
 
 
 def _mark_seen(signature: str):
-    """Mark an error signature as processed."""
+    """Mark an error signature as processed (timestamped for TTL)."""
     SEEN_LOG.parent.mkdir(parents=True, exist_ok=True)
     with open(SEEN_LOG, "a", encoding="utf-8") as f:
-        f.write(signature + "\n")
+        f.write(json.dumps({"sig": signature, "ts": time.time()}) + "\n")
 
 
 def _error_signature(event: dict) -> str:
@@ -101,7 +116,7 @@ def watch_loop():
                 sig = _error_signature(error)
                 if sig not in seen:
                     new_errors.append(error)
-                    seen.add(sig)
+                    seen[sig] = time.time()
                     _mark_seen(sig)
 
             if new_errors:

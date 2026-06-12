@@ -14,6 +14,9 @@ load_dotenv(Path(__file__).parent.parent / ".env")
 MAF_ROOT = Path(__file__).parent.parent.resolve()
 MAX_ITERATIONS = 5
 
+# Model is configurable via env — never hardcode generations in call sites.
+GEMINI_MODEL = os.environ.get("GEMINI_EXECUTOR_MODEL", "gemini-2.5-pro")
+
 BACKOFF_BASE_SECONDS = 2.0
 BACKOFF_MAX_RETRIES = 5
 
@@ -240,7 +243,7 @@ def send_mandate(mandate: str, timeout: int = 300) -> str:
             warnings.simplefilter("ignore")
             chat = _execute_with_backoff(
                 client.chats.create,
-                model="gemini-2.5-pro",
+                model=GEMINI_MODEL,
                 config=types.GenerateContentConfig(
                     tools=[execute_local_shell, write_local_file, read_local_file,
                            execute_remote_shell, playwright_operation],
@@ -301,7 +304,7 @@ def test_connection() -> bool:
             warnings.simplefilter("ignore")
             chat = _execute_with_backoff(
                 client.chats.create,
-                model="gemini-2.5-pro",
+                model=GEMINI_MODEL,
                 config=types.GenerateContentConfig(
                     tools=[execute_local_shell],
                     temperature=0.0

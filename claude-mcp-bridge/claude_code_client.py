@@ -8,6 +8,7 @@ Automatic failover: if Claude Code returns quota/rate-limit error,
 falls through to Antigravity transparently.
 """
 
+import json
 import os
 import sys
 import shutil
@@ -20,6 +21,23 @@ log = logging.getLogger("ClaudeCodeClient")
 MAF_ROOT = Path(__file__).parent.parent.resolve()
 
 MAX_ITERATIONS = 5  # Safety cap inherited from ay_client circuit breaker
+
+# Structured CLI output: --output-format json gives us the ledger text plus
+# session_id (for continuity) and cost telemetry in one parseable envelope.
+USE_JSON_OUTPUT = os.getenv("CLAUDEAY_CLI_JSON", "true").lower() == "true"
+# Session continuity: resume the same Claude Code session across loop
+# iterations so the executor keeps its context instead of cold-starting.
+RESUME_SESSIONS = os.getenv("CLAUDEAY_RESUME_SESSIONS", "true").lower() == "true"
+# Optional model override for the executor (e.g. claude-sonnet-4-6).
+EXECUTOR_MODEL = os.getenv("CLAUDEAY_EXECUTOR_MODEL", "").strip()
+
+_last_session_id: str | None = None
+
+
+def reset_session() -> None:
+    """Forget the resumable session (call at the start of a new run)."""
+    global _last_session_id
+    _last_session_id = None
 
 CLAUDE_QUOTA_ERRORS = [
     "rate limit",
@@ -63,10 +81,26 @@ def _is_quota_error(text: str) -> bool:
     return any(signal in text_lower for signal in CLAUDE_QUOTA_ERRORS)
 
 
+def _build_argv() -> list[str]:
+    argv = [_CLAUDE_BIN, "-p", "--dangerously-skip-permissions"]
+    if USE_JSON_OUTPUT:
+        argv += ["--output-format", "json"]
+    if EXECUTOR_MODEL:
+        argv += ["--model", EXECUTOR_MODEL]
+    if RESUME_SESSIONS and _last_session_id:
+        argv += ["--resume", _last_session_id]
+    return argv
+
+
 def _send_via_claude_code(mandate: str, timeout: int) -> str:
     """Primary: Claude Code CLI execution."""
+    global _last_session_id
+    # Mandate goes via stdin, not argv: argv would pass it through
+    # cmd.exe (.cmd wrapper) where metacharacters mangle it, and
+    # Windows caps the command line at ~32K chars.
     result = subprocess.run(
-        [_CLAUDE_BIN, "-p", mandate, "--dangerously-skip-permissions"],
+        _build_argv(),
+        input=mandate,
         capture_output=True,
         text=True,
         cwd=str(MAF_ROOT),
@@ -80,12 +114,30 @@ def _send_via_claude_code(mandate: str, timeout: int) -> str:
             raise QuotaExhaustedError(
                 f"Claude quota exhausted: {stderr[:200]}"
             )
+        # A stale --resume id must not kill the run — retry once cold.
+        if _last_session_id and ("resume" in stderr.lower()
+                                 or "session" in stderr.lower()):
+            log.warning("[CLAUDE CODE] resume failed — retrying without session")
+            _last_session_id = None
+            return _send_via_claude_code(mandate, timeout)
         raise RuntimeError(
             f"[CLAUDE CODE] Exit {result.returncode}: {stderr}\n"
             f"Halting per CLAUDE_RULES.md Section 3.1."
         )
-    ledger = result.stdout.strip()
-    return ledger if ledger else "LEDGER: Execution complete."
+    raw = result.stdout.strip()
+    if USE_JSON_OUTPUT:
+        try:
+            envelope = json.loads(raw)
+            _last_session_id = envelope.get("session_id") or _last_session_id
+            cost = envelope.get("total_cost_usd")
+            if cost is not None:
+                log.info(f"[CLAUDE CODE] session={_last_session_id} "
+                         f"cost=${cost:.4f}")
+            ledger = (envelope.get("result") or "").strip()
+            return ledger if ledger else "LEDGER: Execution complete."
+        except (json.JSONDecodeError, AttributeError):
+            log.warning("[CLAUDE CODE] JSON envelope unparseable — raw passthrough")
+    return raw if raw else "LEDGER: Execution complete."
 
 
 def _send_via_antigravity(mandate: str, timeout: int) -> str:
@@ -148,8 +200,8 @@ def test_connection() -> dict:
     # Test Claude Code
     try:
         result = subprocess.run(
-            [_CLAUDE_BIN, "-p", "respond with exactly: BRIDGE OK",
-             "--dangerously-skip-permissions"],
+            [_CLAUDE_BIN, "-p", "--dangerously-skip-permissions"],
+            input="respond with exactly: BRIDGE OK",
             capture_output=True,
             text=True,
             cwd=str(MAF_ROOT),
