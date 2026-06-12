@@ -7449,9 +7449,14 @@ async def qa_lab_history():
     """Return last 20 runs sorted by created_at descending."""
     runs = []
     for p in _QA_RUNS_DIR.glob("*.json"):
+        # Metadata dumps live alongside run states — never history rows
+        if p.name.endswith("_seed_report.json") or p.name.endswith("_test_plan.json"):
+            continue
         try:
             data = json.loads(p.read_text(encoding="utf-8"))
-            runs.append(data)
+            # Only valid run records: anything without identity+status is metadata
+            if "run_id" in data and "status" in data:
+                runs.append(data)
         except Exception:
             pass
     runs.sort(key=lambda r: r.get("created_at", ""), reverse=True)
