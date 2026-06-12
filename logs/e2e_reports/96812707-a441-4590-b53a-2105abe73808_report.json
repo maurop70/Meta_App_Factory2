@@ -1,0 +1,2532 @@
+{
+  "app_name": "MWO ERP",
+  "run_id": "96812707-a441-4590-b53a-2105abe73808",
+  "status": "ESCALATE",
+  "fix_cycles": 5,
+  "total_tests": 73,
+  "passed": 0,
+  "failed": 73,
+  "test_results": [
+    {
+      "id": "TC-001",
+      "name": "HM \u2014 valid login",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115353_627619_TC-001.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 12588,
+      "cycle": 5
+    },
+    {
+      "id": "TC-002",
+      "name": "HM \u2014 invalid PIN rejected",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115354_923027_TC-002.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 1087,
+      "cycle": 5
+    },
+    {
+      "id": "TC-003",
+      "name": "TECH \u2014 valid login",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115401_911606_TC-003.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 6776,
+      "cycle": 5
+    },
+    {
+      "id": "TC-004",
+      "name": "TECH \u2014 invalid PIN rejected",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115403_183281_TC-004.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 1097,
+      "cycle": 5
+    },
+    {
+      "id": "TC-005",
+      "name": "DM \u2014 valid login",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115410_171625_TC-005.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 6796,
+      "cycle": 5
+    },
+    {
+      "id": "TC-006",
+      "name": "DM \u2014 invalid PIN rejected",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115411_492701_TC-006.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 1085,
+      "cycle": 5
+    },
+    {
+      "id": "TC-007",
+      "name": "ADMIN \u2014 valid login",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115418_476411_TC-007.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 6743,
+      "cycle": 5
+    },
+    {
+      "id": "TC-008",
+      "name": "ADMIN \u2014 invalid PIN rejected",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115419_826955_TC-008.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 1083,
+      "cycle": 5
+    },
+    {
+      "id": "TC-073",
+      "name": "End-to-end create and view record",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115422_380278_TC-073.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 2267,
+      "cycle": 5
+    },
+    {
+      "id": "TC-009",
+      "name": "Navigate to App.jsx",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115422_739051_TC-009.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 71,
+      "cycle": 5
+    },
+    {
+      "id": "TC-010",
+      "name": "Navigate to main.jsx",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115423_101668_TC-010.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 76,
+      "cycle": 5
+    },
+    {
+      "id": "TC-011",
+      "name": "Navigate to AdminDataIngestion.jsx",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115423_411613_TC-011.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 57,
+      "cycle": 5
+    },
+    {
+      "id": "TC-012",
+      "name": "Navigate to AdminSingleIngestionModal.jsx",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115423_663332_TC-012.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 59,
+      "cycle": 5
+    },
+    {
+      "id": "TC-013",
+      "name": "Navigate to ArchiveDashboard.jsx",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115423_922036_TC-013.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 61,
+      "cycle": 5
+    },
+    {
+      "id": "TC-014",
+      "name": "Navigate to CreateMWOForm.jsx",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115424_195801_TC-014.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 57,
+      "cycle": 5
+    },
+    {
+      "id": "TC-015",
+      "name": "Navigate to DispatchQueueTable.jsx",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115424_494290_TC-015.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 67,
+      "cycle": 5
+    },
+    {
+      "id": "TC-016",
+      "name": "Navigate to EnterpriseDataMatrix.jsx",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115424_767514_TC-016.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 60,
+      "cycle": 5
+    },
+    {
+      "id": "TC-017",
+      "name": "Navigate to EquipmentActuationModal.jsx",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115425_029183_TC-017.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 67,
+      "cycle": 5
+    },
+    {
+      "id": "TC-018",
+      "name": "Navigate to EquipmentDetailModal.jsx",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115425_306667_TC-018.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 56,
+      "cycle": 5
+    },
+    {
+      "id": "TC-019",
+      "name": "Navigate to EquipmentIngestionModal.jsx",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115425_570226_TC-019.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 61,
+      "cycle": 5
+    },
+    {
+      "id": "TC-020",
+      "name": "Navigate to EquipmentMatrix.jsx",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115425_828763_TC-020.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 58,
+      "cycle": 5
+    },
+    {
+      "id": "TC-021",
+      "name": "Navigate to HMAssignmentModal.jsx",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115426_091621_TC-021.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 57,
+      "cycle": 5
+    },
+    {
+      "id": "TC-022",
+      "name": "Navigate to HMDashboard.jsx",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115426_367870_TC-022.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 70,
+      "cycle": 5
+    },
+    {
+      "id": "TC-023",
+      "name": "Navigate to HMReviewModal.jsx",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115426_652822_TC-023.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 69,
+      "cycle": 5
+    },
+    {
+      "id": "TC-024",
+      "name": "Navigate to ManualDispatchPortal.jsx",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115426_996008_TC-024.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 61,
+      "cycle": 5
+    },
+    {
+      "id": "TC-025",
+      "name": "Navigate to MwoClosureModal.jsx",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115427_279449_TC-025.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 60,
+      "cycle": 5
+    },
+    {
+      "id": "TC-026",
+      "name": "Navigate to PartIngestionModal.jsx",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115427_583945_TC-026.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 67,
+      "cycle": 5
+    },
+    {
+      "id": "TC-027",
+      "name": "Navigate to PartsMatrix.jsx",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115427_854910_TC-027.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 59,
+      "cycle": 5
+    },
+    {
+      "id": "TC-028",
+      "name": "Navigate to ProcurementActuationModal.jsx",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115428_129306_TC-028.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 58,
+      "cycle": 5
+    },
+    {
+      "id": "TC-029",
+      "name": "Navigate to ProcurementMatrix.jsx",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115428_434513_TC-029.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 64,
+      "cycle": 5
+    },
+    {
+      "id": "TC-030",
+      "name": "Navigate to SkuCreationModal.jsx",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115428_720593_TC-030.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 61,
+      "cycle": 5
+    },
+    {
+      "id": "TC-031",
+      "name": "Navigate to SkuLedger.jsx",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115428_998094_TC-031.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 57,
+      "cycle": 5
+    },
+    {
+      "id": "TC-032",
+      "name": "Navigate to TaxonomyIngestionModal.jsx",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115429_273943_TC-032.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 70,
+      "cycle": 5
+    },
+    {
+      "id": "TC-033",
+      "name": "Navigate to TechCompletionModal.jsx",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115429_549317_TC-033.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 57,
+      "cycle": 5
+    },
+    {
+      "id": "TC-034",
+      "name": "Navigate to TechConsumePartModal.jsx",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115429_822130_TC-034.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 59,
+      "cycle": 5
+    },
+    {
+      "id": "TC-035",
+      "name": "Navigate to TechDashboard.jsx",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115430_097953_TC-035.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 56,
+      "cycle": 5
+    },
+    {
+      "id": "TC-036",
+      "name": "Navigate to TechMWODetailModal.jsx",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115430_376873_TC-036.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 61,
+      "cycle": 5
+    },
+    {
+      "id": "TC-037",
+      "name": "Navigate to UserDetailModal.jsx",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115430_700808_TC-037.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 62,
+      "cycle": 5
+    },
+    {
+      "id": "TC-038",
+      "name": "Navigate to AuthContext.jsx",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115430_981587_TC-038.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 59,
+      "cycle": 5
+    },
+    {
+      "id": "TC-039",
+      "name": "Navigate to AdminConsole.jsx",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115431_262309_TC-039.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 56,
+      "cycle": 5
+    },
+    {
+      "id": "TC-040",
+      "name": "Navigate to DMLogin.jsx",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115431_568620_TC-040.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 62,
+      "cycle": 5
+    },
+    {
+      "id": "TC-041",
+      "name": "Navigate to Login.jsx",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115431_846686_TC-041.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 57,
+      "cycle": 5
+    },
+    {
+      "id": "TC-042",
+      "name": "Navigate to TechDashboard.jsx",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115432_127288_TC-042.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 61,
+      "cycle": 5
+    },
+    {
+      "id": "TC-043",
+      "name": "API POST /admin/ingest/single-user",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115434_491215_TC-043.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 2175,
+      "cycle": 5
+    },
+    {
+      "id": "TC-044",
+      "name": "API POST /admin/ingest/equipment",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115436_912119_TC-044.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 2157,
+      "cycle": 5
+    },
+    {
+      "id": "TC-045",
+      "name": "API POST /admin/ingest/equipment/bulk",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115439_376621_TC-045.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 2227,
+      "cycle": 5
+    },
+    {
+      "id": "TC-046",
+      "name": "API POST /admin/ingest/department",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115441_834828_TC-046.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 2211,
+      "cycle": 5
+    },
+    {
+      "id": "TC-047",
+      "name": "API POST /admin/ingest/location",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115444_397127_TC-047.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 2272,
+      "cycle": 5
+    },
+    {
+      "id": "TC-048",
+      "name": "API PUT /admin/equipment/{equipment_id}/actuate",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115446_851738_TC-048.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 2156,
+      "cycle": 5
+    },
+    {
+      "id": "TC-049",
+      "name": "API POST /admin/ingest/part",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115449_260892_TC-049.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 2161,
+      "cycle": 5
+    },
+    {
+      "id": "TC-050",
+      "name": "API PUT /admin/procurement/{procurement_id}/actuate",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115451_714868_TC-050.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 2211,
+      "cycle": 5
+    },
+    {
+      "id": "TC-051",
+      "name": "API POST /mwo/{mwo_id}/complete",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115454_228141_TC-051.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 2273,
+      "cycle": 5
+    },
+    {
+      "id": "TC-052",
+      "name": "API POST /mwo/broadcast",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115456_692271_TC-052.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 2228,
+      "cycle": 5
+    },
+    {
+      "id": "TC-053",
+      "name": "API POST /orders/submit",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115459_139545_TC-053.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 2197,
+      "cycle": 5
+    },
+    {
+      "id": "TC-054",
+      "name": "API POST /orders/assign",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115501_601209_TC-054.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 2250,
+      "cycle": 5
+    },
+    {
+      "id": "TC-055",
+      "name": "API POST /mwo",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115504_042475_TC-055.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 2193,
+      "cycle": 5
+    },
+    {
+      "id": "TC-056",
+      "name": "API POST /admin/employees/bulk-upload",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115506_446016_TC-056.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 2159,
+      "cycle": 5
+    },
+    {
+      "id": "TC-057",
+      "name": "API POST /admin/mwo/bulk-upload",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115508_868532_TC-057.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 2170,
+      "cycle": 5
+    },
+    {
+      "id": "TC-058",
+      "name": "API POST /admin/users/bulk-upload",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115511_326135_TC-058.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 2198,
+      "cycle": 5
+    },
+    {
+      "id": "TC-059",
+      "name": "API DELETE /admin/users/{user_id}",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115513_702996_TC-059.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 2157,
+      "cycle": 5
+    },
+    {
+      "id": "TC-060",
+      "name": "API PUT /admin/users/{user_id}/escalate",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115516_239687_TC-060.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 2263,
+      "cycle": 5
+    },
+    {
+      "id": "TC-061",
+      "name": "API POST /admin/ingest/personnel/bulk",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115518_737624_TC-061.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 2148,
+      "cycle": 5
+    },
+    {
+      "id": "TC-062",
+      "name": "API POST /admin/ingest/part/bulk",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115521_137980_TC-062.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 2161,
+      "cycle": 5
+    },
+    {
+      "id": "TC-063",
+      "name": "API POST /inventory/skus",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115523_536899_TC-063.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 2150,
+      "cycle": 5
+    },
+    {
+      "id": "TC-064",
+      "name": "API POST /inventory/parts",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115525_972067_TC-064.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 2194,
+      "cycle": 5
+    },
+    {
+      "id": "TC-065",
+      "name": "API POST /inventory/mutate",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115528_381868_TC-065.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 2159,
+      "cycle": 5
+    },
+    {
+      "id": "TC-066",
+      "name": "API POST /work-orders/{mwo_id}/consume",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115530_817911_TC-066.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 2159,
+      "cycle": 5
+    },
+    {
+      "id": "TC-067",
+      "name": "API POST /locations",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115533_271312_TC-067.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 2149,
+      "cycle": 5
+    },
+    {
+      "id": "TC-068",
+      "name": "API POST /departments",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115535_671923_TC-068.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 2149,
+      "cycle": 5
+    },
+    {
+      "id": "TC-069",
+      "name": "API POST /categories",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115538_108736_TC-069.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 2141,
+      "cycle": 5
+    },
+    {
+      "id": "TC-070",
+      "name": "API POST /employees",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115540_502866_TC-070.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 2150,
+      "cycle": 5
+    },
+    {
+      "id": "TC-071",
+      "name": "API POST /skus",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115542_922848_TC-071.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 2144,
+      "cycle": 5
+    },
+    {
+      "id": "TC-072",
+      "name": "API POST /equipment",
+      "status": "fail",
+      "error": "2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_115545_336952_TC-072.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        },
+        {
+          "url": "http://68.183.30.128/api/mwo/assigned?limit=50&offset=0",
+          "status": 500
+        }
+      ],
+      "duration_ms": 2140,
+      "cycle": 5
+    }
+  ],
+  "fix_history": [
+    {
+      "cycle": 1,
+      "failing_tests": [
+        "HM \u2014 valid login",
+        "HM \u2014 invalid PIN rejected",
+        "TECH \u2014 valid login",
+        "TECH \u2014 invalid PIN rejected",
+        "DM \u2014 valid login",
+        "DM \u2014 invalid PIN rejected",
+        "ADMIN \u2014 valid login",
+        "ADMIN \u2014 invalid PIN rejected",
+        "End-to-end create and view record",
+        "Navigate to App.jsx",
+        "Navigate to main.jsx",
+        "Navigate to AdminDataIngestion.jsx",
+        "Navigate to AdminSingleIngestionModal.jsx",
+        "Navigate to ArchiveDashboard.jsx",
+        "Navigate to CreateMWOForm.jsx",
+        "Navigate to DispatchQueueTable.jsx",
+        "Navigate to EnterpriseDataMatrix.jsx",
+        "Navigate to EquipmentActuationModal.jsx",
+        "Navigate to EquipmentDetailModal.jsx",
+        "Navigate to EquipmentIngestionModal.jsx",
+        "Navigate to EquipmentMatrix.jsx",
+        "Navigate to HMAssignmentModal.jsx",
+        "Navigate to HMDashboard.jsx",
+        "Navigate to HMReviewModal.jsx",
+        "Navigate to ManualDispatchPortal.jsx",
+        "Navigate to MwoClosureModal.jsx",
+        "Navigate to PartIngestionModal.jsx",
+        "Navigate to PartsMatrix.jsx",
+        "Navigate to ProcurementActuationModal.jsx",
+        "Navigate to ProcurementMatrix.jsx",
+        "Navigate to SkuCreationModal.jsx",
+        "Navigate to SkuLedger.jsx",
+        "Navigate to TaxonomyIngestionModal.jsx",
+        "Navigate to TechCompletionModal.jsx",
+        "Navigate to TechConsumePartModal.jsx",
+        "Navigate to TechDashboard.jsx",
+        "Navigate to TechMWODetailModal.jsx",
+        "Navigate to UserDetailModal.jsx",
+        "Navigate to AuthContext.jsx",
+        "Navigate to AdminConsole.jsx",
+        "Navigate to DMLogin.jsx",
+        "Navigate to Login.jsx",
+        "Navigate to TechDashboard.jsx",
+        "API POST /admin/ingest/single-user",
+        "API POST /admin/ingest/equipment",
+        "API POST /admin/ingest/equipment/bulk",
+        "API POST /admin/ingest/department",
+        "API POST /admin/ingest/location",
+        "API PUT /admin/equipment/{equipment_id}/actuate",
+        "API POST /admin/ingest/part",
+        "API PUT /admin/procurement/{procurement_id}/actuate",
+        "API POST /mwo/{mwo_id}/complete",
+        "API POST /mwo/broadcast",
+        "API POST /orders/submit",
+        "API POST /orders/assign",
+        "API POST /mwo",
+        "API POST /admin/employees/bulk-upload",
+        "API POST /admin/mwo/bulk-upload",
+        "API POST /admin/users/bulk-upload",
+        "API DELETE /admin/users/{user_id}",
+        "API PUT /admin/users/{user_id}/escalate",
+        "API POST /admin/ingest/personnel/bulk",
+        "API POST /admin/ingest/part/bulk",
+        "API POST /inventory/skus",
+        "API POST /inventory/parts",
+        "API POST /inventory/mutate",
+        "API POST /work-orders/{mwo_id}/consume",
+        "API POST /locations",
+        "API POST /departments",
+        "API POST /categories",
+        "API POST /employees",
+        "API POST /skus",
+        "API POST /equipment"
+      ],
+      "mandate_sent": "MANDATE \u2014 E2E Fix Cycle 1\nApp: MWO ERP\nBase URL: http://68.183.30.128\nLocal path: C:/Dev/Antigravity_AI_Agents/Meta_App_Factory/ERP\n\nThe following E2E tests are failing:\n\n  - [TC-001] HM \u2014 valid login\n    Error: 1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n    Console errors: 1\n    Network errors: 1\n  - [TC-002] HM \u2014 invalid PIN rejected\n    Error: 1 console error(s): Failed to load resource: the server responded with a status of 401 (Unau",
+      "ay_response": "{\"error\": \"Gateway Unreachable\", \"detail\": \"[AY CLIENT FRACTURE] Gemini API interaction failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'Your project has exceeded its monthly spending cap. Please go to AI Studio at https://ai.studio/spend to manage your project spend cap. Learn more at https://ai.google.dev/gemini-api/docs/billing#project-spend-caps. ', 'status': 'RESOURCE_EXHAUSTED'}}\"}",
+      "tests_before": 73,
+      "tests_after": 0,
+      "timestamp": "2026-06-10T15:38:48.305738+00:00"
+    },
+    {
+      "cycle": 2,
+      "failing_tests": [
+        "HM \u2014 valid login",
+        "HM \u2014 invalid PIN rejected",
+        "TECH \u2014 valid login",
+        "TECH \u2014 invalid PIN rejected",
+        "DM \u2014 valid login",
+        "DM \u2014 invalid PIN rejected",
+        "ADMIN \u2014 valid login",
+        "ADMIN \u2014 invalid PIN rejected",
+        "End-to-end create and view record",
+        "Navigate to App.jsx",
+        "Navigate to main.jsx",
+        "Navigate to AdminDataIngestion.jsx",
+        "Navigate to AdminSingleIngestionModal.jsx",
+        "Navigate to ArchiveDashboard.jsx",
+        "Navigate to CreateMWOForm.jsx",
+        "Navigate to DispatchQueueTable.jsx",
+        "Navigate to EnterpriseDataMatrix.jsx",
+        "Navigate to EquipmentActuationModal.jsx",
+        "Navigate to EquipmentDetailModal.jsx",
+        "Navigate to EquipmentIngestionModal.jsx",
+        "Navigate to EquipmentMatrix.jsx",
+        "Navigate to HMAssignmentModal.jsx",
+        "Navigate to HMDashboard.jsx",
+        "Navigate to HMReviewModal.jsx",
+        "Navigate to ManualDispatchPortal.jsx",
+        "Navigate to MwoClosureModal.jsx",
+        "Navigate to PartIngestionModal.jsx",
+        "Navigate to PartsMatrix.jsx",
+        "Navigate to ProcurementActuationModal.jsx",
+        "Navigate to ProcurementMatrix.jsx",
+        "Navigate to SkuCreationModal.jsx",
+        "Navigate to SkuLedger.jsx",
+        "Navigate to TaxonomyIngestionModal.jsx",
+        "Navigate to TechCompletionModal.jsx",
+        "Navigate to TechConsumePartModal.jsx",
+        "Navigate to TechDashboard.jsx",
+        "Navigate to TechMWODetailModal.jsx",
+        "Navigate to UserDetailModal.jsx",
+        "Navigate to AuthContext.jsx",
+        "Navigate to AdminConsole.jsx",
+        "Navigate to DMLogin.jsx",
+        "Navigate to Login.jsx",
+        "Navigate to TechDashboard.jsx",
+        "API POST /admin/ingest/single-user",
+        "API POST /admin/ingest/equipment",
+        "API POST /admin/ingest/equipment/bulk",
+        "API POST /admin/ingest/department",
+        "API POST /admin/ingest/location",
+        "API PUT /admin/equipment/{equipment_id}/actuate",
+        "API POST /admin/ingest/part",
+        "API PUT /admin/procurement/{procurement_id}/actuate",
+        "API POST /mwo/{mwo_id}/complete",
+        "API POST /mwo/broadcast",
+        "API POST /orders/submit",
+        "API POST /orders/assign",
+        "API POST /mwo",
+        "API POST /admin/employees/bulk-upload",
+        "API POST /admin/mwo/bulk-upload",
+        "API POST /admin/users/bulk-upload",
+        "API DELETE /admin/users/{user_id}",
+        "API PUT /admin/users/{user_id}/escalate",
+        "API POST /admin/ingest/personnel/bulk",
+        "API POST /admin/ingest/part/bulk",
+        "API POST /inventory/skus",
+        "API POST /inventory/parts",
+        "API POST /inventory/mutate",
+        "API POST /work-orders/{mwo_id}/consume",
+        "API POST /locations",
+        "API POST /departments",
+        "API POST /categories",
+        "API POST /employees",
+        "API POST /skus",
+        "API POST /equipment"
+      ],
+      "mandate_sent": "MANDATE \u2014 E2E Fix Cycle 2\nApp: MWO ERP\nBase URL: http://68.183.30.128\nLocal path: C:/Dev/Antigravity_AI_Agents/Meta_App_Factory/ERP\n\nThe following E2E tests are failing:\n\n  - [TC-001] HM \u2014 valid login\n    Error: 1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n    Console errors: 1\n    Network errors: 1\n  - [TC-002] HM \u2014 invalid PIN rejected\n    Error: 1 console error(s): Failed to load resource: the server responded with a status of 401 (Unau",
+      "ay_response": "{\"error\": \"Gateway Unreachable\", \"detail\": \"[AY CLIENT FRACTURE] Gemini API interaction failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'Your project has exceeded its monthly spending cap. Please go to AI Studio at https://ai.studio/spend to manage your project spend cap. Learn more at https://ai.google.dev/gemini-api/docs/billing#project-spend-caps. ', 'status': 'RESOURCE_EXHAUSTED'}}\"}",
+      "tests_before": 73,
+      "tests_after": 0,
+      "timestamp": "2026-06-10T15:42:19.561607+00:00"
+    },
+    {
+      "cycle": 3,
+      "failing_tests": [
+        "HM \u2014 valid login",
+        "HM \u2014 invalid PIN rejected",
+        "TECH \u2014 valid login",
+        "TECH \u2014 invalid PIN rejected",
+        "DM \u2014 valid login",
+        "DM \u2014 invalid PIN rejected",
+        "ADMIN \u2014 valid login",
+        "ADMIN \u2014 invalid PIN rejected",
+        "End-to-end create and view record",
+        "Navigate to App.jsx",
+        "Navigate to main.jsx",
+        "Navigate to AdminDataIngestion.jsx",
+        "Navigate to AdminSingleIngestionModal.jsx",
+        "Navigate to ArchiveDashboard.jsx",
+        "Navigate to CreateMWOForm.jsx",
+        "Navigate to DispatchQueueTable.jsx",
+        "Navigate to EnterpriseDataMatrix.jsx",
+        "Navigate to EquipmentActuationModal.jsx",
+        "Navigate to EquipmentDetailModal.jsx",
+        "Navigate to EquipmentIngestionModal.jsx",
+        "Navigate to EquipmentMatrix.jsx",
+        "Navigate to HMAssignmentModal.jsx",
+        "Navigate to HMDashboard.jsx",
+        "Navigate to HMReviewModal.jsx",
+        "Navigate to ManualDispatchPortal.jsx",
+        "Navigate to MwoClosureModal.jsx",
+        "Navigate to PartIngestionModal.jsx",
+        "Navigate to PartsMatrix.jsx",
+        "Navigate to ProcurementActuationModal.jsx",
+        "Navigate to ProcurementMatrix.jsx",
+        "Navigate to SkuCreationModal.jsx",
+        "Navigate to SkuLedger.jsx",
+        "Navigate to TaxonomyIngestionModal.jsx",
+        "Navigate to TechCompletionModal.jsx",
+        "Navigate to TechConsumePartModal.jsx",
+        "Navigate to TechDashboard.jsx",
+        "Navigate to TechMWODetailModal.jsx",
+        "Navigate to UserDetailModal.jsx",
+        "Navigate to AuthContext.jsx",
+        "Navigate to AdminConsole.jsx",
+        "Navigate to DMLogin.jsx",
+        "Navigate to Login.jsx",
+        "Navigate to TechDashboard.jsx",
+        "API POST /admin/ingest/single-user",
+        "API POST /admin/ingest/equipment",
+        "API POST /admin/ingest/equipment/bulk",
+        "API POST /admin/ingest/department",
+        "API POST /admin/ingest/location",
+        "API PUT /admin/equipment/{equipment_id}/actuate",
+        "API POST /admin/ingest/part",
+        "API PUT /admin/procurement/{procurement_id}/actuate",
+        "API POST /mwo/{mwo_id}/complete",
+        "API POST /mwo/broadcast",
+        "API POST /orders/submit",
+        "API POST /orders/assign",
+        "API POST /mwo",
+        "API POST /admin/employees/bulk-upload",
+        "API POST /admin/mwo/bulk-upload",
+        "API POST /admin/users/bulk-upload",
+        "API DELETE /admin/users/{user_id}",
+        "API PUT /admin/users/{user_id}/escalate",
+        "API POST /admin/ingest/personnel/bulk",
+        "API POST /admin/ingest/part/bulk",
+        "API POST /inventory/skus",
+        "API POST /inventory/parts",
+        "API POST /inventory/mutate",
+        "API POST /work-orders/{mwo_id}/consume",
+        "API POST /locations",
+        "API POST /departments",
+        "API POST /categories",
+        "API POST /employees",
+        "API POST /skus",
+        "API POST /equipment"
+      ],
+      "mandate_sent": "MANDATE \u2014 E2E Fix Cycle 3\nApp: MWO ERP\nBase URL: http://68.183.30.128\nLocal path: C:/Dev/Antigravity_AI_Agents/Meta_App_Factory/ERP\n\nThe following E2E tests are failing:\n\n  - [TC-001] HM \u2014 valid login\n    Error: 1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n    Console errors: 1\n    Network errors: 1\n  - [TC-002] HM \u2014 invalid PIN rejected\n    Error: 1 console error(s): Failed to load resource: the server responded with a status of 401 (Unau",
+      "ay_response": "{\"error\": \"Gateway Unreachable\", \"detail\": \"[AY CLIENT FRACTURE] Gemini API interaction failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'Your project has exceeded its monthly spending cap. Please go to AI Studio at https://ai.studio/spend to manage your project spend cap. Learn more at https://ai.google.dev/gemini-api/docs/billing#project-spend-caps. ', 'status': 'RESOURCE_EXHAUSTED'}}\"}",
+      "tests_before": 73,
+      "tests_after": 0,
+      "timestamp": "2026-06-10T15:45:54.562270+00:00"
+    },
+    {
+      "cycle": 4,
+      "failing_tests": [
+        "HM \u2014 valid login",
+        "HM \u2014 invalid PIN rejected",
+        "TECH \u2014 valid login",
+        "TECH \u2014 invalid PIN rejected",
+        "DM \u2014 valid login",
+        "DM \u2014 invalid PIN rejected",
+        "ADMIN \u2014 valid login",
+        "ADMIN \u2014 invalid PIN rejected",
+        "End-to-end create and view record",
+        "Navigate to App.jsx",
+        "Navigate to main.jsx",
+        "Navigate to AdminDataIngestion.jsx",
+        "Navigate to AdminSingleIngestionModal.jsx",
+        "Navigate to ArchiveDashboard.jsx",
+        "Navigate to CreateMWOForm.jsx",
+        "Navigate to DispatchQueueTable.jsx",
+        "Navigate to EnterpriseDataMatrix.jsx",
+        "Navigate to EquipmentActuationModal.jsx",
+        "Navigate to EquipmentDetailModal.jsx",
+        "Navigate to EquipmentIngestionModal.jsx",
+        "Navigate to EquipmentMatrix.jsx",
+        "Navigate to HMAssignmentModal.jsx",
+        "Navigate to HMDashboard.jsx",
+        "Navigate to HMReviewModal.jsx",
+        "Navigate to ManualDispatchPortal.jsx",
+        "Navigate to MwoClosureModal.jsx",
+        "Navigate to PartIngestionModal.jsx",
+        "Navigate to PartsMatrix.jsx",
+        "Navigate to ProcurementActuationModal.jsx",
+        "Navigate to ProcurementMatrix.jsx",
+        "Navigate to SkuCreationModal.jsx",
+        "Navigate to SkuLedger.jsx",
+        "Navigate to TaxonomyIngestionModal.jsx",
+        "Navigate to TechCompletionModal.jsx",
+        "Navigate to TechConsumePartModal.jsx",
+        "Navigate to TechDashboard.jsx",
+        "Navigate to TechMWODetailModal.jsx",
+        "Navigate to UserDetailModal.jsx",
+        "Navigate to AuthContext.jsx",
+        "Navigate to AdminConsole.jsx",
+        "Navigate to DMLogin.jsx",
+        "Navigate to Login.jsx",
+        "Navigate to TechDashboard.jsx",
+        "API POST /admin/ingest/single-user",
+        "API POST /admin/ingest/equipment",
+        "API POST /admin/ingest/equipment/bulk",
+        "API POST /admin/ingest/department",
+        "API POST /admin/ingest/location",
+        "API PUT /admin/equipment/{equipment_id}/actuate",
+        "API POST /admin/ingest/part",
+        "API PUT /admin/procurement/{procurement_id}/actuate",
+        "API POST /mwo/{mwo_id}/complete",
+        "API POST /mwo/broadcast",
+        "API POST /orders/submit",
+        "API POST /orders/assign",
+        "API POST /mwo",
+        "API POST /admin/employees/bulk-upload",
+        "API POST /admin/mwo/bulk-upload",
+        "API POST /admin/users/bulk-upload",
+        "API DELETE /admin/users/{user_id}",
+        "API PUT /admin/users/{user_id}/escalate",
+        "API POST /admin/ingest/personnel/bulk",
+        "API POST /admin/ingest/part/bulk",
+        "API POST /inventory/skus",
+        "API POST /inventory/parts",
+        "API POST /inventory/mutate",
+        "API POST /work-orders/{mwo_id}/consume",
+        "API POST /locations",
+        "API POST /departments",
+        "API POST /categories",
+        "API POST /employees",
+        "API POST /skus",
+        "API POST /equipment"
+      ],
+      "mandate_sent": "MANDATE \u2014 E2E Fix Cycle 4\nApp: MWO ERP\nBase URL: http://68.183.30.128\nLocal path: C:/Dev/Antigravity_AI_Agents/Meta_App_Factory/ERP\n\nThe following E2E tests are failing:\n\n  - [TC-001] HM \u2014 valid login\n    Error: 1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n    Console errors: 1\n    Network errors: 1\n  - [TC-002] HM \u2014 invalid PIN rejected\n    Error: 1 console error(s): Failed to load resource: the server responded with a status of 401 (Unau",
+      "ay_response": "{\"error\": \"Gateway Unreachable\", \"detail\": \"[AY CLIENT FRACTURE] Gemini API interaction failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'Your project has exceeded its monthly spending cap. Please go to AI Studio at https://ai.studio/spend to manage your project spend cap. Learn more at https://ai.google.dev/gemini-api/docs/billing#project-spend-caps. ', 'status': 'RESOURCE_EXHAUSTED'}}\"}",
+      "tests_before": 73,
+      "tests_after": 0,
+      "timestamp": "2026-06-10T15:49:30.158958+00:00"
+    },
+    {
+      "cycle": 5,
+      "failing_tests": [
+        "HM \u2014 valid login",
+        "HM \u2014 invalid PIN rejected",
+        "TECH \u2014 valid login",
+        "TECH \u2014 invalid PIN rejected",
+        "DM \u2014 valid login",
+        "DM \u2014 invalid PIN rejected",
+        "ADMIN \u2014 valid login",
+        "ADMIN \u2014 invalid PIN rejected",
+        "End-to-end create and view record",
+        "Navigate to App.jsx",
+        "Navigate to main.jsx",
+        "Navigate to AdminDataIngestion.jsx",
+        "Navigate to AdminSingleIngestionModal.jsx",
+        "Navigate to ArchiveDashboard.jsx",
+        "Navigate to CreateMWOForm.jsx",
+        "Navigate to DispatchQueueTable.jsx",
+        "Navigate to EnterpriseDataMatrix.jsx",
+        "Navigate to EquipmentActuationModal.jsx",
+        "Navigate to EquipmentDetailModal.jsx",
+        "Navigate to EquipmentIngestionModal.jsx",
+        "Navigate to EquipmentMatrix.jsx",
+        "Navigate to HMAssignmentModal.jsx",
+        "Navigate to HMDashboard.jsx",
+        "Navigate to HMReviewModal.jsx",
+        "Navigate to ManualDispatchPortal.jsx",
+        "Navigate to MwoClosureModal.jsx",
+        "Navigate to PartIngestionModal.jsx",
+        "Navigate to PartsMatrix.jsx",
+        "Navigate to ProcurementActuationModal.jsx",
+        "Navigate to ProcurementMatrix.jsx",
+        "Navigate to SkuCreationModal.jsx",
+        "Navigate to SkuLedger.jsx",
+        "Navigate to TaxonomyIngestionModal.jsx",
+        "Navigate to TechCompletionModal.jsx",
+        "Navigate to TechConsumePartModal.jsx",
+        "Navigate to TechDashboard.jsx",
+        "Navigate to TechMWODetailModal.jsx",
+        "Navigate to UserDetailModal.jsx",
+        "Navigate to AuthContext.jsx",
+        "Navigate to AdminConsole.jsx",
+        "Navigate to DMLogin.jsx",
+        "Navigate to Login.jsx",
+        "Navigate to TechDashboard.jsx",
+        "API POST /admin/ingest/single-user",
+        "API POST /admin/ingest/equipment",
+        "API POST /admin/ingest/equipment/bulk",
+        "API POST /admin/ingest/department",
+        "API POST /admin/ingest/location",
+        "API PUT /admin/equipment/{equipment_id}/actuate",
+        "API POST /admin/ingest/part",
+        "API PUT /admin/procurement/{procurement_id}/actuate",
+        "API POST /mwo/{mwo_id}/complete",
+        "API POST /mwo/broadcast",
+        "API POST /orders/submit",
+        "API POST /orders/assign",
+        "API POST /mwo",
+        "API POST /admin/employees/bulk-upload",
+        "API POST /admin/mwo/bulk-upload",
+        "API POST /admin/users/bulk-upload",
+        "API DELETE /admin/users/{user_id}",
+        "API PUT /admin/users/{user_id}/escalate",
+        "API POST /admin/ingest/personnel/bulk",
+        "API POST /admin/ingest/part/bulk",
+        "API POST /inventory/skus",
+        "API POST /inventory/parts",
+        "API POST /inventory/mutate",
+        "API POST /work-orders/{mwo_id}/consume",
+        "API POST /locations",
+        "API POST /departments",
+        "API POST /categories",
+        "API POST /employees",
+        "API POST /skus",
+        "API POST /equipment"
+      ],
+      "mandate_sent": "MANDATE \u2014 E2E Fix Cycle 5\nApp: MWO ERP\nBase URL: http://68.183.30.128\nLocal path: C:/Dev/Antigravity_AI_Agents/Meta_App_Factory/ERP\n\nThe following E2E tests are failing:\n\n  - [TC-001] HM \u2014 valid login\n    Error: 1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n    Console errors: 1\n    Network errors: 1\n  - [TC-002] HM \u2014 invalid PIN rejected\n    Error: 1 console error(s): Failed to load resource: the server responded with a status of 401 (Unau",
+      "ay_response": "{\"error\": \"Gateway Unreachable\", \"detail\": \"[AY CLIENT FRACTURE] Gemini API interaction failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'Your project has exceeded its monthly spending cap. Please go to AI Studio at https://ai.studio/spend to manage your project spend cap. Learn more at https://ai.google.dev/gemini-api/docs/billing#project-spend-caps. ', 'status': 'RESOURCE_EXHAUSTED'}}\"}",
+      "tests_before": 73,
+      "tests_after": 0,
+      "timestamp": "2026-06-10T15:53:10.937882+00:00"
+    }
+  ],
+  "escalation_reason": "After 5 fix cycle(s), 73 test(s) are still failing in MWO ERP (http://68.183.30.128):\n  - HM \u2014 valid login: 1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - HM \u2014 invalid PIN rejected: 1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - TECH \u2014 valid login: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - TECH \u2014 invalid PIN rejected: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - DM \u2014 valid login: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - DM \u2014 invalid PIN rejected: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - ADMIN \u2014 valid login: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - ADMIN \u2014 invalid PIN rejected: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - End-to-end create and view record: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - Navigate to App.jsx: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - Navigate to main.jsx: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - Navigate to AdminDataIngestion.jsx: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - Navigate to AdminSingleIngestionModal.jsx: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - Navigate to ArchiveDashboard.jsx: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - Navigate to CreateMWOForm.jsx: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - Navigate to DispatchQueueTable.jsx: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - Navigate to EnterpriseDataMatrix.jsx: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - Navigate to EquipmentActuationModal.jsx: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - Navigate to EquipmentDetailModal.jsx: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - Navigate to EquipmentIngestionModal.jsx: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - Navigate to EquipmentMatrix.jsx: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - Navigate to HMAssignmentModal.jsx: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - Navigate to HMDashboard.jsx: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - Navigate to HMReviewModal.jsx: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - Navigate to ManualDispatchPortal.jsx: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - Navigate to MwoClosureModal.jsx: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - Navigate to PartIngestionModal.jsx: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - Navigate to PartsMatrix.jsx: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - Navigate to ProcurementActuationModal.jsx: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - Navigate to ProcurementMatrix.jsx: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - Navigate to SkuCreationModal.jsx: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - Navigate to SkuLedger.jsx: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - Navigate to TaxonomyIngestionModal.jsx: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - Navigate to TechCompletionModal.jsx: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - Navigate to TechConsumePartModal.jsx: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - Navigate to TechDashboard.jsx: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - Navigate to TechMWODetailModal.jsx: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - Navigate to UserDetailModal.jsx: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - Navigate to AuthContext.jsx: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - Navigate to AdminConsole.jsx: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - Navigate to DMLogin.jsx: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - Navigate to Login.jsx: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - Navigate to TechDashboard.jsx: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - API POST /admin/ingest/single-user: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - API POST /admin/ingest/equipment: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - API POST /admin/ingest/equipment/bulk: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - API POST /admin/ingest/department: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - API POST /admin/ingest/location: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - API PUT /admin/equipment/{equipment_id}/actuate: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - API POST /admin/ingest/part: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - API PUT /admin/procurement/{procurement_id}/actuate: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - API POST /mwo/{mwo_id}/complete: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - API POST /mwo/broadcast: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - API POST /orders/submit: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - API POST /orders/assign: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - API POST /mwo: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - API POST /admin/employees/bulk-upload: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - API POST /admin/mwo/bulk-upload: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - API POST /admin/users/bulk-upload: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - API DELETE /admin/users/{user_id}: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - API PUT /admin/users/{user_id}/escalate: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - API POST /admin/ingest/personnel/bulk: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - API POST /admin/ingest/part/bulk: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - API POST /inventory/skus: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - API POST /inventory/parts: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - API POST /inventory/mutate: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - API POST /work-orders/{mwo_id}/consume: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - API POST /locations: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - API POST /departments: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - API POST /categories: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - API POST /employees: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - API POST /skus: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n  - API POST /equipment: 2 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)\n\nOptions:\n  A \u2014 Give the agent 2 more fix cycles\n  B \u2014 Mark failing tests as skipped and proceed (READY)\n  C \u2014 Give the agent 5 more fix cycles (deep fix mode)",
+  "duration_ms": 3027010,
+  "timestamp": "2026-06-10T16:26:16.845211+00:00"
+}

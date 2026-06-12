@@ -1,0 +1,10 @@
+{
+  "nodes": [
+    {
+      "action": "AST_SPLICE",
+      "file_path": "api.py",
+      "search_content": "is_architecture_phase = any(kw in req.intent.lower() for kw in [\n        # Original keywords\n        \"initialize\", \"architect\", \"genesis\", \"@operator\",\n        # CIO / upgrade directives (from CIO Frontier Report)\n        \"cio\", \"upgrade\", \"implement\", \"fix\", \"harden\", \"hardening\",\n        \"report\", \"config\", \"configure\", \"update\", \"patch\", \"deploy\",\n        \"integrate\", \"refactor\", \"migrate\", \"install\", \"enable\", \"disable\",\n        \"multi-agent\", \"multi agent\", \"news analyzer\", \"fallback\",\n        # War Room authorization keywords\n        \"authorize\", \"authorized\", \"authorization\", \"memo\", \"directive\",\n        \"findings\", \"integrate findings\",\n    ])",
+      "replace_content": "is_architecture_phase = (any(kw in req.intent.lower() for kw in [\n        # Original keywords\n        \"initialize\", \"architect\", \"genesis\", \"@operator\",\n        # CIO / upgrade directives (from CIO Frontier Report)\n        \"cio\", \"upgrade\", \"implement\", \"fix\", \"harden\", \"hardening\",\n        \"report\", \"config\", \"configure\", \"update\", \"patch\", \"deploy\",\n        \"integrate\", \"refactor\", \"migrate\", \"install\", \"enable\", \"disable\",\n        \"multi-agent\", \"multi agent\", \"news analyzer\", \"fallback\",\n        # War Room authorization keywords\n        \"authorize\", \"authorized\", \"authorization\", \"memo\", \"directive\",\n        \"findings\", \"integrate findings\",\n    ]) and not any(kw in req.intent.lower() for kw in [\n        # Business-related keywords that force full QA validation\n        \"business plan\", \"brand identity\", \"financial model\", \"cmo\", \"cfo\", \"market\", \"venture\", \"customer\"\n    ]))"
+    }
+  ]
+}

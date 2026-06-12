@@ -1,0 +1,2365 @@
+{
+  "app_name": "MWO ERP",
+  "base_url": "http://68.183.30.128",
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/admin/hms",
+      "description": "get hms",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "POST",
+      "path": "/admin/ingest/single-user",
+      "description": "ingest single user",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "POST",
+      "path": "/admin/ingest/equipment",
+      "description": "ingest equipment",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "GET",
+      "path": "/admin/ingest/equipment/template",
+      "description": "get equipment ingestion template",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "POST",
+      "path": "/admin/ingest/equipment/bulk",
+      "description": "bulk ingest equipment",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "GET",
+      "path": "/admin/equipment",
+      "description": "get equipment",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "GET",
+      "path": "/admin/lookups/categories",
+      "description": "get categories",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "GET",
+      "path": "/admin/lookups/departments",
+      "description": "get departments",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "GET",
+      "path": "/admin/lookups/locations",
+      "description": "get locations",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "POST",
+      "path": "/admin/ingest/department",
+      "description": "ingest department",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "POST",
+      "path": "/admin/ingest/location",
+      "description": "ingest location",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "GET",
+      "path": "/admin/lookups/technicians",
+      "description": "get technicians",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/equipment/{equipment_id}/actuate",
+      "description": "actuate equipment",
+      "requires_auth": true,
+      "params": [
+        "equipment_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/admin/ingest/part",
+      "description": "ingest part",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "GET",
+      "path": "/admin/parts",
+      "description": "get parts",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "GET",
+      "path": "/inventory/available",
+      "description": "get available inventory",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/procurement/{procurement_id}/actuate",
+      "description": "actuate procurement",
+      "requires_auth": true,
+      "params": [
+        "procurement_id"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/mwo/{mwo_id}/execute",
+      "description": "execute mwo",
+      "requires_auth": true,
+      "params": [
+        "mwo_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/system/directive",
+      "description": "Exposes the Orchestration Boundary context to external agents.",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "GET",
+      "path": "/mwo/technicians",
+      "description": "get technicians",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "GET",
+      "path": "/mwo/hms",
+      "description": "get hms",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "GET",
+      "path": "/mwo",
+      "description": "get mwo",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "GET",
+      "path": "/mwo/assigned",
+      "description": "get assigned mwo",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "GET",
+      "path": "/mwo/archive/list",
+      "description": "get archive list",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "GET",
+      "path": "/mwo/{mwo_id}/archive",
+      "description": "retrieve mwo archive",
+      "requires_auth": true,
+      "params": [
+        "mwo_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/mwo/{mwo_id}/complete",
+      "description": "complete mwo",
+      "requires_auth": true,
+      "params": [
+        "mwo_id"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/mwo/{mwo_id}",
+      "description": "update mwo v2",
+      "requires_auth": true,
+      "params": [
+        "mwo_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/mwo/broadcast",
+      "description": "broadcast mwo state",
+      "requires_auth": false,
+      "params": []
+    },
+    {
+      "method": "POST",
+      "path": "/orders/legacy/submit",
+      "description": "submit order",
+      "requires_auth": false,
+      "params": []
+    },
+    {
+      "method": "POST",
+      "path": "/orders/assign",
+      "description": "assign order",
+      "requires_auth": false,
+      "params": []
+    },
+    {
+      "method": "POST",
+      "path": "/mwo",
+      "description": "create mwo",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "POST",
+      "path": "/admin/employees/bulk-upload",
+      "description": "bulk upload employees",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "POST",
+      "path": "/admin/mwo/bulk-upload",
+      "description": "bulk upload mwos",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "POST",
+      "path": "/admin/users/bulk-upload",
+      "description": "bulk upload users",
+      "requires_auth": false,
+      "params": []
+    },
+    {
+      "method": "GET",
+      "path": "/orders/active",
+      "description": "get active orders",
+      "requires_auth": false,
+      "params": []
+    },
+    {
+      "method": "GET",
+      "path": "/admin/users",
+      "description": "get admin users",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "GET",
+      "path": "/admin/users/{user_id}/audit-log",
+      "description": "get user audit log",
+      "requires_auth": true,
+      "params": [
+        "user_id"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/admin/users/{user_id}",
+      "description": "terminate user access",
+      "requires_auth": true,
+      "params": [
+        "user_id"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/users/{user_id}/escalate",
+      "description": "escalate user",
+      "requires_auth": true,
+      "params": [
+        "user_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/work-orders/queue",
+      "description": "get work orders queue",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "PATCH",
+      "path": "/mwo/{mwo_id}/assign",
+      "description": "assign mwo",
+      "requires_auth": true,
+      "params": [
+        "mwo_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/employees",
+      "description": "get employees",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "GET",
+      "path": "/admin/ingest/personnel/template",
+      "description": "get personnel ingestion template",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "POST",
+      "path": "/admin/ingest/personnel/bulk",
+      "description": "bulk ingest personnel",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "GET",
+      "path": "/admin/ingest/part/template",
+      "description": "get part ingestion template",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "POST",
+      "path": "/admin/ingest/part/bulk",
+      "description": "bulk ingest part",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "POST",
+      "path": "/inventory/skus",
+      "description": "ingest sku",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "GET",
+      "path": "/inventory/skus",
+      "description": "get skus",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "POST",
+      "path": "/inventory/parts",
+      "description": "ingest part",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "GET",
+      "path": "/inventory/parts",
+      "description": "get paginated parts",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "POST",
+      "path": "/inventory/mutate",
+      "description": "mutate inventory",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "GET",
+      "path": "/users",
+      "description": "get paginated users",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "POST",
+      "path": "/work-orders/{mwo_id}/consume",
+      "description": "ingest mwo consumption",
+      "requires_auth": true,
+      "params": [
+        "mwo_id"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/admin/procurement",
+      "description": "get procurement ledger",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "POST",
+      "path": "/locations",
+      "description": "hydrate location",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "POST",
+      "path": "/departments",
+      "description": "hydrate department",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "POST",
+      "path": "/categories",
+      "description": "hydrate category",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "POST",
+      "path": "/employees",
+      "description": "hydrate employee",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "POST",
+      "path": "/skus",
+      "description": "hydrate sku",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "POST",
+      "path": "/equipment",
+      "description": "hydrate equipment",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "GET",
+      "path": "/dm/personnel",
+      "description": "get department personnel",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "GET",
+      "path": "/notifications/stream",
+      "description": "SSE feed for inventory/PO events. EventSource cannot set headers, so the JWT rides a query param.",
+      "requires_auth": false,
+      "params": []
+    },
+    {
+      "method": "POST",
+      "path": "/inventory/manual-log",
+      "description": "ingest manual log",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "GET",
+      "path": "/inventory/skus/search",
+      "description": "SKU autocomplete feed for the manual log widget (maintenance parts + admin supplies).",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "GET",
+      "path": "/inventory/manual-log",
+      "description": "Zero-trust audit trail of manual stock adjustments.",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "GET",
+      "path": "/orders/drafts",
+      "description": "get draft orders",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "GET",
+      "path": "/orders/inbound",
+      "description": "APPROVED POs awaiting physical receipt, plus PENDING_CFO/HOLD visibility for the HOD.",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "GET",
+      "path": "/inventory/suppliers",
+      "description": "list suppliers",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "POST",
+      "path": "/inventory/suppliers",
+      "description": "register supplier",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "PUT",
+      "path": "/inventory/suppliers/{supplier_id}",
+      "description": "HOD supplier lifecycle: amend contact details / lead time. Compulsory fields cannot be blanked.",
+      "requires_auth": true,
+      "params": [
+        "supplier_id"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/inventory/skus/{sku_id}/supplier",
+      "description": "HOD supplier reassignment on an existing SKU; supplier_id=null explicitly unassigns.",
+      "requires_auth": true,
+      "params": [
+        "sku_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/orders/drafts/add-item",
+      "description": "add draft item",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "PUT",
+      "path": "/orders/{po_id}/update",
+      "description": "update draft order",
+      "requires_auth": true,
+      "params": [
+        "po_id"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/orders/{po_id}/items/{sku_id}",
+      "description": "HOD line-item exclusion. Removing the final item dissolves the draft entirely.",
+      "requires_auth": true,
+      "params": [
+        "po_id",
+        "sku_id"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/orders/submit",
+      "description": "submit draft order",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "GET",
+      "path": "/orders/approvals",
+      "description": "get cfo approval queue",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "POST",
+      "path": "/orders/actuate-bulk",
+      "description": "actuate orders bulk",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "POST",
+      "path": "/orders/{po_id}/receive",
+      "description": "HOD shipment receipt: flips APPROVED -> FULFILLED and increments physical inventory.",
+      "requires_auth": true,
+      "params": [
+        "po_id"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "route": "/login",
+      "component": "App.jsx",
+      "requires_auth": true,
+      "roles": [],
+      "api_calls": []
+    },
+    {
+      "route": "/main",
+      "component": "main.jsx",
+      "requires_auth": false,
+      "roles": [],
+      "api_calls": []
+    },
+    {
+      "route": "/admin-data-ingestion",
+      "component": "AdminDataIngestion.jsx",
+      "requires_auth": false,
+      "roles": [],
+      "api_calls": []
+    },
+    {
+      "route": "/admin-single-ingestion-modal",
+      "component": "AdminSingleIngestionModal.jsx",
+      "requires_auth": false,
+      "roles": [
+        "TECH"
+      ],
+      "api_calls": []
+    },
+    {
+      "route": "/",
+      "component": "ArchiveDashboard.jsx",
+      "requires_auth": false,
+      "roles": [],
+      "api_calls": [
+        "/api/mwo/${order.mwo_id}/archive",
+        "/api/mwo"
+      ]
+    },
+    {
+      "route": "/c-f-o-approvals",
+      "component": "CFOApprovals.jsx",
+      "requires_auth": false,
+      "roles": [],
+      "api_calls": []
+    },
+    {
+      "route": "/archive",
+      "component": "CreateMWOForm.jsx",
+      "requires_auth": true,
+      "roles": [],
+      "api_calls": []
+    },
+    {
+      "route": "/dispatch-queue-table",
+      "component": "DispatchQueueTable.jsx",
+      "requires_auth": true,
+      "roles": [],
+      "api_calls": []
+    },
+    {
+      "route": "/enterprise-data-matrix",
+      "component": "EnterpriseDataMatrix.jsx",
+      "requires_auth": false,
+      "roles": [],
+      "api_calls": []
+    },
+    {
+      "route": "/equipment-actuation-modal",
+      "component": "EquipmentActuationModal.jsx",
+      "requires_auth": false,
+      "roles": [],
+      "api_calls": []
+    },
+    {
+      "route": "/equipment-detail-modal",
+      "component": "EquipmentDetailModal.jsx",
+      "requires_auth": false,
+      "roles": [],
+      "api_calls": []
+    },
+    {
+      "route": "/equipment-ingestion-modal",
+      "component": "EquipmentIngestionModal.jsx",
+      "requires_auth": false,
+      "roles": [],
+      "api_calls": []
+    },
+    {
+      "route": "/equipment-matrix",
+      "component": "EquipmentMatrix.jsx",
+      "requires_auth": false,
+      "roles": [],
+      "api_calls": []
+    },
+    {
+      "route": "/h-m-assignment-modal",
+      "component": "HMAssignmentModal.jsx",
+      "requires_auth": false,
+      "roles": [],
+      "api_calls": []
+    },
+    {
+      "route": "/archive",
+      "component": "HMDashboard.jsx",
+      "requires_auth": true,
+      "roles": [],
+      "api_calls": []
+    },
+    {
+      "route": "/h-m-review-modal",
+      "component": "HMReviewModal.jsx",
+      "requires_auth": false,
+      "roles": [],
+      "api_calls": []
+    },
+    {
+      "route": "/h-o-d-workspace",
+      "component": "HODWorkspace.jsx",
+      "requires_auth": false,
+      "roles": [],
+      "api_calls": []
+    },
+    {
+      "route": "/manual-dispatch-portal",
+      "component": "ManualDispatchPortal.jsx",
+      "requires_auth": false,
+      "roles": [],
+      "api_calls": []
+    },
+    {
+      "route": "/manual-log-widget",
+      "component": "ManualLogWidget.jsx",
+      "requires_auth": true,
+      "roles": [],
+      "api_calls": []
+    },
+    {
+      "route": "/mwo-closure-modal",
+      "component": "MwoClosureModal.jsx",
+      "requires_auth": false,
+      "roles": [],
+      "api_calls": []
+    },
+    {
+      "route": "/part-ingestion-modal",
+      "component": "PartIngestionModal.jsx",
+      "requires_auth": false,
+      "roles": [],
+      "api_calls": []
+    },
+    {
+      "route": "/parts-matrix",
+      "component": "PartsMatrix.jsx",
+      "requires_auth": false,
+      "roles": [],
+      "api_calls": []
+    },
+    {
+      "route": "/procurement-actuation-modal",
+      "component": "ProcurementActuationModal.jsx",
+      "requires_auth": false,
+      "roles": [],
+      "api_calls": []
+    },
+    {
+      "route": "/procurement-matrix",
+      "component": "ProcurementMatrix.jsx",
+      "requires_auth": false,
+      "roles": [],
+      "api_calls": []
+    },
+    {
+      "route": "/sku-creation-modal",
+      "component": "SkuCreationModal.jsx",
+      "requires_auth": false,
+      "roles": [],
+      "api_calls": []
+    },
+    {
+      "route": "/sku-ledger",
+      "component": "SkuLedger.jsx",
+      "requires_auth": true,
+      "roles": [],
+      "api_calls": []
+    },
+    {
+      "route": "/supplier-creation-modal",
+      "component": "SupplierCreationModal.jsx",
+      "requires_auth": false,
+      "roles": [],
+      "api_calls": []
+    },
+    {
+      "route": "/taxonomy-ingestion-modal",
+      "component": "TaxonomyIngestionModal.jsx",
+      "requires_auth": false,
+      "roles": [],
+      "api_calls": []
+    },
+    {
+      "route": "/tech-consume-part-modal",
+      "component": "TechConsumePartModal.jsx",
+      "requires_auth": false,
+      "roles": [],
+      "api_calls": []
+    },
+    {
+      "route": "/archive",
+      "component": "TechDashboard.jsx",
+      "requires_auth": true,
+      "roles": [],
+      "api_calls": []
+    },
+    {
+      "route": "/tech-m-w-o-detail-modal",
+      "component": "TechMWODetailModal.jsx",
+      "requires_auth": false,
+      "roles": [],
+      "api_calls": []
+    },
+    {
+      "route": "/user-detail-modal",
+      "component": "UserDetailModal.jsx",
+      "requires_auth": false,
+      "roles": [],
+      "api_calls": []
+    },
+    {
+      "route": "/auth-context",
+      "component": "AuthContext.jsx",
+      "requires_auth": true,
+      "roles": [],
+      "api_calls": []
+    },
+    {
+      "route": "/admin",
+      "component": "AdminConsole.jsx",
+      "requires_auth": true,
+      "roles": [],
+      "api_calls": []
+    },
+    {
+      "route": "/c-f-o",
+      "component": "CFODashboard.jsx",
+      "requires_auth": true,
+      "roles": [],
+      "api_calls": []
+    },
+    {
+      "route": "/dm",
+      "component": "DMLogin.jsx",
+      "requires_auth": true,
+      "roles": [],
+      "api_calls": []
+    },
+    {
+      "route": "/",
+      "component": "Login.jsx",
+      "requires_auth": true,
+      "roles": [],
+      "api_calls": []
+    },
+    {
+      "route": "/tech",
+      "component": "TechDashboard.jsx",
+      "requires_auth": true,
+      "roles": [],
+      "api_calls": []
+    }
+  ],
+  "auth_flows": [
+    {
+      "role": "HM",
+      "login_url": "http://68.183.30.128/login",
+      "credentials": {
+        "hm_pin": "1234",
+        "hm_employee_id": "ERP-2000"
+      }
+    },
+    {
+      "role": "TECH",
+      "login_url": "http://68.183.30.128/login",
+      "credentials": {
+        "tech_pin": "2345",
+        "tech_employee_id": "ERP-3000"
+      }
+    },
+    {
+      "role": "DM",
+      "login_url": "http://68.183.30.128/login",
+      "credentials": {
+        "dm_pin": "4567",
+        "dm_employee_id": "ERP-4000"
+      }
+    },
+    {
+      "role": "ADMIN",
+      "login_url": "http://68.183.30.128/login",
+      "credentials": {
+        "admin_pin": "1234",
+        "admin_employee_id": "ERP-1000"
+      }
+    }
+  ],
+  "test_cases": [
+    {
+      "id": "TC-001",
+      "name": "HM \u2014 valid login",
+      "description": "Authenticate as HM with correct PIN",
+      "category": "auth",
+      "page": "Login.jsx",
+      "role": "HM",
+      "steps": [
+        "Navigate to http://68.183.30.128/login",
+        "Enter HM credentials",
+        "Submit the login form"
+      ],
+      "expected": "HM dashboard loads without errors",
+      "priority": 1,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-002",
+      "name": "HM \u2014 invalid PIN rejected",
+      "description": "Ensure wrong PIN shows error for HM",
+      "category": "error_handling",
+      "page": "Login.jsx",
+      "role": "HM",
+      "steps": [
+        "Navigate to http://68.183.30.128/login",
+        "Enter wrong PIN for HM",
+        "Submit the login form"
+      ],
+      "expected": "Error message displayed; no navigation away from login",
+      "priority": 1,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-003",
+      "name": "TECH \u2014 valid login",
+      "description": "Authenticate as TECH with correct PIN",
+      "category": "auth",
+      "page": "Login.jsx",
+      "role": "TECH",
+      "steps": [
+        "Navigate to http://68.183.30.128/login",
+        "Enter TECH credentials",
+        "Submit the login form"
+      ],
+      "expected": "TECH dashboard loads without errors",
+      "priority": 1,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-004",
+      "name": "TECH \u2014 invalid PIN rejected",
+      "description": "Ensure wrong PIN shows error for TECH",
+      "category": "error_handling",
+      "page": "Login.jsx",
+      "role": "TECH",
+      "steps": [
+        "Navigate to http://68.183.30.128/login",
+        "Enter wrong PIN for TECH",
+        "Submit the login form"
+      ],
+      "expected": "Error message displayed; no navigation away from login",
+      "priority": 1,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-005",
+      "name": "DM \u2014 valid login",
+      "description": "Authenticate as DM with correct PIN",
+      "category": "auth",
+      "page": "Login.jsx",
+      "role": "DM",
+      "steps": [
+        "Navigate to http://68.183.30.128/login",
+        "Enter DM credentials",
+        "Submit the login form"
+      ],
+      "expected": "DM dashboard loads without errors",
+      "priority": 1,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-006",
+      "name": "DM \u2014 invalid PIN rejected",
+      "description": "Ensure wrong PIN shows error for DM",
+      "category": "error_handling",
+      "page": "Login.jsx",
+      "role": "DM",
+      "steps": [
+        "Navigate to http://68.183.30.128/login",
+        "Enter wrong PIN for DM",
+        "Submit the login form"
+      ],
+      "expected": "Error message displayed; no navigation away from login",
+      "priority": 1,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-007",
+      "name": "ADMIN \u2014 valid login",
+      "description": "Authenticate as ADMIN with correct PIN",
+      "category": "auth",
+      "page": "Login.jsx",
+      "role": "ADMIN",
+      "steps": [
+        "Navigate to http://68.183.30.128/login",
+        "Enter ADMIN credentials",
+        "Submit the login form"
+      ],
+      "expected": "ADMIN dashboard loads without errors",
+      "priority": 1,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-008",
+      "name": "ADMIN \u2014 invalid PIN rejected",
+      "description": "Ensure wrong PIN shows error for ADMIN",
+      "category": "error_handling",
+      "page": "Login.jsx",
+      "role": "ADMIN",
+      "steps": [
+        "Navigate to http://68.183.30.128/login",
+        "Enter wrong PIN for ADMIN",
+        "Submit the login form"
+      ],
+      "expected": "Error message displayed; no navigation away from login",
+      "priority": 1,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-009",
+      "name": "Navigate to App.jsx",
+      "description": "Page App.jsx loads without console errors",
+      "category": "navigation",
+      "page": "App.jsx",
+      "role": "HM",
+      "steps": [
+        "Authenticate as HM",
+        "Navigate to /login",
+        "Wait for page to fully load"
+      ],
+      "expected": "Page renders without JS errors or failed network requests",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-010",
+      "name": "Navigate to main.jsx",
+      "description": "Page main.jsx loads without console errors",
+      "category": "navigation",
+      "page": "main.jsx",
+      "role": "HM",
+      "steps": [
+        "Authenticate as HM",
+        "Navigate to /main",
+        "Wait for page to fully load"
+      ],
+      "expected": "Page renders without JS errors or failed network requests",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-011",
+      "name": "Navigate to AdminDataIngestion.jsx",
+      "description": "Page AdminDataIngestion.jsx loads without console errors",
+      "category": "navigation",
+      "page": "AdminDataIngestion.jsx",
+      "role": "HM",
+      "steps": [
+        "Authenticate as HM",
+        "Navigate to /admin-data-ingestion",
+        "Wait for page to fully load"
+      ],
+      "expected": "Page renders without JS errors or failed network requests",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-012",
+      "name": "Navigate to AdminSingleIngestionModal.jsx",
+      "description": "Page AdminSingleIngestionModal.jsx loads without console errors",
+      "category": "navigation",
+      "page": "AdminSingleIngestionModal.jsx",
+      "role": "TECH",
+      "steps": [
+        "Authenticate as TECH",
+        "Navigate to /admin-single-ingestion-modal",
+        "Wait for page to fully load"
+      ],
+      "expected": "Page renders without JS errors or failed network requests",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-013",
+      "name": "Navigate to ArchiveDashboard.jsx",
+      "description": "Page ArchiveDashboard.jsx loads without console errors",
+      "category": "navigation",
+      "page": "ArchiveDashboard.jsx",
+      "role": "HM",
+      "steps": [
+        "Authenticate as HM",
+        "Navigate to /",
+        "Wait for page to fully load"
+      ],
+      "expected": "Page renders without JS errors or failed network requests",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-014",
+      "name": "Navigate to CFOApprovals.jsx",
+      "description": "Page CFOApprovals.jsx loads without console errors",
+      "category": "navigation",
+      "page": "CFOApprovals.jsx",
+      "role": "HM",
+      "steps": [
+        "Authenticate as HM",
+        "Navigate to /c-f-o-approvals",
+        "Wait for page to fully load"
+      ],
+      "expected": "Page renders without JS errors or failed network requests",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-015",
+      "name": "Navigate to CreateMWOForm.jsx",
+      "description": "Page CreateMWOForm.jsx loads without console errors",
+      "category": "navigation",
+      "page": "CreateMWOForm.jsx",
+      "role": "HM",
+      "steps": [
+        "Authenticate as HM",
+        "Navigate to /archive",
+        "Wait for page to fully load"
+      ],
+      "expected": "Page renders without JS errors or failed network requests",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-016",
+      "name": "Navigate to DispatchQueueTable.jsx",
+      "description": "Page DispatchQueueTable.jsx loads without console errors",
+      "category": "navigation",
+      "page": "DispatchQueueTable.jsx",
+      "role": "HM",
+      "steps": [
+        "Authenticate as HM",
+        "Navigate to /dispatch-queue-table",
+        "Wait for page to fully load"
+      ],
+      "expected": "Page renders without JS errors or failed network requests",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-017",
+      "name": "Navigate to EnterpriseDataMatrix.jsx",
+      "description": "Page EnterpriseDataMatrix.jsx loads without console errors",
+      "category": "navigation",
+      "page": "EnterpriseDataMatrix.jsx",
+      "role": "HM",
+      "steps": [
+        "Authenticate as HM",
+        "Navigate to /enterprise-data-matrix",
+        "Wait for page to fully load"
+      ],
+      "expected": "Page renders without JS errors or failed network requests",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-018",
+      "name": "Navigate to EquipmentActuationModal.jsx",
+      "description": "Page EquipmentActuationModal.jsx loads without console errors",
+      "category": "navigation",
+      "page": "EquipmentActuationModal.jsx",
+      "role": "HM",
+      "steps": [
+        "Authenticate as HM",
+        "Navigate to /equipment-actuation-modal",
+        "Wait for page to fully load"
+      ],
+      "expected": "Page renders without JS errors or failed network requests",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-019",
+      "name": "Navigate to EquipmentDetailModal.jsx",
+      "description": "Page EquipmentDetailModal.jsx loads without console errors",
+      "category": "navigation",
+      "page": "EquipmentDetailModal.jsx",
+      "role": "HM",
+      "steps": [
+        "Authenticate as HM",
+        "Navigate to /equipment-detail-modal",
+        "Wait for page to fully load"
+      ],
+      "expected": "Page renders without JS errors or failed network requests",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-020",
+      "name": "Navigate to EquipmentIngestionModal.jsx",
+      "description": "Page EquipmentIngestionModal.jsx loads without console errors",
+      "category": "navigation",
+      "page": "EquipmentIngestionModal.jsx",
+      "role": "HM",
+      "steps": [
+        "Authenticate as HM",
+        "Navigate to /equipment-ingestion-modal",
+        "Wait for page to fully load"
+      ],
+      "expected": "Page renders without JS errors or failed network requests",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-021",
+      "name": "Navigate to EquipmentMatrix.jsx",
+      "description": "Page EquipmentMatrix.jsx loads without console errors",
+      "category": "navigation",
+      "page": "EquipmentMatrix.jsx",
+      "role": "HM",
+      "steps": [
+        "Authenticate as HM",
+        "Navigate to /equipment-matrix",
+        "Wait for page to fully load"
+      ],
+      "expected": "Page renders without JS errors or failed network requests",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-022",
+      "name": "Navigate to HMAssignmentModal.jsx",
+      "description": "Page HMAssignmentModal.jsx loads without console errors",
+      "category": "navigation",
+      "page": "HMAssignmentModal.jsx",
+      "role": "HM",
+      "steps": [
+        "Authenticate as HM",
+        "Navigate to /h-m-assignment-modal",
+        "Wait for page to fully load"
+      ],
+      "expected": "Page renders without JS errors or failed network requests",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-023",
+      "name": "Navigate to HMDashboard.jsx",
+      "description": "Page HMDashboard.jsx loads without console errors",
+      "category": "navigation",
+      "page": "HMDashboard.jsx",
+      "role": "HM",
+      "steps": [
+        "Authenticate as HM",
+        "Navigate to /archive",
+        "Wait for page to fully load"
+      ],
+      "expected": "Page renders without JS errors or failed network requests",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-024",
+      "name": "Navigate to HMReviewModal.jsx",
+      "description": "Page HMReviewModal.jsx loads without console errors",
+      "category": "navigation",
+      "page": "HMReviewModal.jsx",
+      "role": "HM",
+      "steps": [
+        "Authenticate as HM",
+        "Navigate to /h-m-review-modal",
+        "Wait for page to fully load"
+      ],
+      "expected": "Page renders without JS errors or failed network requests",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-025",
+      "name": "Navigate to HODWorkspace.jsx",
+      "description": "Page HODWorkspace.jsx loads without console errors",
+      "category": "navigation",
+      "page": "HODWorkspace.jsx",
+      "role": "HM",
+      "steps": [
+        "Authenticate as HM",
+        "Navigate to /h-o-d-workspace",
+        "Wait for page to fully load"
+      ],
+      "expected": "Page renders without JS errors or failed network requests",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-026",
+      "name": "Navigate to ManualDispatchPortal.jsx",
+      "description": "Page ManualDispatchPortal.jsx loads without console errors",
+      "category": "navigation",
+      "page": "ManualDispatchPortal.jsx",
+      "role": "HM",
+      "steps": [
+        "Authenticate as HM",
+        "Navigate to /manual-dispatch-portal",
+        "Wait for page to fully load"
+      ],
+      "expected": "Page renders without JS errors or failed network requests",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-027",
+      "name": "Navigate to ManualLogWidget.jsx",
+      "description": "Page ManualLogWidget.jsx loads without console errors",
+      "category": "navigation",
+      "page": "ManualLogWidget.jsx",
+      "role": "HM",
+      "steps": [
+        "Authenticate as HM",
+        "Navigate to /manual-log-widget",
+        "Wait for page to fully load"
+      ],
+      "expected": "Page renders without JS errors or failed network requests",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-028",
+      "name": "Navigate to MwoClosureModal.jsx",
+      "description": "Page MwoClosureModal.jsx loads without console errors",
+      "category": "navigation",
+      "page": "MwoClosureModal.jsx",
+      "role": "HM",
+      "steps": [
+        "Authenticate as HM",
+        "Navigate to /mwo-closure-modal",
+        "Wait for page to fully load"
+      ],
+      "expected": "Page renders without JS errors or failed network requests",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-029",
+      "name": "Navigate to PartIngestionModal.jsx",
+      "description": "Page PartIngestionModal.jsx loads without console errors",
+      "category": "navigation",
+      "page": "PartIngestionModal.jsx",
+      "role": "HM",
+      "steps": [
+        "Authenticate as HM",
+        "Navigate to /part-ingestion-modal",
+        "Wait for page to fully load"
+      ],
+      "expected": "Page renders without JS errors or failed network requests",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-030",
+      "name": "Navigate to PartsMatrix.jsx",
+      "description": "Page PartsMatrix.jsx loads without console errors",
+      "category": "navigation",
+      "page": "PartsMatrix.jsx",
+      "role": "HM",
+      "steps": [
+        "Authenticate as HM",
+        "Navigate to /parts-matrix",
+        "Wait for page to fully load"
+      ],
+      "expected": "Page renders without JS errors or failed network requests",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-031",
+      "name": "Navigate to ProcurementActuationModal.jsx",
+      "description": "Page ProcurementActuationModal.jsx loads without console errors",
+      "category": "navigation",
+      "page": "ProcurementActuationModal.jsx",
+      "role": "HM",
+      "steps": [
+        "Authenticate as HM",
+        "Navigate to /procurement-actuation-modal",
+        "Wait for page to fully load"
+      ],
+      "expected": "Page renders without JS errors or failed network requests",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-032",
+      "name": "Navigate to ProcurementMatrix.jsx",
+      "description": "Page ProcurementMatrix.jsx loads without console errors",
+      "category": "navigation",
+      "page": "ProcurementMatrix.jsx",
+      "role": "HM",
+      "steps": [
+        "Authenticate as HM",
+        "Navigate to /procurement-matrix",
+        "Wait for page to fully load"
+      ],
+      "expected": "Page renders without JS errors or failed network requests",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-033",
+      "name": "Navigate to SkuCreationModal.jsx",
+      "description": "Page SkuCreationModal.jsx loads without console errors",
+      "category": "navigation",
+      "page": "SkuCreationModal.jsx",
+      "role": "HM",
+      "steps": [
+        "Authenticate as HM",
+        "Navigate to /sku-creation-modal",
+        "Wait for page to fully load"
+      ],
+      "expected": "Page renders without JS errors or failed network requests",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-034",
+      "name": "Navigate to SkuLedger.jsx",
+      "description": "Page SkuLedger.jsx loads without console errors",
+      "category": "navigation",
+      "page": "SkuLedger.jsx",
+      "role": "HM",
+      "steps": [
+        "Authenticate as HM",
+        "Navigate to /sku-ledger",
+        "Wait for page to fully load"
+      ],
+      "expected": "Page renders without JS errors or failed network requests",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-035",
+      "name": "Navigate to SupplierCreationModal.jsx",
+      "description": "Page SupplierCreationModal.jsx loads without console errors",
+      "category": "navigation",
+      "page": "SupplierCreationModal.jsx",
+      "role": "HM",
+      "steps": [
+        "Authenticate as HM",
+        "Navigate to /supplier-creation-modal",
+        "Wait for page to fully load"
+      ],
+      "expected": "Page renders without JS errors or failed network requests",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-036",
+      "name": "Navigate to TaxonomyIngestionModal.jsx",
+      "description": "Page TaxonomyIngestionModal.jsx loads without console errors",
+      "category": "navigation",
+      "page": "TaxonomyIngestionModal.jsx",
+      "role": "HM",
+      "steps": [
+        "Authenticate as HM",
+        "Navigate to /taxonomy-ingestion-modal",
+        "Wait for page to fully load"
+      ],
+      "expected": "Page renders without JS errors or failed network requests",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-037",
+      "name": "Navigate to TechConsumePartModal.jsx",
+      "description": "Page TechConsumePartModal.jsx loads without console errors",
+      "category": "navigation",
+      "page": "TechConsumePartModal.jsx",
+      "role": "HM",
+      "steps": [
+        "Authenticate as HM",
+        "Navigate to /tech-consume-part-modal",
+        "Wait for page to fully load"
+      ],
+      "expected": "Page renders without JS errors or failed network requests",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-038",
+      "name": "Navigate to TechDashboard.jsx",
+      "description": "Page TechDashboard.jsx loads without console errors",
+      "category": "navigation",
+      "page": "TechDashboard.jsx",
+      "role": "HM",
+      "steps": [
+        "Authenticate as HM",
+        "Navigate to /archive",
+        "Wait for page to fully load"
+      ],
+      "expected": "Page renders without JS errors or failed network requests",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-039",
+      "name": "Navigate to TechMWODetailModal.jsx",
+      "description": "Page TechMWODetailModal.jsx loads without console errors",
+      "category": "navigation",
+      "page": "TechMWODetailModal.jsx",
+      "role": "HM",
+      "steps": [
+        "Authenticate as HM",
+        "Navigate to /tech-m-w-o-detail-modal",
+        "Wait for page to fully load"
+      ],
+      "expected": "Page renders without JS errors or failed network requests",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-040",
+      "name": "Navigate to UserDetailModal.jsx",
+      "description": "Page UserDetailModal.jsx loads without console errors",
+      "category": "navigation",
+      "page": "UserDetailModal.jsx",
+      "role": "HM",
+      "steps": [
+        "Authenticate as HM",
+        "Navigate to /user-detail-modal",
+        "Wait for page to fully load"
+      ],
+      "expected": "Page renders without JS errors or failed network requests",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-041",
+      "name": "Navigate to AuthContext.jsx",
+      "description": "Page AuthContext.jsx loads without console errors",
+      "category": "navigation",
+      "page": "AuthContext.jsx",
+      "role": "HM",
+      "steps": [
+        "Authenticate as HM",
+        "Navigate to /auth-context",
+        "Wait for page to fully load"
+      ],
+      "expected": "Page renders without JS errors or failed network requests",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-042",
+      "name": "Navigate to AdminConsole.jsx",
+      "description": "Page AdminConsole.jsx loads without console errors",
+      "category": "navigation",
+      "page": "AdminConsole.jsx",
+      "role": "HM",
+      "steps": [
+        "Authenticate as HM",
+        "Navigate to /admin",
+        "Wait for page to fully load"
+      ],
+      "expected": "Page renders without JS errors or failed network requests",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-043",
+      "name": "Navigate to CFODashboard.jsx",
+      "description": "Page CFODashboard.jsx loads without console errors",
+      "category": "navigation",
+      "page": "CFODashboard.jsx",
+      "role": "HM",
+      "steps": [
+        "Authenticate as HM",
+        "Navigate to /c-f-o",
+        "Wait for page to fully load"
+      ],
+      "expected": "Page renders without JS errors or failed network requests",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-044",
+      "name": "Navigate to DMLogin.jsx",
+      "description": "Page DMLogin.jsx loads without console errors",
+      "category": "navigation",
+      "page": "DMLogin.jsx",
+      "role": "HM",
+      "steps": [
+        "Authenticate as HM",
+        "Navigate to /dm",
+        "Wait for page to fully load"
+      ],
+      "expected": "Page renders without JS errors or failed network requests",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-045",
+      "name": "Navigate to Login.jsx",
+      "description": "Page Login.jsx loads without console errors",
+      "category": "navigation",
+      "page": "Login.jsx",
+      "role": "HM",
+      "steps": [
+        "Authenticate as HM",
+        "Navigate to /",
+        "Wait for page to fully load"
+      ],
+      "expected": "Page renders without JS errors or failed network requests",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-046",
+      "name": "Navigate to TechDashboard.jsx",
+      "description": "Page TechDashboard.jsx loads without console errors",
+      "category": "navigation",
+      "page": "TechDashboard.jsx",
+      "role": "HM",
+      "steps": [
+        "Authenticate as HM",
+        "Navigate to /tech",
+        "Wait for page to fully load"
+      ],
+      "expected": "Page renders without JS errors or failed network requests",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-047",
+      "name": "API POST /admin/ingest/single-user",
+      "description": "Test ingest single user endpoint",
+      "category": "crud",
+      "page": "/admin/ingest/single-user",
+      "role": "HM",
+      "steps": [
+        "Authenticate with valid credentials",
+        "Send POST request to /admin/ingest/single-user",
+        "Check response status and payload"
+      ],
+      "expected": "HTTP 200/201 with valid JSON; data persisted in DB",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-048",
+      "name": "API POST /admin/ingest/equipment",
+      "description": "Test ingest equipment endpoint",
+      "category": "crud",
+      "page": "/admin/ingest/equipment",
+      "role": "HM",
+      "steps": [
+        "Authenticate with valid credentials",
+        "Send POST request to /admin/ingest/equipment",
+        "Check response status and payload"
+      ],
+      "expected": "HTTP 200/201 with valid JSON; data persisted in DB",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-049",
+      "name": "API POST /admin/ingest/equipment/bulk",
+      "description": "Test bulk ingest equipment endpoint",
+      "category": "crud",
+      "page": "/admin/ingest/equipment/bulk",
+      "role": "HM",
+      "steps": [
+        "Authenticate with valid credentials",
+        "Send POST request to /admin/ingest/equipment/bulk",
+        "Check response status and payload"
+      ],
+      "expected": "HTTP 200/201 with valid JSON; data persisted in DB",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-050",
+      "name": "API POST /admin/ingest/department",
+      "description": "Test ingest department endpoint",
+      "category": "crud",
+      "page": "/admin/ingest/department",
+      "role": "HM",
+      "steps": [
+        "Authenticate with valid credentials",
+        "Send POST request to /admin/ingest/department",
+        "Check response status and payload"
+      ],
+      "expected": "HTTP 200/201 with valid JSON; data persisted in DB",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-051",
+      "name": "API POST /admin/ingest/location",
+      "description": "Test ingest location endpoint",
+      "category": "crud",
+      "page": "/admin/ingest/location",
+      "role": "HM",
+      "steps": [
+        "Authenticate with valid credentials",
+        "Send POST request to /admin/ingest/location",
+        "Check response status and payload"
+      ],
+      "expected": "HTTP 200/201 with valid JSON; data persisted in DB",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-052",
+      "name": "API PUT /admin/equipment/{equipment_id}/actuate",
+      "description": "Test actuate equipment endpoint",
+      "category": "crud",
+      "page": "/admin/equipment/{equipment_id}/actuate",
+      "role": "HM",
+      "steps": [
+        "Authenticate with valid credentials",
+        "Send PUT request to /admin/equipment/{equipment_id}/actuate",
+        "Check response status and payload"
+      ],
+      "expected": "HTTP 200/201 with valid JSON; data persisted in DB",
+      "priority": 2,
+      "requires_seed": true
+    },
+    {
+      "id": "TC-053",
+      "name": "API POST /admin/ingest/part",
+      "description": "Test ingest part endpoint",
+      "category": "crud",
+      "page": "/admin/ingest/part",
+      "role": "HM",
+      "steps": [
+        "Authenticate with valid credentials",
+        "Send POST request to /admin/ingest/part",
+        "Check response status and payload"
+      ],
+      "expected": "HTTP 200/201 with valid JSON; data persisted in DB",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-054",
+      "name": "API PUT /admin/procurement/{procurement_id}/actuate",
+      "description": "Test actuate procurement endpoint",
+      "category": "crud",
+      "page": "/admin/procurement/{procurement_id}/actuate",
+      "role": "HM",
+      "steps": [
+        "Authenticate with valid credentials",
+        "Send PUT request to /admin/procurement/{procurement_id}/actuate",
+        "Check response status and payload"
+      ],
+      "expected": "HTTP 200/201 with valid JSON; data persisted in DB",
+      "priority": 2,
+      "requires_seed": true
+    },
+    {
+      "id": "TC-055",
+      "name": "API POST /mwo/{mwo_id}/complete",
+      "description": "Test complete mwo endpoint",
+      "category": "crud",
+      "page": "/mwo/{mwo_id}/complete",
+      "role": "HM",
+      "steps": [
+        "Authenticate with valid credentials",
+        "Send POST request to /mwo/{mwo_id}/complete",
+        "Check response status and payload"
+      ],
+      "expected": "HTTP 200/201 with valid JSON; data persisted in DB",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-056",
+      "name": "API POST /mwo/broadcast",
+      "description": "Test broadcast mwo state endpoint",
+      "category": "crud",
+      "page": "/mwo/broadcast",
+      "role": "HM",
+      "steps": [
+        "Authenticate with valid credentials",
+        "Send POST request to /mwo/broadcast",
+        "Check response status and payload"
+      ],
+      "expected": "HTTP 200/201 with valid JSON; data persisted in DB",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-057",
+      "name": "API POST /orders/legacy/submit",
+      "description": "Test submit order endpoint",
+      "category": "crud",
+      "page": "/orders/legacy/submit",
+      "role": "HM",
+      "steps": [
+        "Authenticate with valid credentials",
+        "Send POST request to /orders/legacy/submit",
+        "Check response status and payload"
+      ],
+      "expected": "HTTP 200/201 with valid JSON; data persisted in DB",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-058",
+      "name": "API POST /orders/assign",
+      "description": "Test assign order endpoint",
+      "category": "crud",
+      "page": "/orders/assign",
+      "role": "HM",
+      "steps": [
+        "Authenticate with valid credentials",
+        "Send POST request to /orders/assign",
+        "Check response status and payload"
+      ],
+      "expected": "HTTP 200/201 with valid JSON; data persisted in DB",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-059",
+      "name": "API POST /mwo",
+      "description": "Test create mwo endpoint",
+      "category": "crud",
+      "page": "/mwo",
+      "role": "HM",
+      "steps": [
+        "Authenticate with valid credentials",
+        "Send POST request to /mwo",
+        "Check response status and payload"
+      ],
+      "expected": "HTTP 200/201 with valid JSON; data persisted in DB",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-060",
+      "name": "API POST /admin/employees/bulk-upload",
+      "description": "Test bulk upload employees endpoint",
+      "category": "crud",
+      "page": "/admin/employees/bulk-upload",
+      "role": "HM",
+      "steps": [
+        "Authenticate with valid credentials",
+        "Send POST request to /admin/employees/bulk-upload",
+        "Check response status and payload"
+      ],
+      "expected": "HTTP 200/201 with valid JSON; data persisted in DB",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-061",
+      "name": "API POST /admin/mwo/bulk-upload",
+      "description": "Test bulk upload mwos endpoint",
+      "category": "crud",
+      "page": "/admin/mwo/bulk-upload",
+      "role": "HM",
+      "steps": [
+        "Authenticate with valid credentials",
+        "Send POST request to /admin/mwo/bulk-upload",
+        "Check response status and payload"
+      ],
+      "expected": "HTTP 200/201 with valid JSON; data persisted in DB",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-062",
+      "name": "API POST /admin/users/bulk-upload",
+      "description": "Test bulk upload users endpoint",
+      "category": "crud",
+      "page": "/admin/users/bulk-upload",
+      "role": "HM",
+      "steps": [
+        "Authenticate with valid credentials",
+        "Send POST request to /admin/users/bulk-upload",
+        "Check response status and payload"
+      ],
+      "expected": "HTTP 200/201 with valid JSON; data persisted in DB",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-063",
+      "name": "API DELETE /admin/users/{user_id}",
+      "description": "Test terminate user access endpoint",
+      "category": "crud",
+      "page": "/admin/users/{user_id}",
+      "role": "HM",
+      "steps": [
+        "Authenticate with valid credentials",
+        "Send DELETE request to /admin/users/{user_id}",
+        "Check response status and payload"
+      ],
+      "expected": "HTTP 200/201 with valid JSON; data persisted in DB",
+      "priority": 2,
+      "requires_seed": true
+    },
+    {
+      "id": "TC-064",
+      "name": "API PUT /admin/users/{user_id}/escalate",
+      "description": "Test escalate user endpoint",
+      "category": "crud",
+      "page": "/admin/users/{user_id}/escalate",
+      "role": "HM",
+      "steps": [
+        "Authenticate with valid credentials",
+        "Send PUT request to /admin/users/{user_id}/escalate",
+        "Check response status and payload"
+      ],
+      "expected": "HTTP 200/201 with valid JSON; data persisted in DB",
+      "priority": 2,
+      "requires_seed": true
+    },
+    {
+      "id": "TC-065",
+      "name": "API POST /admin/ingest/personnel/bulk",
+      "description": "Test bulk ingest personnel endpoint",
+      "category": "crud",
+      "page": "/admin/ingest/personnel/bulk",
+      "role": "HM",
+      "steps": [
+        "Authenticate with valid credentials",
+        "Send POST request to /admin/ingest/personnel/bulk",
+        "Check response status and payload"
+      ],
+      "expected": "HTTP 200/201 with valid JSON; data persisted in DB",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-066",
+      "name": "API POST /admin/ingest/part/bulk",
+      "description": "Test bulk ingest part endpoint",
+      "category": "crud",
+      "page": "/admin/ingest/part/bulk",
+      "role": "HM",
+      "steps": [
+        "Authenticate with valid credentials",
+        "Send POST request to /admin/ingest/part/bulk",
+        "Check response status and payload"
+      ],
+      "expected": "HTTP 200/201 with valid JSON; data persisted in DB",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-067",
+      "name": "API POST /inventory/skus",
+      "description": "Test ingest sku endpoint",
+      "category": "crud",
+      "page": "/inventory/skus",
+      "role": "HM",
+      "steps": [
+        "Authenticate with valid credentials",
+        "Send POST request to /inventory/skus",
+        "Check response status and payload"
+      ],
+      "expected": "HTTP 200/201 with valid JSON; data persisted in DB",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-068",
+      "name": "API POST /inventory/parts",
+      "description": "Test ingest part endpoint",
+      "category": "crud",
+      "page": "/inventory/parts",
+      "role": "HM",
+      "steps": [
+        "Authenticate with valid credentials",
+        "Send POST request to /inventory/parts",
+        "Check response status and payload"
+      ],
+      "expected": "HTTP 200/201 with valid JSON; data persisted in DB",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-069",
+      "name": "API POST /inventory/mutate",
+      "description": "Test mutate inventory endpoint",
+      "category": "crud",
+      "page": "/inventory/mutate",
+      "role": "HM",
+      "steps": [
+        "Authenticate with valid credentials",
+        "Send POST request to /inventory/mutate",
+        "Check response status and payload"
+      ],
+      "expected": "HTTP 200/201 with valid JSON; data persisted in DB",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-070",
+      "name": "API POST /work-orders/{mwo_id}/consume",
+      "description": "Test ingest mwo consumption endpoint",
+      "category": "crud",
+      "page": "/work-orders/{mwo_id}/consume",
+      "role": "HM",
+      "steps": [
+        "Authenticate with valid credentials",
+        "Send POST request to /work-orders/{mwo_id}/consume",
+        "Check response status and payload"
+      ],
+      "expected": "HTTP 200/201 with valid JSON; data persisted in DB",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-071",
+      "name": "API POST /locations",
+      "description": "Test hydrate location endpoint",
+      "category": "crud",
+      "page": "/locations",
+      "role": "HM",
+      "steps": [
+        "Authenticate with valid credentials",
+        "Send POST request to /locations",
+        "Check response status and payload"
+      ],
+      "expected": "HTTP 200/201 with valid JSON; data persisted in DB",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-072",
+      "name": "API POST /departments",
+      "description": "Test hydrate department endpoint",
+      "category": "crud",
+      "page": "/departments",
+      "role": "HM",
+      "steps": [
+        "Authenticate with valid credentials",
+        "Send POST request to /departments",
+        "Check response status and payload"
+      ],
+      "expected": "HTTP 200/201 with valid JSON; data persisted in DB",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-073",
+      "name": "API POST /categories",
+      "description": "Test hydrate category endpoint",
+      "category": "crud",
+      "page": "/categories",
+      "role": "HM",
+      "steps": [
+        "Authenticate with valid credentials",
+        "Send POST request to /categories",
+        "Check response status and payload"
+      ],
+      "expected": "HTTP 200/201 with valid JSON; data persisted in DB",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-074",
+      "name": "API POST /employees",
+      "description": "Test hydrate employee endpoint",
+      "category": "crud",
+      "page": "/employees",
+      "role": "HM",
+      "steps": [
+        "Authenticate with valid credentials",
+        "Send POST request to /employees",
+        "Check response status and payload"
+      ],
+      "expected": "HTTP 200/201 with valid JSON; data persisted in DB",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-075",
+      "name": "API POST /skus",
+      "description": "Test hydrate sku endpoint",
+      "category": "crud",
+      "page": "/skus",
+      "role": "HM",
+      "steps": [
+        "Authenticate with valid credentials",
+        "Send POST request to /skus",
+        "Check response status and payload"
+      ],
+      "expected": "HTTP 200/201 with valid JSON; data persisted in DB",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-076",
+      "name": "API POST /equipment",
+      "description": "Test hydrate equipment endpoint",
+      "category": "crud",
+      "page": "/equipment",
+      "role": "HM",
+      "steps": [
+        "Authenticate with valid credentials",
+        "Send POST request to /equipment",
+        "Check response status and payload"
+      ],
+      "expected": "HTTP 200/201 with valid JSON; data persisted in DB",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-077",
+      "name": "API POST /inventory/manual-log",
+      "description": "Test ingest manual log endpoint",
+      "category": "crud",
+      "page": "/inventory/manual-log",
+      "role": "HM",
+      "steps": [
+        "Authenticate with valid credentials",
+        "Send POST request to /inventory/manual-log",
+        "Check response status and payload"
+      ],
+      "expected": "HTTP 200/201 with valid JSON; data persisted in DB",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-078",
+      "name": "API POST /inventory/suppliers",
+      "description": "Test register supplier endpoint",
+      "category": "crud",
+      "page": "/inventory/suppliers",
+      "role": "HM",
+      "steps": [
+        "Authenticate with valid credentials",
+        "Send POST request to /inventory/suppliers",
+        "Check response status and payload"
+      ],
+      "expected": "HTTP 200/201 with valid JSON; data persisted in DB",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-079",
+      "name": "API PUT /inventory/suppliers/{supplier_id}",
+      "description": "Test HOD supplier lifecycle: amend contact details / lead time. Compulsory fields cannot be blanked. endpoint",
+      "category": "crud",
+      "page": "/inventory/suppliers/{supplier_id}",
+      "role": "HM",
+      "steps": [
+        "Authenticate with valid credentials",
+        "Send PUT request to /inventory/suppliers/{supplier_id}",
+        "Check response status and payload"
+      ],
+      "expected": "HTTP 200/201 with valid JSON; data persisted in DB",
+      "priority": 2,
+      "requires_seed": true
+    },
+    {
+      "id": "TC-080",
+      "name": "API PUT /inventory/skus/{sku_id}/supplier",
+      "description": "Test HOD supplier reassignment on an existing SKU; supplier_id=null explicitly unassigns. endpoint",
+      "category": "crud",
+      "page": "/inventory/skus/{sku_id}/supplier",
+      "role": "HM",
+      "steps": [
+        "Authenticate with valid credentials",
+        "Send PUT request to /inventory/skus/{sku_id}/supplier",
+        "Check response status and payload"
+      ],
+      "expected": "HTTP 200/201 with valid JSON; data persisted in DB",
+      "priority": 2,
+      "requires_seed": true
+    },
+    {
+      "id": "TC-081",
+      "name": "API POST /orders/drafts/add-item",
+      "description": "Test add draft item endpoint",
+      "category": "crud",
+      "page": "/orders/drafts/add-item",
+      "role": "HM",
+      "steps": [
+        "Authenticate with valid credentials",
+        "Send POST request to /orders/drafts/add-item",
+        "Check response status and payload"
+      ],
+      "expected": "HTTP 200/201 with valid JSON; data persisted in DB",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-082",
+      "name": "API PUT /orders/{po_id}/update",
+      "description": "Test update draft order endpoint",
+      "category": "crud",
+      "page": "/orders/{po_id}/update",
+      "role": "HM",
+      "steps": [
+        "Authenticate with valid credentials",
+        "Send PUT request to /orders/{po_id}/update",
+        "Check response status and payload"
+      ],
+      "expected": "HTTP 200/201 with valid JSON; data persisted in DB",
+      "priority": 2,
+      "requires_seed": true
+    },
+    {
+      "id": "TC-083",
+      "name": "API DELETE /orders/{po_id}/items/{sku_id}",
+      "description": "Test HOD line-item exclusion. Removing the final item dissolves the draft entirely. endpoint",
+      "category": "crud",
+      "page": "/orders/{po_id}/items/{sku_id}",
+      "role": "HM",
+      "steps": [
+        "Authenticate with valid credentials",
+        "Send DELETE request to /orders/{po_id}/items/{sku_id}",
+        "Check response status and payload"
+      ],
+      "expected": "HTTP 200/201 with valid JSON; data persisted in DB",
+      "priority": 2,
+      "requires_seed": true
+    },
+    {
+      "id": "TC-084",
+      "name": "API POST /orders/submit",
+      "description": "Test submit draft order endpoint",
+      "category": "crud",
+      "page": "/orders/submit",
+      "role": "HM",
+      "steps": [
+        "Authenticate with valid credentials",
+        "Send POST request to /orders/submit",
+        "Check response status and payload"
+      ],
+      "expected": "HTTP 200/201 with valid JSON; data persisted in DB",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-085",
+      "name": "API POST /orders/actuate-bulk",
+      "description": "Test actuate orders bulk endpoint",
+      "category": "crud",
+      "page": "/orders/actuate-bulk",
+      "role": "HM",
+      "steps": [
+        "Authenticate with valid credentials",
+        "Send POST request to /orders/actuate-bulk",
+        "Check response status and payload"
+      ],
+      "expected": "HTTP 200/201 with valid JSON; data persisted in DB",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-086",
+      "name": "API POST /orders/{po_id}/receive",
+      "description": "Test HOD shipment receipt: flips APPROVED -> FULFILLED and increments physical inventory. endpoint",
+      "category": "crud",
+      "page": "/orders/{po_id}/receive",
+      "role": "HM",
+      "steps": [
+        "Authenticate with valid credentials",
+        "Send POST request to /orders/{po_id}/receive",
+        "Check response status and payload"
+      ],
+      "expected": "HTTP 200/201 with valid JSON; data persisted in DB",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-087",
+      "name": "End-to-end create and view record",
+      "description": "Create a new record and verify it appears in the list",
+      "category": "workflow",
+      "page": "Dashboard",
+      "role": "HM",
+      "steps": [
+        "Authenticate as HM",
+        "Open the create form",
+        "Fill in all required fields",
+        "Submit the form",
+        "Navigate to the records list",
+        "Verify the new record is present"
+      ],
+      "expected": "New record visible in the list with correct data",
+      "priority": 1,
+      "requires_seed": false
+    }
+  ],
+  "seed_requirements": {
+    "tables": [
+      {
+        "table_name": "users",
+        "min_records": 5,
+        "sample_record": {
+          "id": 1,
+          "username": "testuser",
+          "role": "HM"
+        }
+      },
+      {
+        "table_name": "equipment",
+        "min_records": 5,
+        "sample_record": {
+          "id": 1,
+          "name": "Unit A",
+          "status": "active"
+        }
+      },
+      {
+        "table_name": "parts",
+        "min_records": 5,
+        "sample_record": {
+          "id": 1,
+          "sku": "SKU-001",
+          "qty": 10
+        }
+      },
+      {
+        "table_name": "procurement",
+        "min_records": 5,
+        "sample_record": {
+          "id": 1,
+          "sku_id": 1,
+          "qty": 5
+        }
+      },
+      {
+        "table_name": "work_orders",
+        "min_records": 5,
+        "sample_record": {
+          "id": 1,
+          "title": "Test MWO",
+          "status": "open"
+        }
+      },
+      {
+        "table_name": "archive",
+        "min_records": 5,
+        "sample_record": {
+          "id": 1,
+          "mwo_id": 1,
+          "closed_at": "2024-01-01"
+        }
+      },
+      {
+        "table_name": "employees",
+        "min_records": 5,
+        "sample_record": {
+          "id": 1,
+          "name": "Test Tech",
+          "role": "TECH"
+        }
+      },
+      {
+        "table_name": "skus",
+        "min_records": 5,
+        "sample_record": {
+          "id": 1,
+          "code": "SKU-001",
+          "description": "Test part"
+        }
+      }
+    ]
+  }
+}

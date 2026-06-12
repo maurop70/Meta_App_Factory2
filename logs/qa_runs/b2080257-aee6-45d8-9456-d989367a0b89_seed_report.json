@@ -1,0 +1,23 @@
+{
+  "app_name": "MWO ERP",
+  "run_id": "b2080257-aee6-45d8-9456-d989367a0b89",
+  "tables_seeded": [
+    "erp_procurement_queue"
+  ],
+  "records_inserted": 1,
+  "seed_log": [
+    {
+      "table": "erp_procurement_queue",
+      "records_inserted": 1,
+      "sample": {
+        "procurement_id": "SEED-PROC-001",
+        "part_id": "00b83142f270f7c06e408559545bfe3a",
+        "triggered_at": "2026-06-10T10:42:10.464384",
+        "status": "PENDING",
+        "authorized_quantity": 1
+      }
+    }
+  ],
+  "errors": [],
+  "success": true
+}

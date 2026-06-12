@@ -1,0 +1,10 @@
+{
+  "nodes": [
+    {
+      "action": "AST_SPLICE",
+      "file_path": "api.py",
+      "search_content": "@app.get(\"/\")\ndef root():\n    return {\"service\": \"Meta App Factory API\", \"version\": \"3.0\", \"streaming\": STREAMING_AVAILABLE}\n\n\n@app.post(\"/execute\")",
+      "replace_content": "@app.get(\"/\")\ndef root():\n    return {\"service\": \"Meta App Factory API\", \"version\": \"3.0\", \"streaming\": STREAMING_AVAILABLE}\n\n\n@app.get(\"/api/test/mandate\")\ndef test_mandate_endpoint():\n    \"\"\"A test endpoint to verify sub-atomic mutations.\"\"\"\n    return {\"status\": \"success\", \"message\": \"Test mandate executed successfully.\"}\n\n\n@app.post(\"/execute\")"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "nodes": [
+    {
+      "action": "AST_SPLICE",
+      "file_path": "api.py",
+      "search_content": "@app.get(\"/api/test/subatomic\")\ndef test_subatomic_endpoint():\n    \"\"\"A test endpoint to verify the new sub-atomic mutation.\"\"\"\n    return {\"status\": \"success\", \"message\": \"Sub-atomic mutation 'test_subatomic' has been successfully executed.\"}\n\n\n@app.post(\"/execute\")",
+      "replace_content": "@app.get(\"/api/test/subatomic\")\ndef test_subatomic_endpoint():\n    \"\"\"A test endpoint to verify the new sub-atomic mutation.\"\"\"\n    return {\"status\": \"success\", \"message\": \"Sub-atomic mutation 'test_subatomic' has been successfully executed.\"}\n\n\n@app.get(\"/api/test/mandate\")\ndef test_mandate_endpoint():\n    \"\"\"A test endpoint to verify the 'test_mandate' command.\"\"\"\n    return {\"status\": \"success\", \"message\": \"Sub-atomic mutation 'test_mandate' has been successfully executed.\"}\n\n\n@app.post(\"/execute\")"
+    }
+  ]
+}
