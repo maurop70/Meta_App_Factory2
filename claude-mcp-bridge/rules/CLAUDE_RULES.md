@@ -661,3 +661,14 @@ The Executor declares the tier it believes a mandate requires in LEDGER_JSON
 (needs_human) when it encounters higher-tier territory mid-execution. Tier
 violations are fatal: the Auditor cross-checks audit logs (git_wire, ssh_wire)
 against the mandate's authorized tier.
+
+
+## [APPROVED RULE 2026-06-12] (provenance: trace=session-2026-06-11-sota, source=architect-session, approved by operator)
+COMMIT WINDOW DISCIPLINE: In the shared MAF repo, verified work on tracked files must be committed IMMEDIATELY after its suite passes - not at end of session. Any unexplained file reversion: check git stash list first; recover with git checkout stash@{N} -- <exact paths>; never drop or pop stashes that contain other agents WIP.
+[ATTRIBUTION CORRECTED 2026-06-12: the reverting stashes were NOT a concurrent
+agent - they were git_wire.py's own smoke test, whose "stash push" case ran a
+real `git stash` against the shared MAF tree on every run. Fixed same day:
+stash is now exercised only in the suite's isolated temp repo. Corollary rule:
+smoke/verification suites must NEVER perform state-changing operations against
+the real shared repository - use isolated temp fixtures (live-probe discipline
+14.2 applies to our own test suites too).]

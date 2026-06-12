@@ -6,7 +6,10 @@
 # This script NEVER throws and always exits 0, so callers (Launch_MWO.ps1) are never blocked.
 
 $source      = "C:\Dev"
-$driveRoot   = "C:\Users\mpetr\My Drive\Antigravity-AI Agents"
+# Path updated 2026-06-12: the backups folder was relocated to Drive root
+# (old location "My Drive\Antigravity-AI Agents\backups" was emptied in the
+# move). Guard 1 now checks the Drive mount root itself.
+$driveRoot   = "C:\Users\mpetr\My Drive"
 $destination = Join-Path $driveRoot "backups\Dev"
 $excludeDirs = @("node_modules", ".venv", "venv", "env", "__pycache__", ".git", ".pytest_cache", "dist", "build")
 
