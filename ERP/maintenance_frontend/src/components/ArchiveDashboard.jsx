@@ -21,6 +21,35 @@ const ArchiveDashboard = () => {
     fetchArchives();
   }, []);
 
+  const formatDate = (dateVal) => {
+    if (!dateVal) return 'N/A';
+    const parsedNum = Number(dateVal);
+    if (!isNaN(parsedNum) && parsedNum > 0) {
+      const ms = parsedNum < 1e11 ? parsedNum * 1000 : parsedNum;
+      return new Date(ms).toLocaleString();
+    }
+    const d = new Date(dateVal);
+    return isNaN(d.getTime()) ? 'Invalid Date' : d.toLocaleString();
+  };
+
+  const handleDownloadPDF = async (mwo_id) => {
+    try {
+      const response = await api.get(`/mwo/${mwo_id}/archive`, { responseType: 'blob' });
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `ARCHIVE_${mwo_id}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Failed to download PDF", err);
+      alert("Failed to download PDF. Please check permissions or try again.");
+    }
+  };
+
   return (
     <div style={{ background: 'var(--bg-card, rgba(15, 23, 42, 0.85))', border: '1px solid var(--border, rgba(99, 102, 241, 0.15))', borderRadius: '12px', padding: '1.5rem', backdropFilter: 'blur(8px)', fontFamily: "var(--font, Inter)", maxWidth: '1200px', margin: '0 auto', textAlign: 'left' }}>
       
@@ -101,17 +130,16 @@ const ArchiveDashboard = () => {
                   <tr key={order.mwo_id}>
                     <td style={{ fontWeight: 600, color: '#818cf8' }}>{order.mwo_id}</td>
                     <td>{order.equipment_nomenclature || order.equipment_id}</td>
-                    <td>{new Date(order.completed_at * 1000).toLocaleString()}</td>
+                    <td>{formatDate(order.completed_at)}</td>
                     <td style={{ maxWidth: '300px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{order.description}</td>
                     <td>
-                      <a 
-                        href={`/api/mwo/${order.mwo_id}/archive`}
-                        target="_blank"
-                        rel="noreferrer"
+                      <button 
+                        onClick={() => handleDownloadPDF(order.mwo_id)}
                         className="btn-inspect"
+                        style={{ border: 'none', cursor: 'pointer' }}
                       >
                         Download PDF
-                      </a>
+                      </button>
                     </td>
                   </tr>
                 ))}
