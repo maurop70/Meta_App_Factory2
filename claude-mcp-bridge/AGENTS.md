@@ -4,6 +4,32 @@ Agent roles and wiring for the Meta App Factory QA Lab.
 
 ---
 
+## Auditor (auditor.py) — added 2026-06-11
+
+**Role**: Independent read-only verifier (triad: Architect plans, Executor acts,
+Auditor verifies). The loop engine refuses COMPLETE for Tier ≥ 1 mandates until
+the Auditor confirms ledger claims against ground truth: files exist, claimed
+commits aren't dirty, contract suites pass at registered counts
+(`rules/verification_contracts.json`), health probes return expected status.
+
+**Entry**: `auditor.audit(instruction, ledger_result, trace_id, run_suites)`
+**Log**: `logs/audit_reports.jsonl`
+
+## Postmortem Engine (postmortem.py) — added 2026-06-11
+
+**Role**: After ERROR/ESCALATE runs, drafts a prevention rule into
+`rules/pending_rules.jsonl`. Rules NEVER enter CLAUDE_RULES.md without operator
+approval (`python postmortem.py list / approve <n> / reject <n>`). The
+`update_rules` MCP tool routes here — direct rulebook appends are disabled.
+
+## Self-Check (self_check.py) — added 2026-06-11
+
+**Role**: Nightly heartbeat (Task Scheduler 03:00): contract suites, prod
+health, backup freshness. Weekly digest Sundays 08:00. Reports to
+`logs/self_check_reports.jsonl`; failures alert the QA endpoint and exit 1.
+
+---
+
 ## E2E Orchestrator (e2e_orchestrator.py)
 
 **Role**: Coordinates Inspector + Seed + Playwright agents. Manages run state on disk. Streams events to QA Lab UI. Entry point for all E2E evaluation requests.

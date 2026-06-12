@@ -170,7 +170,7 @@ condition, 600s cooldown between triggers.
 | `get_telemetry_summary` | — | Reads in-memory telemetry buffer | telemetry.jsonl |
 | `clear_telemetry` | — | Clears in-memory buffer | — |
 | `get_rules` | — | Read-only CLAUDE_RULES.md | — |
-| `update_rules` | — | Append-only to CLAUDE_RULES.md | — |
+| `update_rules` | — | PROPOSES rule → pending_rules.jsonl; operator approval required | rules/pending_rules.jsonl |
 | `run_e2e_evaluation` | e2e_orchestrator | Inspector→Seed→Playwright pipeline | logs/e2e_reports/ |
 
 **MCP Resources:**
@@ -239,7 +239,13 @@ All logs written to `claude-mcp-bridge/logs/`:
 | `telemetry.jsonl` | mcp_server/server.py | Chrome extension events: console_error, page_error, request_failed |
 | `loop_history.jsonl` | loop_engine | Every mandate sent/received by the autonomous loop |
 | `dispatched_prompts.jsonl` | dispatcher | Every prompt built: instruction, length, timestamp |
-| `seen_errors.jsonl` | auto_trigger | Dedup ledger — error signatures already diagnosed |
+| `seen_errors.jsonl` | auto_trigger | Dedup ledger (7-day TTL) — error signatures already diagnosed |
+| `episodes.jsonl` | episodic_memory | Mandate→outcome episodes; recalled into similar future mandates |
+| `audit_reports.jsonl` | auditor | Independent verification of executor COMPLETE claims |
+| `budget_ledger.jsonl` | budget | Per-dispatch accounting for daily budget caps |
+| `loop_runs/{trace}.json` | loop_engine | Per-run checkpoint state (survives restarts) |
+| `deploy_recipes.jsonl` | deploy_erp.py | Rollback recipe per deploy: git SHA, DB backup, snapshot path |
+| `self_check_reports.jsonl` | self_check | Nightly check + weekly digest reports |
 
 ---
 
@@ -254,6 +260,36 @@ All logs written to `claude-mcp-bridge/logs/`:
 | `SSH_KEY_PATH` | `~/.ssh/id_rsa` | Path to SSH private key for ssh_wire |
 | `GEMINI_API_KEY` | (required) | Gemini API key for ay_client and intent_router |
 | `FIRECRAWL_API_KEY` | (optional) | Firecrawl API key for cio_crawler |
+| `GEMINI_EXECUTOR_MODEL` | gemini-2.5-pro | Gemini-plane executor model |
+| `GEMINI_ROUTER_MODEL` | gemini-2.5-flash | Intent router classifier model |
+| `CLAUDEAY_CLI_JSON` | true | Claude Code CLI --output-format json (session id + cost) |
+| `CLAUDEAY_RESUME_SESSIONS` | true | Resume executor session across loop iterations |
+| `CLAUDEAY_EXECUTOR_MODEL` | (inherit) | --model override for Claude Code executor |
+| `CLAUDEAY_MAX_ITER_PER_RUN` | 10 | Budget: dispatches per loop run |
+| `CLAUDEAY_MAX_SECS_PER_RUN` | 1800 | Budget: wall-clock seconds per run |
+| `CLAUDEAY_MAX_DISPATCH_DAILY` | 60 | Budget: total dispatches per UTC day |
+
+---
+
+## 9b. SOTA Control Plane (added 2026-06-11)
+
+The loop is governed by five cooperating modules (CLAUDE_RULES §13–§15):
+
+| Module | Role |
+|---|---|
+| `mandate_tiers.py` | Risk-tier classifier (0 read-only → 3 operator-gated). Replaces keyword Section 11 scan; classifies the INSTRUCTION, never the rule-injected prompt. |
+| `ledger_evaluator.py` | Structured LEDGER_JSON contract (authoritative, conf 0.95) with capped-confidence prose fallback. Failing tests can never be COMPLETE. |
+| `auditor.py` | Independent read-only verifier: re-runs contract suites (`rules/verification_contracts.json`), checks files/git/health before COMPLETE is accepted. |
+| `episodic_memory.py` | Mandate→outcome store with IDF-overlap recall, injected as `<PAST_EPISODES>`. |
+| `budget.py` + `postmortem.py` | Run/daily budgets with kill switch; ERROR runs auto-draft prevention rules into the operator-approval queue. |
+
+Supporting flows: scoped rule injection (dispatcher injects only sections whose
+`[scope: x]` tag matches the task), telemetry fenced as `<UNTRUSTED_TELEMETRY>`
+behind an origin allowlist in server.py, TOFU host-key pinning in ssh_wire,
+git_wire blocks bulk staging, fs_wire blocks backup deletion, deploy_erp.py
+records rollback recipes and auto-rolls-back on failed health probes, and
+`self_check.py` runs nightly (Task Scheduler: ClaudeAY_Nightly_SelfCheck)
+with a Sunday digest (ClaudeAY_Weekly_Digest).
 
 ---
 
