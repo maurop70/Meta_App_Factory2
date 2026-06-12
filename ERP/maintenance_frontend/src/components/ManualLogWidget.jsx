@@ -228,16 +228,24 @@ const ManualLogWidget = ({ onLogged }) => {
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: '0.8rem', marginBottom: '0.8rem' }}>
-        <input
-          className="mlw-input"
-          type="number"
-          min="1"
-          value={quantity}
-          onChange={e => setQuantity(e.target.value)}
-          style={{ maxWidth: '110px' }}
-          placeholder="Qty"
-        />
+      <div style={{ display: 'flex', gap: '0.8rem', marginBottom: '0.8rem', alignItems: 'flex-start' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+          <input
+            className="mlw-input"
+            type="number"
+            min="1"
+            value={quantity}
+            onChange={e => setQuantity(e.target.value)}
+            style={{ maxWidth: '110px' }}
+            placeholder="Qty"
+          />
+          {/* Context-sensitive amount semantics per mode */}
+          <span style={{ fontSize: '0.62rem', color: '#64748b', fontStyle: 'italic', maxWidth: '110px', lineHeight: 1.35 }}>
+            {mode === 'OUT' && '(Amount to manually deduct from the inventory)'}
+            {mode === 'IN' && '(Amount to manually add to the inventory)'}
+            {mode === 'PROCURE' && '(Quantity to request in the supplier draft PO)'}
+          </span>
+        </div>
         <input
           className="mlw-input"
           placeholder={mode === 'PROCURE' ? 'Special instructions for supplier (optional)...' : 'Reason / comment (e.g. "damaged parts write-off")'}

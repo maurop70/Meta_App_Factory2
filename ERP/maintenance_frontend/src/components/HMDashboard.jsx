@@ -29,6 +29,28 @@ const HMDashboard = () => {
   // [BACK OFFICE INVENTORY] Command console view switcher
   const [activeView, setActiveView] = useState('mwo');
 
+  // [SAFETY ALERTS] Low-stock alert feed + draft PO deep-link target
+  const [inventoryAlerts, setInventoryAlerts] = useState([]);
+  const [highlightPoId, setHighlightPoId] = useState(null);
+
+  const fetchAlerts = async () => {
+    try {
+      const response = await api.get('/inventory/alerts');
+      setInventoryAlerts(response.data.data || []);
+    } catch (err) {
+      console.warn('Inventory alert sync failed.', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchAlerts();
+  }, [activeView]); // re-sync when returning from the procurement view
+
+  const openAlertDraft = (alert) => {
+    setHighlightPoId(alert.draft_po_id || null);
+    setActiveView('inventory');
+  };
+
   const fetchHms = async () => {
     try {
       const response = await api.get('/mwo/hms');
@@ -134,7 +156,7 @@ const HMDashboard = () => {
             Inventory & Procurement
           </button>
         </div>
-        <HODWorkspace />
+        <HODWorkspace highlightPoId={highlightPoId} onHighlightConsumed={() => setHighlightPoId(null)} />
       </div>
     );
   }
@@ -253,6 +275,43 @@ const HMDashboard = () => {
         }
       `}</style>
       
+      {/* [SAFETY ALERTS] Inventory Alerts Panel — dedicated, deep-links to draft POs */}
+      {inventoryAlerts.length > 0 && (
+        <div style={{ marginBottom: '1.5rem', padding: '1rem 1.2rem', borderRadius: '10px', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.35)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.7rem' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Inventory Alerts
+            </span>
+            <span style={{ padding: '1px 8px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: 700, background: 'rgba(239, 68, 68, 0.2)', color: '#fca5a5' }}>
+              {inventoryAlerts.length}
+            </span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+            {inventoryAlerts.map(alert => (
+              <div key={alert.sku_id} style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', flexWrap: 'wrap', fontSize: '0.82rem' }}>
+                <span style={{ color: '#fca5a5', fontWeight: 600 }}>{alert.sku_id}</span>
+                <span style={{ color: '#e2e8f0' }}>{alert.nomenclature}</span>
+                <span style={{ color: '#94a3b8' }}>
+                  is below safety threshold ({alert.quantity_on_hand} / {alert.reorder_threshold} on hand)
+                </span>
+                {alert.draft_po_id ? (
+                  <button
+                    onClick={() => openAlertDraft(alert)}
+                    style={{ padding: '0.2rem 0.7rem', borderRadius: '6px', border: '1px solid rgba(99, 102, 241, 0.4)', background: 'rgba(99, 102, 241, 0.15)', color: '#818cf8', cursor: 'pointer', fontWeight: 700, fontSize: '0.72rem' }}
+                  >
+                    View Draft {alert.draft_po_id} →
+                  </button>
+                ) : (
+                  <span style={{ fontSize: '0.72rem', color: '#64748b', fontStyle: 'italic' }}>
+                    no draft yet — awaiting auto-draft or supplier assignment
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Global Filters */}
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap', background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', alignItems: 'center' }}>
         <input 

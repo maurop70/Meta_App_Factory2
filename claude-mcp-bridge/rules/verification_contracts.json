@@ -6,7 +6,8 @@
       "test_inventory_module.py": 50,
       "test_add_item_endpoint.py": 19,
       "test_supplier_ingestion.py": 27,
-      "test_supplier_lifecycle.py": 27
+      "test_supplier_lifecycle.py": 27,
+      "test_moq_alerts.py": 23
     },
     "health": [
       {"name": "erp-production", "url": "http://68.183.30.128/", "expect": 200}
