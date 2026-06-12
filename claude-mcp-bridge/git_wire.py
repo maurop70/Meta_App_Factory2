@@ -333,11 +333,15 @@ if __name__ == "__main__":
     MAF = str(MAF_ROOT)
 
     # (label, operation, args, expect_blocked, expect_exit_code_or_None)
+    # NOTE: no state-changing operations against the REAL repo here. The old
+    # "stash push" case ran a real `git stash` on the shared MAF tree on every
+    # smoke run, silently hiding all agents' uncommitted work (discovered
+    # 2026-06-12 — it caused the mid-session file reverts). Stash is now
+    # exercised in the isolated temp repo below.
     CASES = [
         ("status",              "status",   {},                       False, None),
         ("log -5",              "log",      {"n": 5},                 False, None),
         ("diff unstaged",       "diff",     {},                       False, None),
-        ("stash push",          "stash",    {"action": "push"},       False, None),
         ("push --force",        "push",     {"force": True},          True,  -1),
         ("push to production",  "push",     {"branch": "production"}, True,  -1),
         ("push to prod",        "push",     {"branch": "prod"},       True,  -1),
@@ -397,6 +401,26 @@ if __name__ == "__main__":
             failed += 1
             print(f"         stderr : {r['stderr'][:200]}")
             print(f"         stdout : {r['stdout'][:100]}")
+
+        # ── stash: exercised ONLY in the isolated temp repo ──────────────────
+        # (the old real-repo stash case silently hid all agents' uncommitted
+        # work on every smoke run — root cause of the 2026-06-11/12 reverts)
+        _f = os.path.join(_tmpdir, "tracked.txt")
+        with open(_f, "w") as _fh:
+            _fh.write("v1\n")
+        _sp2.run(["git", "add", "tracked.txt"], cwd=_tmpdir, capture_output=True)
+        _sp2.run(["git", "commit", "-m", "track"], cwd=_tmpdir,
+                 capture_output=True, env=_git_env)
+        with open(_f, "w") as _fh:
+            _fh.write("v2 dirty\n")
+        r = execute("stash", {"action": "push"}, cwd=_tmpdir)
+        ok_stash = (not r["blocked"]) and r["exit_code"] == 0
+        print(f"  [{'PASS' if ok_stash else 'FAIL'}] [exit={r['exit_code']}]  "
+              f"stash push (temp repo only — never the shared tree)")
+        if ok_stash:
+            passed += 1
+        else:
+            failed += 1
     finally:
         _shu.rmtree(_tmpdir, ignore_errors=True)
 

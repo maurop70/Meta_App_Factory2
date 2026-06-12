@@ -30,7 +30,8 @@ sys.path.insert(0, str(BRIDGE_ROOT))
 import auditor  # reuses contract suite runner + registry
 
 REPORTS_LOG   = BRIDGE_ROOT / "logs" / "self_check_reports.jsonl"
-BACKUP_DEST   = Path(r"C:\Users\mpetr\My Drive\Antigravity-AI Agents\backups\Dev")
+# Relocated 2026-06-12: backups moved to Drive root (matches backup_dev.ps1)
+BACKUP_DEST   = Path(r"C:\Users\mpetr\My Drive\backups\Dev")
 BACKUP_MAX_AGE_H = 48
 PENDING_RULES = BRIDGE_ROOT / "rules" / "pending_rules.jsonl"
 
@@ -117,7 +118,7 @@ def nightly() -> int:
         print(f"  [{'PASS' if c['ok'] else 'FAIL'}] {c['check']}: {c['detail']}")
     pending = _count_pending_rules()
     if pending:
-        print(f"\n  ⚠ {pending} rule proposal(s) await operator review "
+        print(f"\n  NOTE: {pending} rule proposal(s) await operator review "
               f"(python postmortem.py list)")
 
     all_ok = all(c["ok"] for c in checks)
@@ -193,7 +194,7 @@ def digest() -> int:
     print(f"  Pending rules       : {_count_pending_rules()} awaiting review")
 
     if by_status.get("error", 0) or nightly_fails:
-        print("\n  ⚠ Review needed: failed runs or self-checks this week.")
+        print("\n  NOTE: Review needed: failed runs or self-checks this week.")
     report = {
         "ts": datetime.now(timezone.utc).isoformat(), "kind": "digest",
         "episodes": len(episodes), "by_status": by_status,

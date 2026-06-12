@@ -26,10 +26,45 @@
   text-align: left;
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--text-secondary, #94a3b8);
+  /* slate-300: AA contrast on the indigo header band (was #94a3b8) */
+  color: var(--text-header, #cbd5e1);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   border-bottom: 1px solid var(--border, rgba(99, 102, 241, 0.2));
+}
+
+/* ── Pagination (DispatchQueueTable) ─────────────────────────────────
+   .dispatch-btn was referenced in JSX but never defined, so Previous/
+   Next rendered as unstyled native buttons (visual-critic finding,
+   2026-06-12). Styled to match the dark enterprise theme. */
+.dispatch-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1rem 0 0.25rem;
+}
+
+.dispatch-btn {
+  padding: 0.45rem 1.1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.dispatch-btn:hover:not(:disabled) {
+  background: rgba(99, 102, 241, 0.3);
+  border-color: rgba(99, 102, 241, 0.6);
+}
+
+.dispatch-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 .erp-data-matrix td {
