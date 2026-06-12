@@ -10,6 +10,15 @@ import json
 import logging
 import requests
 
+# Standalone invocations (loop_engine planner, CLI tests) need .env loaded;
+# inside api.py this is a no-op since the environment is already populated.
+try:
+    from dotenv import load_dotenv
+    from pathlib import Path as _Path
+    load_dotenv(_Path(__file__).parent / ".env")
+except ImportError:
+    pass
+
 logger = logging.getLogger("ModelRouter")
 
 # ── Model Definitions ────────────────────────────────────────────────
@@ -46,7 +55,13 @@ TASK_ROUTING = {
     "implementation_plan": CLAUDE_SONNET,  # Structured planning
     "code_generation":   CLAUDE_SONNET,    # Code writing
     "chat":              GEMINI_FLASH,     # General conversation
+
+    # Visual Critic (ClaudeAY Auditor — layout/design screenshot review)
+    "visual_critic":     GEMINI_PRO,       # Spatial reasoning on screenshots
 }
+
+# Vision model override (e.g. gemini-2.5-flash for faster/cheaper critiques)
+VISION_MODEL_ENV = "GEMINI_VISION_MODEL"
 
 
 def _get_gemini_key():
@@ -65,11 +80,15 @@ def _get_anthropic_key():
     return key
 
 
-def _call_gemini(prompt: str, system_prompt: str = "", api_key: str = "", model_name: str = GEMINI_FLASH) -> str:
-    """Call Gemini models via REST API."""
+def _call_gemini(prompt: str, system_prompt: str = "", api_key: str = "",
+                 model_name: str = GEMINI_FLASH,
+                 image_b64: str = None, image_mime: str = "image/png") -> str:
+    """Call Gemini models via REST API. Optional inline image for vision tasks."""
     if not api_key:
         api_key = _get_gemini_key()
     if not api_key:
+        # Loud, never silent (CLAUDE_RULES 0.3)
+        logger.warning("[ModelRouter] GEMINI_API_KEY missing — Gemini call skipped")
         return ""
 
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent"
@@ -80,6 +99,8 @@ def _call_gemini(prompt: str, system_prompt: str = "", api_key: str = "", model_
         parts.append({"text": f"[SYSTEM]: {system_prompt}\n\n{prompt}"})
     else:
         parts.append({"text": prompt})
+    if image_b64:
+        parts.append({"inlineData": {"mimeType": image_mime, "data": image_b64}})
 
     data = {"contents": [{"role": "user", "parts": parts}]}
 
@@ -129,6 +150,28 @@ def _call_claude(prompt: str, system_prompt: str = "", api_key: str = "") -> str
 def get_model_for_task(task_type: str) -> str:
     """Return the model name that best fits the given task type."""
     return TASK_ROUTING.get(task_type, GEMINI_FLASH)
+
+
+def route_multimodal(task_type: str, prompt: str, image_b64: str,
+                     image_mime: str = "image/png", system_prompt: str = "") -> str:
+    """
+    Route a vision task (prompt + inline image) to a Gemini vision model.
+    Model: GEMINI_VISION_MODEL env override, else the task's TASK_ROUTING
+    entry (visual_critic → gemini-2.5-pro for spatial reasoning).
+
+    Returns the RAW model text ('' on failure) — no emoji prefixes and no
+    truncation, because callers (auditor visual critic) parse a verdict
+    out of the response. API key absence is logged loudly, never silent
+    (CLAUDE_RULES 0.3).
+    """
+    if not _get_gemini_key():
+        logger.warning("[ModelRouter] GEMINI_API_KEY missing — multimodal "
+                       "route '%s' unavailable", task_type)
+        return ""
+    model = os.getenv(VISION_MODEL_ENV, "").strip() or get_model_for_task(task_type)
+    logger.info(f"[ModelRouter] Multimodal task '{task_type}' → {model}")
+    return _call_gemini(prompt, system_prompt, model_name=model,
+                        image_b64=image_b64, image_mime=image_mime)
 
 
 def route(task_type: str, prompt: str, system_prompt: str = "", high_availability: bool = False) -> str:

@@ -18,6 +18,7 @@ Orchestrates the Architect ↔ Executor loop with the full SOTA stack:
 """
 
 import json
+import os
 import sys
 import asyncio
 import threading
@@ -52,6 +53,35 @@ dispatcher = AntigravityDispatcher(rules_path=RULES_PATH)
 loop_status_buffer: list = []
 _approval_event = threading.Event()
 _approval_response: list = [""]
+
+# ── Interactive Planner gate ───────────────────────────────────────────────
+# always : draft + approve a plan before every run (architect default)
+# tier2  : only for runs classified Tier >= 2 (version control and above)
+# off    : no planning gate
+PLAN_APPROVAL_ENV = "CLAUDEAY_PLAN_APPROVAL"
+MAX_PLAN_REVISIONS = 3
+
+
+def _plan_gate_needed(user_intent: str, web_mode: bool) -> bool:
+    """
+    Decide whether the interactive planning gate applies to this run.
+    Headless runs (no terminal, not web-driven) skip the gate LOUDLY:
+    nothing would ever answer the approval prompt — blocking would
+    deadlock the thread (the web approval event is only serviced by
+    operator-facing surfaces).
+    """
+    mode = os.getenv(PLAN_APPROVAL_ENV, "always").strip().lower()
+    if mode == "off":
+        return False
+    if mode == "tier2" and classify_tier(user_intent).tier < 2:
+        return False
+    has_operator_channel = web_mode or (sys.stdin is not None and sys.stdin.isatty())
+    if not has_operator_channel:
+        # Plain ASCII: this branch runs in piped/headless contexts (cp1252-safe)
+        print("[PLANNER] WARNING: no operator channel (headless run) - plan "
+              "approval gate SKIPPED. Set CLAUDEAY_PLAN_APPROVAL=off to silence.")
+        return False
+    return True
 
 
 def _is_local_url(url: str) -> bool:
@@ -164,14 +194,78 @@ class AutonomousLoop:
         """
         Block until the operator responds. Web mode: event-driven wait on
         _approval_event (no busy-poll). Terminal mode: stdin input().
+
+        Course correction contract: any response that is not an approval
+        ("yes"/"approve"/...) or a stop word is treated by callers as a
+        STRUCTURAL MODIFICATION — it replaces or amends the loop's active
+        instruction instead of halting the run.
         """
         loop_status_buffer.append({"type": "approval_required", "msg": prompt_msg})
-        if self.web_mode:
+        # Deadlock guard: input() in a non-tty context blocks forever, so any
+        # run without a real terminal goes through the web approval event.
+        if self.web_mode or sys.stdin is None or not sys.stdin.isatty():
             _approval_event.wait()
             _approval_event.clear()
             return _approval_response[0].strip()
         print(f"\n[ARCHITECT] ⏸ {prompt_msg}")
         return input("Your decision: ").strip()
+
+    # ── Interactive Planner (upfront plan approval + revision loop) ───────
+
+    def _draft_plan(self, user_intent: str, feedback: str = "") -> str:
+        """Draft an implementation plan via the model router (Tier 0 call —
+        not an executor dispatch, so it is not charged to the run budget)."""
+        try:
+            maf_root = str(BRIDGE_ROOT.parent)
+            if maf_root not in sys.path:
+                sys.path.insert(0, maf_root)
+            from model_router import route
+            prompt = (
+                "Draft a concise implementation plan for this mandate in the "
+                f"Meta App Factory codebase:\n\n{user_intent}\n"
+                + (f"\nOperator feedback on the previous draft — incorporate it:"
+                   f"\n{feedback}\n" if feedback else "")
+                + "\nFormat: numbered steps, files to touch, risks, and a final "
+                  "VERIFICATION section. Under 30 lines. Plain text."
+            )
+            plan = route("implementation_plan", prompt)
+            return plan or "[planner unavailable — no model produced a draft]"
+        except Exception as e:
+            return f"[planner error: {str(e)[:160]}]"
+
+    def _planning_phase(self, user_intent: str) -> str | None:
+        """
+        Draft → print → await approval. Non-approval, non-stop input is plan
+        FEEDBACK: the plan is redrafted with it (course correction before any
+        execution). Returns the approved intent, or None when the operator
+        stops the run.
+        """
+        feedback = ""
+        for revision in range(MAX_PLAN_REVISIONS):
+            plan = self._draft_plan(user_intent, feedback)
+            try:
+                RUNS_DIR.mkdir(parents=True, exist_ok=True)
+                (RUNS_DIR / f"{self.trace_id}_plan.md").write_text(
+                    plan, encoding="utf-8")
+            except Exception:
+                pass
+            print(f"\n[PLANNER] ── Draft plan (revision {revision + 1}) "
+                  f"──────────\n{plan}\n")
+            log_loop_event("PLAN_DRAFTED", plan, self.trace_id)
+            directive = self._await_directive(
+                "Plan drafted — 'yes' to approve, 'stop' to abort, or type "
+                "feedback to revise")
+            low = directive.lower()
+            if low in ("yes", "y", "approve", "approved", "go", "proceed", ""):
+                log_loop_event("PLAN_APPROVED", f"revision {revision + 1}",
+                               self.trace_id)
+                return user_intent
+            if low in ("stop", "halt", "abort", "no"):
+                return None
+            feedback = directive
+            log_loop_event("PLAN_FEEDBACK", directive, self.trace_id)
+        print(f"[PLANNER] {MAX_PLAN_REVISIONS} revisions without approval — halting.")
+        return None
 
     # ── Main loop ─────────────────────────────────────────────────────────
 
@@ -189,6 +283,19 @@ class AutonomousLoop:
             reset_session()  # fresh executor session per run; iterations resume it
         except ImportError:
             pass
+
+        # ── Interactive Planner gate (CLAUDEAY_PLAN_APPROVAL) ─────────────
+        if _plan_gate_needed(user_intent, self.web_mode):
+            approved_intent = self._planning_phase(user_intent)
+            if approved_intent is None:
+                log_loop_event("PLAN_REJECTED", user_intent, self.trace_id)
+                self._checkpoint("halted", "operator rejected plan")
+                record_episode(self.trace_id, user_intent, "halted",
+                               "operator rejected plan at planning gate",
+                               tags=["halted", "plan_rejected"])
+                print("\n[ARCHITECT] Run aborted at planning gate.")
+                return
+            user_intent = approved_intent
 
         budget = RunBudget(self.trace_id, max_iterations=self.MAX_ITERATIONS)
         current_instruction = user_intent
