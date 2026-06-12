@@ -1,0 +1,22 @@
+{
+  "_doc": "Verification contracts (CLAUDE_RULES.md 13.3). Suite pass counts are immutable signals: never edit an existing entry to absorb a regression - new features add NEW entries. A changed count is a deliberate, operator-flagged contract change.",
+  "erp_maintenance": {
+    "cwd": "ERP/Maintenance_Work_Order",
+    "suites": {
+      "test_inventory_module.py": 50,
+      "test_add_item_endpoint.py": 19,
+      "test_supplier_ingestion.py": 27,
+      "test_supplier_lifecycle.py": 27
+    },
+    "health": [
+      {"name": "erp-production", "url": "http://68.183.30.128/", "expect": 200}
+    ]
+  },
+  "maf_bridge": {
+    "cwd": "claude-mcp-bridge",
+    "suites": {
+      "test_sota_upgrade.py": 55
+    },
+    "health": []
+  }
+}
