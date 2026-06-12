@@ -4,16 +4,17 @@ import api from '../services/api';
 
 const CREATE_NEW = '__CREATE_NEW_SUPPLIER__';
 
-const SkuCreationModal = ({ closeModal, onIngestionSuccess }) => {
+const SkuCreationModal = ({ closeModal, onIngestionSuccess, editSku = null }) => {
   const [formData, setFormData] = useState({
-    sku_id: '',
-    nomenclature: '',
-    unit_cost: '',
-    reorder_threshold: ''
+    sku_id: editSku ? editSku.sku_id : '',
+    nomenclature: editSku ? editSku.nomenclature : '',
+    unit_cost: editSku ? String(editSku.unit_cost) : '',
+    reorder_threshold: editSku ? String(editSku.reorder_threshold) : '',
+    min_order_qty: editSku ? String(editSku.min_order_qty || 1) : '1'
   });
 
   const [suppliers, setSuppliers] = useState([]);
-  const [supplierChoice, setSupplierChoice] = useState('');
+  const [supplierChoice, setSupplierChoice] = useState(editSku ? (editSku.supplier_id || '') : '');
   const [newSupplier, setNewSupplier] = useState({
     supplier_id: '',
     name: '',
@@ -56,11 +57,16 @@ const SkuCreationModal = ({ closeModal, onIngestionSuccess }) => {
       nomenclature: formData.nomenclature.trim(),
       unit_cost: parseFloat(formData.unit_cost),
       reorder_threshold: parseInt(formData.reorder_threshold, 10),
+      min_order_qty: parseInt(formData.min_order_qty, 10) || 1,
       supplier_id: null
     };
 
-    if (isNaN(payload.unit_cost) || isNaN(payload.reorder_threshold)) {
-      setError("Unit cost and Reorder threshold must be numeric.");
+    if (isNaN(payload.unit_cost) || isNaN(payload.reorder_threshold) || isNaN(payload.min_order_qty)) {
+      setError("Unit cost, Reorder threshold, and Min Order Qty must be numeric.");
+      return;
+    }
+    if (payload.min_order_qty < 1) {
+      setError("Min Order Qty must be at least 1.");
       return;
     }
 
@@ -92,18 +98,25 @@ const SkuCreationModal = ({ closeModal, onIngestionSuccess }) => {
         payload.supplier_id = supplierChoice;
       }
 
-      const response = await api.post('/inventory/skus', payload);
-      if (response.status === 201) {
-        onIngestionSuccess();
-        closeModal();
+      if (editSku) {
+        const response = await api.put(`/inventory/skus/${editSku.sku_id}`, payload);
+        if (response.status === 200 || response.data?.status === 'success') {
+          onIngestionSuccess();
+          closeModal();
+        }
       } else {
-        // Fallback for non-201 success if any, though mandate specifies 201
-        onIngestionSuccess();
-        closeModal();
+        const response = await api.post('/inventory/skus', payload);
+        if (response.status === 201) {
+          onIngestionSuccess();
+          closeModal();
+        } else {
+          onIngestionSuccess();
+          closeModal();
+        }
       }
     } catch (err) {
-      console.error("SKU Ingestion Error:", err);
-      setError(err.response?.data?.detail || "Failed to ingest SKU. System error.");
+      console.error("SKU Ingestion/Update Error:", err);
+      setError(err.response?.data?.detail || "Failed to save SKU. System error.");
       setIsSubmitting(false);
     }
   };
@@ -112,7 +125,7 @@ const SkuCreationModal = ({ closeModal, onIngestionSuccess }) => {
     <div style={styles.overlay}>
       <div style={styles.modal}>
         <div style={styles.header}>
-          <h3 style={styles.title}>SKU INGESTION MATRIX</h3>
+          <h3 style={styles.title}>{editSku ? 'UPDATE SKU CATALOG RECORD' : 'SKU INGESTION MATRIX'}</h3>
         </div>
 
         {error && <div style={styles.errorBanner}>{error}</div>}
@@ -125,7 +138,7 @@ const SkuCreationModal = ({ closeModal, onIngestionSuccess }) => {
               name="sku_id"
               value={formData.sku_id}
               onChange={handleInputChange}
-              disabled={isSubmitting}
+              disabled={isSubmitting || !!editSku}
               required
               style={styles.input}
             />
@@ -158,12 +171,28 @@ const SkuCreationModal = ({ closeModal, onIngestionSuccess }) => {
                 style={styles.input}
               />
             </div>
+          </div>
+          
+          <div style={styles.row}>
             <div style={{ ...styles.inputGroup, flex: 1 }}>
               <label style={styles.label}>Reorder Threshold</label>
               <input
                 type="number"
                 name="reorder_threshold"
                 value={formData.reorder_threshold}
+                onChange={handleInputChange}
+                disabled={isSubmitting}
+                required
+                style={styles.input}
+              />
+            </div>
+            <div style={{ ...styles.inputGroup, flex: 1 }}>
+              <label style={styles.label}>Min Order Qty (MOQ)</label>
+              <input
+                type="number"
+                name="min_order_qty"
+                min="1"
+                value={formData.min_order_qty}
                 onChange={handleInputChange}
                 disabled={isSubmitting}
                 required
@@ -182,7 +211,9 @@ const SkuCreationModal = ({ closeModal, onIngestionSuccess }) => {
               style={{ ...styles.input, cursor: 'pointer' }}
             >
               <option value="">Select Supplier (Optional)</option>
-              <option value={CREATE_NEW}>+ Create New Supplier...</option>
+              {/* Inline supplier creation is a POST-only flow; SKUUpdate
+                  ignores new_supplier, so hide it in edit mode */}
+              {!editSku && <option value={CREATE_NEW}>+ Create New Supplier...</option>}
               {suppliers.map(s => (
                 <option key={s.supplier_id} value={s.supplier_id}>
                   {s.name} ({s.supplier_id})
@@ -246,7 +277,7 @@ const SkuCreationModal = ({ closeModal, onIngestionSuccess }) => {
               disabled={isSubmitting}
               style={{ ...styles.submitBtn, opacity: isSubmitting ? 0.5 : 1 }}
             >
-              {isSubmitting ? 'INGESTING...' : (isInlineMode ? 'REGISTER + SUBMIT' : 'SUBMIT')}
+              {isSubmitting ? 'SAVING...' : (editSku ? 'SAVE CHANGES' : (isInlineMode ? 'REGISTER + SUBMIT' : 'SUBMIT'))}
             </button>
           </div>
         </form>

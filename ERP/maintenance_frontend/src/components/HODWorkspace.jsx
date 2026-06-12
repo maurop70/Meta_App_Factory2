@@ -36,19 +36,25 @@ const HODWorkspace = ({ highlightPoId = null, onHighlightConsumed = null }) => {
 
   // [SAFETY ALERTS] Deep-link from the HM dashboard alert panel: scroll the
   // target draft card into view and pulse it briefly.
+  // Race fix: defer the DOM query one tick (100ms) so the freshly-mounted
+  // card list is painted before getElementById runs; only consume the
+  // highlight after the scroll resolves or the element is genuinely absent.
   useEffect(() => {
     if (!highlightPoId || status.type !== 'success') return;
-    const el = document.getElementById(`po-card-${highlightPoId}`);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      setPulsingPoId(highlightPoId);
-      const timer = setTimeout(() => {
-        setPulsingPoId(null);
+    const timer = setTimeout(() => {
+      const el = document.getElementById(`po-card-${highlightPoId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setPulsingPoId(highlightPoId);
+        setTimeout(() => {
+          setPulsingPoId(null);
+          if (onHighlightConsumed) onHighlightConsumed();
+        }, 3500);
+      } else {
         if (onHighlightConsumed) onHighlightConsumed();
-      }, 3500);
-      return () => clearTimeout(timer);
-    }
-    if (onHighlightConsumed) onHighlightConsumed();
+      }
+    }, 100);
+    return () => clearTimeout(timer);
   }, [highlightPoId, status.type, drafts]);
 
   const flash = (type, message) => {
