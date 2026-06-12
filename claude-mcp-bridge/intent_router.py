@@ -82,7 +82,7 @@ async def classify_intent(prompt: str) -> str:
         )
 
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model=os.getenv("GEMINI_ROUTER_MODEL", "gemini-2.5-flash"),
             contents=classification_prompt,
         )
         result = response.text.strip().upper()

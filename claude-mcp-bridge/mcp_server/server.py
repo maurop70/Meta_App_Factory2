@@ -21,7 +21,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from shell_wire      import execute as _shell_execute, AUDIT_LOG as _SHELL_AUDIT_LOG, LIVE_LOG as _SHELL_LIVE_LOG
 from git_wire        import execute_async as _git_execute_async
-from ssh_wire        import execute_async as _ssh_execute_async
+from ssh_wire        import execute_async as _ssh_execute_async, APPROVED_HOSTS as _SSH_APPROVED_HOSTS
 from fs_wire         import execute_async as _fs_execute_async
 from playwright_wire import execute_async as _pw_execute_async
 
@@ -35,6 +35,13 @@ from mcp.types import Resource, Tool, TextContent
 # ── Config ────────────────────────────────────────────────
 WS_HOST = "localhost"
 WS_PORT = 9001
+
+# Telemetry ingestion allowlist: local dev origins + the two production
+# droplets. Everything else is dropped at the WebSocket boundary.
+MONITORED_ORIGINS = (
+    "localhost", "127.0.0.1", "::1",
+    "68.183.30.128", "104.248.233.220",
+)
 RULES_PATH = Path(__file__).parent.parent / "rules" / "CLAUDE_RULES.md"
 TELEMETRY_LOG = Path(__file__).parent.parent / "logs" / "telemetry.jsonl"
 MAX_EVENTS = 200
@@ -59,12 +66,16 @@ async def ws_handler(websocket):
                 event = json.loads(raw)
                 event["_received_at"] = datetime.utcnow().isoformat()
 
-                # ── Telemetry filter: exclude claude.ai traffic ──────────
-                _url = event.get("url") or event.get("data", {}).get("url", "")
-                if any(domain in str(_url) for domain in 
-                       ("claude.ai", "anthropic.com", "assets-proxy.anthropic.com")):
-                    log.debug(f"[TELEMETRY FILTER] Skipped external domain event: {str(event)[:80]}")
+                # ── Telemetry ALLOWLIST (single chokepoint) ──────────────
+                # Only events from monitored origins enter the pipeline.
+                # Telemetry text reaches autonomous executors downstream,
+                # so an allowlist (not a known-bad denylist) is the boundary.
+                _url = str(event.get("url") or event.get("data", {}).get("url", ""))
+                if _url and not any(origin in _url for origin in MONITORED_ORIGINS):
+                    log.debug(f"[TELEMETRY FILTER] non-monitored origin dropped: {_url[:80]}")
                     continue
+                # Events with no URL (pure JS errors relayed by the
+                # extension) pass — they cannot be origin-attributed.
                 # ─────────────────────────────────────────────────────────
 
                 # Drop ERR_NETWORK_IO_SUSPENDED — browser power-management, not a real error
@@ -72,18 +83,6 @@ async def ws_handler(websocket):
                 if "ERR_NETWORK_IO_SUSPENDED" in _msg:
                     log.debug(f"[TELEMETRY FILTER] Skipped ERR_NETWORK_IO_SUSPENDED (browser power management)")
                     continue
-
-                # Drop console_error and page_error from external tabs
-                if event.get("type") in ("console_error", "page_error"):
-                    _url = (
-                        event.get("url") or
-                        event.get("data", {}).get("url", "") or
-                        ""
-                    )
-                    if not _url or any(domain in str(_url) for domain in
-                                       ("claude.ai", "anthropic.com", "assets-proxy.anthropic.com")):
-                        log.debug(f"[FILTER] Skipped external tab error: {event.get('type')}")
-                        continue
 
                 telemetry_buffer.append(event)
                 TELEMETRY_LOG.parent.mkdir(parents=True, exist_ok=True)
@@ -159,9 +158,16 @@ async def list_tools():
         ),
         Tool(
             name="update_rules",
-            description="Appends a new rule section to CLAUDE_RULES.md",
+            description=(
+                "Proposes a new rule for CLAUDE_RULES.md. The proposal enters "
+                "rules/pending_rules.jsonl and requires OPERATOR approval "
+                "(python postmortem.py approve <n>) before it becomes a rule. "
+                "Direct appends are disabled — rule changes are Tier 3."
+            ),
             inputSchema={"type": "object", "properties": {
-                "section": {"type": "string"}
+                "section": {"type": "string"},
+                "root_cause": {"type": "string",
+                               "description": "What failure/lesson motivates this rule."}
             }, "required": ["section"]},
         ),
         # ── Shell Wire ─────────────────────────────────────────
@@ -407,8 +413,7 @@ async def list_tools():
             name="execute_remote_shell",
             description=(
                 "Execute a shell command on an approved remote production server via SSH. "
-                "Approved hosts: maf-production-nyc1 (104.248.233.220), "
-                "mwo-production-nyc1 (68.183.30.128). "
+                f"Approved hosts: {', '.join(f'{name} ({ip})' for ip, name in _SSH_APPROVED_HOSTS.items())}. "
                 "Any other host_ip is blocked. "
                 "Subject to a remote command blocklist (rm -rf /, reboot, shutdown, mkfs, etc.). "
                 "Network failures return exit_code 502 (Gateway Unreachable). "
@@ -461,11 +466,21 @@ async def call_tool(name: str, arguments: dict):
         content = RULES_PATH.read_text(encoding="utf-8") if RULES_PATH.exists() else "No rules file found."
         return [TextContent(type="text", text=content)]
     if name == "update_rules":
+        # Tier 3 governance: proposals queue for operator approval instead of
+        # mutating the rulebook that every future session obeys (anti-poisoning).
+        import postmortem as _postmortem
         section = arguments["section"]
-        RULES_PATH.parent.mkdir(parents=True, exist_ok=True)
-        with open(RULES_PATH, "a", encoding="utf-8") as f:
-            f.write(f"\n\n{section}\n")
-        return [TextContent(type="text", text=f"Rule appended to {RULES_PATH}")]
+        root_cause = arguments.get("root_cause", "proposed via update_rules MCP tool")
+        queued = _postmortem.propose_rule(
+            trace_id="mcp-update_rules", root_cause=root_cause,
+            proposed_rule=section, source="update_rules")
+        if queued:
+            return [TextContent(type="text", text=(
+                "Rule PROPOSED (not yet active). It awaits operator approval: "
+                "python claude-mcp-bridge/postmortem.py list / approve <n>"))]
+        return [TextContent(type="text", text=(
+            "Rule proposal SKIPPED — a near-duplicate proposal already exists "
+            "in the pending queue."))]
     # ── Shell Wire handlers ───────────────────────────────
     if name == "execute_shell":
         command = arguments.get("command", "").strip()

@@ -91,6 +91,14 @@ def _check_delete_blocklist(path: Path) -> str | None:
     if ".git" in [p.lower() for p in path.parts]:
         return ".git directory/contents deletion blocked"
 
+    # CLAUDE_RULES §14.3 enforcement: migration/deploy backups survive their
+    # session. (.db backups are already covered by the suffix rule above;
+    # this catches renamed/exported backup artifacts of any extension.)
+    if re.search(r"(?:^|[._\-])(?:pre_deploy|pre_inventory|pre_migration|backup)[._\-]", name):
+        return "backup file deletion blocked — backups are removed only on explicit operator confirmation (CLAUDE_RULES 14.3)"
+    if "archives" in [p.lower() for p in path.parts]:
+        return "archives/ contents deletion blocked (CLAUDE_RULES 14.3)"
+
     return None
 
 

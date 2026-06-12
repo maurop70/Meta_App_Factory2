@@ -186,14 +186,15 @@ def _probe_remote_health(host_ip: str, health_url: str) -> tuple[bool, str]:
     Returns (is_healthy, detail).  is_healthy == True only when HTTP 200.
     """
     try:
-        client = paramiko.SSHClient()
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        from ssh_wire import pinned_ssh_client
+        client, _save_host_key = pinned_ssh_client(host_ip)
         kw: dict = {"hostname": host_ip, "username": "root",
                     "timeout": 10, "look_for_keys": True, "allow_agent": True}
         sk = _find_ssh_key()
         if sk:
             kw["key_filename"] = sk
         client.connect(**kw)
+        _save_host_key()  # TOFU pinning — key changes are rejected thereafter
         cmd = f'curl -s -o /dev/null -w "%{{http_code}}" --max-time 5 {health_url}'
         _, stdout, _ = client.exec_command(cmd)
         stdout.channel.settimeout(15)
@@ -243,31 +244,25 @@ STEP 3 — VERIFY LOCALLY
   If tests fail after your fix, revise and re-run.
   Do NOT proceed to commit if tests fail.
 
-STEP 4 — COMMIT
-  Use git_operation(add) then git_operation(commit) with message:
+STEP 4 — COMMIT (specific files only — git add "." is blocked)
+  Use git_operation(add, paths=[<files you changed>]) then
+  git_operation(commit) with message:
     "fix(autonomy): <error_type> -- <one_line_root_cause> [auto]"
+  Then git_operation(push).
 
-STEP 5 — DEPLOY
-  Determine the correct deploy script based on which repository path
-  you mutated:
-    - Files under the Meta_App_Factory MAF codebase:
-        execute_shell "python deploy_maf.py"
-    - Files under children/MWO_ERP or ERP codebase:
-        execute_shell "python deploy_erp.py"
-  Execute the appropriate script. Wait for exit_code=0.
+STEP 5 — DO NOT DEPLOY (Tier 3-R cap, CLAUDE_RULES Section 15)
+  Autonomous self-healing is capped below production deployment.
+  The fix is committed and pushed; deployment requires the operator.
+  End your ledger with:
+  LEDGER_JSON: {{"status": "ESCALATE", "summary": "<root cause + fix>",
+   "files_changed": [...], "tests_run": [...],
+   "next_step": "operator: review commit and deploy",
+   "needs_human": "Tier 3: production deploy of committed autonomy fix"}}
 
-STEP 6 — VERIFY ON PROD
-  For MAF changes: execute_remote_shell on 104.248.233.220:
-    curl -s -o /dev/null -w "%{{http_code}}" http://127.0.0.1:8000/api/health
-  For MWO changes: execute_remote_shell on 68.183.30.128:
-    curl -s -o /dev/null -w "%{{http_code}}" http://127.0.0.1:8000/system/directive
-  Expected: 200. Report PROD_STATUS=FAIL with detail if not.
-
-STEP 7 — REPORT (required even on failure)
+STEP 6 — REPORT (required even on failure)
   ROOT_CAUSE: <one sentence>
   FILES_CHANGED: <list>
   COMMIT: <hash or "none">
-  PROD_STATUS: PASS | FAIL
   NOTES: <anything the operator must know>
 """
 
@@ -309,9 +304,13 @@ STEP 2 — FIX
   Case A (code crash):
     Use file_operation(read) to locate the defect in local source.
     Use file_operation(write) to apply the fix.
-    Use git_operation(commit):
+    Use git_operation(add, paths=[<files>]) + git_operation(commit):
       "fix(autonomy): {host_name} crash -- <root_cause> [auto]"
-    Use execute_shell: {deploy_hint}
+    Then git_operation(push). DO NOT run {deploy_hint} — deployment is
+    Tier 3 (CLAUDE_RULES Section 15): end with LEDGER_JSON status=ESCALATE,
+    needs_human="Tier 3: deploy committed crash fix to {host_name}".
+    Service restart alone (without new code) IS authorized if it restores
+    health while the fix awaits deployment.
 
   Case B (resource exhaustion):
     Use execute_remote_shell to clear logs/temp files as needed.
@@ -372,7 +371,9 @@ def _fire_trigger(condition_id: str, state: ConditionState,
     state.active_session.set()
     try:
         sys.path.insert(0, str(BRIDGE_DIR))
-        from ay_client import send_mandate
+        # Cascade executor: Claude Code primary, Antigravity fallback
+        # on quota errors — handled inside claude_code_client.
+        from claude_code_client import send_mandate
         result = send_mandate(mandate)
         log.info("[AUTONOMY] %s completed: %.200s", condition_id, result)
         _write_audit({

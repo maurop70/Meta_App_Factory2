@@ -189,10 +189,19 @@ def _build_argv(
         return ["diff", "--staged"] if args.get("staged") else ["diff"], None
 
     if operation == "add":
-        paths = args.get("paths", ["."])
+        # CLAUDE_RULES §14.4 enforcement: selective staging only. The repo is
+        # shared with other agents — bulk staging is physically blocked.
+        paths = args.get("paths")
         if isinstance(paths, str):
-            paths = paths.split() or ["."]
-        return ["add"] + (paths or ["."]), None
+            paths = paths.split()
+        if not paths:
+            return None, "git add requires explicit 'paths' — bulk staging is blocked (CLAUDE_RULES 14.4)"
+        forbidden = {".", "-A", "--all", "-a", "*"}
+        bad = [p for p in paths if p.strip() in forbidden]
+        if bad:
+            return None, (f"git add {' '.join(bad)} is blocked — enumerate "
+                          f"explicit file paths (CLAUDE_RULES 14.4)")
+        return ["add"] + paths, None
 
     if operation == "commit":
         message = (args.get("message") or "").strip()
