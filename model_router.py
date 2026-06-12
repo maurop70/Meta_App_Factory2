@@ -24,7 +24,9 @@ logger = logging.getLogger("ModelRouter")
 # ── Model Definitions ────────────────────────────────────────────────
 GEMINI_FLASH = "gemini-2.5-flash"
 GEMINI_PRO = "gemini-2.5-pro"
-CLAUDE_SONNET = "claude-3-7-sonnet-20250219"
+# claude-3-7-sonnet-20250219 was retired (404 as of 2026-06-12); current
+# Sonnet verified live on this key. Override without code change via env.
+CLAUDE_SONNET = os.getenv("CLAUDE_ROUTER_MODEL", "claude-sonnet-4-6")
 
 # ── Task → Model Mapping ────────────────────────────────────────────
 # Gemini: fast inference, creative/generative, multimodal (images)
