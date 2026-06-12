@@ -103,7 +103,7 @@ def deploy():
                      "frontend_prev, restart services"),
     })
 
-    # 5. Remote Execution — snapshot → mutate → probe → auto-rollback
+    # 5. Remote Execution — snapshot -> mutate -> probe -> auto-rollback
     remote_script = f"""
     set -e
 
@@ -154,7 +154,7 @@ def deploy():
     fi
 
     # Schema synchronization: idempotent inventory migration (suppliers, POs,
-    # manual logs, CFO role). Failure triggers the ERR trap → auto-rollback.
+    # manual logs, CFO role). Failure triggers the ERR trap -> auto-rollback.
     echo "Running inventory schema migration..."
     venv/bin/python3 migration_inventory.py
 
@@ -162,7 +162,7 @@ def deploy():
     systemctl restart erp-backend.service
     systemctl restart nginx.service
 
-    # Closed-loop probe: 5 attempts, 3s apart. Non-200 → auto-rollback.
+    # Closed-loop probe: 5 attempts, 3s apart. Non-200 -> auto-rollback.
     trap - ERR
     PROBE_OK=0
     for i in 1 2 3 4 5; do
