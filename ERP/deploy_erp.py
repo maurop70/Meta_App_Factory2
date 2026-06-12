@@ -82,6 +82,15 @@ def deploy():
     sed -i 's|Maintenance_Work_Order/venv|backend/venv|g' /etc/systemd/system/erp-backend.service || true
     systemctl daemon-reload
 
+    # Pre-migration safety net: timestamped backup of the live DB, kept in
+    # archives/ until the user confirms post-deploy health. Never auto-deleted.
+    mkdir -p {REMOTE_DIR}/backend/archives
+    TS=$(date +%Y%m%d_%H%M%S)
+    if [ -f {REMOTE_DIR}/backend/data/maintenance_erp.db ]; then
+        cp {REMOTE_DIR}/backend/data/maintenance_erp.db {REMOTE_DIR}/backend/archives/maintenance_erp.pre_deploy_$TS.db
+        echo "Pre-migration backup: {REMOTE_DIR}/backend/archives/maintenance_erp.pre_deploy_$TS.db"
+    fi
+
     # Schema synchronization: idempotent inventory migration (suppliers, POs,
     # manual logs, CFO role). set -e aborts the deploy if it fails, preventing
     # new code from booting against an unmigrated database.
