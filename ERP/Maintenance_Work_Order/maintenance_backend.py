@@ -318,6 +318,8 @@ class SKUCreate(BaseModel):
     unit_cost: float
     reorder_threshold: int
     supplier_id: Optional[str] = None
+    # Minimum Order Quantity: auto-drafted reorders are rounded UP to this
+    min_order_qty: Optional[int] = Field(default=1, ge=1)
     # Atomic inline registration: supplier + SKU land in ONE transaction,
     # eliminating the orphan-supplier window of the old two-call chain.
     new_supplier: Optional[SupplierCreate] = None
@@ -1572,9 +1574,10 @@ def archive_mwo_pdf_worker(mwo_id: str, resolution_notes: str, labor_hours: floa
         # 1. Explicit Data Extraction (Strict Enumeration)
         cursor.execute(
             """
-            SELECT mwo_id, status, assigned_tech, equipment_id, description
-            FROM work_orders 
-            WHERE mwo_id = ?
+            SELECT w.mwo_id, w.status, w.assigned_tech, w.equipment_id, e.nomenclature as equipment_name, w.description
+            FROM work_orders w
+            LEFT JOIN erp_equipment e ON w.equipment_id = e.equipment_id
+            WHERE w.mwo_id = ?
             """, 
             (mwo_id,)
         )
@@ -1630,6 +1633,7 @@ def archive_mwo_pdf_worker(mwo_id: str, resolution_notes: str, labor_hours: floa
             ("STATUS", mwo_data["status"]),
             ("ASSIGNED TECH", mwo_data["assigned_tech"] or "N/A"),
             ("EQUIPMENT ID", mwo_data["equipment_id"] or "N/A"),
+            ("EQUIPMENT DESC", mwo_data["equipment_name"] or "N/A"),
             ("COMPLETED AT", mwo_data["completed_at"] or "N/A"),
             ("LABOR HOURS", str(mwo_data["labor_hours"] or "N/A")),
         ]
@@ -1933,6 +1937,9 @@ async def update_mwo_v2(mwo_id: str, payload: MWOUpdate, background_tasks: Backg
             final_row = cursor.fetchone()
             if final_row:
                 background_tasks.add_task(archive_completed_mwo, dict(final_row))
+                resolution_notes = final_row['manual_log'] or "No manual log provided."
+                labor_hours = final_row['labor_hours'] or 0.0
+                background_tasks.add_task(archive_mwo_pdf_worker, mwo_id, resolution_notes, labor_hours)
         
         return {"status": "success", "message": "MWO Updated successfully", "patch": update_data}
     except HTTPException:
@@ -3107,10 +3114,11 @@ def ingest_sku(payload: SKUCreate, jwt_payload: dict = Depends(verify_jwt_token)
             raise HTTPException(status_code=409, detail="SKU already exists.")
         cursor.execute(
             """
-            INSERT INTO erp_skus (sku_id, nomenclature, unit_cost, reorder_threshold, quantity_on_hand, supplier_id)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO erp_skus (sku_id, nomenclature, unit_cost, reorder_threshold, quantity_on_hand, supplier_id, min_order_qty)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
-            (payload.sku_id, payload.nomenclature, payload.unit_cost, payload.reorder_threshold, 0, supplier_id)
+            (payload.sku_id, payload.nomenclature, payload.unit_cost, payload.reorder_threshold, 0, supplier_id,
+             max(1, payload.min_order_qty or 1))
         )
         conn.commit()
         if supplier_created:
@@ -3817,7 +3825,7 @@ def worker_evaluate_sku_threshold(sku_id: str):
         c = conn.cursor()
         c.execute("""
             SELECT s.sku_id, s.nomenclature, s.quantity_on_hand, s.reorder_threshold,
-                   s.unit_cost, s.supplier_id, sup.default_lead_time_days
+                   s.unit_cost, s.supplier_id, s.min_order_qty, sup.default_lead_time_days
             FROM erp_skus s
             LEFT JOIN erp_suppliers sup ON s.supplier_id = sup.supplier_id
             WHERE s.sku_id = ?
@@ -3832,8 +3840,11 @@ def worker_evaluate_sku_threshold(sku_id: str):
             logger.warning(f"[PO WORKER] {sku_id} breached threshold but has no designated supplier. Skipping auto-draft.")
             return
 
-        # Reorder heuristic: restore to 2x threshold coverage
+        # Reorder heuristic: restore to 2x threshold coverage,
+        # rounded UP to the SKU's Minimum Order Quantity (MOQ)
         reorder_qty = max((sku["reorder_threshold"] * 2) - sku["quantity_on_hand"], 1)
+        moq = sku["min_order_qty"] if sku["min_order_qty"] else 1
+        reorder_qty = max(reorder_qty, moq)
 
         c.execute("BEGIN IMMEDIATE TRANSACTION")
         c.execute("SELECT po_id FROM erp_purchase_orders WHERE supplier_id = ? AND status = 'DRAFT'", (sku["supplier_id"],))
@@ -3923,6 +3934,33 @@ def ingest_manual_log(payload: ManualLogPayload, background_tasks: BackgroundTas
     finally:
         conn.close()
 
+@api_router.get("/inventory/alerts")
+def get_inventory_alerts(jwt_payload: dict = Depends(verify_jwt_token)):
+    """
+    Safety-stock alert feed for the HM dashboard: every SKU at or below its
+    reorder threshold, with the open DRAFT PO (if any) that already covers it
+    so the UI can deep-link straight to the draft card.
+    """
+    if jwt_payload.get("role") not in HOD_ROLES:
+        raise HTTPException(status_code=403, detail="RBAC Violation: HOD clearance required.")
+    conn = get_db_connection()
+    try:
+        rows = conn.execute("""
+            SELECT s.sku_id, s.nomenclature, s.quantity_on_hand, s.reorder_threshold,
+                   s.min_order_qty, s.supplier_id,
+                   (SELECT i.po_id
+                    FROM erp_purchase_order_items i
+                    JOIN erp_purchase_orders po ON po.po_id = i.po_id AND po.status = 'DRAFT'
+                    WHERE i.sku_id = s.sku_id
+                    LIMIT 1) AS draft_po_id
+            FROM erp_skus s
+            WHERE s.quantity_on_hand <= s.reorder_threshold
+            ORDER BY (s.quantity_on_hand * 1.0) / NULLIF(s.reorder_threshold, 0) ASC, s.sku_id
+        """).fetchall()
+        return {"status": "success", "data": [dict(r) for r in rows]}
+    finally:
+        conn.close()
+
 @api_router.get("/inventory/skus/search")
 def search_skus(q: str = Query("", max_length=100), limit: int = Query(20, ge=1, le=100), jwt_payload: dict = Depends(verify_jwt_token)):
     """SKU autocomplete feed for the manual log widget (maintenance parts + admin supplies)."""
@@ -3979,7 +4017,7 @@ def _hydrate_purchase_orders(conn, statuses: list):
         record = dict(po)
         items = conn.execute("""
             SELECT i.sku_id, s.nomenclature, i.quantity, i.unit_cost,
-                   s.quantity_on_hand, s.reorder_threshold
+                   s.quantity_on_hand, s.reorder_threshold, s.min_order_qty
             FROM erp_purchase_order_items i
             LEFT JOIN erp_skus s ON i.sku_id = s.sku_id
             WHERE i.po_id = ? ORDER BY i.sku_id

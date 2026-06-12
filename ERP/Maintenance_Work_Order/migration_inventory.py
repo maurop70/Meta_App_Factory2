@@ -102,6 +102,9 @@ def migrate_erp_database():
     if not _column_exists(cursor, "erp_skus", "category_id"):
         cursor.execute("ALTER TABLE erp_skus ADD COLUMN category_id TEXT REFERENCES erp_categories(id)")
         print("[DDL] erp_skus.category_id added")
+    if not _column_exists(cursor, "erp_skus", "min_order_qty"):
+        cursor.execute("ALTER TABLE erp_skus ADD COLUMN min_order_qty INTEGER DEFAULT 1")
+        print("[DDL] erp_skus.min_order_qty added")
 
     # --- 6. Rebuild erp_employees with CFO admitted to the role CHECK ---
     cursor.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='erp_employees'")
@@ -148,6 +151,11 @@ def migrate_erp_database():
         ('SKU-ADM-003', 'Printer Toner Cartridge (Black)', 89.00, 5, 8, 'SUP-ADMIN-01', 'CAT-ADMIN'),
         ('SKU-ADM-004', 'Sticky Notes (Pack of 12 Pads)',  7.80, 8, 15, 'SUP-ADMIN-01', 'CAT-ADMIN')
     ''')
+
+    # Minimum Order Quantities for bulk-packaged admin supplies (idempotent).
+    # Copy paper ships by the 5-ream carton; toner by the 2-cartridge pack.
+    cursor.execute("UPDATE erp_skus SET min_order_qty = 5 WHERE sku_id = 'SKU-ADM-001' AND (min_order_qty IS NULL OR min_order_qty = 1)")
+    cursor.execute("UPDATE erp_skus SET min_order_qty = 2 WHERE sku_id = 'SKU-ADM-003' AND (min_order_qty IS NULL OR min_order_qty = 1)")
 
     # CFO operator identity (local ERP ledger)
     import bcrypt

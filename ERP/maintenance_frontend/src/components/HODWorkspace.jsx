@@ -8,13 +8,14 @@ import SkuLedger from './SkuLedger';
  * Draft PO grid grouped by supplier with inline quantity adjustment,
  * line-item exclusion, ETA override, and High Priority pulse toggle.
  */
-const HODWorkspace = () => {
+const HODWorkspace = ({ highlightPoId = null, onHighlightConsumed = null }) => {
   const [drafts, setDrafts] = useState([]);
   const [inbound, setInbound] = useState([]);
   const [status, setStatus] = useState({ type: 'loading', message: 'Synchronizing procurement state...' });
   const [banner, setBanner] = useState(null);
   const [dirtyQty, setDirtyQty] = useState({}); // { `${po_id}|${sku_id}`: qty }
   const [dirtyMeta, setDirtyMeta] = useState({}); // { po_id: { notes, eta_date } }
+  const [pulsingPoId, setPulsingPoId] = useState(null); // alert deep-link highlight
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -32,6 +33,23 @@ const HODWorkspace = () => {
   }, []);
 
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
+
+  // [SAFETY ALERTS] Deep-link from the HM dashboard alert panel: scroll the
+  // target draft card into view and pulse it briefly.
+  useEffect(() => {
+    if (!highlightPoId || status.type !== 'success') return;
+    const el = document.getElementById(`po-card-${highlightPoId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setPulsingPoId(highlightPoId);
+      const timer = setTimeout(() => {
+        setPulsingPoId(null);
+        if (onHighlightConsumed) onHighlightConsumed();
+      }, 3500);
+      return () => clearTimeout(timer);
+    }
+    if (onHighlightConsumed) onHighlightConsumed();
+  }, [highlightPoId, status.type, drafts]);
 
   const flash = (type, message) => {
     setBanner({ type, message });
@@ -133,6 +151,21 @@ const HODWorkspace = () => {
           border-radius: 12px; padding: 1.2rem; backdrop-filter: blur(8px); margin-bottom: 1.2rem;
         }
         .hod-po-card.high-priority { animation: hod-priority-pulse 1.8s ease-in-out infinite; }
+        @keyframes hod-alert-pulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.45); border-color: rgba(239, 68, 68, 0.8); }
+          50%      { box-shadow: 0 0 22px 4px rgba(239, 68, 68, 0.35); border-color: rgba(239, 68, 68, 0.5); }
+        }
+        .hod-po-card.alert-highlight { animation: hod-alert-pulse 1.1s ease-in-out 3; }
+        .hod-moq-badge {
+          display: inline-flex; align-items: center; gap: 0.35rem; margin-left: 0.45rem;
+          padding: 1px 7px; border-radius: 10px; font-size: 0.65rem; font-weight: 700;
+          background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35);
+          white-space: nowrap;
+        }
+        .hod-moq-roundup {
+          background: transparent; border: none; color: #38bdf8; cursor: pointer;
+          font-size: 0.65rem; font-weight: 700; padding: 0; text-decoration: underline;
+        }
         .hod-qty-input {
           width: 70px; padding: 0.35rem 0.5rem; border-radius: 6px; text-align: center;
           border: 1px solid rgba(99, 102, 241, 0.3); background: rgba(10, 14, 23, 0.6);
@@ -177,7 +210,7 @@ const HODWorkspace = () => {
       )}
 
       {drafts.map(po => (
-        <div key={po.po_id} className={`hod-po-card ${po.priority === 1 ? 'high-priority' : ''}`}>
+        <div key={po.po_id} id={`po-card-${po.po_id}`} className={`hod-po-card ${po.priority === 1 ? 'high-priority' : ''} ${pulsingPoId === po.po_id ? 'alert-highlight' : ''}`}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.8rem', marginBottom: '0.9rem' }}>
             <div>
               <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#818cf8' }}>{po.po_id} {statusChip(po.status)}</div>
@@ -202,23 +235,41 @@ const HODWorkspace = () => {
           <table className="hod-item-table">
             <thead>
               <tr>
-                <th>SKU</th><th>Description</th><th>On Hand / Threshold</th><th>Qty</th><th>Unit Cost</th><th></th>
+                <th>SKU</th><th>Description</th><th>On Hand / Threshold</th><th>MOQ</th><th>Qty</th><th>Unit Cost</th><th></th>
               </tr>
             </thead>
             <tbody>
-              {po.items.map(item => (
+              {po.items.map(item => {
+                const moq = item.min_order_qty || 1;
+                const stagedQty = dirtyQty[`${po.po_id}|${item.sku_id}`] !== undefined
+                  ? dirtyQty[`${po.po_id}|${item.sku_id}`] : item.quantity;
+                const belowMoq = Number(stagedQty) > 0 && Number(stagedQty) < moq;
+                return (
                 <tr key={item.sku_id}>
                   <td style={{ color: '#818cf8', fontWeight: 600 }}>{item.sku_id}</td>
                   <td>{item.nomenclature}</td>
                   <td style={{ color: item.quantity_on_hand <= item.reorder_threshold ? '#ef4444' : '#94a3b8' }}>
                     {item.quantity_on_hand} / {item.reorder_threshold}
                   </td>
-                  <td>
+                  <td style={{ color: moq > 1 ? '#fbbf24' : '#64748b', fontWeight: moq > 1 ? 600 : 400 }}>
+                    {moq}
+                  </td>
+                  <td style={{ whiteSpace: 'nowrap' }}>
                     <input
                       type="number" min="1" className="hod-qty-input"
-                      value={dirtyQty[`${po.po_id}|${item.sku_id}`] !== undefined ? dirtyQty[`${po.po_id}|${item.sku_id}`] : item.quantity}
+                      value={stagedQty}
                       onChange={e => stageQty(po.po_id, item.sku_id, e.target.value)}
+                      style={belowMoq ? { borderColor: 'rgba(245, 158, 11, 0.7)' } : {}}
                     />
+                    {/* Q1 policy: non-blocking warning + one-click round-up */}
+                    {belowMoq && (
+                      <span className="hod-moq-badge">
+                        Below MOQ {moq}
+                        <button className="hod-moq-roundup" onClick={() => stageQty(po.po_id, item.sku_id, moq)}>
+                          Round up
+                        </button>
+                      </span>
+                    )}
                   </td>
                   <td style={{ color: '#94a3b8' }}>${item.unit_cost.toFixed(2)}</td>
                   <td>
@@ -231,7 +282,8 @@ const HODWorkspace = () => {
                     </button>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
 
