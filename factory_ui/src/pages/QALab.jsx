@@ -88,35 +88,76 @@ export default function QALab() {
     }
   }, [])
 
+  // Normalize a disk test-result row (asdict(TestResult): screenshot_path,
+  // possibly repeated across fix cycles) to the table's row shape.
+  const normalizeRow = (r) => ({
+    name: r.name,
+    status: r.status,
+    duration_ms: r.duration_ms ?? null,
+    error: r.error || '',
+    screenshot: r.screenshot
+      || (r.screenshot_path ? String(r.screenshot_path).split(/[\\/]/).pop() : null),
+  })
+
+  // Sync view from the run's disk state — dedupe rows by name (last wins,
+  // so the post-fix-cycle result replaces the original failure).
+  const syncFromDiskState = (state) => {
+    setPassed(state.passed || 0)
+    setFailed(state.failed || 0)
+    const byName = new Map()
+    for (const r of (state.test_results || [])) {
+      if (r && r.name) byName.set(r.name, normalizeRow(r))
+    }
+    setTestResults([...byName.values()])
+  }
+
   const handleStreamEvent = (event) => {
     if (!event || !event.type) return
 
+    const data = event.data || {}
+
     switch (event.type) {
-      case 'test_result':
+      case 'test_start': {
+        setCurrentTest(data.name || null)
         setTestResults(prev => {
           const updated = [...prev]
-          const idx = updated.findIndex(r => r.name === event.test_name)
+          const idx = updated.findIndex(r => r.name === data.name)
           const result = {
-            name: event.test_name,
-            status: event.status,
-            duration_ms: event.duration_ms,
-            error: event.error,
-            screenshot: event.screenshot || null,
+            name: data.name,
+            status: 'running',
+            duration_ms: null,
+            error: '',
+            screenshot: null,
           }
           if (idx >= 0) updated[idx] = result
           else updated.push(result)
           return updated
         })
-        if (event.status === 'pass') setPassed(p => p + 1)
-        if (event.status === 'fail') setFailed(f => f + 1)
         break
+      }
+
+      case 'test_pass':
+      case 'test_fail': {
+        const result = normalizeRow(data)
+        setTestResults(prev => {
+          const updated = [...prev]
+          const idx = updated.findIndex(r => r.name === data.name)
+          if (idx >= 0) updated[idx] = result
+          else updated.push(result)
+          return updated
+        })
+        if (data.status === 'pass') setPassed(p => p + 1)
+        if (data.status === 'fail') setFailed(f => f + 1)
+        break
+      }
 
       case 'run_start':
         setRunStatus('running')
         break
 
       case 'fix_cycle':
-        setCycle(event.cycle || 1)
+      case 'fix_cycle_start':
+        setCycle(data.cycle || event.cycle || 1)
         break
 
       case 'fix_applied':
@@ -124,34 +165,31 @@ export default function QALab() {
         if (runIdRef.current) {
           fetch(`/api/qa-lab/status/${runIdRef.current}`)
             .then(r => r.json())
-            .then(data => {
-              setPassed(data.passed || 0)
-              setFailed(data.failed || 0)
-              setTestResults(data.test_results || [])
-            })
+            .then(syncFromDiskState)
             .catch(() => {})
         }
         break
 
       case 'run_complete':
+      case 'run_end': {
         setRunStatus(event.status || 'complete')
-        setPassed(event.passed || 0)
-        setFailed(event.failed || 0)
+        // Resilient completion: re-fetch disk state so final counts and
+        // results survive any SSE events lost to reconnects.
+        const finalRunId = runIdRef.current || runId
+        if (finalRunId) {
+          fetch(`/api/qa-lab/status/${finalRunId}`)
+            .then(r => r.json())
+            .then(syncFromDiskState)
+            .catch(() => {})
+        }
+        setCurrentTest(null)
         runIdRef.current = null
         if (esRef.current) {
           esRef.current.close()
           esRef.current = null
         }
         break
-
-      case 'run_end':
-        setRunStatus(event.status || 'complete')
-        runIdRef.current = null
-        if (esRef.current) {
-          esRef.current.close()
-          esRef.current = null
-        }
-        break
+      }
 
       case 'error':
         setRunStatus('failed')
@@ -163,7 +201,14 @@ export default function QALab() {
         }
         break
 
+      case 'escalate':
+        // Backend emits type 'escalate' with {question, options} in data
+        setEscalation(data.question ? data : { question: event.message })
+        setRunStatus('escalate')
+        break
+
       case 'escalation':
+        // Legacy shape — kept for compatibility
         setEscalation(event.escalation || { question: event.message })
         setRunStatus('escalate')
         break
