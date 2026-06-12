@@ -1,0 +1,16 @@
+{
+  "nodes": [
+    {
+      "action": "AST_SPLICE",
+      "file_path": "api.py",
+      "search_content": "class WarRoomDispatchRequest(BaseModel):\n    commander_intent: str\n    project_id: str = \"Aether\"\n    strategy_mode: str = \"operator_directive\"\n\n@app.post(\"/api/warroom/dispatch\")\nasync def warroom_dispatch(req: WarRoomDispatchRequest, request: Request):",
+      "replace_content": "class SimpleWarRoomDispatchRequest(BaseModel):\n    commander_intent: str\n    project_id: str = \"Aether\"\n    strategy_mode: str = \"operator_directive\"\n\n@app.post(\"/api/warroom/dispatch\")\nasync def warroom_dispatch(req: SimpleWarRoomDispatchRequest, request: Request):"
+    },
+    {
+      "action": "AST_SPLICE",
+      "file_path": "api.py",
+      "search_content": "class RefineRequest(BaseModel):\n    app_name: str\n\n@app.post(\"/api/system/refine\")\nasync def system_refine(req: RefineRequest):",
+      "replace_content": "class SystemRefineRequest(BaseModel):\n    app_name: str\n\n@app.post(\"/api/system/refine\")\nasync def system_refine(req: SystemRefineRequest):"
+    }
+  ]
+}

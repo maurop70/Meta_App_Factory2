@@ -1,0 +1,2514 @@
+{
+  "run_id": "ac48393b-d6d1-4d67-aa2f-0f1219072077",
+  "app_name": "MWO ERP",
+  "status": "complete",
+  "cycle": 1,
+  "max_cycles": 1,
+  "total_tests": 72,
+  "passed": 72,
+  "failed": 0,
+  "current_test": "API POST /equipment",
+  "test_results": [
+    {
+      "id": "TC-001",
+      "name": "HM \u2014 valid login",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132556_120004_TC-001.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 8979,
+      "cycle": 0
+    },
+    {
+      "id": "TC-002",
+      "name": "HM \u2014 invalid PIN rejected",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132557_197054_TC-002.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 1078,
+      "cycle": 0
+    },
+    {
+      "id": "TC-003",
+      "name": "TECH \u2014 valid login",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132603_895112_TC-003.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 6687,
+      "cycle": 0
+    },
+    {
+      "id": "TC-004",
+      "name": "TECH \u2014 invalid PIN rejected",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132604_978308_TC-004.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 1074,
+      "cycle": 0
+    },
+    {
+      "id": "TC-005",
+      "name": "DM \u2014 valid login",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132611_696500_TC-005.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 6707,
+      "cycle": 0
+    },
+    {
+      "id": "TC-006",
+      "name": "DM \u2014 invalid PIN rejected",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132612_776371_TC-006.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 1080,
+      "cycle": 0
+    },
+    {
+      "id": "TC-007",
+      "name": "ADMIN \u2014 valid login",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132619_474906_TC-007.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 6687,
+      "cycle": 0
+    },
+    {
+      "id": "TC-008",
+      "name": "ADMIN \u2014 invalid PIN rejected",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132620_560439_TC-008.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 1076,
+      "cycle": 0
+    },
+    {
+      "id": "TC-072",
+      "name": "End-to-end create and view record",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132622_720841_TC-072.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 2147,
+      "cycle": 0
+    },
+    {
+      "id": "TC-009",
+      "name": "Navigate to App.jsx",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132622_795780_TC-009.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 71,
+      "cycle": 0
+    },
+    {
+      "id": "TC-010",
+      "name": "Navigate to main.jsx",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132622_874339_TC-010.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 47,
+      "cycle": 0
+    },
+    {
+      "id": "TC-011",
+      "name": "Navigate to AdminDataIngestion.jsx",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132622_930016_TC-011.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 56,
+      "cycle": 0
+    },
+    {
+      "id": "TC-012",
+      "name": "Navigate to AdminSingleIngestionModal.jsx",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132623_003208_TC-012.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 61,
+      "cycle": 0
+    },
+    {
+      "id": "TC-013",
+      "name": "Navigate to ArchiveDashboard.jsx",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132623_074844_TC-013.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 48,
+      "cycle": 0
+    },
+    {
+      "id": "TC-014",
+      "name": "Navigate to CreateMWOForm.jsx",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132623_132528_TC-014.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 48,
+      "cycle": 0
+    },
+    {
+      "id": "TC-015",
+      "name": "Navigate to DispatchQueueTable.jsx",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132623_189989_TC-015.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 59,
+      "cycle": 0
+    },
+    {
+      "id": "TC-016",
+      "name": "Navigate to EnterpriseDataMatrix.jsx",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132623_257920_TC-016.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 45,
+      "cycle": 0
+    },
+    {
+      "id": "TC-017",
+      "name": "Navigate to EquipmentActuationModal.jsx",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132623_312679_TC-017.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 52,
+      "cycle": 0
+    },
+    {
+      "id": "TC-018",
+      "name": "Navigate to EquipmentDetailModal.jsx",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132623_375478_TC-018.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 48,
+      "cycle": 0
+    },
+    {
+      "id": "TC-019",
+      "name": "Navigate to EquipmentIngestionModal.jsx",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132623_433464_TC-019.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 48,
+      "cycle": 0
+    },
+    {
+      "id": "TC-020",
+      "name": "Navigate to EquipmentMatrix.jsx",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132623_493170_TC-020.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 56,
+      "cycle": 0
+    },
+    {
+      "id": "TC-021",
+      "name": "Navigate to HMAssignmentModal.jsx",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132623_558880_TC-021.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 46,
+      "cycle": 0
+    },
+    {
+      "id": "TC-022",
+      "name": "Navigate to HMDashboard.jsx",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132623_615833_TC-022.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 48,
+      "cycle": 0
+    },
+    {
+      "id": "TC-023",
+      "name": "Navigate to HMReviewModal.jsx",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132623_674510_TC-023.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 56,
+      "cycle": 0
+    },
+    {
+      "id": "TC-024",
+      "name": "Navigate to ManualDispatchPortal.jsx",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132623_742273_TC-024.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 47,
+      "cycle": 0
+    },
+    {
+      "id": "TC-025",
+      "name": "Navigate to MwoClosureModal.jsx",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132623_805826_TC-025.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 60,
+      "cycle": 0
+    },
+    {
+      "id": "TC-026",
+      "name": "Navigate to PartIngestionModal.jsx",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132623_876106_TC-026.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 55,
+      "cycle": 0
+    },
+    {
+      "id": "TC-027",
+      "name": "Navigate to PartsMatrix.jsx",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132623_943333_TC-027.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 47,
+      "cycle": 0
+    },
+    {
+      "id": "TC-028",
+      "name": "Navigate to ProcurementActuationModal.jsx",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132624_011076_TC-028.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 54,
+      "cycle": 0
+    },
+    {
+      "id": "TC-029",
+      "name": "Navigate to ProcurementMatrix.jsx",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132624_077595_TC-029.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 47,
+      "cycle": 0
+    },
+    {
+      "id": "TC-030",
+      "name": "Navigate to SkuCreationModal.jsx",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132624_136898_TC-030.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 61,
+      "cycle": 0
+    },
+    {
+      "id": "TC-031",
+      "name": "Navigate to SkuLedger.jsx",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132624_210215_TC-031.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 56,
+      "cycle": 0
+    },
+    {
+      "id": "TC-032",
+      "name": "Navigate to TaxonomyIngestionModal.jsx",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132624_278237_TC-032.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 52,
+      "cycle": 0
+    },
+    {
+      "id": "TC-033",
+      "name": "Navigate to TechConsumePartModal.jsx",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132624_346667_TC-033.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 51,
+      "cycle": 0
+    },
+    {
+      "id": "TC-034",
+      "name": "Navigate to TechDashboard.jsx",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132624_410147_TC-034.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 45,
+      "cycle": 0
+    },
+    {
+      "id": "TC-035",
+      "name": "Navigate to TechMWODetailModal.jsx",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132624_468820_TC-035.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 62,
+      "cycle": 0
+    },
+    {
+      "id": "TC-036",
+      "name": "Navigate to UserDetailModal.jsx",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132624_543512_TC-036.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 53,
+      "cycle": 0
+    },
+    {
+      "id": "TC-037",
+      "name": "Navigate to AuthContext.jsx",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132624_613659_TC-037.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 50,
+      "cycle": 0
+    },
+    {
+      "id": "TC-038",
+      "name": "Navigate to AdminConsole.jsx",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132624_677351_TC-038.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 54,
+      "cycle": 0
+    },
+    {
+      "id": "TC-039",
+      "name": "Navigate to DMLogin.jsx",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132624_745136_TC-039.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 53,
+      "cycle": 0
+    },
+    {
+      "id": "TC-040",
+      "name": "Navigate to Login.jsx",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132624_812572_TC-040.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 51,
+      "cycle": 0
+    },
+    {
+      "id": "TC-041",
+      "name": "Navigate to TechDashboard.jsx",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132624_878327_TC-041.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 52,
+      "cycle": 0
+    },
+    {
+      "id": "TC-042",
+      "name": "API POST /admin/ingest/single-user",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132627_123275_TC-042.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 2234,
+      "cycle": 0
+    },
+    {
+      "id": "TC-043",
+      "name": "API POST /admin/ingest/equipment",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132629_377037_TC-043.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 2256,
+      "cycle": 0
+    },
+    {
+      "id": "TC-044",
+      "name": "API POST /admin/ingest/equipment/bulk",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132631_639832_TC-044.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 2236,
+      "cycle": 0
+    },
+    {
+      "id": "TC-045",
+      "name": "API POST /admin/ingest/department",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132633_883941_TC-045.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 2234,
+      "cycle": 0
+    },
+    {
+      "id": "TC-046",
+      "name": "API POST /admin/ingest/location",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132636_134403_TC-046.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 2242,
+      "cycle": 0
+    },
+    {
+      "id": "TC-047",
+      "name": "API PUT /admin/equipment/{equipment_id}/actuate",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132638_387785_TC-047.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 2227,
+      "cycle": 0
+    },
+    {
+      "id": "TC-048",
+      "name": "API POST /admin/ingest/part",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132640_643454_TC-048.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 2250,
+      "cycle": 0
+    },
+    {
+      "id": "TC-049",
+      "name": "API PUT /admin/procurement/{procurement_id}/actuate",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132642_893575_TC-049.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 2231,
+      "cycle": 0
+    },
+    {
+      "id": "TC-050",
+      "name": "API POST /mwo/{mwo_id}/complete",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132645_145789_TC-050.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 2237,
+      "cycle": 0
+    },
+    {
+      "id": "TC-051",
+      "name": "API POST /mwo/broadcast",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132647_330514_TC-051.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 2166,
+      "cycle": 0
+    },
+    {
+      "id": "TC-052",
+      "name": "API POST /orders/submit",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132649_549693_TC-052.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 2201,
+      "cycle": 0
+    },
+    {
+      "id": "TC-053",
+      "name": "API POST /orders/assign",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132651_801818_TC-053.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 2233,
+      "cycle": 0
+    },
+    {
+      "id": "TC-054",
+      "name": "API POST /mwo",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132654_057236_TC-054.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 2254,
+      "cycle": 0
+    },
+    {
+      "id": "TC-055",
+      "name": "API POST /admin/employees/bulk-upload",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132656_308721_TC-055.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 2232,
+      "cycle": 0
+    },
+    {
+      "id": "TC-056",
+      "name": "API POST /admin/mwo/bulk-upload",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132658_869537_TC-056.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 2532,
+      "cycle": 0
+    },
+    {
+      "id": "TC-057",
+      "name": "API POST /admin/users/bulk-upload",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132701_010026_TC-057.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 2133,
+      "cycle": 0
+    },
+    {
+      "id": "TC-058",
+      "name": "API DELETE /admin/users/{user_id}",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132703_271760_TC-058.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 2232,
+      "cycle": 0
+    },
+    {
+      "id": "TC-059",
+      "name": "API PUT /admin/users/{user_id}/escalate",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132705_525638_TC-059.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 2252,
+      "cycle": 0
+    },
+    {
+      "id": "TC-060",
+      "name": "API POST /admin/ingest/personnel/bulk",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132707_777889_TC-060.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 2231,
+      "cycle": 0
+    },
+    {
+      "id": "TC-061",
+      "name": "API POST /admin/ingest/part/bulk",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132710_029139_TC-061.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 2232,
+      "cycle": 0
+    },
+    {
+      "id": "TC-062",
+      "name": "API POST /inventory/skus",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132712_282263_TC-062.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 2233,
+      "cycle": 0
+    },
+    {
+      "id": "TC-063",
+      "name": "API POST /inventory/parts",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132714_807132_TC-063.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 2517,
+      "cycle": 0
+    },
+    {
+      "id": "TC-064",
+      "name": "API POST /inventory/mutate",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132716_993555_TC-064.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 2163,
+      "cycle": 0
+    },
+    {
+      "id": "TC-065",
+      "name": "API POST /work-orders/{mwo_id}/consume",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132719_248597_TC-065.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 2235,
+      "cycle": 0
+    },
+    {
+      "id": "TC-066",
+      "name": "API POST /locations",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132721_399515_TC-066.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 2128,
+      "cycle": 0
+    },
+    {
+      "id": "TC-067",
+      "name": "API POST /departments",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132723_650886_TC-067.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 2231,
+      "cycle": 0
+    },
+    {
+      "id": "TC-068",
+      "name": "API POST /categories",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132725_905556_TC-068.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 2246,
+      "cycle": 0
+    },
+    {
+      "id": "TC-069",
+      "name": "API POST /employees",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132728_162625_TC-069.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 2231,
+      "cycle": 0
+    },
+    {
+      "id": "TC-070",
+      "name": "API POST /skus",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132730_410002_TC-070.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 2229,
+      "cycle": 0
+    },
+    {
+      "id": "TC-071",
+      "name": "API POST /equipment",
+      "status": "pass",
+      "error": "",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132732_664367_TC-071.png",
+      "console_errors": [],
+      "network_errors": [],
+      "duration_ms": 2228,
+      "cycle": 0
+    }
+  ],
+  "escalation": null,
+  "escalation_response": null,
+  "fix_history": [],
+  "events": [
+    {
+      "type": "status_change",
+      "data": {
+        "status": "inspecting",
+        "message": "Inspector Agent analyzing code and docs..."
+      },
+      "timestamp": "2026-06-10T17:25:44.413422+00:00"
+    },
+    {
+      "type": "status_change",
+      "data": {
+        "status": "inspecting_complete",
+        "message": "Inspector found 72 test cases"
+      },
+      "timestamp": "2026-06-10T17:25:47.032484+00:00"
+    },
+    {
+      "type": "status_change",
+      "data": {
+        "status": "seeding",
+        "message": "Seed Agent preparing test data..."
+      },
+      "timestamp": "2026-06-10T17:25:47.036364+00:00"
+    },
+    {
+      "type": "status_change",
+      "data": {
+        "status": "seeding_complete",
+        "message": "Seed complete: 1 records inserted",
+        "tables_seeded": [
+          "erp_procurement_queue"
+        ],
+        "records_inserted": 1
+      },
+      "timestamp": "2026-06-10T17:25:47.182527+00:00"
+    },
+    {
+      "type": "status_change",
+      "data": {
+        "status": "testing",
+        "message": "Playwright Agent running tests..."
+      },
+      "timestamp": "2026-06-10T17:25:47.185459+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "HM \u2014 valid login",
+        "id": "TC-001"
+      },
+      "timestamp": "2026-06-10T17:25:47.195052+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-001",
+        "name": "HM \u2014 valid login",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132556_120004_TC-001.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 8979,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:25:56.178262+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "HM \u2014 invalid PIN rejected",
+        "id": "TC-002"
+      },
+      "timestamp": "2026-06-10T17:25:56.181230+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-002",
+        "name": "HM \u2014 invalid PIN rejected",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132557_197054_TC-002.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 1078,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:25:57.263102+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "TECH \u2014 valid login",
+        "id": "TC-003"
+      },
+      "timestamp": "2026-06-10T17:25:57.266658+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-003",
+        "name": "TECH \u2014 valid login",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132603_895112_TC-003.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 6687,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:03.958574+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "TECH \u2014 invalid PIN rejected",
+        "id": "TC-004"
+      },
+      "timestamp": "2026-06-10T17:26:03.962277+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-004",
+        "name": "TECH \u2014 invalid PIN rejected",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132604_978308_TC-004.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 1074,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:05.041378+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "DM \u2014 valid login",
+        "id": "TC-005"
+      },
+      "timestamp": "2026-06-10T17:26:05.045353+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-005",
+        "name": "DM \u2014 valid login",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132611_696500_TC-005.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 6707,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:11.756888+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "DM \u2014 invalid PIN rejected",
+        "id": "TC-006"
+      },
+      "timestamp": "2026-06-10T17:26:11.760337+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-006",
+        "name": "DM \u2014 invalid PIN rejected",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132612_776371_TC-006.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 1080,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:12.844439+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "ADMIN \u2014 valid login",
+        "id": "TC-007"
+      },
+      "timestamp": "2026-06-10T17:26:12.848675+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-007",
+        "name": "ADMIN \u2014 valid login",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132619_474906_TC-007.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 6687,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:19.541175+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "ADMIN \u2014 invalid PIN rejected",
+        "id": "TC-008"
+      },
+      "timestamp": "2026-06-10T17:26:19.544759+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-008",
+        "name": "ADMIN \u2014 invalid PIN rejected",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132620_560439_TC-008.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 1076,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:20.625627+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "End-to-end create and view record",
+        "id": "TC-072"
+      },
+      "timestamp": "2026-06-10T17:26:20.629118+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-072",
+        "name": "End-to-end create and view record",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132622_720841_TC-072.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 2147,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:22.780437+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to App.jsx",
+        "id": "TC-009"
+      },
+      "timestamp": "2026-06-10T17:26:22.784092+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-009",
+        "name": "Navigate to App.jsx",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132622_795780_TC-009.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 71,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:22.860161+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to main.jsx",
+        "id": "TC-010"
+      },
+      "timestamp": "2026-06-10T17:26:22.863712+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-010",
+        "name": "Navigate to main.jsx",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132622_874339_TC-010.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 47,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:22.915005+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to AdminDataIngestion.jsx",
+        "id": "TC-011"
+      },
+      "timestamp": "2026-06-10T17:26:22.918714+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-011",
+        "name": "Navigate to AdminDataIngestion.jsx",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132622_930016_TC-011.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 56,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:22.988994+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to AdminSingleIngestionModal.jsx",
+        "id": "TC-012"
+      },
+      "timestamp": "2026-06-10T17:26:22.993536+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-012",
+        "name": "Navigate to AdminSingleIngestionModal.jsx",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132623_003208_TC-012.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 61,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:23.060265+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to ArchiveDashboard.jsx",
+        "id": "TC-013"
+      },
+      "timestamp": "2026-06-10T17:26:23.064353+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-013",
+        "name": "Navigate to ArchiveDashboard.jsx",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132623_074844_TC-013.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 48,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:23.117688+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to CreateMWOForm.jsx",
+        "id": "TC-014"
+      },
+      "timestamp": "2026-06-10T17:26:23.122399+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-014",
+        "name": "Navigate to CreateMWOForm.jsx",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132623_132528_TC-014.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 48,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:23.175206+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to DispatchQueueTable.jsx",
+        "id": "TC-015"
+      },
+      "timestamp": "2026-06-10T17:26:23.179378+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-015",
+        "name": "Navigate to DispatchQueueTable.jsx",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132623_189989_TC-015.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 59,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:23.243521+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to EnterpriseDataMatrix.jsx",
+        "id": "TC-016"
+      },
+      "timestamp": "2026-06-10T17:26:23.248044+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-016",
+        "name": "Navigate to EnterpriseDataMatrix.jsx",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132623_257920_TC-016.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 45,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:23.298712+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to EquipmentActuationModal.jsx",
+        "id": "TC-017"
+      },
+      "timestamp": "2026-06-10T17:26:23.303339+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-017",
+        "name": "Navigate to EquipmentActuationModal.jsx",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132623_312679_TC-017.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 52,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:23.360978+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to EquipmentDetailModal.jsx",
+        "id": "TC-018"
+      },
+      "timestamp": "2026-06-10T17:26:23.365357+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-018",
+        "name": "Navigate to EquipmentDetailModal.jsx",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132623_375478_TC-018.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 48,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:23.419525+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to EquipmentIngestionModal.jsx",
+        "id": "TC-019"
+      },
+      "timestamp": "2026-06-10T17:26:23.424364+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-019",
+        "name": "Navigate to EquipmentIngestionModal.jsx",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132623_433464_TC-019.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 48,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:23.478136+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to EquipmentMatrix.jsx",
+        "id": "TC-020"
+      },
+      "timestamp": "2026-06-10T17:26:23.483046+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-020",
+        "name": "Navigate to EquipmentMatrix.jsx",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132623_493170_TC-020.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 56,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:23.544869+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to HMAssignmentModal.jsx",
+        "id": "TC-021"
+      },
+      "timestamp": "2026-06-10T17:26:23.549256+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-021",
+        "name": "Navigate to HMAssignmentModal.jsx",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132623_558880_TC-021.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 46,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:23.601457+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to HMDashboard.jsx",
+        "id": "TC-022"
+      },
+      "timestamp": "2026-06-10T17:26:23.606931+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-022",
+        "name": "Navigate to HMDashboard.jsx",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132623_615833_TC-022.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 48,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:23.660325+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to HMReviewModal.jsx",
+        "id": "TC-023"
+      },
+      "timestamp": "2026-06-10T17:26:23.664921+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-023",
+        "name": "Navigate to HMReviewModal.jsx",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132623_674510_TC-023.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 56,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:23.727172+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to ManualDispatchPortal.jsx",
+        "id": "TC-024"
+      },
+      "timestamp": "2026-06-10T17:26:23.732199+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-024",
+        "name": "Navigate to ManualDispatchPortal.jsx",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132623_742273_TC-024.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 47,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:23.785880+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to MwoClosureModal.jsx",
+        "id": "TC-025"
+      },
+      "timestamp": "2026-06-10T17:26:23.793549+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-025",
+        "name": "Navigate to MwoClosureModal.jsx",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132623_805826_TC-025.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 60,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:23.860431+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to PartIngestionModal.jsx",
+        "id": "TC-026"
+      },
+      "timestamp": "2026-06-10T17:26:23.865689+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-026",
+        "name": "Navigate to PartIngestionModal.jsx",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132623_876106_TC-026.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 55,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:23.927349+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to PartsMatrix.jsx",
+        "id": "TC-027"
+      },
+      "timestamp": "2026-06-10T17:26:23.932351+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-027",
+        "name": "Navigate to PartsMatrix.jsx",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132623_943333_TC-027.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 47,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:23.988027+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to ProcurementActuationModal.jsx",
+        "id": "TC-028"
+      },
+      "timestamp": "2026-06-10T17:26:24.001104+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-028",
+        "name": "Navigate to ProcurementActuationModal.jsx",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132624_011076_TC-028.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 54,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:24.061479+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to ProcurementMatrix.jsx",
+        "id": "TC-029"
+      },
+      "timestamp": "2026-06-10T17:26:24.066875+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-029",
+        "name": "Navigate to ProcurementMatrix.jsx",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132624_077595_TC-029.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 47,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:24.121665+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to SkuCreationModal.jsx",
+        "id": "TC-030"
+      },
+      "timestamp": "2026-06-10T17:26:24.126807+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-030",
+        "name": "Navigate to SkuCreationModal.jsx",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132624_136898_TC-030.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 61,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:24.194509+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to SkuLedger.jsx",
+        "id": "TC-031"
+      },
+      "timestamp": "2026-06-10T17:26:24.199878+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-031",
+        "name": "Navigate to SkuLedger.jsx",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132624_210215_TC-031.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 56,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:24.262302+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to TaxonomyIngestionModal.jsx",
+        "id": "TC-032"
+      },
+      "timestamp": "2026-06-10T17:26:24.267911+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-032",
+        "name": "Navigate to TaxonomyIngestionModal.jsx",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132624_278237_TC-032.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 52,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:24.327873+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to TechConsumePartModal.jsx",
+        "id": "TC-033"
+      },
+      "timestamp": "2026-06-10T17:26:24.334328+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-033",
+        "name": "Navigate to TechConsumePartModal.jsx",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132624_346667_TC-033.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 51,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:24.394350+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to TechDashboard.jsx",
+        "id": "TC-034"
+      },
+      "timestamp": "2026-06-10T17:26:24.400007+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-034",
+        "name": "Navigate to TechDashboard.jsx",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132624_410147_TC-034.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 45,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:24.452443+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to TechMWODetailModal.jsx",
+        "id": "TC-035"
+      },
+      "timestamp": "2026-06-10T17:26:24.458596+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-035",
+        "name": "Navigate to TechMWODetailModal.jsx",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132624_468820_TC-035.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 62,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:24.527703+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to UserDetailModal.jsx",
+        "id": "TC-036"
+      },
+      "timestamp": "2026-06-10T17:26:24.533185+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-036",
+        "name": "Navigate to UserDetailModal.jsx",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132624_543512_TC-036.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 53,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:24.593977+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to AuthContext.jsx",
+        "id": "TC-037"
+      },
+      "timestamp": "2026-06-10T17:26:24.603591+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-037",
+        "name": "Navigate to AuthContext.jsx",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132624_613659_TC-037.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 50,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:24.661132+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to AdminConsole.jsx",
+        "id": "TC-038"
+      },
+      "timestamp": "2026-06-10T17:26:24.666926+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-038",
+        "name": "Navigate to AdminConsole.jsx",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132624_677351_TC-038.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 54,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:24.727911+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to DMLogin.jsx",
+        "id": "TC-039"
+      },
+      "timestamp": "2026-06-10T17:26:24.734064+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-039",
+        "name": "Navigate to DMLogin.jsx",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132624_745136_TC-039.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 53,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:24.795058+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to Login.jsx",
+        "id": "TC-040"
+      },
+      "timestamp": "2026-06-10T17:26:24.802130+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-040",
+        "name": "Navigate to Login.jsx",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132624_812572_TC-040.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 51,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:24.860641+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to TechDashboard.jsx",
+        "id": "TC-041"
+      },
+      "timestamp": "2026-06-10T17:26:24.867185+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-041",
+        "name": "Navigate to TechDashboard.jsx",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132624_878327_TC-041.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 52,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:24.927207+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /admin/ingest/single-user",
+        "id": "TC-042"
+      },
+      "timestamp": "2026-06-10T17:26:24.933607+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-042",
+        "name": "API POST /admin/ingest/single-user",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132627_123275_TC-042.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 2234,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:27.175637+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /admin/ingest/equipment",
+        "id": "TC-043"
+      },
+      "timestamp": "2026-06-10T17:26:27.182031+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-043",
+        "name": "API POST /admin/ingest/equipment",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132629_377037_TC-043.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 2256,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:29.446284+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /admin/ingest/equipment/bulk",
+        "id": "TC-044"
+      },
+      "timestamp": "2026-06-10T17:26:29.452958+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-044",
+        "name": "API POST /admin/ingest/equipment/bulk",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132631_639832_TC-044.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 2236,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:31.696656+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /admin/ingest/department",
+        "id": "TC-045"
+      },
+      "timestamp": "2026-06-10T17:26:31.703095+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-045",
+        "name": "API POST /admin/ingest/department",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132633_883941_TC-045.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 2234,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:33.945156+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /admin/ingest/location",
+        "id": "TC-046"
+      },
+      "timestamp": "2026-06-10T17:26:33.951989+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-046",
+        "name": "API POST /admin/ingest/location",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132636_134403_TC-046.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 2242,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:36.201745+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API PUT /admin/equipment/{equipment_id}/actuate",
+        "id": "TC-047"
+      },
+      "timestamp": "2026-06-10T17:26:36.208906+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-047",
+        "name": "API PUT /admin/equipment/{equipment_id}/actuate",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132638_387785_TC-047.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 2227,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:38.444689+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /admin/ingest/part",
+        "id": "TC-048"
+      },
+      "timestamp": "2026-06-10T17:26:38.452056+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-048",
+        "name": "API POST /admin/ingest/part",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132640_643454_TC-048.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 2250,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:40.710416+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API PUT /admin/procurement/{procurement_id}/actuate",
+        "id": "TC-049"
+      },
+      "timestamp": "2026-06-10T17:26:40.717655+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-049",
+        "name": "API PUT /admin/procurement/{procurement_id}/actuate",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132642_893575_TC-049.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 2231,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:42.958777+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /mwo/{mwo_id}/complete",
+        "id": "TC-050"
+      },
+      "timestamp": "2026-06-10T17:26:42.965974+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-050",
+        "name": "API POST /mwo/{mwo_id}/complete",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132645_145789_TC-050.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 2237,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:45.212045+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /mwo/broadcast",
+        "id": "TC-051"
+      },
+      "timestamp": "2026-06-10T17:26:45.219217+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-051",
+        "name": "API POST /mwo/broadcast",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132647_330514_TC-051.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 2166,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:47.393989+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /orders/submit",
+        "id": "TC-052"
+      },
+      "timestamp": "2026-06-10T17:26:47.400977+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-052",
+        "name": "API POST /orders/submit",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132649_549693_TC-052.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 2201,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:49.610859+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /orders/assign",
+        "id": "TC-053"
+      },
+      "timestamp": "2026-06-10T17:26:49.617832+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-053",
+        "name": "API POST /orders/assign",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132651_801818_TC-053.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 2233,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:51.859529+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /mwo",
+        "id": "TC-054"
+      },
+      "timestamp": "2026-06-10T17:26:51.866698+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-054",
+        "name": "API POST /mwo",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132654_057236_TC-054.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 2254,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:54.129350+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /admin/employees/bulk-upload",
+        "id": "TC-055"
+      },
+      "timestamp": "2026-06-10T17:26:54.137053+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-055",
+        "name": "API POST /admin/employees/bulk-upload",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132656_308721_TC-055.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 2232,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:56.377324+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /admin/mwo/bulk-upload",
+        "id": "TC-056"
+      },
+      "timestamp": "2026-06-10T17:26:56.385450+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-056",
+        "name": "API POST /admin/mwo/bulk-upload",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132658_869537_TC-056.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 2532,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:26:58.926357+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /admin/users/bulk-upload",
+        "id": "TC-057"
+      },
+      "timestamp": "2026-06-10T17:26:58.934670+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-057",
+        "name": "API POST /admin/users/bulk-upload",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132701_010026_TC-057.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 2133,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:27:01.077387+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API DELETE /admin/users/{user_id}",
+        "id": "TC-058"
+      },
+      "timestamp": "2026-06-10T17:27:01.084786+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-058",
+        "name": "API DELETE /admin/users/{user_id}",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132703_271760_TC-058.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 2232,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:27:03.326451+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API PUT /admin/users/{user_id}/escalate",
+        "id": "TC-059"
+      },
+      "timestamp": "2026-06-10T17:27:03.334246+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-059",
+        "name": "API PUT /admin/users/{user_id}/escalate",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132705_525638_TC-059.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 2252,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:27:05.595385+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /admin/ingest/personnel/bulk",
+        "id": "TC-060"
+      },
+      "timestamp": "2026-06-10T17:27:05.602580+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-060",
+        "name": "API POST /admin/ingest/personnel/bulk",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132707_777889_TC-060.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 2231,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:27:07.843097+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /admin/ingest/part/bulk",
+        "id": "TC-061"
+      },
+      "timestamp": "2026-06-10T17:27:07.850478+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-061",
+        "name": "API POST /admin/ingest/part/bulk",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132710_029139_TC-061.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 2232,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:27:10.092907+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /inventory/skus",
+        "id": "TC-062"
+      },
+      "timestamp": "2026-06-10T17:27:10.102004+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-062",
+        "name": "API POST /inventory/skus",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132712_282263_TC-062.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 2233,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:27:12.343527+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /inventory/parts",
+        "id": "TC-063"
+      },
+      "timestamp": "2026-06-10T17:27:12.352317+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-063",
+        "name": "API POST /inventory/parts",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132714_807132_TC-063.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 2517,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:27:14.878995+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /inventory/mutate",
+        "id": "TC-064"
+      },
+      "timestamp": "2026-06-10T17:27:14.886823+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-064",
+        "name": "API POST /inventory/mutate",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132716_993555_TC-064.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 2163,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:27:17.060662+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /work-orders/{mwo_id}/consume",
+        "id": "TC-065"
+      },
+      "timestamp": "2026-06-10T17:27:17.068321+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-065",
+        "name": "API POST /work-orders/{mwo_id}/consume",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132719_248597_TC-065.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 2235,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:27:19.312346+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /locations",
+        "id": "TC-066"
+      },
+      "timestamp": "2026-06-10T17:27:19.321720+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-066",
+        "name": "API POST /locations",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132721_399515_TC-066.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 2128,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:27:21.460655+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /departments",
+        "id": "TC-067"
+      },
+      "timestamp": "2026-06-10T17:27:21.469879+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-067",
+        "name": "API POST /departments",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132723_650886_TC-067.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 2231,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:27:23.711084+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /categories",
+        "id": "TC-068"
+      },
+      "timestamp": "2026-06-10T17:27:23.721232+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-068",
+        "name": "API POST /categories",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132725_905556_TC-068.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 2246,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:27:25.977153+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /employees",
+        "id": "TC-069"
+      },
+      "timestamp": "2026-06-10T17:27:25.987659+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-069",
+        "name": "API POST /employees",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132728_162625_TC-069.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 2231,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:27:28.229684+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /skus",
+        "id": "TC-070"
+      },
+      "timestamp": "2026-06-10T17:27:28.238100+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-070",
+        "name": "API POST /skus",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132730_410002_TC-070.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 2229,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:27:30.479708+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /equipment",
+        "id": "TC-071"
+      },
+      "timestamp": "2026-06-10T17:27:30.488147+00:00"
+    },
+    {
+      "type": "test_pass",
+      "data": {
+        "id": "TC-071",
+        "name": "API POST /equipment",
+        "status": "pass",
+        "error": "",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260610_132732_664367_TC-071.png",
+        "console_errors": [],
+        "network_errors": [],
+        "duration_ms": 2228,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-10T17:27:32.729567+00:00"
+    }
+  ],
+  "created_at": "2026-06-10T17:25:44.405008",
+  "updated_at": "2026-06-10T17:27:32.741143+00:00",
+  "test_plan_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\logs\\qa_runs\\ac48393b-d6d1-4d67-aa2f-0f1219072077_test_plan.json",
+  "report_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\logs\\e2e_reports\\ac48393b-d6d1-4d67-aa2f-0f1219072077_report.json"
+}

@@ -1,0 +1,10 @@
+{
+  "nodes": [
+    {
+      "action": "AST_SPLICE",
+      "file_path": "Workspace_Blueprint.js",
+      "search_content": "const blueprint = {};",
+      "replace_content": "const blueprint = {\"template_id\":\"MAF_Executive_Briefing_Master\",\"mappings\":{\"PROJECT_NAME\":\"Heinlein Foods - 90-Day Survival & Capitalization Strategy\",\"OBJECTIVE\":\"Achieve cash-flow positivity and secure next-round funding within 90 days by executing a targeted operational cost reduction and aggressive market penetration strategy.\",\"STRATEGY_SUMMARY\":{\"financial_tactics\":[\"Implement immediate 15% reduction in non-essential operational expenditures.\",\"Renegotiate terms with top 5 suppliers to extend payment cycles by 30 days.\",\"Secure a short-term credit facility of $2.5M as an operational buffer.\",\"Aggressively pursue collection of outstanding accounts receivable over 45 days.\"],\"marketing_tactics\":[\"Launch a high-impact, low-cost digital marketing campaign targeting competitor weaknesses in the premium organic segment.\",\"Introduce a bundled product offering to increase average order value by 20%.\",\"Establish strategic partnerships with two major online grocery delivery platforms.\",\"Execute a PR campaign focused on brand resilience and commitment to quality to reinforce investor confidence.\"]}}};"
+    }
+  ]
+}

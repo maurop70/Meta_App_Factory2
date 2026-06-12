@@ -1,0 +1,10 @@
+{
+  "nodes": [
+    {
+      "action": "AST_SPLICE",
+      "file_path": "api.py",
+      "search_content": "        # Import and call AY client\n        from ay_client import send_mandate\n        diagnosis = send_mandate(mandate)",
+      "replace_content": "        # Import and call AY client\n        import asyncio\n        from ay_client import send_mandate\n        diagnosis = await asyncio.get_running_loop().run_in_executor(None, send_mandate, mandate)"
+    }
+  ]
+}
