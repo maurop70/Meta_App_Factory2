@@ -18,7 +18,9 @@ Checks (all read-only, or isolated suite re-runs):
 Every audit is logged to logs/audit_reports.jsonl with the run trace_id.
 """
 
+import base64
 import json
+import os
 import subprocess
 import sys
 from dataclasses import dataclass, field
@@ -31,6 +33,95 @@ CONTRACTS     = BRIDGE_ROOT / "rules" / "verification_contracts.json"
 AUDIT_REPORTS = BRIDGE_ROOT / "logs" / "audit_reports.jsonl"
 
 SUITE_TIMEOUT = 300  # seconds per suite
+
+# ── Visual critic (multimodal layout review) ─────────────────────────────────
+SCREENSHOT_DIR     = BRIDGE_ROOT / "logs" / "playwright_screenshots"
+_FRONTEND_EXTS     = (".jsx", ".tsx", ".css", ".html", ".vue")
+_MAX_SCREENSHOT_MB = 4
+# Strict mode: critic unavailable (no key / no response) fails the audit.
+# Default lenient: unavailability is reported loudly but does not block.
+VISUAL_STRICT_ENV  = "CLAUDEAY_VISUAL_STRICT"
+
+DESIGN_GUIDELINES = (
+    "Audit this UI screenshot against these design rules: "
+    "(1) no overlapping or clipped elements; (2) no horizontal overflow or "
+    "content escaping its container; (3) consistent spacing and alignment "
+    "within sections; (4) readable text contrast; (5) tables >5 columns must "
+    "reflow, not shrink to illegibility; (6) modals/overlays must cover and "
+    "dim background content; (7) no raw placeholder text, broken icons, or "
+    "unstyled native widgets in styled contexts."
+)
+
+_VISUAL_PROMPT = (
+    f"{DESIGN_GUIDELINES}\n\n"
+    "Respond with EXACTLY one JSON object and nothing else:\n"
+    '{"verdict": "PASS" or "FAIL", "violations": ["<short description>", ...]}\n'
+    "Only report clear violations visible in the screenshot; cosmetic taste "
+    "preferences are not violations."
+)
+
+
+def _parse_visual_verdict(response: str) -> tuple[bool, list[str]]:
+    """Parse the critic's JSON verdict; fall back to token scan."""
+    try:
+        start = response.index("{")
+        end = response.rindex("}") + 1
+        obj = json.loads(response[start:end])
+        verdict = str(obj.get("verdict", "")).strip().upper()
+        violations = [str(v)[:160] for v in (obj.get("violations") or [])][:8]
+        if verdict in ("PASS", "FAIL"):
+            return verdict == "PASS", violations
+    except (ValueError, json.JSONDecodeError):
+        pass
+    # Fallback: explicit FAIL token anywhere in a non-JSON response
+    return ("FAIL" not in response.upper()), []
+
+
+def _check_visual(files_changed: list) -> list:
+    """
+    Multimodal layout critique: when frontend files changed, send the most
+    recent Playwright screenshot to the vision model with design guidelines.
+    Returns [] when not applicable (no frontend files / no screenshots).
+    """
+    frontend = [f for f in (files_changed or [])
+                if str(f).lower().endswith(_FRONTEND_EXTS)]
+    if not frontend:
+        return []
+    strict = os.getenv(VISUAL_STRICT_ENV, "false").lower() == "true"
+
+    if not SCREENSHOT_DIR.exists():
+        return [AuditCheck("visual_critic", not strict,
+                           "no screenshots directory — layout not evaluated")]
+    shots = sorted(SCREENSHOT_DIR.glob("*.png"),
+                   key=lambda p: p.stat().st_mtime, reverse=True)
+    if not shots:
+        return [AuditCheck("visual_critic", not strict,
+                           "no screenshots found — layout not evaluated")]
+    shot = shots[0]
+    if shot.stat().st_size > _MAX_SCREENSHOT_MB * 1024 * 1024:
+        return [AuditCheck("visual_critic", not strict,
+                           f"screenshot {shot.name} exceeds {_MAX_SCREENSHOT_MB}MB — skipped")]
+
+    try:
+        sys.path.insert(0, str(MAF_ROOT))
+        from model_router import route_multimodal
+        b64 = base64.b64encode(shot.read_bytes()).decode("ascii")
+        response = route_multimodal("visual_critic", _VISUAL_PROMPT, b64)
+    except Exception as e:
+        return [AuditCheck("visual_critic", not strict,
+                           f"visual critic error: {str(e)[:120]}")]
+
+    if not response:
+        # Loud, never silent (CLAUDE_RULES 0.3) — but only blocking in strict mode
+        return [AuditCheck("visual_critic", not strict,
+                           "visual critic unavailable (no API key or empty "
+                           "response) — layout NOT evaluated")]
+
+    passed, violations = _parse_visual_verdict(response)
+    detail = (f"{shot.name}: " +
+              ("; ".join(violations) if violations
+               else ("clean" if passed else response[:160])))
+    return [AuditCheck("visual_critic", passed, detail[:300])]
 
 
 @dataclass
@@ -194,7 +285,8 @@ def _check_health(app: str) -> list[AuditCheck]:
 
 
 def audit(instruction: str, ledger_result, trace_id: str = "",
-          run_suites: bool = True, probe_health: bool = False) -> AuditReport:
+          run_suites: bool = True, probe_health: bool = False,
+          check_visual: bool = True) -> AuditReport:
     """
     Verify an executor's COMPLETE/ITERATE claims against ground truth.
     ledger_result: LedgerResult from ledger_evaluator (structured fields used).
@@ -213,6 +305,8 @@ def audit(instruction: str, ledger_result, trace_id: str = "",
         checks += _check_contracts(app, tests_run)
     if app and probe_health:
         checks += _check_health(app)
+    if check_visual:
+        checks += _check_visual(files_changed)
 
     if not checks:
         # Nothing auditable claimed — pass with an explicit note so the

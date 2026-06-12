@@ -268,6 +268,9 @@ All logs written to `claude-mcp-bridge/logs/`:
 | `CLAUDEAY_MAX_ITER_PER_RUN` | 10 | Budget: dispatches per loop run |
 | `CLAUDEAY_MAX_SECS_PER_RUN` | 1800 | Budget: wall-clock seconds per run |
 | `CLAUDEAY_MAX_DISPATCH_DAILY` | 60 | Budget: total dispatches per UTC day |
+| `CLAUDEAY_PLAN_APPROVAL` | always | Interactive Planner gate: always / tier2 / off (headless runs skip loudly) |
+| `GEMINI_VISION_MODEL` | (task routing) | Vision model override for the visual critic (e.g. gemini-2.5-flash) |
+| `CLAUDEAY_VISUAL_STRICT` | false | true: visual critic unavailability fails the audit |
 
 ---
 
@@ -282,6 +285,15 @@ The loop is governed by five cooperating modules (CLAUDE_RULES §13–§15):
 | `auditor.py` | Independent read-only verifier: re-runs contract suites (`rules/verification_contracts.json`), checks files/git/health before COMPLETE is accepted. |
 | `episodic_memory.py` | Mandate→outcome store with IDF-overlap recall, injected as `<PAST_EPISODES>`. |
 | `budget.py` + `postmortem.py` | Run/daily budgets with kill switch; ERROR runs auto-draft prevention rules into the operator-approval queue. |
+
+Strategic/visual upgrades (2026-06-12): the **Interactive Planner** drafts an
+implementation plan via model_router before the first dispatch and waits for
+operator approval — non-approval input is treated as feedback and the plan is
+redrafted (course correction before execution). The Auditor's **visual critic**
+(`auditor._check_visual`) sends the newest Playwright screenshot to
+`model_router.route_multimodal` (visual_critic → gemini-2.5-pro) with design
+guidelines whenever frontend files changed, and fails the audit on layout
+violations.
 
 Supporting flows: scoped rule injection (dispatcher injects only sections whose
 `[scope: x]` tag matches the task), telemetry fenced as `<UNTRUSTED_TELEMETRY>`

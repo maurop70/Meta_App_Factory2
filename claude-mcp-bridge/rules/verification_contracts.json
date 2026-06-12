@@ -15,7 +15,8 @@
   "maf_bridge": {
     "cwd": "claude-mcp-bridge",
     "suites": {
-      "test_sota_upgrade.py": 55
+      "test_sota_upgrade.py": 55,
+      "test_visual_audit.py": 25
     },
     "health": []
   }
