@@ -324,6 +324,13 @@ class SKUCreate(BaseModel):
     # eliminating the orphan-supplier window of the old two-call chain.
     new_supplier: Optional[SupplierCreate] = None
 
+class SKUUpdate(BaseModel):
+    nomenclature: Optional[str] = None
+    unit_cost: Optional[float] = Field(None, ge=0)
+    reorder_threshold: Optional[int] = Field(None, ge=0)
+    min_order_qty: Optional[int] = Field(None, ge=1)
+    supplier_id: Optional[str] = None
+
 class PartCreate(BaseModel):
     sku_id: str
     serial_number: Optional[str] = None
@@ -3152,7 +3159,7 @@ def get_skus(
         
         cursor.execute("""
             SELECT s.sku_id, s.nomenclature, s.unit_cost, s.reorder_threshold, s.quantity_on_hand,
-                   s.supplier_id, sup.name AS supplier_name
+                   s.supplier_id, sup.name AS supplier_name, s.min_order_qty
             FROM erp_skus s
             LEFT JOIN erp_suppliers sup ON s.supplier_id = sup.supplier_id
             LIMIT ? OFFSET ?
@@ -4153,6 +4160,47 @@ def assign_sku_supplier(sku_id: str, payload: SkuSupplierAssign, jwt_payload: di
         conn.rollback()
         logger.error(f"SKU supplier reassignment error: {e}")
         raise HTTPException(status_code=500, detail="SKU supplier reassignment failed.")
+    finally:
+        conn.close()
+
+@api_router.put("/inventory/skus/{sku_id}")
+def update_sku(sku_id: str, payload: SKUUpdate, jwt_payload: dict = Depends(verify_jwt_token)):
+    """General HOD update endpoint for existing SKUs."""
+    if jwt_payload.get("role") not in HOD_ROLES:
+        raise HTTPException(status_code=403, detail="RBAC Violation: HOD clearance required.")
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("BEGIN IMMEDIATE TRANSACTION")
+        cursor.execute("SELECT 1 FROM erp_skus WHERE sku_id = ?", (sku_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail=f"SKU {sku_id} not found.")
+        
+        if payload.supplier_id:
+            cursor.execute("SELECT 1 FROM erp_suppliers WHERE supplier_id = ?", (payload.supplier_id,))
+            if not cursor.fetchone():
+                raise HTTPException(status_code=400, detail=f"Supplier {payload.supplier_id} not found.")
+        
+        updates = []
+        params = []
+        for field_name, value in payload.dict(exclude_unset=True).items():
+            updates.append(f"{field_name} = ?")
+            params.append(value)
+        
+        if updates:
+            params.append(sku_id)
+            cursor.execute(f"UPDATE erp_skus SET {', '.join(updates)} WHERE sku_id = ?", params)
+            conn.commit()
+            
+        logger.info(f"[SKU] {jwt_payload.get('sub')} updated SKU {sku_id}: {payload.dict(exclude_unset=True)}")
+        return {"status": "success", "sku_id": sku_id}
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"SKU update failed: {e}")
+        raise HTTPException(status_code=500, detail="SKU update failed.")
     finally:
         conn.close()
 

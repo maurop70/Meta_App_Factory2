@@ -17,6 +17,7 @@ const SkuLedger = () => {
   const [showIngestionModal, setShowIngestionModal] = useState(false);
   const [showSupplierModal, setShowSupplierModal] = useState(false);
   const [suppliers, setSuppliers] = useState([]);
+  const [selectedSkuForEdit, setSelectedSkuForEdit] = useState(null);
 
   const fetchSuppliers = async () => {
     try {
@@ -152,13 +153,15 @@ const SkuLedger = () => {
               <th>Unit Cost</th>
               <th>Qty On Hand</th>
               <th>Reorder Threshold</th>
+              <th>Min Order Qty</th>
               <th>Status</th>
+              {canIngest && <th>Action</th>}
             </tr>
           </thead>
           <tbody>
             {skus.length === 0 ? (
               <tr>
-                <td colSpan="7" className="matrix-status-msg">No SKUs present in the ledger matrix.</td>
+                <td colSpan={canIngest ? 9 : 8} className="matrix-status-msg">No SKUs present in the ledger matrix.</td>
               </tr>
             ) : (
               skus.map((sku) => {
@@ -186,11 +189,24 @@ const SkuLedger = () => {
                     <td data-label="Unit Cost">${sku.unit_cost?.toFixed(2) || '0.00'}</td>
                     <td data-label="Qty On Hand" style={{ fontWeight: 700, color: stock.color }}>{sku.quantity_on_hand ?? 0}</td>
                     <td data-label="Reorder Threshold">{sku.reorder_threshold}</td>
+                    <td data-label="Min Order Qty" style={{ color: (sku.min_order_qty || 1) > 1 ? '#fbbf24' : '#64748b', fontWeight: (sku.min_order_qty || 1) > 1 ? 600 : 400 }}>
+                      {sku.min_order_qty || 1}
+                    </td>
                     <td data-label="Status">
                       <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '0.65rem', fontWeight: 600, background: stock.bg, color: stock.color }}>
                         {stock.label}
                       </span>
                     </td>
+                    {canIngest && (
+                      <td data-label="Action">
+                        <button
+                          onClick={() => setSelectedSkuForEdit(sku)}
+                          style={{ padding: '0.3rem 0.8rem', borderRadius: '6px', border: '1px solid rgba(99, 102, 241, 0.35)', background: 'rgba(99, 102, 241, 0.12)', color: '#818cf8', cursor: 'pointer', fontWeight: 700, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}
+                        >
+                          Edit
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 );
               })
@@ -202,6 +218,14 @@ const SkuLedger = () => {
       {showIngestionModal && (
         <SkuCreationModal
           closeModal={() => setShowIngestionModal(false)}
+          onIngestionSuccess={() => { fetchSkus(); fetchSuppliers(); }}
+        />
+      )}
+
+      {selectedSkuForEdit && (
+        <SkuCreationModal
+          editSku={selectedSkuForEdit}
+          closeModal={() => setSelectedSkuForEdit(null)}
           onIngestionSuccess={() => { fetchSkus(); fetchSuppliers(); }}
         />
       )}
