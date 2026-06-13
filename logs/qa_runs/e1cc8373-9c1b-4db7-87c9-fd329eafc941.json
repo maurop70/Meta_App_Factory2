@@ -1,0 +1,4879 @@
+{
+  "run_id": "e1cc8373-9c1b-4db7-87c9-fd329eafc941",
+  "app_name": "MWO ERP",
+  "status": "fixing",
+  "cycle": 1,
+  "max_cycles": 5,
+  "total_tests": 89,
+  "passed": 0,
+  "failed": 89,
+  "current_test": "API POST /orders/{po_id}/receive",
+  "test_results": [
+    {
+      "id": "TC-001",
+      "name": "HM \u2014 valid login",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224852_399988_TC-001.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 9231,
+      "cycle": 0
+    },
+    {
+      "id": "TC-002",
+      "name": "HM \u2014 invalid PIN rejected",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224853_481394_TC-002.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 1074,
+      "cycle": 0
+    },
+    {
+      "id": "TC-003",
+      "name": "TECH \u2014 valid login",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224900_194998_TC-003.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 6708,
+      "cycle": 0
+    },
+    {
+      "id": "TC-004",
+      "name": "TECH \u2014 invalid PIN rejected",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224901_277983_TC-004.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 1074,
+      "cycle": 0
+    },
+    {
+      "id": "TC-005",
+      "name": "DM \u2014 valid login",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224908_009488_TC-005.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 6724,
+      "cycle": 0
+    },
+    {
+      "id": "TC-006",
+      "name": "DM \u2014 invalid PIN rejected",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224909_096607_TC-006.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 1071,
+      "cycle": 0
+    },
+    {
+      "id": "TC-007",
+      "name": "ADMIN \u2014 valid login",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224915_792704_TC-007.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 6692,
+      "cycle": 0
+    },
+    {
+      "id": "TC-008",
+      "name": "ADMIN \u2014 invalid PIN rejected",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224916_879539_TC-008.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 1069,
+      "cycle": 0
+    },
+    {
+      "id": "TC-089",
+      "name": "End-to-end create and view record",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224919_032991_TC-089.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2156,
+      "cycle": 0
+    },
+    {
+      "id": "TC-009",
+      "name": "Navigate to App.jsx",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224919_127024_TC-009.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 77,
+      "cycle": 0
+    },
+    {
+      "id": "TC-010",
+      "name": "Navigate to main.jsx",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224919_205735_TC-010.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 53,
+      "cycle": 0
+    },
+    {
+      "id": "TC-011",
+      "name": "Navigate to AdminDataIngestion.jsx",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224919_268621_TC-011.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 49,
+      "cycle": 0
+    },
+    {
+      "id": "TC-012",
+      "name": "Navigate to AdminSingleIngestionModal.jsx",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224919_328397_TC-012.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 63,
+      "cycle": 0
+    },
+    {
+      "id": "TC-013",
+      "name": "Navigate to ArchiveDashboard.jsx",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224919_402806_TC-013.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 57,
+      "cycle": 0
+    },
+    {
+      "id": "TC-014",
+      "name": "Navigate to CFOApprovals.jsx",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224919_470762_TC-014.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 56,
+      "cycle": 0
+    },
+    {
+      "id": "TC-015",
+      "name": "Navigate to CreateMWOForm.jsx",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224919_540189_TC-015.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 51,
+      "cycle": 0
+    },
+    {
+      "id": "TC-016",
+      "name": "Navigate to DispatchQueueTable.jsx",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224919_603228_TC-016.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 55,
+      "cycle": 0
+    },
+    {
+      "id": "TC-017",
+      "name": "Navigate to EnterpriseDataMatrix.jsx",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224919_670627_TC-017.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 62,
+      "cycle": 0
+    },
+    {
+      "id": "TC-018",
+      "name": "Navigate to EquipmentActuationModal.jsx",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224919_746991_TC-018.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 63,
+      "cycle": 0
+    },
+    {
+      "id": "TC-019",
+      "name": "Navigate to EquipmentDetailModal.jsx",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224919_822562_TC-019.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 53,
+      "cycle": 0
+    },
+    {
+      "id": "TC-020",
+      "name": "Navigate to EquipmentIngestionModal.jsx",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224919_889537_TC-020.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 54,
+      "cycle": 0
+    },
+    {
+      "id": "TC-021",
+      "name": "Navigate to EquipmentMatrix.jsx",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224919_957334_TC-021.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 55,
+      "cycle": 0
+    },
+    {
+      "id": "TC-022",
+      "name": "Navigate to HMAssignmentModal.jsx",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224920_025839_TC-022.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 69,
+      "cycle": 0
+    },
+    {
+      "id": "TC-023",
+      "name": "Navigate to HMDashboard.jsx",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224920_107498_TC-023.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 51,
+      "cycle": 0
+    },
+    {
+      "id": "TC-024",
+      "name": "Navigate to HMReviewModal.jsx",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224920_174070_TC-024.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 51,
+      "cycle": 0
+    },
+    {
+      "id": "TC-025",
+      "name": "Navigate to HODWorkspace.jsx",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224920_239103_TC-025.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 55,
+      "cycle": 0
+    },
+    {
+      "id": "TC-026",
+      "name": "Navigate to ManualDispatchPortal.jsx",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224920_317817_TC-026.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 66,
+      "cycle": 0
+    },
+    {
+      "id": "TC-027",
+      "name": "Navigate to ManualLogWidget.jsx",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224920_409316_TC-027.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 55,
+      "cycle": 0
+    },
+    {
+      "id": "TC-028",
+      "name": "Navigate to MwoClosureModal.jsx",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224920_475855_TC-028.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 68,
+      "cycle": 0
+    },
+    {
+      "id": "TC-029",
+      "name": "Navigate to PartIngestionModal.jsx",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224920_559579_TC-029.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 47,
+      "cycle": 0
+    },
+    {
+      "id": "TC-030",
+      "name": "Navigate to PartsMatrix.jsx",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224920_628976_TC-030.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 69,
+      "cycle": 0
+    },
+    {
+      "id": "TC-031",
+      "name": "Navigate to ProcurementActuationModal.jsx",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224920_725400_TC-031.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 66,
+      "cycle": 0
+    },
+    {
+      "id": "TC-032",
+      "name": "Navigate to ProcurementMatrix.jsx",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224920_801741_TC-032.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 60,
+      "cycle": 0
+    },
+    {
+      "id": "TC-033",
+      "name": "Navigate to SkuCreationModal.jsx",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224920_878711_TC-033.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 63,
+      "cycle": 0
+    },
+    {
+      "id": "TC-034",
+      "name": "Navigate to SkuLedger.jsx",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224920_960961_TC-034.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 65,
+      "cycle": 0
+    },
+    {
+      "id": "TC-035",
+      "name": "Navigate to SupplierCreationModal.jsx",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224921_044924_TC-035.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 67,
+      "cycle": 0
+    },
+    {
+      "id": "TC-036",
+      "name": "Navigate to TaxonomyIngestionModal.jsx",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224921_130035_TC-036.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 63,
+      "cycle": 0
+    },
+    {
+      "id": "TC-037",
+      "name": "Navigate to TechCompletionModal.jsx",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224921_211303_TC-037.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 64,
+      "cycle": 0
+    },
+    {
+      "id": "TC-038",
+      "name": "Navigate to TechConsumePartModal.jsx",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224921_295700_TC-038.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 62,
+      "cycle": 0
+    },
+    {
+      "id": "TC-039",
+      "name": "Navigate to TechDashboard.jsx",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224921_378044_TC-039.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 62,
+      "cycle": 0
+    },
+    {
+      "id": "TC-040",
+      "name": "Navigate to TechMWODetailModal.jsx",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224921_460352_TC-040.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 66,
+      "cycle": 0
+    },
+    {
+      "id": "TC-041",
+      "name": "Navigate to UserDetailModal.jsx",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224921_545954_TC-041.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 60,
+      "cycle": 0
+    },
+    {
+      "id": "TC-042",
+      "name": "Navigate to AuthContext.jsx",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224921_628382_TC-042.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 62,
+      "cycle": 0
+    },
+    {
+      "id": "TC-043",
+      "name": "Navigate to AdminConsole.jsx",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224921_724031_TC-043.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 76,
+      "cycle": 0
+    },
+    {
+      "id": "TC-044",
+      "name": "Navigate to CFODashboard.jsx",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224921_815303_TC-044.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 61,
+      "cycle": 0
+    },
+    {
+      "id": "TC-045",
+      "name": "Navigate to DMLogin.jsx",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224921_895937_TC-045.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 65,
+      "cycle": 0
+    },
+    {
+      "id": "TC-046",
+      "name": "Navigate to Login.jsx",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224921_984608_TC-046.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 57,
+      "cycle": 0
+    },
+    {
+      "id": "TC-047",
+      "name": "Navigate to TechDashboard.jsx",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224922_065494_TC-047.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 59,
+      "cycle": 0
+    },
+    {
+      "id": "TC-048",
+      "name": "API POST /admin/ingest/single-user",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224924_519735_TC-048.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2445,
+      "cycle": 0
+    },
+    {
+      "id": "TC-049",
+      "name": "API POST /admin/ingest/equipment",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224926_760488_TC-049.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2212,
+      "cycle": 0
+    },
+    {
+      "id": "TC-050",
+      "name": "API POST /admin/ingest/equipment/bulk",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224929_010009_TC-050.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2227,
+      "cycle": 0
+    },
+    {
+      "id": "TC-051",
+      "name": "API POST /admin/ingest/department",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224931_260669_TC-051.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2227,
+      "cycle": 0
+    },
+    {
+      "id": "TC-052",
+      "name": "API POST /admin/ingest/location",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224933_514169_TC-052.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2226,
+      "cycle": 0
+    },
+    {
+      "id": "TC-053",
+      "name": "API PUT /admin/equipment/{equipment_id}/actuate",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224935_765040_TC-053.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2245,
+      "cycle": 0
+    },
+    {
+      "id": "TC-054",
+      "name": "API POST /admin/ingest/part",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224938_024211_TC-054.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2224,
+      "cycle": 0
+    },
+    {
+      "id": "TC-055",
+      "name": "API PUT /admin/procurement/{procurement_id}/actuate",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224940_245958_TC-055.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2193,
+      "cycle": 0
+    },
+    {
+      "id": "TC-056",
+      "name": "API POST /mwo/{mwo_id}/complete",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224942_420923_TC-056.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2160,
+      "cycle": 0
+    },
+    {
+      "id": "TC-057",
+      "name": "API POST /mwo/broadcast",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224944_671181_TC-057.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2227,
+      "cycle": 0
+    },
+    {
+      "id": "TC-058",
+      "name": "API POST /orders/legacy/submit",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224946_838968_TC-058.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2141,
+      "cycle": 0
+    },
+    {
+      "id": "TC-059",
+      "name": "API POST /orders/assign",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224949_004474_TC-059.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2124,
+      "cycle": 0
+    },
+    {
+      "id": "TC-060",
+      "name": "API POST /mwo",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224951_226520_TC-060.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2186,
+      "cycle": 0
+    },
+    {
+      "id": "TC-061",
+      "name": "API POST /admin/employees/bulk-upload",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224953_386185_TC-061.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2139,
+      "cycle": 0
+    },
+    {
+      "id": "TC-062",
+      "name": "API POST /admin/mwo/bulk-upload",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224955_629757_TC-062.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2227,
+      "cycle": 0
+    },
+    {
+      "id": "TC-063",
+      "name": "API POST /admin/users/bulk-upload",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224957_884316_TC-063.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2180,
+      "cycle": 0
+    },
+    {
+      "id": "TC-064",
+      "name": "API DELETE /admin/users/{user_id}",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225000_036661_TC-064.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2123,
+      "cycle": 0
+    },
+    {
+      "id": "TC-065",
+      "name": "API PUT /admin/users/{user_id}/escalate",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225002_250914_TC-065.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2123,
+      "cycle": 0
+    },
+    {
+      "id": "TC-066",
+      "name": "API POST /admin/ingest/personnel/bulk",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225004_441357_TC-066.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2153,
+      "cycle": 0
+    },
+    {
+      "id": "TC-067",
+      "name": "API POST /admin/ingest/part/bulk",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225006_585638_TC-067.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2129,
+      "cycle": 0
+    },
+    {
+      "id": "TC-068",
+      "name": "API POST /inventory/skus",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225008_784491_TC-068.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2170,
+      "cycle": 0
+    },
+    {
+      "id": "TC-069",
+      "name": "API POST /inventory/parts",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225010_998051_TC-069.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2185,
+      "cycle": 0
+    },
+    {
+      "id": "TC-070",
+      "name": "API POST /inventory/mutate",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225013_343338_TC-070.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2321,
+      "cycle": 0
+    },
+    {
+      "id": "TC-071",
+      "name": "API POST /work-orders/{mwo_id}/consume",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225015_597728_TC-071.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2222,
+      "cycle": 0
+    },
+    {
+      "id": "TC-072",
+      "name": "API POST /locations",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225018_043234_TC-072.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2422,
+      "cycle": 0
+    },
+    {
+      "id": "TC-073",
+      "name": "API POST /departments",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225020_208091_TC-073.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2136,
+      "cycle": 0
+    },
+    {
+      "id": "TC-074",
+      "name": "API POST /categories",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225022_380707_TC-074.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2128,
+      "cycle": 0
+    },
+    {
+      "id": "TC-075",
+      "name": "API POST /employees",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225024_606228_TC-075.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2204,
+      "cycle": 0
+    },
+    {
+      "id": "TC-076",
+      "name": "API POST /skus",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225026_859784_TC-076.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2220,
+      "cycle": 0
+    },
+    {
+      "id": "TC-077",
+      "name": "API POST /equipment",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225029_113418_TC-077.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2215,
+      "cycle": 0
+    },
+    {
+      "id": "TC-078",
+      "name": "API POST /inventory/manual-log",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225031_321435_TC-078.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2185,
+      "cycle": 0
+    },
+    {
+      "id": "TC-079",
+      "name": "API POST /inventory/suppliers",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225033_514914_TC-079.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2152,
+      "cycle": 0
+    },
+    {
+      "id": "TC-080",
+      "name": "API PUT /inventory/suppliers/{supplier_id}",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225035_768196_TC-080.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2216,
+      "cycle": 0
+    },
+    {
+      "id": "TC-081",
+      "name": "API PUT /inventory/skus/{sku_id}/supplier",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225037_925396_TC-081.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2137,
+      "cycle": 0
+    },
+    {
+      "id": "TC-082",
+      "name": "API PUT /inventory/skus/{sku_id}",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225040_097205_TC-082.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2132,
+      "cycle": 0
+    },
+    {
+      "id": "TC-083",
+      "name": "API POST /orders/drafts/add-item",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225042_320845_TC-083.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2201,
+      "cycle": 0
+    },
+    {
+      "id": "TC-084",
+      "name": "API PUT /orders/{po_id}/update",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225044_494118_TC-084.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2131,
+      "cycle": 0
+    },
+    {
+      "id": "TC-085",
+      "name": "API DELETE /orders/{po_id}/items/{sku_id}",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225046_692299_TC-085.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2165,
+      "cycle": 0
+    },
+    {
+      "id": "TC-086",
+      "name": "API POST /orders/submit",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225048_872544_TC-086.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2150,
+      "cycle": 0
+    },
+    {
+      "id": "TC-087",
+      "name": "API POST /orders/actuate-bulk",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225051_045632_TC-087.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2129,
+      "cycle": 0
+    },
+    {
+      "id": "TC-088",
+      "name": "API POST /orders/{po_id}/receive",
+      "status": "fail",
+      "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225053_294230_TC-088.png",
+      "console_errors": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://68.183.30.128/api/v1/auth/refresh",
+          "status": 401
+        }
+      ],
+      "duration_ms": 2215,
+      "cycle": 0
+    }
+  ],
+  "escalation": null,
+  "escalation_response": null,
+  "fix_history": [],
+  "events": [
+    {
+      "type": "status_change",
+      "data": {
+        "status": "inspecting",
+        "message": "Inspector Agent analyzing code and docs..."
+      },
+      "timestamp": "2026-06-13T02:47:40.625714+00:00"
+    },
+    {
+      "type": "status_change",
+      "data": {
+        "status": "inspecting_complete",
+        "message": "Inspector found 89 test cases"
+      },
+      "timestamp": "2026-06-13T02:48:42.940599+00:00"
+    },
+    {
+      "type": "status_change",
+      "data": {
+        "status": "seeding",
+        "message": "Seed Agent preparing test data..."
+      },
+      "timestamp": "2026-06-13T02:48:42.944252+00:00"
+    },
+    {
+      "type": "status_change",
+      "data": {
+        "status": "seeding_complete",
+        "message": "Seed complete: 1 records inserted",
+        "tables_seeded": [
+          "erp_procurement_queue"
+        ],
+        "records_inserted": 1
+      },
+      "timestamp": "2026-06-13T02:48:43.195445+00:00"
+    },
+    {
+      "type": "status_change",
+      "data": {
+        "status": "testing",
+        "message": "Playwright Agent running tests..."
+      },
+      "timestamp": "2026-06-13T02:48:43.199117+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "HM \u2014 valid login",
+        "id": "TC-001"
+      },
+      "timestamp": "2026-06-13T02:48:43.221572+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-001",
+        "name": "HM \u2014 valid login",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224852_399988_TC-001.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 9231,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:48:52.456636+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "HM \u2014 invalid PIN rejected",
+        "id": "TC-002"
+      },
+      "timestamp": "2026-06-13T02:48:52.460851+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-002",
+        "name": "HM \u2014 invalid PIN rejected",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224853_481394_TC-002.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 1074,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:48:53.539375+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "TECH \u2014 valid login",
+        "id": "TC-003"
+      },
+      "timestamp": "2026-06-13T02:48:53.542938+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-003",
+        "name": "TECH \u2014 valid login",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224900_194998_TC-003.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 6708,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:00.255349+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "TECH \u2014 invalid PIN rejected",
+        "id": "TC-004"
+      },
+      "timestamp": "2026-06-13T02:49:00.259471+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-004",
+        "name": "TECH \u2014 invalid PIN rejected",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224901_277983_TC-004.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 1074,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:01.338397+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "DM \u2014 valid login",
+        "id": "TC-005"
+      },
+      "timestamp": "2026-06-13T02:49:01.342993+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-005",
+        "name": "DM \u2014 valid login",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224908_009488_TC-005.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 6724,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:08.071827+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "DM \u2014 invalid PIN rejected",
+        "id": "TC-006"
+      },
+      "timestamp": "2026-06-13T02:49:08.075878+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-006",
+        "name": "DM \u2014 invalid PIN rejected",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224909_096607_TC-006.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 1071,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:09.152474+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "ADMIN \u2014 valid login",
+        "id": "TC-007"
+      },
+      "timestamp": "2026-06-13T02:49:09.157337+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-007",
+        "name": "ADMIN \u2014 valid login",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224915_792704_TC-007.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 6692,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:15.855392+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "ADMIN \u2014 invalid PIN rejected",
+        "id": "TC-008"
+      },
+      "timestamp": "2026-06-13T02:49:15.861091+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-008",
+        "name": "ADMIN \u2014 invalid PIN rejected",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224916_879539_TC-008.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 1069,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:16.937213+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "End-to-end create and view record",
+        "id": "TC-089"
+      },
+      "timestamp": "2026-06-13T02:49:16.941907+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-089",
+        "name": "End-to-end create and view record",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224919_032991_TC-089.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2156,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:19.103527+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to App.jsx",
+        "id": "TC-009"
+      },
+      "timestamp": "2026-06-13T02:49:19.107664+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-009",
+        "name": "Navigate to App.jsx",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224919_127024_TC-009.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 77,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:19.190195+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to main.jsx",
+        "id": "TC-010"
+      },
+      "timestamp": "2026-06-13T02:49:19.194511+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-010",
+        "name": "Navigate to main.jsx",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224919_205735_TC-010.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 53,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:19.253386+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to AdminDataIngestion.jsx",
+        "id": "TC-011"
+      },
+      "timestamp": "2026-06-13T02:49:19.258120+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-011",
+        "name": "Navigate to AdminDataIngestion.jsx",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224919_268621_TC-011.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 49,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:19.312386+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to AdminSingleIngestionModal.jsx",
+        "id": "TC-012"
+      },
+      "timestamp": "2026-06-13T02:49:19.317286+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-012",
+        "name": "Navigate to AdminSingleIngestionModal.jsx",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224919_328397_TC-012.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 63,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:19.387267+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to ArchiveDashboard.jsx",
+        "id": "TC-013"
+      },
+      "timestamp": "2026-06-13T02:49:19.392006+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-013",
+        "name": "Navigate to ArchiveDashboard.jsx",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224919_402806_TC-013.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 57,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:19.455003+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to CFOApprovals.jsx",
+        "id": "TC-014"
+      },
+      "timestamp": "2026-06-13T02:49:19.459795+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-014",
+        "name": "Navigate to CFOApprovals.jsx",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224919_470762_TC-014.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 56,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:19.522228+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to CreateMWOForm.jsx",
+        "id": "TC-015"
+      },
+      "timestamp": "2026-06-13T02:49:19.527756+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-015",
+        "name": "Navigate to CreateMWOForm.jsx",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224919_540189_TC-015.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 51,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:19.586682+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to DispatchQueueTable.jsx",
+        "id": "TC-016"
+      },
+      "timestamp": "2026-06-13T02:49:19.592382+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-016",
+        "name": "Navigate to DispatchQueueTable.jsx",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224919_603228_TC-016.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 55,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:19.654220+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to EnterpriseDataMatrix.jsx",
+        "id": "TC-017"
+      },
+      "timestamp": "2026-06-13T02:49:19.659501+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-017",
+        "name": "Navigate to EnterpriseDataMatrix.jsx",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224919_670627_TC-017.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 62,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:19.728527+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to EquipmentActuationModal.jsx",
+        "id": "TC-018"
+      },
+      "timestamp": "2026-06-13T02:49:19.735853+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-018",
+        "name": "Navigate to EquipmentActuationModal.jsx",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224919_746991_TC-018.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 63,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:19.806042+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to EquipmentDetailModal.jsx",
+        "id": "TC-019"
+      },
+      "timestamp": "2026-06-13T02:49:19.811515+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-019",
+        "name": "Navigate to EquipmentDetailModal.jsx",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224919_822562_TC-019.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 53,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:19.871730+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to EquipmentIngestionModal.jsx",
+        "id": "TC-020"
+      },
+      "timestamp": "2026-06-13T02:49:19.877550+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-020",
+        "name": "Navigate to EquipmentIngestionModal.jsx",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224919_889537_TC-020.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 54,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:19.939591+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to EquipmentMatrix.jsx",
+        "id": "TC-021"
+      },
+      "timestamp": "2026-06-13T02:49:19.945509+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-021",
+        "name": "Navigate to EquipmentMatrix.jsx",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224919_957334_TC-021.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 55,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:20.007385+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to HMAssignmentModal.jsx",
+        "id": "TC-022"
+      },
+      "timestamp": "2026-06-13T02:49:20.013521+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-022",
+        "name": "Navigate to HMAssignmentModal.jsx",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224920_025839_TC-022.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 69,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:20.089971+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to HMDashboard.jsx",
+        "id": "TC-023"
+      },
+      "timestamp": "2026-06-13T02:49:20.096135+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-023",
+        "name": "Navigate to HMDashboard.jsx",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224920_107498_TC-023.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 51,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:20.155346+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to HMReviewModal.jsx",
+        "id": "TC-024"
+      },
+      "timestamp": "2026-06-13T02:49:20.162632+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-024",
+        "name": "Navigate to HMReviewModal.jsx",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224920_174070_TC-024.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 51,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:20.221194+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to HODWorkspace.jsx",
+        "id": "TC-025"
+      },
+      "timestamp": "2026-06-13T02:49:20.227553+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-025",
+        "name": "Navigate to HODWorkspace.jsx",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224920_239103_TC-025.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 55,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:20.292154+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to ManualDispatchPortal.jsx",
+        "id": "TC-026"
+      },
+      "timestamp": "2026-06-13T02:49:20.304595+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-026",
+        "name": "Navigate to ManualDispatchPortal.jsx",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224920_317817_TC-026.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 66,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:20.381978+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to ManualLogWidget.jsx",
+        "id": "TC-027"
+      },
+      "timestamp": "2026-06-13T02:49:20.391918+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-027",
+        "name": "Navigate to ManualLogWidget.jsx",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224920_409316_TC-027.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 55,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:20.457225+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to MwoClosureModal.jsx",
+        "id": "TC-028"
+      },
+      "timestamp": "2026-06-13T02:49:20.463966+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-028",
+        "name": "Navigate to MwoClosureModal.jsx",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224920_475855_TC-028.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 68,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:20.540983+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to PartIngestionModal.jsx",
+        "id": "TC-029"
+      },
+      "timestamp": "2026-06-13T02:49:20.548412+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-029",
+        "name": "Navigate to PartIngestionModal.jsx",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224920_559579_TC-029.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 47,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:20.605868+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to PartsMatrix.jsx",
+        "id": "TC-030"
+      },
+      "timestamp": "2026-06-13T02:49:20.612937+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-030",
+        "name": "Navigate to PartsMatrix.jsx",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224920_628976_TC-030.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 69,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:20.692686+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to ProcurementActuationModal.jsx",
+        "id": "TC-031"
+      },
+      "timestamp": "2026-06-13T02:49:20.703679+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-031",
+        "name": "Navigate to ProcurementActuationModal.jsx",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224920_725400_TC-031.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 66,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:20.781258+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to ProcurementMatrix.jsx",
+        "id": "TC-032"
+      },
+      "timestamp": "2026-06-13T02:49:20.789859+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-032",
+        "name": "Navigate to ProcurementMatrix.jsx",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224920_801741_TC-032.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 60,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:20.858196+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to SkuCreationModal.jsx",
+        "id": "TC-033"
+      },
+      "timestamp": "2026-06-13T02:49:20.866595+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-033",
+        "name": "Navigate to SkuCreationModal.jsx",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224920_878711_TC-033.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 63,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:20.939520+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to SkuLedger.jsx",
+        "id": "TC-034"
+      },
+      "timestamp": "2026-06-13T02:49:20.947010+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-034",
+        "name": "Navigate to SkuLedger.jsx",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224920_960961_TC-034.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 65,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:21.023009+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to SupplierCreationModal.jsx",
+        "id": "TC-035"
+      },
+      "timestamp": "2026-06-13T02:49:21.030768+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-035",
+        "name": "Navigate to SupplierCreationModal.jsx",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224921_044924_TC-035.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 67,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:21.109217+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to TaxonomyIngestionModal.jsx",
+        "id": "TC-036"
+      },
+      "timestamp": "2026-06-13T02:49:21.118577+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-036",
+        "name": "Navigate to TaxonomyIngestionModal.jsx",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224921_130035_TC-036.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 63,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:21.191180+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to TechCompletionModal.jsx",
+        "id": "TC-037"
+      },
+      "timestamp": "2026-06-13T02:49:21.200013+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-037",
+        "name": "Navigate to TechCompletionModal.jsx",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224921_211303_TC-037.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 64,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:21.273233+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to TechConsumePartModal.jsx",
+        "id": "TC-038"
+      },
+      "timestamp": "2026-06-13T02:49:21.281965+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-038",
+        "name": "Navigate to TechConsumePartModal.jsx",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224921_295700_TC-038.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 62,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:21.356771+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to TechDashboard.jsx",
+        "id": "TC-039"
+      },
+      "timestamp": "2026-06-13T02:49:21.365180+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-039",
+        "name": "Navigate to TechDashboard.jsx",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224921_378044_TC-039.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 62,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:21.439700+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to TechMWODetailModal.jsx",
+        "id": "TC-040"
+      },
+      "timestamp": "2026-06-13T02:49:21.448927+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-040",
+        "name": "Navigate to TechMWODetailModal.jsx",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224921_460352_TC-040.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 66,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:21.525245+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to UserDetailModal.jsx",
+        "id": "TC-041"
+      },
+      "timestamp": "2026-06-13T02:49:21.534275+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-041",
+        "name": "Navigate to UserDetailModal.jsx",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224921_545954_TC-041.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 60,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:21.605392+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to AuthContext.jsx",
+        "id": "TC-042"
+      },
+      "timestamp": "2026-06-13T02:49:21.616643+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-042",
+        "name": "Navigate to AuthContext.jsx",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224921_628382_TC-042.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 62,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:21.690699+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to AdminConsole.jsx",
+        "id": "TC-043"
+      },
+      "timestamp": "2026-06-13T02:49:21.702467+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-043",
+        "name": "Navigate to AdminConsole.jsx",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224921_724031_TC-043.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 76,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:21.792108+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to CFODashboard.jsx",
+        "id": "TC-044"
+      },
+      "timestamp": "2026-06-13T02:49:21.803015+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-044",
+        "name": "Navigate to CFODashboard.jsx",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224921_815303_TC-044.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 61,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:21.874043+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to DMLogin.jsx",
+        "id": "TC-045"
+      },
+      "timestamp": "2026-06-13T02:49:21.884144+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-045",
+        "name": "Navigate to DMLogin.jsx",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224921_895937_TC-045.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 65,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:21.960659+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to Login.jsx",
+        "id": "TC-046"
+      },
+      "timestamp": "2026-06-13T02:49:21.972127+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-046",
+        "name": "Navigate to Login.jsx",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224921_984608_TC-046.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 57,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:22.040293+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "Navigate to TechDashboard.jsx",
+        "id": "TC-047"
+      },
+      "timestamp": "2026-06-13T02:49:22.052742+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-047",
+        "name": "Navigate to TechDashboard.jsx",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224922_065494_TC-047.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 59,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:22.122922+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /admin/ingest/single-user",
+        "id": "TC-048"
+      },
+      "timestamp": "2026-06-13T02:49:22.133239+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-048",
+        "name": "API POST /admin/ingest/single-user",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224924_519735_TC-048.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2445,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:24.588752+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /admin/ingest/equipment",
+        "id": "TC-049"
+      },
+      "timestamp": "2026-06-13T02:49:24.598777+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-049",
+        "name": "API POST /admin/ingest/equipment",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224926_760488_TC-049.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2212,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:26.822592+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /admin/ingest/equipment/bulk",
+        "id": "TC-050"
+      },
+      "timestamp": "2026-06-13T02:49:26.833330+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-050",
+        "name": "API POST /admin/ingest/equipment/bulk",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224929_010009_TC-050.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2227,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:29.072828+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /admin/ingest/department",
+        "id": "TC-051"
+      },
+      "timestamp": "2026-06-13T02:49:29.083220+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-051",
+        "name": "API POST /admin/ingest/department",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224931_260669_TC-051.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2227,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:31.323633+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /admin/ingest/location",
+        "id": "TC-052"
+      },
+      "timestamp": "2026-06-13T02:49:31.333457+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-052",
+        "name": "API POST /admin/ingest/location",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224933_514169_TC-052.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2226,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:33.572383+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API PUT /admin/equipment/{equipment_id}/actuate",
+        "id": "TC-053"
+      },
+      "timestamp": "2026-06-13T02:49:33.582914+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-053",
+        "name": "API PUT /admin/equipment/{equipment_id}/actuate",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224935_765040_TC-053.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2245,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:35.840166+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /admin/ingest/part",
+        "id": "TC-054"
+      },
+      "timestamp": "2026-06-13T02:49:35.851468+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-054",
+        "name": "API POST /admin/ingest/part",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224938_024211_TC-054.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2224,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:38.087261+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API PUT /admin/procurement/{procurement_id}/actuate",
+        "id": "TC-055"
+      },
+      "timestamp": "2026-06-13T02:49:38.098342+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-055",
+        "name": "API PUT /admin/procurement/{procurement_id}/actuate",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224940_245958_TC-055.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2193,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:40.302859+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /mwo/{mwo_id}/complete",
+        "id": "TC-056"
+      },
+      "timestamp": "2026-06-13T02:49:40.314475+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-056",
+        "name": "API POST /mwo/{mwo_id}/complete",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224942_420923_TC-056.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2160,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:42.486619+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /mwo/broadcast",
+        "id": "TC-057"
+      },
+      "timestamp": "2026-06-13T02:49:42.498039+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-057",
+        "name": "API POST /mwo/broadcast",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224944_671181_TC-057.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2227,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:44.740107+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /orders/legacy/submit",
+        "id": "TC-058"
+      },
+      "timestamp": "2026-06-13T02:49:44.752323+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-058",
+        "name": "API POST /orders/legacy/submit",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224946_838968_TC-058.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2141,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:46.910635+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /orders/assign",
+        "id": "TC-059"
+      },
+      "timestamp": "2026-06-13T02:49:46.930331+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-059",
+        "name": "API POST /orders/assign",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224949_004474_TC-059.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2124,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:49.071974+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /mwo",
+        "id": "TC-060"
+      },
+      "timestamp": "2026-06-13T02:49:49.089761+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-060",
+        "name": "API POST /mwo",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224951_226520_TC-060.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2186,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:51.288127+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /admin/employees/bulk-upload",
+        "id": "TC-061"
+      },
+      "timestamp": "2026-06-13T02:49:51.300347+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-061",
+        "name": "API POST /admin/employees/bulk-upload",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224953_386185_TC-061.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2139,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:53.451745+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /admin/mwo/bulk-upload",
+        "id": "TC-062"
+      },
+      "timestamp": "2026-06-13T02:49:53.464000+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-062",
+        "name": "API POST /admin/mwo/bulk-upload",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224955_629757_TC-062.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2227,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:55.703587+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /admin/users/bulk-upload",
+        "id": "TC-063"
+      },
+      "timestamp": "2026-06-13T02:49:55.758236+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-063",
+        "name": "API POST /admin/users/bulk-upload",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_224957_884316_TC-063.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2180,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:49:57.952791+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API DELETE /admin/users/{user_id}",
+        "id": "TC-064"
+      },
+      "timestamp": "2026-06-13T02:49:57.965132+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-064",
+        "name": "API DELETE /admin/users/{user_id}",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225000_036661_TC-064.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2123,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:50:00.163304+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API PUT /admin/users/{user_id}/escalate",
+        "id": "TC-065"
+      },
+      "timestamp": "2026-06-13T02:50:00.180138+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-065",
+        "name": "API PUT /admin/users/{user_id}/escalate",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225002_250914_TC-065.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2123,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:50:02.320140+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /admin/ingest/personnel/bulk",
+        "id": "TC-066"
+      },
+      "timestamp": "2026-06-13T02:50:02.333660+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-066",
+        "name": "API POST /admin/ingest/personnel/bulk",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225004_441357_TC-066.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2153,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:50:04.500493+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /admin/ingest/part/bulk",
+        "id": "TC-067"
+      },
+      "timestamp": "2026-06-13T02:50:04.512680+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-067",
+        "name": "API POST /admin/ingest/part/bulk",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225006_585638_TC-067.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2129,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:50:06.654797+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /inventory/skus",
+        "id": "TC-068"
+      },
+      "timestamp": "2026-06-13T02:50:06.668266+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-068",
+        "name": "API POST /inventory/skus",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225008_784491_TC-068.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2170,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:50:08.851469+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /inventory/parts",
+        "id": "TC-069"
+      },
+      "timestamp": "2026-06-13T02:50:08.866604+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-069",
+        "name": "API POST /inventory/parts",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225010_998051_TC-069.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2185,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:50:11.066460+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /inventory/mutate",
+        "id": "TC-070"
+      },
+      "timestamp": "2026-06-13T02:50:11.079416+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-070",
+        "name": "API POST /inventory/mutate",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225013_343338_TC-070.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2321,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:50:13.417909+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /work-orders/{mwo_id}/consume",
+        "id": "TC-071"
+      },
+      "timestamp": "2026-06-13T02:50:13.430439+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-071",
+        "name": "API POST /work-orders/{mwo_id}/consume",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225015_597728_TC-071.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2222,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:50:15.667640+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /locations",
+        "id": "TC-072"
+      },
+      "timestamp": "2026-06-13T02:50:15.681351+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-072",
+        "name": "API POST /locations",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225018_043234_TC-072.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2422,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:50:18.119020+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /departments",
+        "id": "TC-073"
+      },
+      "timestamp": "2026-06-13T02:50:18.135452+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-073",
+        "name": "API POST /departments",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225020_208091_TC-073.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2136,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:50:20.288979+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /categories",
+        "id": "TC-074"
+      },
+      "timestamp": "2026-06-13T02:50:20.303582+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-074",
+        "name": "API POST /categories",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225022_380707_TC-074.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2128,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:50:22.449643+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /employees",
+        "id": "TC-075"
+      },
+      "timestamp": "2026-06-13T02:50:22.464300+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-075",
+        "name": "API POST /employees",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225024_606228_TC-075.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2204,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:50:24.681850+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /skus",
+        "id": "TC-076"
+      },
+      "timestamp": "2026-06-13T02:50:24.695833+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-076",
+        "name": "API POST /skus",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225026_859784_TC-076.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2220,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:50:26.934000+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /equipment",
+        "id": "TC-077"
+      },
+      "timestamp": "2026-06-13T02:50:26.950672+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-077",
+        "name": "API POST /equipment",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225029_113418_TC-077.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2215,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:50:29.182654+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /inventory/manual-log",
+        "id": "TC-078"
+      },
+      "timestamp": "2026-06-13T02:50:29.195787+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-078",
+        "name": "API POST /inventory/manual-log",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225031_321435_TC-078.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2185,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:50:31.397293+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /inventory/suppliers",
+        "id": "TC-079"
+      },
+      "timestamp": "2026-06-13T02:50:31.411821+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-079",
+        "name": "API POST /inventory/suppliers",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225033_514914_TC-079.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2152,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:50:33.582304+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API PUT /inventory/suppliers/{supplier_id}",
+        "id": "TC-080"
+      },
+      "timestamp": "2026-06-13T02:50:33.597767+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-080",
+        "name": "API PUT /inventory/suppliers/{supplier_id}",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225035_768196_TC-080.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2216,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:50:35.829566+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API PUT /inventory/skus/{sku_id}/supplier",
+        "id": "TC-081"
+      },
+      "timestamp": "2026-06-13T02:50:35.844075+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-081",
+        "name": "API PUT /inventory/skus/{sku_id}/supplier",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225037_925396_TC-081.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2137,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:50:37.997033+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API PUT /inventory/skus/{sku_id}",
+        "id": "TC-082"
+      },
+      "timestamp": "2026-06-13T02:50:38.013856+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-082",
+        "name": "API PUT /inventory/skus/{sku_id}",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225040_097205_TC-082.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2132,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:50:40.163911+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /orders/drafts/add-item",
+        "id": "TC-083"
+      },
+      "timestamp": "2026-06-13T02:50:40.178928+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-083",
+        "name": "API POST /orders/drafts/add-item",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225042_320845_TC-083.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2201,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:50:42.398545+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API PUT /orders/{po_id}/update",
+        "id": "TC-084"
+      },
+      "timestamp": "2026-06-13T02:50:42.413541+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-084",
+        "name": "API PUT /orders/{po_id}/update",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225044_494118_TC-084.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2131,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:50:44.562916+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API DELETE /orders/{po_id}/items/{sku_id}",
+        "id": "TC-085"
+      },
+      "timestamp": "2026-06-13T02:50:44.580410+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-085",
+        "name": "API DELETE /orders/{po_id}/items/{sku_id}",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225046_692299_TC-085.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2165,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:50:46.763925+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /orders/submit",
+        "id": "TC-086"
+      },
+      "timestamp": "2026-06-13T02:50:46.781948+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-086",
+        "name": "API POST /orders/submit",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225048_872544_TC-086.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2150,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:50:48.949020+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /orders/actuate-bulk",
+        "id": "TC-087"
+      },
+      "timestamp": "2026-06-13T02:50:48.966520+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-087",
+        "name": "API POST /orders/actuate-bulk",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225051_045632_TC-087.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2129,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:50:51.112895+00:00"
+    },
+    {
+      "type": "test_start",
+      "data": {
+        "name": "API POST /orders/{po_id}/receive",
+        "id": "TC-088"
+      },
+      "timestamp": "2026-06-13T02:50:51.129660+00:00"
+    },
+    {
+      "type": "test_fail",
+      "data": {
+        "id": "TC-088",
+        "name": "API POST /orders/{po_id}/receive",
+        "status": "fail",
+        "error": "1 console error(s): Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+        "screenshot_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\claude-mcp-bridge\\logs\\playwright_screenshots\\20260612_225053_294230_TC-088.png",
+        "console_errors": [
+          {
+            "type": "error",
+            "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+          }
+        ],
+        "network_errors": [
+          {
+            "url": "http://68.183.30.128/api/v1/auth/refresh",
+            "status": 401
+          }
+        ],
+        "duration_ms": 2215,
+        "cycle": 0
+      },
+      "timestamp": "2026-06-13T02:50:53.361590+00:00"
+    },
+    {
+      "type": "fix_cycle_start",
+      "data": {
+        "cycle": 1,
+        "failing": 89
+      },
+      "timestamp": "2026-06-13T02:50:53.379820+00:00"
+    }
+  ],
+  "created_at": "2026-06-13T02:47:40.615106",
+  "updated_at": "2026-06-13T02:50:53.380081+00:00",
+  "test_plan_path": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory\\logs\\qa_runs\\e1cc8373-9c1b-4db7-87c9-fd329eafc941_test_plan.json"
+}

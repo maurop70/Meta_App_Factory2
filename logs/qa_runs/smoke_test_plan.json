@@ -467,6 +467,13 @@
     },
     {
       "method": "GET",
+      "path": "/inventory/alerts",
+      "description": "get inventory alerts",
+      "requires_auth": true,
+      "params": []
+    },
+    {
+      "method": "GET",
       "path": "/inventory/skus/search",
       "description": "SKU autocomplete feed for the manual log widget (maintenance parts + admin supplies).",
       "requires_auth": true,
@@ -520,6 +527,15 @@
       "method": "PUT",
       "path": "/inventory/skus/{sku_id}/supplier",
       "description": "HOD supplier reassignment on an existing SKU; supplier_id=null explicitly unassigns.",
+      "requires_auth": true,
+      "params": [
+        "sku_id"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/inventory/skus/{sku_id}",
+      "description": "General HOD update endpoint for existing SKUs.",
       "requires_auth": true,
       "params": [
         "sku_id"
@@ -618,10 +634,7 @@
       "component": "ArchiveDashboard.jsx",
       "requires_auth": false,
       "roles": [],
-      "api_calls": [
-        "/api/mwo/${order.mwo_id}/archive",
-        "/api/mwo"
-      ]
+      "api_calls": []
     },
     {
       "route": "/c-f-o-approvals",
@@ -780,6 +793,13 @@
     {
       "route": "/taxonomy-ingestion-modal",
       "component": "TaxonomyIngestionModal.jsx",
+      "requires_auth": false,
+      "roles": [],
+      "api_calls": []
+    },
+    {
+      "route": "/tech-completion-modal",
+      "component": "TechCompletionModal.jsx",
       "requires_auth": false,
       "roles": [],
       "api_calls": []
@@ -1468,6 +1488,22 @@
     },
     {
       "id": "TC-037",
+      "name": "Navigate to TechCompletionModal.jsx",
+      "description": "Page TechCompletionModal.jsx loads without console errors",
+      "category": "navigation",
+      "page": "TechCompletionModal.jsx",
+      "role": "HM",
+      "steps": [
+        "Authenticate as HM",
+        "Navigate to /tech-completion-modal",
+        "Wait for page to fully load"
+      ],
+      "expected": "Page renders without JS errors or failed network requests",
+      "priority": 2,
+      "requires_seed": false
+    },
+    {
+      "id": "TC-038",
       "name": "Navigate to TechConsumePartModal.jsx",
       "description": "Page TechConsumePartModal.jsx loads without console errors",
       "category": "navigation",
@@ -1483,7 +1519,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-038",
+      "id": "TC-039",
       "name": "Navigate to TechDashboard.jsx",
       "description": "Page TechDashboard.jsx loads without console errors",
       "category": "navigation",
@@ -1499,7 +1535,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-039",
+      "id": "TC-040",
       "name": "Navigate to TechMWODetailModal.jsx",
       "description": "Page TechMWODetailModal.jsx loads without console errors",
       "category": "navigation",
@@ -1515,7 +1551,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-040",
+      "id": "TC-041",
       "name": "Navigate to UserDetailModal.jsx",
       "description": "Page UserDetailModal.jsx loads without console errors",
       "category": "navigation",
@@ -1531,7 +1567,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-041",
+      "id": "TC-042",
       "name": "Navigate to AuthContext.jsx",
       "description": "Page AuthContext.jsx loads without console errors",
       "category": "navigation",
@@ -1547,7 +1583,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-042",
+      "id": "TC-043",
       "name": "Navigate to AdminConsole.jsx",
       "description": "Page AdminConsole.jsx loads without console errors",
       "category": "navigation",
@@ -1563,7 +1599,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-043",
+      "id": "TC-044",
       "name": "Navigate to CFODashboard.jsx",
       "description": "Page CFODashboard.jsx loads without console errors",
       "category": "navigation",
@@ -1579,7 +1615,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-044",
+      "id": "TC-045",
       "name": "Navigate to DMLogin.jsx",
       "description": "Page DMLogin.jsx loads without console errors",
       "category": "navigation",
@@ -1595,7 +1631,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-045",
+      "id": "TC-046",
       "name": "Navigate to Login.jsx",
       "description": "Page Login.jsx loads without console errors",
       "category": "navigation",
@@ -1611,7 +1647,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-046",
+      "id": "TC-047",
       "name": "Navigate to TechDashboard.jsx",
       "description": "Page TechDashboard.jsx loads without console errors",
       "category": "navigation",
@@ -1627,7 +1663,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-047",
+      "id": "TC-048",
       "name": "API POST /admin/ingest/single-user",
       "description": "Test ingest single user endpoint",
       "category": "crud",
@@ -1643,7 +1679,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-048",
+      "id": "TC-049",
       "name": "API POST /admin/ingest/equipment",
       "description": "Test ingest equipment endpoint",
       "category": "crud",
@@ -1659,7 +1695,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-049",
+      "id": "TC-050",
       "name": "API POST /admin/ingest/equipment/bulk",
       "description": "Test bulk ingest equipment endpoint",
       "category": "crud",
@@ -1675,7 +1711,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-050",
+      "id": "TC-051",
       "name": "API POST /admin/ingest/department",
       "description": "Test ingest department endpoint",
       "category": "crud",
@@ -1691,7 +1727,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-051",
+      "id": "TC-052",
       "name": "API POST /admin/ingest/location",
       "description": "Test ingest location endpoint",
       "category": "crud",
@@ -1707,7 +1743,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-052",
+      "id": "TC-053",
       "name": "API PUT /admin/equipment/{equipment_id}/actuate",
       "description": "Test actuate equipment endpoint",
       "category": "crud",
@@ -1723,7 +1759,7 @@
       "requires_seed": true
     },
     {
-      "id": "TC-053",
+      "id": "TC-054",
       "name": "API POST /admin/ingest/part",
       "description": "Test ingest part endpoint",
       "category": "crud",
@@ -1739,7 +1775,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-054",
+      "id": "TC-055",
       "name": "API PUT /admin/procurement/{procurement_id}/actuate",
       "description": "Test actuate procurement endpoint",
       "category": "crud",
@@ -1755,7 +1791,7 @@
       "requires_seed": true
     },
     {
-      "id": "TC-055",
+      "id": "TC-056",
       "name": "API POST /mwo/{mwo_id}/complete",
       "description": "Test complete mwo endpoint",
       "category": "crud",
@@ -1771,7 +1807,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-056",
+      "id": "TC-057",
       "name": "API POST /mwo/broadcast",
       "description": "Test broadcast mwo state endpoint",
       "category": "crud",
@@ -1787,7 +1823,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-057",
+      "id": "TC-058",
       "name": "API POST /orders/legacy/submit",
       "description": "Test submit order endpoint",
       "category": "crud",
@@ -1803,7 +1839,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-058",
+      "id": "TC-059",
       "name": "API POST /orders/assign",
       "description": "Test assign order endpoint",
       "category": "crud",
@@ -1819,7 +1855,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-059",
+      "id": "TC-060",
       "name": "API POST /mwo",
       "description": "Test create mwo endpoint",
       "category": "crud",
@@ -1835,7 +1871,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-060",
+      "id": "TC-061",
       "name": "API POST /admin/employees/bulk-upload",
       "description": "Test bulk upload employees endpoint",
       "category": "crud",
@@ -1851,7 +1887,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-061",
+      "id": "TC-062",
       "name": "API POST /admin/mwo/bulk-upload",
       "description": "Test bulk upload mwos endpoint",
       "category": "crud",
@@ -1867,7 +1903,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-062",
+      "id": "TC-063",
       "name": "API POST /admin/users/bulk-upload",
       "description": "Test bulk upload users endpoint",
       "category": "crud",
@@ -1883,7 +1919,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-063",
+      "id": "TC-064",
       "name": "API DELETE /admin/users/{user_id}",
       "description": "Test terminate user access endpoint",
       "category": "crud",
@@ -1899,7 +1935,7 @@
       "requires_seed": true
     },
     {
-      "id": "TC-064",
+      "id": "TC-065",
       "name": "API PUT /admin/users/{user_id}/escalate",
       "description": "Test escalate user endpoint",
       "category": "crud",
@@ -1915,7 +1951,7 @@
       "requires_seed": true
     },
     {
-      "id": "TC-065",
+      "id": "TC-066",
       "name": "API POST /admin/ingest/personnel/bulk",
       "description": "Test bulk ingest personnel endpoint",
       "category": "crud",
@@ -1931,7 +1967,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-066",
+      "id": "TC-067",
       "name": "API POST /admin/ingest/part/bulk",
       "description": "Test bulk ingest part endpoint",
       "category": "crud",
@@ -1947,7 +1983,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-067",
+      "id": "TC-068",
       "name": "API POST /inventory/skus",
       "description": "Test ingest sku endpoint",
       "category": "crud",
@@ -1963,7 +1999,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-068",
+      "id": "TC-069",
       "name": "API POST /inventory/parts",
       "description": "Test ingest part endpoint",
       "category": "crud",
@@ -1979,7 +2015,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-069",
+      "id": "TC-070",
       "name": "API POST /inventory/mutate",
       "description": "Test mutate inventory endpoint",
       "category": "crud",
@@ -1995,7 +2031,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-070",
+      "id": "TC-071",
       "name": "API POST /work-orders/{mwo_id}/consume",
       "description": "Test ingest mwo consumption endpoint",
       "category": "crud",
@@ -2011,7 +2047,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-071",
+      "id": "TC-072",
       "name": "API POST /locations",
       "description": "Test hydrate location endpoint",
       "category": "crud",
@@ -2027,7 +2063,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-072",
+      "id": "TC-073",
       "name": "API POST /departments",
       "description": "Test hydrate department endpoint",
       "category": "crud",
@@ -2043,7 +2079,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-073",
+      "id": "TC-074",
       "name": "API POST /categories",
       "description": "Test hydrate category endpoint",
       "category": "crud",
@@ -2059,7 +2095,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-074",
+      "id": "TC-075",
       "name": "API POST /employees",
       "description": "Test hydrate employee endpoint",
       "category": "crud",
@@ -2075,7 +2111,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-075",
+      "id": "TC-076",
       "name": "API POST /skus",
       "description": "Test hydrate sku endpoint",
       "category": "crud",
@@ -2091,7 +2127,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-076",
+      "id": "TC-077",
       "name": "API POST /equipment",
       "description": "Test hydrate equipment endpoint",
       "category": "crud",
@@ -2107,7 +2143,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-077",
+      "id": "TC-078",
       "name": "API POST /inventory/manual-log",
       "description": "Test ingest manual log endpoint",
       "category": "crud",
@@ -2123,7 +2159,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-078",
+      "id": "TC-079",
       "name": "API POST /inventory/suppliers",
       "description": "Test register supplier endpoint",
       "category": "crud",
@@ -2139,7 +2175,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-079",
+      "id": "TC-080",
       "name": "API PUT /inventory/suppliers/{supplier_id}",
       "description": "Test HOD supplier lifecycle: amend contact details / lead time. Compulsory fields cannot be blanked. endpoint",
       "category": "crud",
@@ -2155,7 +2191,7 @@
       "requires_seed": true
     },
     {
-      "id": "TC-080",
+      "id": "TC-081",
       "name": "API PUT /inventory/skus/{sku_id}/supplier",
       "description": "Test HOD supplier reassignment on an existing SKU; supplier_id=null explicitly unassigns. endpoint",
       "category": "crud",
@@ -2171,7 +2207,23 @@
       "requires_seed": true
     },
     {
-      "id": "TC-081",
+      "id": "TC-082",
+      "name": "API PUT /inventory/skus/{sku_id}",
+      "description": "Test General HOD update endpoint for existing SKUs. endpoint",
+      "category": "crud",
+      "page": "/inventory/skus/{sku_id}",
+      "role": "HM",
+      "steps": [
+        "Authenticate with valid credentials",
+        "Send PUT request to /inventory/skus/{sku_id}",
+        "Check response status and payload"
+      ],
+      "expected": "HTTP 200/201 with valid JSON; data persisted in DB",
+      "priority": 2,
+      "requires_seed": true
+    },
+    {
+      "id": "TC-083",
       "name": "API POST /orders/drafts/add-item",
       "description": "Test add draft item endpoint",
       "category": "crud",
@@ -2187,7 +2239,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-082",
+      "id": "TC-084",
       "name": "API PUT /orders/{po_id}/update",
       "description": "Test update draft order endpoint",
       "category": "crud",
@@ -2203,7 +2255,7 @@
       "requires_seed": true
     },
     {
-      "id": "TC-083",
+      "id": "TC-085",
       "name": "API DELETE /orders/{po_id}/items/{sku_id}",
       "description": "Test HOD line-item exclusion. Removing the final item dissolves the draft entirely. endpoint",
       "category": "crud",
@@ -2219,7 +2271,7 @@
       "requires_seed": true
     },
     {
-      "id": "TC-084",
+      "id": "TC-086",
       "name": "API POST /orders/submit",
       "description": "Test submit draft order endpoint",
       "category": "crud",
@@ -2235,7 +2287,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-085",
+      "id": "TC-087",
       "name": "API POST /orders/actuate-bulk",
       "description": "Test actuate orders bulk endpoint",
       "category": "crud",
@@ -2251,7 +2303,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-086",
+      "id": "TC-088",
       "name": "API POST /orders/{po_id}/receive",
       "description": "Test HOD shipment receipt: flips APPROVED -> FULFILLED and increments physical inventory. endpoint",
       "category": "crud",
@@ -2267,7 +2319,7 @@
       "requires_seed": false
     },
     {
-      "id": "TC-087",
+      "id": "TC-089",
       "name": "End-to-end create and view record",
       "description": "Create a new record and verify it appears in the list",
       "category": "workflow",

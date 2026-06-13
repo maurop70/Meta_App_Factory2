@@ -21,6 +21,7 @@ export const AuthProvider = ({ children }) => {
         isLoggedOutRef.current = true;
         clearRefreshTimer();
         setAccessToken(null);
+        localStorage.removeItem('accessToken');
         setUserRole(null);
         setJwtPayload(null);
         // Add React Router navigation here depending on your routing setup
@@ -68,7 +69,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     // SYSTEM BOOTSTRAP & EVENT LISTENER
-    useEffect(() => {
+    useEffect(() => {.
         const handleAuthTermination = () => logout();
         window.addEventListener('auth:termination', handleAuthTermination);
 

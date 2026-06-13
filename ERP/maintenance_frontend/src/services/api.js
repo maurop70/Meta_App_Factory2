@@ -1,12 +1,17 @@
 import axios from 'axios';
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
-let accessToken = null;
+let accessToken = localStorage.getItem('accessToken');
 let isRefreshing = false;
 let failedQueue = [];
 
 export const setAccessToken = (token) => {
     accessToken = token;
+    if (token) {
+        localStorage.setItem('accessToken', token);
+    } else {
+        localStorage.removeItem('accessToken');
+    }
 };
 
 const processQueue = (error, token = null) => {
