@@ -32,8 +32,11 @@ export const AuthProvider = ({ children }) => {
         clearRefreshTimer();
         
         try {
-            // SILENT PATCH: Fixed split() array indexing to prevent TypeError
-            const payloadBase64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+            const parts = token.split('.');
+            if (parts.length !== 3) {
+                throw new Error("Invalid JWT format");
+            }
+            const payloadBase64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
             const payloadJson = atob(payloadBase64);
             const payload = JSON.parse(payloadJson);
             const expTimeMs = payload.exp * 1000;
@@ -69,19 +72,18 @@ export const AuthProvider = ({ children }) => {
     };
 
     // SYSTEM BOOTSTRAP & EVENT LISTENER
-    useEffect(() => {.
+    useEffect(() => {
         const handleAuthTermination = () => logout();
         window.addEventListener('auth:termination', handleAuthTermination);
 
         const bootstrapSession = async () => {
             try {
-                // Attempt to silently reconstruct session from HttpOnly cookie on F5
                 const token = await triggerRefresh();
-                const payloadBase64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-                const payload = JSON.parse(atob(payloadBase64));
-                
-                // Assuming 'role' or equivalent key exists in your JWT payload
-                authenticateContext(token, payload.role || payload.sub_role, payload); 
+                if (token && typeof token === 'string' && token.split('.').length === 3) {
+                    const payloadBase64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+                    const payload = JSON.parse(atob(payloadBase64));
+                    authenticateContext(token, payload.role || payload.sub_role, payload);
+                }
             } catch (error) {
                 // Initial session reconstruction failed (user is logged out)
             } finally {

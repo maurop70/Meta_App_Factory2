@@ -431,6 +431,35 @@ class PlaywrightAgent:
         if ss_res.get("exit_code") == 0:
             screenshot_path = ss_res.get("screenshot_path") or ss_res.get("stdout") or ""
 
+        # Network errors (4xx/5xx) for the app's domain only.
+        # Fetched before console errors so console evaluation can correlate the
+        # expected pre-login 401 on the refresh endpoint.
+        network_res = execute_pw({"operation": "get_network", "session_id": session_id})
+        raw_network = network_res.get("stdout") or "[]"
+        try:
+            all_network = json.loads(raw_network) if isinstance(raw_network, str) else raw_network
+        except Exception:
+            all_network = []
+        host = base_url.split("//")[-1].split("/")[0]
+
+        # Expected pre-login session check: the app calls /api/v1/auth/refresh on
+        # initial load and receives 401 when no session exists. This is normal
+        # behavior, not a test failure.
+        has_allowed_401 = any(
+            isinstance(r, dict)
+            and r.get("status") == 401
+            and "auth/refresh" in r.get("url", "")
+            for r in (all_network if isinstance(all_network, list) else [])
+        )
+        net_errors = [
+            r for r in (all_network if isinstance(all_network, list) else [])
+            if isinstance(r, dict)
+            and r.get("status", 0) >= 400
+            and host in r.get("url", "")
+            # Whitelist 401 Unauthorized for the refresh endpoint only
+            and not (r.get("status") == 401 and "auth/refresh" in r.get("url", ""))
+        ]
+
         # Console errors
         console_res = execute_pw({"operation": "get_console", "session_id": session_id})
         raw_console = console_res.get("stdout") or "[]"
@@ -441,21 +470,8 @@ class PlaywrightAgent:
         console_errors = [
             e for e in (all_console if isinstance(all_console, list) else [])
             if isinstance(e, dict) and e.get("type") == "error"
-        ]
-
-        # Network errors (4xx/5xx) for the app's domain only
-        network_res = execute_pw({"operation": "get_network", "session_id": session_id})
-        raw_network = network_res.get("stdout") or "[]"
-        try:
-            all_network = json.loads(raw_network) if isinstance(raw_network, str) else raw_network
-        except Exception:
-            all_network = []
-        host = base_url.split("//")[-1].split("/")[0]
-        net_errors = [
-            r for r in (all_network if isinstance(all_network, list) else [])
-            if isinstance(r, dict)
-            and r.get("status", 0) >= 400
-            and host in r.get("url", "")
+            # Whitelist 401 console load failure only if matching the network refresh 401
+            and not ("401" in e.get("text", "") and has_allowed_401)
         ]
 
         # ── Step E: Evaluate result ───────────────────────────────────────────
