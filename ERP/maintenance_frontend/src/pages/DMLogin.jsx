@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { AUTH_API_BASE_URL } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 const DMLogin = () => {
@@ -29,7 +30,7 @@ const DMLogin = () => {
 
     try {
       const response = await axios.post(
-        '/api/v1/auth/login',
+        `${AUTH_API_BASE_URL}/v1/auth/login`,
         { emp_id: employeeId, pin },
         { withCredentials: true }
       );

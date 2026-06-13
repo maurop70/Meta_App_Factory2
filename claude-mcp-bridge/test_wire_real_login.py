@@ -54,15 +54,17 @@ def qa_thread() -> None:
             "operation": "evaluate",
             "script": (
                 "(() => {"
-                "  const ins = Array.from(document.querySelectorAll('input'));"
-                "  if (ins.length < 2) return 'not enough inputs';"
+                # Target the real fields by ID (avoids honeypots / input ordering)
+                "  const eid = document.querySelector('#mwo_operator_id');"
+                "  const pin = document.querySelector('#mwo_operator_pin');"
+                "  if (!eid || !pin) return 'fields not found';"
                 "  const setVal = (el, v) => {"
                 "    const s = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;"
                 "    s.call(el, v);"
                 "    el.dispatchEvent(new Event('input', {bubbles: true}));"
                 "  };"
-                f"  setVal(ins[ins.length - 2], '{EMPLOYEE_ID}');"
-                f"  setVal(ins[ins.length - 1], '{PIN}');"
+                f"  setVal(eid, '{EMPLOYEE_ID}');"
+                f"  setVal(pin, '{PIN}');"
                 "  return 'filled';"
                 "})()"
             ),
@@ -75,8 +77,9 @@ def qa_thread() -> None:
             "operation": "evaluate",
             "script": (
                 "(() => {"
-                "  const btn = Array.from(document.querySelectorAll('button'))"
-                "    .find(b => /login|sign in|submit/i.test(b.textContent)) "
+                "  const btn = document.querySelector('.erp-submit-btn')"
+                "    || Array.from(document.querySelectorAll('button'))"
+                "      .find(b => /login|sign in|submit|authorize/i.test(b.textContent)) "
                 "    || document.querySelector('button[type=submit], button');"
                 "  if (!btn) return 'no button';"
                 "  btn.click();"
@@ -100,7 +103,13 @@ def qa_thread() -> None:
         body = page_text.get("stdout", "")
         step("read authenticated page", page_text)
 
-        on_login = "PIN" in body and "Employee" in body and "Logout" not in body
+        # Robust login-page detection: these markers only exist on the gateway
+        # login screen and disappear once authenticated.
+        on_login = (
+            "Authorize Session" in body
+            or "Restricted Access Gateway" in body
+            or "Authentication failed" in body
+        )
         has_content = len(body) > 50
         result["page_excerpt"] = body[:400]
         result["ok"] = has_content and not on_login

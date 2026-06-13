@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const AUTH_API_BASE_URL = 'http://68.183.30.128/auth/api';
+export const AUTH_API_BASE_URL = 'http://68.183.30.128/auth/api';
 const API_BASE_URL = 'http://68.183.30.128/mwo/api';
 
 let accessToken = localStorage.getItem('accessToken');
