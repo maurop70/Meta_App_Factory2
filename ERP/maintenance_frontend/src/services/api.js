@@ -1,5 +1,7 @@
 import axios from 'axios';
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+
+const AUTH_API_BASE_URL = 'http://68.183.30.128:9000/api';
+const API_BASE_URL = 'http://68.183.30.128:8000/api';
 
 let accessToken = localStorage.getItem('accessToken');
 let isRefreshing = false;
@@ -33,7 +35,7 @@ export const triggerRefresh = async () => {
     }
     isRefreshing = true;
     try {
-        const { data } = await axios.post(`${API_BASE_URL}/v1/auth/refresh`, {}, { withCredentials: true });
+        const { data } = await axios.post(`${AUTH_API_BASE_URL}/v1/auth/refresh`, {}, { withCredentials: true });
         setAccessToken(data.access_token);
         processQueue(null, data.access_token);
         return data.access_token;
@@ -51,7 +53,7 @@ export const triggerRefresh = async () => {
 const apiClient = axios.create({
     baseURL: API_BASE_URL,
     headers: { 'Content-Type': 'application/json' },
-    withCredentials: true 
+    withCredentials: true
 });
 
 apiClient.interceptors.request.use(config => {
