@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --force",
-    "build": "vite build",
+    "build": "cd C:/Dev/Antigravity_AI_Agents/Meta_App_Factory/ERP/maintenance_frontend && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
