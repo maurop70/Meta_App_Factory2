@@ -78,6 +78,19 @@ export default function BuilderChat() {
   const [isMaximized, setIsMaximized] = useState(false);
   const [swarmOpen, setSwarmOpen] = useState(false);
   const [systemAgents, setSystemAgents] = useState([]);
+  // Explicit routing mode for Builder Chat: 'auto' | 'build' | 'venture'.
+  // Persisted across refreshes; sent as `mode` on the /api/orchestrate request.
+  const [routingMode, setRoutingMode] = useState(() => {
+    try {
+      return sessionStorage.getItem('ma_routing_mode') || 'auto';
+    } catch (e) {
+      return 'auto';
+    }
+  });
+  const applyRoutingMode = (m) => {
+    setRoutingMode(m);
+    try { sessionStorage.setItem('ma_routing_mode', m); } catch (e) {}
+  };
 
   const fetchSystemRegistry = async () => {
     try {
@@ -552,7 +565,8 @@ export default function BuilderChat() {
           description: userMsg || "Evaluate attached documents.", 
           prompt: userMsg || "Evaluate attached documents.",
           document_ids: updatedCachedDocIds,
-          history: serializedHistory
+          history: serializedHistory,
+          mode: routingMode
         })
       });
       
@@ -1210,6 +1224,30 @@ export default function BuilderChat() {
         </div>
       )}
 
+      <div className="routing-mode-toggle" style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.5rem', justifyContent: 'center' }}>
+        {[
+          { key: 'auto', label: '🤖 AUTO' },
+          { key: 'build', label: '🛠️ BUILD APP' },
+          { key: 'venture', label: '💼 C-SUITE' },
+        ].map((m) => (
+          <button
+            key={m.key}
+            type="button"
+            onClick={() => applyRoutingMode(m.key)}
+            disabled={isStreaming}
+            title={m.key === 'build' ? 'Build/change an app - skips the C-Suite pipeline' : m.key === 'venture' ? 'Engage the C-Suite for venture/strategy work' : 'Auto-route via the intent classifier'}
+            style={{
+              padding: '0.3rem 0.9rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: 700,
+              cursor: isStreaming ? 'not-allowed' : 'pointer', transition: 'all 0.15s',
+              border: routingMode === m.key ? '1px solid #6366f1' : '1px solid rgba(148,163,184,0.3)',
+              background: routingMode === m.key ? 'rgba(99,102,241,0.18)' : 'rgba(15,23,42,0.5)',
+              color: routingMode === m.key ? '#a5b4fc' : '#94a3b8',
+            }}
+          >
+            {m.label}
+          </button>
+        ))}
+      </div>
       <div className="chat-input-bar glowing-capsule-input">
         {isStreaming && (
           <button
@@ -1250,7 +1288,7 @@ export default function BuilderChat() {
           }}
           className="flex-1" 
           rows={2}
-          placeholder={socraticChallenge ? "___Standard input locked. Resolve challenge above___" : "___Enter system architectural brief or attach payload___"}
+          placeholder={socraticChallenge ? "___Standard input locked. Resolve challenge above___" : (routingMode === 'build' ? "___Enter app requirement or code modification brief (Build-an-App Mode)___" : routingMode === 'venture' ? "___Enter venture context, financial inquiry, or C-Suite directive (C-Suite Mode)___" : "___Enter system architectural brief or attach payload (Auto-Router Mode)___")}
           disabled={isStreaming || socraticChallenge !== null}
         />
         <button 

@@ -376,6 +376,7 @@ class ReviewRequest(BaseModel):
     prompt: Optional[str] = None
     document_ids: Optional[List[str]] = None
     history: Optional[List[dict]] = None
+    mode: Optional[str] = "auto"  # explicit routing: "auto" | "build" | "venture"
 
 class DirectAgentRequest(BaseModel):
     agent_id: str
@@ -737,8 +738,34 @@ async def review(req: ReviewRequest):
     user_query = req.prompt or req.description or ""
     query_lower = user_query.lower()
 
+    # -- Explicit Build-vs-Venture Routing Resolver --------------------------
+    # Precedence: inline prefix (/build, /venture, /csuite) > explicit `mode`
+    # field > AUTO (fall back to the LLM classifier downstream). forced_intent
+    # stays None in AUTO mode. Inline prefixes are stripped from the prompt here
+    # (the client keeps the original text in its local chat history).
+    forced_intent = None
+    _prefix_map = {"/build": "BUILDER", "/venture": "VENTURE", "/csuite": "VENTURE"}
+    _stripped = user_query.lstrip()
+    _low = _stripped.lower()
+    for _pfx, _pintent in _prefix_map.items():
+        if _low == _pfx or (_low.startswith(_pfx) and _low[len(_pfx):len(_pfx) + 1].isspace()):
+            forced_intent = _pintent
+            user_query = _stripped[len(_pfx):].lstrip()
+            query_lower = user_query.lower()
+            break
+    if forced_intent is None:
+        _mode = (getattr(req, "mode", None) or "auto").strip().lower()
+        if _mode == "build":
+            forced_intent = "BUILDER"
+        elif _mode in ("venture", "csuite"):
+            forced_intent = "VENTURE"
+
     # Deterministic Intent Classification Gate
     if "[MANDATE START]" in user_query or user_query.strip().startswith("/genesis "):
+        classification = "STRUCTURAL_MANDATE"
+    elif forced_intent is not None:
+        # Explicit build/venture signal -> force the structural path so the
+        # prompt reaches the builder/venture pipeline, not conversational chat.
         classification = "STRUCTURAL_MANDATE"
     else:
         classification = "CONVERSATIONAL_QUERY"
@@ -865,6 +892,7 @@ async def review(req: ReviewRequest):
         is_conversational = False
 
     async def generate_review_stream():
+        nonlocal is_conversational
         api_key = os.getenv("GEMINI_API_KEY", "")
         if api_key:
             api_key = api_key.strip("'\"")
@@ -898,8 +926,16 @@ async def review(req: ReviewRequest):
             # Configure native Google Gemini API client
             genai.configure(api_key=api_key)
 
-            # Step A: Run classify_intent
-            intent = await classify_builder_venture_intent(user_query, req.history)
+            # Step A: Resolve intent -- explicit override wins, else LLM classifier.
+            if forced_intent is not None:
+                intent = forced_intent
+            else:
+                intent = await classify_builder_venture_intent(user_query, req.history)
+            # Force the structural/build path for BUILDER so keyword-free prose
+            # prompts (e.g. "make me a todo app") still reach blueprint
+            # extraction/validation/spool (overrides the is_conversational heuristic).
+            if intent == "BUILDER":
+                is_conversational = False
             if intent == "BUILDER":
                 if user_query.strip().startswith("/genesis "):
                     # Genesis Architect Mode!
