@@ -1,7 +1,11 @@
 import axios from 'axios';
 
-export const AUTH_API_BASE_URL = 'http://68.183.30.128/auth/api';
-const API_BASE_URL = 'http://68.183.30.128/mwo/api';
+// Defaults target production. `.env.development` overrides these to the Vite
+// dev-proxy paths ('/api') for local development (see vite.config.js). Because
+// `vite build` runs in production mode it does NOT load `.env.development`, so
+// production bundles keep the absolute URLs below unchanged.
+export const AUTH_API_BASE_URL = import.meta.env.VITE_AUTH_API_BASE_URL ?? 'http://68.183.30.128/auth/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://68.183.30.128/mwo/api';
 
 let accessToken = localStorage.getItem('accessToken');
 let isRefreshing = false;

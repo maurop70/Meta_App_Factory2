@@ -32,6 +32,10 @@ const HMDashboard = () => {
   // [SAFETY ALERTS] Low-stock alert feed + draft PO deep-link target
   const [inventoryAlerts, setInventoryAlerts] = useState([]);
   const [highlightPoId, setHighlightPoId] = useState(null);
+  // Tracks the sku_id whose draft PO is currently being synthesized (drives
+  // the button's disabled/loading state and blocks double-submit).
+  const [creatingDraftFor, setCreatingDraftFor] = useState(null);
+  const [draftError, setDraftError] = useState(null);
 
   const fetchAlerts = async () => {
     try {
@@ -49,6 +53,34 @@ const HMDashboard = () => {
   const openAlertDraft = (alert) => {
     setHighlightPoId(alert.draft_po_id || null);
     setActiveView('inventory');
+  };
+
+  // Synthesize (or append to) the supplier's open draft PO for a below-threshold
+  // SKU, then deep-link the HM into the procurement workspace at that draft.
+  // Note: the backend field is `quantity`, not `min_order_qty` — we send the
+  // SKU's minimum order quantity as the line quantity.
+  const handleCreateDraft = async (alert) => {
+    if (creatingDraftFor) return; // single in-flight request; blocks double-click
+    setCreatingDraftFor(alert.sku_id);
+    setDraftError(null);
+    try {
+      const quantity = Math.max(1, alert.min_order_qty || 1);
+      const response = await api.post('/orders/drafts/add-item', {
+        sku_id: alert.sku_id,
+        quantity,
+      });
+      // Switching to the inventory view re-syncs the alert feed via the
+      // activeView effect, so the row will flip to "View Draft" on return.
+      setHighlightPoId(response.data?.po_id || null);
+      setActiveView('inventory');
+    } catch (err) {
+      console.warn('Draft PO synthesis failed.', err);
+      const detail = err?.response?.data?.detail
+        || 'Could not create draft PO. Confirm the SKU has a supplier assigned.';
+      setDraftError(`${alert.sku_id}: ${detail}`);
+    } finally {
+      setCreatingDraftFor(null);
+    }
   };
 
   const fetchHms = async () => {
@@ -286,6 +318,11 @@ const HMDashboard = () => {
               {inventoryAlerts.length}
             </span>
           </div>
+          {draftError && (
+            <div style={{ marginBottom: '0.4rem', fontSize: '0.72rem', color: '#fca5a5', fontWeight: 600 }}>
+              ⚠ {draftError}
+            </div>
+          )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
             {inventoryAlerts.map(alert => (
               <div key={alert.sku_id} style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', flexWrap: 'wrap', fontSize: '0.82rem' }}>
@@ -302,9 +339,13 @@ const HMDashboard = () => {
                     View Draft {alert.draft_po_id} →
                   </button>
                 ) : (
-                  <span style={{ fontSize: '0.72rem', color: '#64748b', fontStyle: 'italic' }}>
-                    no draft yet — awaiting auto-draft or supplier assignment
-                  </span>
+                  <button
+                    onClick={() => handleCreateDraft(alert)}
+                    disabled={creatingDraftFor === alert.sku_id}
+                    style={{ padding: '0.2rem 0.7rem', borderRadius: '6px', border: '1px solid rgba(34, 197, 94, 0.4)', background: 'rgba(34, 197, 94, 0.15)', color: '#4ade80', cursor: creatingDraftFor === alert.sku_id ? 'wait' : 'pointer', fontWeight: 700, fontSize: '0.72rem', opacity: creatingDraftFor === alert.sku_id ? 0.6 : 1 }}
+                  >
+                    {creatingDraftFor === alert.sku_id ? 'Creating…' : 'Create Draft PO →'}
+                  </button>
                 )}
               </div>
             ))}
