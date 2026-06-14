@@ -275,6 +275,8 @@ _Ledger engine: Alpha V2 Genesis Quant Architect v2.0 | Antigravity AI_
 | 2026-04-17 | DEPLOYMENT | MAINTENANCE_WORK_ORDER_V3 | Universal Routing, Dynamic Permissions, Native Event Bus | PROJECT: AETHER-2026-9B2D4C |
 | 2026-04-18 | MAINTENANCE | GIT_SYNC_HYGIENE | Clean git pull origin dev (Already up to date). Volatile stashing/restoration verified. | PROJECT: AETHER-2026-9B2D4C |
 | 2026-04-18 | MAINTENANCE | VOLATILE_CLEANUP_V1 | Automatic cleanup hook for untracked reports (>7d). Integrated into auto_heal.py CLI/Diagnose. | PROJECT: AETHER-2026-9B2D4C |
+| 2026-06-14 16:30 | BUILDER_CHAT | BLUEPRINT_HARDENING | Hardened blueprint JSON generation (max_output_tokens=32768, temperature-0.0 retry fallback on JSONDecodeError). Baselined on sandboxed Option A (commit e741339). | PROJECT: MAF-BUILDER-CHAT |
+
 
 ### ARCHITECTURAL_DOCTRINE_UPDATE
 - **Timestamp:** 2026-05-18T21:36:18.5663434-04:00
