@@ -465,6 +465,52 @@ EXECUTIVE_ARCHITECT = (
     "- PATH B (Conversational Inquiry): If the user asks a natural language question, you are permanently authorized to bypass the JSON schema and output a standard, rich Markdown text response with no JSON wrappers."
 )
 
+# ── BUILDER blueprint contract ──
+# The autonomous build path uses THIS prompt (not EXECUTIVE_ARCHITECT, which emits a
+# vulnerability scorecard). The downstream actuator (mock_antigravity.py) writes each
+# code_payload verbatim, so the model must return the COMPLETE, runnable file contents.
+BUILDER_BLUEPRINT = (
+    "You are the MAF Build Architect. The user will describe an application they want built. "
+    "You output ONLY a single JSON object describing the complete, runnable set of files for that application. "
+    "There is no conversation: every response is a buildable blueprint.\n\n"
+    "JSON shape:\n"
+    "{\n"
+    '  "app_name": "<short kebab-case name, e.g. simple-todo>",\n'
+    '  "summary": "<one short sentence describing what was built>",\n'
+    '  "ast_mutations": [\n'
+    '    { "target_file": "<relative path, e.g. index.html or src/app.js>", "code_payload": "<the COMPLETE final content of that file>" }\n'
+    "  ]\n"
+    "}\n\n"
+    "Rules:\n"
+    "- code_payload MUST be the full, final file content — never a diff, snippet, placeholder, or '...'.\n"
+    "- target_file MUST be a relative path. Never use absolute paths, drive letters, or '..'.\n"
+    "- Produce a minimal but fully working app. Prefer a single self-contained index.html (inline CSS/JS) "
+    "when the request allows; otherwise include every file required to run.\n"
+    "- Output raw JSON only: no markdown, no backticks, no prose before or after the object."
+)
+
+# Gemini response schema mirror of the BUILDER blueprint, so generation is forced to
+# valid JSON in the exact shape the actuator consumes (eliminates malformed-payload 500s).
+BUILDER_BLUEPRINT_SCHEMA = {
+    "type": "OBJECT",
+    "properties": {
+        "app_name": {"type": "STRING"},
+        "summary": {"type": "STRING"},
+        "ast_mutations": {
+            "type": "ARRAY",
+            "items": {
+                "type": "OBJECT",
+                "properties": {
+                    "target_file": {"type": "STRING"},
+                    "code_payload": {"type": "STRING"},
+                },
+                "required": ["target_file", "code_payload"],
+            },
+        },
+    },
+    "required": ["app_name", "ast_mutations"],
+}
+
 VENTURE_ARCHITECT = (
     "You are the Venture Architect. Your persona is strategic, analytical, C-Suite corporate-aligned, and business-focused. "
     "Your primary directives are C-Suite business strategy, marketing plans, capex budgets, operational risk assessment, "
@@ -1001,7 +1047,7 @@ async def review(req: ReviewRequest):
                     
                     return # Exit stream
 
-                system_prompt = EXECUTIVE_ARCHITECT
+                system_prompt = BUILDER_BLUEPRINT
                 agent_identity = "EXECUTIVE_ARCHITECT"
                 
                 # CRITICAL: Yield the SSE agent identity tag as the very first chunk
@@ -1097,17 +1143,26 @@ async def review(req: ReviewRequest):
                     contents_payload.append(uf)
                 contents_payload.append(prompt_payload)
 
+                # BUILDER path is always structural: force valid JSON in the exact
+                # actuator schema so blueprint generation can no longer emit malformed
+                # payloads (the prior cause of the "CRITICAL MALFORMED PAYLOAD" 500s).
+                builder_gen_config = {
+                    "temperature": 0.2,
+                    "response_mime_type": "application/json",
+                    "response_schema": BUILDER_BLUEPRINT_SCHEMA,
+                }
+
                 # Step B: Instantiate ChatSession if history is present, ensuring strict context binding
                 if formatted_history:
                     chat = model.start_chat(history=formatted_history)
                     response = chat.send_message(
                         contents_payload,
-                        generation_config={"temperature": 0.2}
+                        generation_config=builder_gen_config
                     )
                 else:
                     response = model.generate_content(
                         contents_payload,
-                        generation_config={"temperature": 0.2}
+                        generation_config=builder_gen_config
                     )
                 
                 text = response.text.strip()
@@ -1151,10 +1206,14 @@ async def review(req: ReviewRequest):
                 # AST Interception Patch: Package generated code/architecture into strict JSON envelope
                 import time
                 timestamp = int(time.time())
+                # NOTE: only the user's query may trigger these control flags. Scanning the
+                # generated blueprint text was a bug — real code routinely contains the words
+                # "fail"/"pause" (error handling, etc.) and would falsely trip the actuator's
+                # crash-test / strategic-pause paths, aborting otherwise-valid builds.
                 blueprint_payload = {
                     "blueprint_data": text,
-                    "Strategic_Pause": "pause" in query_lower or "pause" in text.lower(),
-                    "Strategic_Fail": "fail" in query_lower or "fail" in text.lower(),
+                    "Strategic_Pause": "pause" in query_lower,
+                    "Strategic_Fail": "fail" in query_lower,
                     "timestamp": timestamp
                 }
                 blueprint_json = json.dumps(blueprint_payload, indent=2)
