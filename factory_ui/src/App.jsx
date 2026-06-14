@@ -19,6 +19,7 @@ import AppRegistry from './components/AppRegistry';
 import CIOIntel from './components/CIOIntel';
 import TelemetryPanel from './components/TelemetryPanel';
 import WorkspaceVault from './components/WorkspaceVault';
+import SupportFAB from './SupportFAB';
 
 // ═══════════════════════════════════════════════════════════
 //  META APP FACTORY — BUILDER DASHBOARD (Full Feature Parity)
@@ -1843,6 +1844,7 @@ function App() {
           </div>
         </div>
       )}
+      <SupportFAB activeApp="ecosystem" themeColor="#818cf8" />
       <GlobalDiagnosticOverlay />
     </div>
   );

@@ -31,6 +31,18 @@ const APP_KNOWLEDGE = {
       'Where are my saved documents?',
     ],
   },
+  ecosystem: {
+    displayName: 'Ecosystem Guide',
+    focus: 'Navigating and utilizing the Meta App Factory and its constituent AI agents',
+    isEcosystem: true, // Used to toggle security guard and glossary rules
+    greeting: "Welcome to the Ecosystem Guide! I can help you understand how to navigate the Meta App Factory, run workflows, leverage specialized agents (CFO, CMO, HR, Critic), and build/deploy your own apps. What would you like to know?",
+    topics: [
+      'What is the Triad Protocol?',
+      'How do I build and deploy a new app?',
+      'How does the Self-Heal system work?',
+      'Explain the Role of CFO/CMO Agents',
+    ],
+  },
   _default: {
     displayName: 'Support',
     focus: 'Getting You Started',
@@ -216,6 +228,13 @@ const GUARD_KEYWORDS = [
   'show me the code', 'what model', 'what ai', 'which ai',
 ];
 
+// Restricted guard for the internal Ecosystem Guide: architecture/agent talk is allowed —
+// only hard secrets and raw source dumps are deflected.
+const ECOSYSTEM_GUARD_KEYWORDS = [
+  'api key', 'secret', 'credential', 'password',
+  'show me the code', 'show me the source', 'source code',
+];
+
 const VAULT_ASSURANCE = "\n\n🔒 Your data is fully encrypted and completely private. It's never shared or exposed during our conversation.";
 
 /**
@@ -229,9 +248,11 @@ function systemGuardCheck(userText, appConfig) {
   const walkthrough = usageWalkthroughCheck(userText);
   if (walkthrough) return walkthrough;
 
-  // TIER 2: Check architecture/internals — security deflection
+  // TIER 2: Check architecture/internals — security deflection.
+  // The Ecosystem Guide uses a restricted set (secrets only); architecture talk is permitted.
   const lower = userText.toLowerCase();
-  const triggered = GUARD_KEYWORDS.some(kw => lower.includes(kw));
+  const guardKeywords = appConfig?.isEcosystem ? ECOSYSTEM_GUARD_KEYWORDS : GUARD_KEYWORDS;
+  const triggered = guardKeywords.some(kw => lower.includes(kw));
   if (!triggered) return null;
 
   // The Polite Guard: dynamic feature substitution based on active app
@@ -272,11 +293,15 @@ const GLOSSARY_MAP = [
   [/Hardened Files?/gi, "Protected System Core"],
 ];
 
-function scrubResponse(text) {
+function scrubResponse(text, activeApp) {
   let scrubbed = text;
-  // Apply hard redactions for secrets
+  // Apply hard redactions for secrets (always — even for the Ecosystem Guide)
   for (const pattern of SCRUB_PATTERNS) {
     scrubbed = scrubbed.replace(pattern, '[REDACTED]');
+  }
+  // Ecosystem Guide keeps real terminology — skip the commercial glossary obfuscation
+  if (activeApp === 'ecosystem') {
+    return scrubbed;
   }
   // Apply commercial translation glossary
   for (const [pattern, translation] of GLOSSARY_MAP) {
@@ -470,7 +495,7 @@ export default function SupportFAB({ activeApp, themeColor = '#818cf8' }) {
                 const copy = [...prev];
                 copy[copy.length - 1] = {
                   role: 'assistant',
-                  text: scrubResponse(copy[copy.length - 1].text + event.text),
+                  text: scrubResponse(copy[copy.length - 1].text + event.text, activeApp),
                 };
                 return copy;
               });
