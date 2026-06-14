@@ -230,7 +230,7 @@ async def startup_event():
     await register_active_agent_proxies()
     # Start the Asynchronous IPC Bridge
     from ipc_bridge import start_ipc_bridge
-    asyncio.create_task(start_ipc_bridge())
+    asyncio.create_task(start_ipc_bridge(PORT))
 
 from genesis_orchestrator import ON_COMPILE_SUCCESS_CALLBACKS
 
@@ -384,6 +384,7 @@ class ReviewRequest(BaseModel):
     document_ids: Optional[List[str]] = None
     history: Optional[List[dict]] = None
     mode: Optional[str] = "auto"  # explicit routing: "auto" | "build" | "venture"
+    test_inject_broken: Optional[bool] = None  # test-only: inject a known-broken build (gated by ALLOW_TEST_INJECTION)
 
 class DirectAgentRequest(BaseModel):
     agent_id: str
@@ -1312,6 +1313,21 @@ async def review(req: ReviewRequest):
                 # they do not depend on this query heuristic.)
                 strategic_pause = bool(re.search(r"(?:^|\s)/pause\b", user_query, re.IGNORECASE))
                 strategic_fail = bool(re.search(r"(?:^|\s)/fail\b", user_query, re.IGNORECASE))
+
+                # Test-only: inject a known-broken build to deterministically exercise the
+                # self-healing loop. Gated by an env flag so it is inert on a reachable endpoint.
+                if getattr(req, "test_inject_broken", None) and os.getenv("ALLOW_TEST_INJECTION", "").lower() == "true":
+                    blueprint_data = {
+                        "app_name": "selfheal-test",
+                        "summary": "injected broken build for self-heal verification",
+                        "ast_mutations": [{
+                            "target_file": "index.html",
+                            "code_payload": "<!doctype html><html><head><title>Heal Test</title></head><body><h1>Self-Heal Test</h1><script>renderAppError();</script></body></html>",
+                        }],
+                    }
+                    text = json.dumps(blueprint_data, indent=2)
+                    logger.warning("[TEST] ALLOW_TEST_INJECTION: spooling known-broken blueprint to exercise self-healing.")
+
                 blueprint_payload = {
                     "blueprint_data": text,
                     "Strategic_Pause": strategic_pause,
@@ -1333,13 +1349,10 @@ async def review(req: ReviewRequest):
                 # Yield the precise SSE actuation token
                 yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CTO', 'content': '\n\n⚙️ [CTO Node] Blueprint spooled. IPC Bridge actuating...\n'})}\n\n"
 
-                # ── Build completion watcher ──
-                # The dispatch queue is shared across all server instances, so the process
-                # that actually actuates (and broadcasts the bridge ✅) may not be the one
-                # this UI is connected to — leaving the user without a "done" signal. Since
-                # THIS server spooled the blueprint, it watches the sandbox for its own
-                # build's output and reports completion in *this* stream, so the user always
-                # gets a definitive done/failed message no matter which instance did the work.
+                # ── Build verification + self-healing loop ──
+                # Wait for the build to actuate, headlessly render it, and feed any
+                # console/runtime/network errors (+ a screenshot) back to the model for up
+                # to MAX_ROUNDS repair passes. The final ✅ is gated on a clean render.
                 try:
                     _bp_inner = blueprint_data if isinstance(blueprint_data, dict) else json.loads(text)
                 except Exception:
@@ -1348,41 +1361,148 @@ async def review(req: ReviewRequest):
                 _safe_app = "".join(c if (c.isalnum() or c in "-_") else "-" for c in _raw_app).strip("-_") or "app"
                 _app_dir = os.path.join(_SCRIPT_DIR, "generated_builds", _safe_app)
                 _targets = [m.get("target_file", "") for m in _bp_inner.get("ast_mutations", []) if isinstance(m, dict)]
-                _broken = os.path.join(ay2_queue_dir, f"broken_blueprint_{timestamp}.json")
 
-                _built = False
-                _deadline = time.time() + 45
-                while time.time() < _deadline:
-                    await asyncio.sleep(0.7)
-                    if _targets:
+                _factory_ui_dir = os.path.join(_FACTORY_DIR, "factory_ui")
+                _verify_dir = os.path.join(_SCRIPT_DIR, ".verify_tmp")
+                os.makedirs(_verify_dir, exist_ok=True)
+                _build_url = f"http://localhost:{PORT}/builds/{_safe_app}/"
+                _open_url = _build_url
+                _gallery_url = f"http://localhost:{PORT}/builds/"
+                MAX_ROUNDS = 3
+
+                def _targets_of(inner):
+                    return [m.get("target_file", "") for m in inner.get("ast_mutations", []) if isinstance(m, dict)]
+
+                async def _await_actuation(spool_ts, targets, deadline_s=45):
+                    _dl = time.time() + deadline_s
+                    while time.time() < _dl:
+                        await asyncio.sleep(0.7)
+                        if not targets:
+                            continue
                         _ok = True
-                        for _tf in _targets:
+                        for _tf in targets:
                             _rel = str(_tf).replace("\\", "/").lstrip("/")
                             _dest = os.path.join(_app_dir, *[p for p in _rel.split("/") if p])
-                            # Success = every targeted file exists and was (re)written at/after spool.
-                            if not (os.path.exists(_dest) and os.path.getmtime(_dest) >= timestamp - 1):
+                            if not (os.path.exists(_dest) and os.path.getmtime(_dest) >= spool_ts - 1):
                                 _ok = False
                                 break
                         if _ok:
-                            _built = True
-                            break
-                    if os.path.exists(_broken):
-                        break
+                            return True
+                    return False
 
-                if _built:
-                    _rel_dir = f"generated_builds/{_safe_app}"
-                    _open_url = f"http://localhost:{PORT}/builds/{_safe_app}/"
-                    _gallery_url = f"http://localhost:{PORT}/builds/"
+                async def _run_verify():
+                    _stamp = int(time.time() * 1000)
+                    _rp = os.path.join(_verify_dir, f"report_{_stamp}.json")
+                    _sp = os.path.join(_verify_dir, f"shot_{_stamp}.png")
+                    try:
+                        _proc = await asyncio.create_subprocess_exec(
+                            "node", "verify_app.mjs", _build_url, _sp, _rp,
+                            cwd=_factory_ui_dir,
+                            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+                        )
+                        await asyncio.wait_for(_proc.communicate(), timeout=45)
+                    except Exception as _ve:
+                        logger.warning(f"[Self-Heal] verifier unavailable ({_ve}); skipping verification.")
+                        return {"success": True, "_skipped": True}, None
+                    try:
+                        with open(_rp, "r", encoding="utf-8") as _f:
+                            _report = json.load(_f)
+                    except Exception:
+                        return {"success": True, "_skipped": True}, None
+                    return _report, (_sp if os.path.exists(_sp) else None)
+
+                def _spool_blueprint(inner):
+                    _ts = int(time.time())
+                    _payload = {
+                        "blueprint_data": json.dumps(inner, indent=2),
+                        "Strategic_Pause": False, "Strategic_Fail": False, "timestamp": _ts,
+                    }
+                    _bp = os.path.join(ay2_queue_dir, f"pending_blueprint_{_ts}.json")
+                    _tmp = _bp + ".tmp"
+                    with open(_tmp, "w", encoding="utf-8") as _f:
+                        _f.write(json.dumps(_payload, indent=2))
+                    os.replace(_tmp, _bp)
+                    return _ts
+
+                async def _request_fix(report, shot_path):
+                    _errs = []
+                    for _k in ("pageErrors", "consoleErrors", "networkErrors"):
+                        for _e in report.get(_k, []):
+                            _errs.append(f"[{_k}] {_e}")
+                    _files = []
+                    for _tf in _targets:
+                        _rel = str(_tf).replace("\\", "/").lstrip("/")
+                        _dest = os.path.join(_app_dir, *[p for p in _rel.split("/") if p])
+                        try:
+                            with open(_dest, "r", encoding="utf-8") as _f:
+                                _files.append((_tf, _f.read()))
+                        except Exception:
+                            _files.append((_tf, ""))
+                    _files_blob = "\n\n".join(f"--- FILE: {p} ---\n{c}" for p, c in _files)
+                    _fix_prompt = (
+                        "The app you generated produced errors when rendered in a headless browser. "
+                        "Return a CORRECTED, COMPLETE blueprint in the same JSON schema "
+                        "{app_name, ast_mutations:[{target_file, code_payload}]}. Keep app_name identical, "
+                        "emit the FULL final content of every file, and fix every error listed.\n\n"
+                        "ERRORS:\n" + "\n".join(_errs) + "\n\n"
+                        "CURRENT FILES:\n" + _files_blob
+                    )
+                    _parts = [_fix_prompt]
+                    if shot_path and os.path.exists(shot_path):
+                        try:
+                            _parts = [await asyncio.to_thread(genai.upload_file, shot_path), _fix_prompt]
+                        except Exception:
+                            _parts = [_fix_prompt]
+                    _fix_model = genai.GenerativeModel("gemini-2.5-pro", system_instruction=BUILDER_BLUEPRINT)
+                    _resp = await asyncio.to_thread(
+                        _fix_model.generate_content, _parts,
+                        generation_config={"temperature": 0.2, "response_mime_type": "application/json", "response_schema": BUILDER_BLUEPRINT_SCHEMA},
+                    )
+                    return json.loads(_resp.text.strip())
+
+                await _await_actuation(timestamp, _targets)
+                _final_ok = False
+                _last_report = {}
+                for _round in range(1, MAX_ROUNDS + 1):
+                    _report, _shot = await _run_verify()
+                    _last_report = _report
+                    if _report.get("success"):
+                        _final_ok = True
+                        break
+                    _nerr = sum(len(_report.get(_k, [])) for _k in ("pageErrors", "consoleErrors", "networkErrors"))
+                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CRITIC', 'content': f'\n🔧 [Self-Heal] Round {_round}: {_nerr} issue(s) detected, repairing...\n'})}\n\n"
+                    if _round >= MAX_ROUNDS:
+                        break
+                    try:
+                        _fixed = await _request_fix(_report, _shot)
+                    except Exception as _fe:
+                        logger.error(f"[Self-Heal] fix request failed: {_fe}")
+                        break
+                    _bp_inner = _fixed
+                    _targets = _targets_of(_fixed) or _targets
+                    _new_ts = _spool_blueprint(_fixed)
+                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CTO', 'content': '⚙️ [Self-Heal] Actuating revised blueprint...\n'})}\n\n"
+                    await _await_actuation(_new_ts, _targets)
+
+                if _final_ok:
+                    _verified = "" if _last_report.get("_skipped") else " (verified clean)"
                     _msg = (
-                        f"\n✅ [Build Complete] {len(_targets)} file(s) written to {_rel_dir}/.\n"
+                        f"\n✅ [Build Complete]{_verified} {len(_targets)} file(s) in generated_builds/{_safe_app}/.\n"
                         f"▶ Open your app:  {_open_url}\n"
                         f"📂 All your built apps:  {_gallery_url}\n"
                     )
                     yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CTO', 'content': _msg})}\n\n"
-                    # Structured event so the UI can render a real clickable "Open app" button.
                     yield f"data: {json.dumps({'type': 'build_complete', 'app_name': _safe_app, 'open_url': _open_url, 'gallery_url': _gallery_url, 'files': _targets})}\n\n"
                 else:
-                    _msg = "\n⚠️ [Build Watch] Blueprint spooled, but no output appeared in generated_builds within 45s. The actuator may have failed or is still running — check the generated_builds folder.\n"
+                    _rem = []
+                    for _k in ("pageErrors", "consoleErrors", "networkErrors"):
+                        _rem.extend(_last_report.get(_k, []))
+                    _detail = ("  - " + "\n  - ".join(_rem[:5])) if _rem else "  (no diagnostic captured)"
+                    _msg = (
+                        f"\n⚠️ [Build Incomplete] Could not reach a clean render after {MAX_ROUNDS} self-heal round(s).\n"
+                        f"Latest issues:\n{_detail}\n"
+                        f"Partial output is at generated_builds/{_safe_app}/ — {_open_url}\n"
+                    )
                     yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CRITIC', 'content': _msg})}\n\n"
 
             else:
