@@ -1232,14 +1232,20 @@ async def review(req: ReviewRequest):
                 # AST Interception Patch: Package generated code/architecture into strict JSON envelope
                 import time
                 timestamp = int(time.time())
-                # NOTE: only the user's query may trigger these control flags. Scanning the
-                # generated blueprint text was a bug — real code routinely contains the words
-                # "fail"/"pause" (error handling, etc.) and would falsely trip the actuator's
-                # crash-test / strategic-pause paths, aborting otherwise-valid builds.
+                # These are control flags, not content signals. They must only fire on an
+                # explicit operator directive (the standalone tokens "/pause" / "/fail"),
+                # never on a substring of natural-language prose: real build prompts routinely
+                # contain "fail"/"pause" ("show a PASS/FAIL banner", "handle login failure",
+                # "play/pause controls") and a substring match would falsely trip the actuator's
+                # crash-test / strategic-pause paths and abort an otherwise-valid build.
+                # (E2E suites trigger these by spooling JSON with the flags set directly, so
+                # they do not depend on this query heuristic.)
+                strategic_pause = bool(re.search(r"(?:^|\s)/pause\b", user_query, re.IGNORECASE))
+                strategic_fail = bool(re.search(r"(?:^|\s)/fail\b", user_query, re.IGNORECASE))
                 blueprint_payload = {
                     "blueprint_data": text,
-                    "Strategic_Pause": "pause" in query_lower,
-                    "Strategic_Fail": "fail" in query_lower,
+                    "Strategic_Pause": strategic_pause,
+                    "Strategic_Fail": strategic_fail,
                     "timestamp": timestamp
                 }
                 blueprint_json = json.dumps(blueprint_payload, indent=2)
