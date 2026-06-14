@@ -651,6 +651,17 @@ export default function BuilderChat() {
                 }
               } else if (parsed.type === 'socratic_pause') {
                 setSocraticChallenge(parsed);
+              } else if (parsed.type === 'build_complete') {
+                setChatHistory(prev => [...prev, {
+                  role: 'system',
+                  agent: 'BUILD_COMPLETE',
+                  content: JSON.stringify({
+                    app_name: parsed.app_name,
+                    open_url: parsed.open_url,
+                    gallery_url: parsed.gallery_url,
+                    files: parsed.files || []
+                  })
+                }]);
               }
             } catch (e) {
               if (agentType === 'EXECUTIVE_ARCHITECT') {
@@ -831,6 +842,17 @@ export default function BuilderChat() {
                 });
               } else if (parsed.type === 'socratic_pause') {
                 setSocraticChallenge(parsed);
+              } else if (parsed.type === 'build_complete') {
+                setChatHistory(prev => [...prev, {
+                  role: 'system',
+                  agent: 'BUILD_COMPLETE',
+                  content: JSON.stringify({
+                    app_name: parsed.app_name,
+                    open_url: parsed.open_url,
+                    gallery_url: parsed.gallery_url,
+                    files: parsed.files || []
+                  })
+                }]);
               }
             } catch (e) {
               setChatHistory(prev => {
@@ -920,6 +942,37 @@ export default function BuilderChat() {
             >
               🚫 Dismiss
             </button>
+          </div>
+        </div>
+      );
+    }
+
+    // Build complete card with a clickable "Open app" button
+    if (agent === 'BUILD_COMPLETE') {
+      let info = {};
+      try { info = JSON.parse(content); } catch (_) {}
+      const files = Array.isArray(info.files) ? info.files : [];
+      return (
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(13,148,136,0.14), rgba(15,23,42,0.6))',
+          border: '1px solid rgba(45,212,191,0.4)', borderRadius: 14, padding: 16, marginTop: 6
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <span style={{ fontSize: 18 }}>✅</span>
+            <span style={{ fontWeight: 700, color: '#5eead4' }}>Build Complete — {info.app_name}</span>
+          </div>
+          <div style={{ fontSize: 12, color: '#9ca3af', marginBottom: 12 }}>
+            {files.length} file{files.length === 1 ? '' : 's'} written to generated_builds/{info.app_name}/
+          </div>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <a href={info.open_url} target="_blank" rel="noopener noreferrer"
+               style={{ background: '#0d9488', color: '#fff', textDecoration: 'none', padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600 }}>
+              ▶ Open app
+            </a>
+            <a href={info.gallery_url} target="_blank" rel="noopener noreferrer"
+               style={{ background: 'transparent', color: '#5eead4', textDecoration: 'none', padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600, border: '1px solid rgba(45,212,191,0.4)' }}>
+              📂 All built apps
+            </a>
           </div>
         </div>
       );
