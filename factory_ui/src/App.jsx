@@ -19,6 +19,7 @@ import AppRegistry from './components/AppRegistry';
 import CIOIntel from './components/CIOIntel';
 import TelemetryPanel from './components/TelemetryPanel';
 import WorkspaceVault from './components/WorkspaceVault';
+import CostOperations from './components/CostOperations';
 import SupportFAB from './SupportFAB';
 
 // ═══════════════════════════════════════════════════════════
@@ -1602,6 +1603,7 @@ function App() {
     { icon: '⚛️', label: 'Atomizer', view: 'atomizer' },
     { icon: '📊', label: 'Telemetry', view: 'telemetry', badge: 'Beta' },
     { icon: '📦', label: 'Inventory', view: 'inventory', badge: 'MAF' },
+    { icon: '💰', label: 'Cost Operations', view: 'cost-operations', badge: 'NEW' },
   ];
 
   return (
@@ -1780,6 +1782,7 @@ function App() {
           <Route path="/commands" element={<CommandPalette onCommand={handleCommand} />} />
           <Route path="/agents" element={<TelemetryPanel />} />
           <Route path="/telemetry" element={<TelemetryPanel />} />
+          <Route path="/cost-operations" element={<CostOperations />} />
           <Route path="/brand" element={<BrandStudioPanel registry={registry} />} />
           <Route path="/refine" element={
             <RefinePanel 

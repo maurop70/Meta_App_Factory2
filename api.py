@@ -101,6 +101,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "backend
 from backend.app.routers.inventory_router import router as inventory_router
 from backend.app.routers.cio_router import router as backend_cio_router
 from backend.app.routers.vector_router import router as vector_router
+from pydantic import BaseModel as _CostBaseModel
+import shared_modules.telemetry as _telemetry
 
 app = FastAPI(title="Antigravity Meta App Factory API", version="3.0", lifespan=lifespan)
 app.include_router(builder_router, prefix="/api/v1")
@@ -127,6 +129,26 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# -- Cost-Tracking Telemetry (data/maf_telemetry.db) -----------
+class _TelemetryRecord(_CostBaseModel):
+    input_tokens: int
+    output_tokens: int
+    model_name: str
+    parent_app_id: str
+
+
+@app.post("/api/telemetry/record")
+def telemetry_record(rec: _TelemetryRecord):
+    saved = _telemetry.record_usage(rec.parent_app_id, rec.model_name,
+                                    rec.input_tokens, rec.output_tokens)
+    return {"status": "success", **saved}
+
+
+@app.get("/api/telemetry/stats")
+def telemetry_stats():
+    return _telemetry.get_stats()
 
 REGISTRY_PATH = os.path.join(SCRIPT_DIR, "registry.json")
 
