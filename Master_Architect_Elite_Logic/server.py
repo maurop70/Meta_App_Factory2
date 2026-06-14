@@ -50,7 +50,7 @@ from datetime import datetime
 
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.responses import StreamingResponse, JSONResponse, FileResponse, HTMLResponse, RedirectResponse
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict
 
@@ -639,6 +639,76 @@ def root():
         "triad": ["structural_engineer", "logic_weaver", "security_auditor"],
         "gate": "adversarial_gate",
     }
+
+
+@app.get("/builds")
+@app.get("/builds/")
+def builds_gallery():
+    """Browsable gallery of every app produced by autonomous builds (generated_builds/)."""
+    root = os.path.join(_SCRIPT_DIR, "generated_builds")
+    cards = []
+    if os.path.isdir(root):
+        for name in sorted(os.listdir(root)):
+            app_path = os.path.join(root, name)
+            if not os.path.isdir(app_path):
+                continue
+            files, newest = [], 0
+            for dp, _dirs, fnames in os.walk(app_path):
+                for fn in fnames:
+                    fp = os.path.join(dp, fn)
+                    files.append(os.path.relpath(fp, app_path).replace("\\", "/"))
+                    try:
+                        newest = max(newest, os.path.getmtime(fp))
+                    except OSError:
+                        pass
+            if not files:
+                continue
+            entry = "index.html" if "index.html" in files else sorted(files)[0]
+            when = datetime.fromtimestamp(newest).strftime("%Y-%m-%d %H:%M") if newest else "—"
+            cards.append(
+                f'<div class="card"><h2>{name}</h2>'
+                f'<p>{len(files)} file(s) · built {when}</p>'
+                f'<a class="btn" href="/builds/{name}/{entry}" target="_blank">▶ Open app</a></div>'
+            )
+    body = "".join(cards) or '<p class="empty">No apps built yet — describe one in Builder Chat.</p>'
+    html = (
+        '<!doctype html><html><head><meta charset="utf-8"><title>MAF Built Apps</title><style>'
+        'body{font-family:Inter,system-ui,sans-serif;background:#0B0F19;color:#e5e7eb;margin:0;padding:32px}'
+        'h1{font-weight:700;margin:0 0 4px}.sub{color:#9ca3af;margin:0 0 24px;font-size:13px}'
+        '.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}'
+        '.card{background:#111827;border:1px solid #1f2937;border-radius:14px;padding:18px}'
+        '.card h2{margin:0 0 6px;font-size:16px;color:#5eead4}.card p{margin:0 0 12px;font-size:12px;color:#9ca3af}'
+        '.btn{display:inline-block;background:#0d9488;color:#fff;text-decoration:none;padding:8px 14px;border-radius:8px;font-size:13px}'
+        '.btn:hover{background:#14b8a6}.empty{color:#9ca3af}code{color:#cbd5e1}</style></head><body>'
+        '<h1>🏗️ MAF Built Apps</h1>'
+        '<p class="sub">Every app produced by Builder Chat. Each lives in its own folder under '
+        '<code>generated_builds/&lt;name&gt;/</code>.</p>'
+        f'<div class="grid">{body}</div></body></html>'
+    )
+    return HTMLResponse(html)
+
+
+@app.get("/builds/{app_name}")
+def build_app_redirect(app_name: str):
+    return RedirectResponse(url=f"/builds/{app_name}/")
+
+
+@app.get("/builds/{app_name}/")
+@app.get("/builds/{app_name}/{file_path:path}")
+def serve_build(app_name: str, file_path: str = "index.html"):
+    """Serve a file from a generated app, strictly sandboxed to generated_builds/<app_name>/."""
+    root = os.path.abspath(os.path.join(_SCRIPT_DIR, "generated_builds"))
+    base = os.path.abspath(os.path.join(root, os.path.basename(app_name)))
+    if base != root and not base.startswith(root + os.sep):
+        raise HTTPException(status_code=400, detail="Invalid app name")
+    rel = (file_path or "index.html").replace("\\", "/")
+    parts = [p for p in rel.split("/") if p not in ("", ".", "..")]
+    target = os.path.abspath(os.path.join(base, *parts)) if parts else os.path.join(base, "index.html")
+    if target != base and not target.startswith(base + os.sep):
+        raise HTTPException(status_code=400, detail="Path traversal blocked")
+    if not os.path.isfile(target):
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(target)
 
 
 @app.get("/api/health")
@@ -1301,9 +1371,16 @@ async def review(req: ReviewRequest):
 
                 if _built:
                     _rel_dir = f"generated_builds/{_safe_app}"
-                    _first = _targets[0] if _targets else "index.html"
-                    _msg = f"\n✅ [Build Complete] {len(_targets)} file(s) written to {_rel_dir}/. Open {_rel_dir}/{_first} to view your app.\n"
+                    _open_url = f"http://localhost:{PORT}/builds/{_safe_app}/"
+                    _gallery_url = f"http://localhost:{PORT}/builds/"
+                    _msg = (
+                        f"\n✅ [Build Complete] {len(_targets)} file(s) written to {_rel_dir}/.\n"
+                        f"▶ Open your app:  {_open_url}\n"
+                        f"📂 All your built apps:  {_gallery_url}\n"
+                    )
                     yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CTO', 'content': _msg})}\n\n"
+                    # Structured event so the UI can render a real clickable "Open app" button.
+                    yield f"data: {json.dumps({'type': 'build_complete', 'app_name': _safe_app, 'open_url': _open_url, 'gallery_url': _gallery_url, 'files': _targets})}\n\n"
                 else:
                     _msg = "\n⚠️ [Build Watch] Blueprint spooled, but no output appeared in generated_builds within 45s. The actuator may have failed or is still running — check the generated_builds folder.\n"
                     yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CRITIC', 'content': _msg})}\n\n"
