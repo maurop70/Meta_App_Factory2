@@ -1599,6 +1599,7 @@ function App() {
     { icon: '🧠', label: 'Agent Status', view: 'agents' },
     { icon: '🎨', label: 'Brand Studio', view: 'brand', badge: 'NEW' },
     { icon: '📂', label: 'Workspace Vault', view: 'workspaces' },
+    { icon: '🏗️', label: 'Built Apps', external: 'http://localhost:5050/builds/', badge: 'NEW' },
     { icon: '🔧', label: 'Refine App', view: 'refine' },
     { icon: '⚛️', label: 'Atomizer', view: 'atomizer' },
     { icon: '📊', label: 'Telemetry', view: 'telemetry', badge: 'Beta' },
@@ -1626,6 +1627,23 @@ function App() {
         <div className="sidebar-section">
           <h3>Navigation</h3>
           {sidebarItems.map(item => {
+            // External links (e.g. the Built Apps gallery served by :5050) open in a new tab.
+            if (item.external) {
+              return (
+                <a
+                  key={item.label}
+                  href={item.external}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="sidebar-item"
+                  style={{ textDecoration: 'none' }}
+                >
+                  <span className="icon">{item.icon}</span>
+                  <span>{item.label}</span>
+                  {item.badge && <span className="badge">{item.badge}</span>}
+                </a>
+              );
+            }
             const pathMap = {
               systemmap: '/system-map',
               warroom: '/warroom',
