@@ -21,6 +21,13 @@ _sys.path.insert(0, _FACTORY_DIR)
 _sys.path.insert(0, _os.path.join(_FACTORY_DIR, "backend"))
 _sys.path.insert(0, _SCRIPT_DIR)
 
+# Cost-tracking telemetry: record LLM token usage to data/maf_telemetry.db.
+try:
+    from shared_modules.telemetry import record_usage as _record_usage
+except Exception:
+    def _record_usage(*_a, **_k):
+        return None
+
 try:
     from dotenv import load_dotenv
     load_dotenv(_os.path.join(_FACTORY_DIR, ".env"))
@@ -875,6 +882,15 @@ async def review(req: ReviewRequest):
                         text_chunk = ""
                     if text_chunk:
                         yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CEO', 'content': text_chunk})}\n\n"
+                # Telemetry: record token usage for the conversational turn.
+                try:
+                    _um = getattr(response_stream, "usage_metadata", None)
+                    if _um:
+                        _record_usage("ma_conversational", "gemini-2.5-pro",
+                                      getattr(_um, "prompt_token_count", 0),
+                                      getattr(_um, "candidates_token_count", 0))
+                except Exception:
+                    pass
             except Exception as e:
                 logger.error(f"Error in Conversational Stream: {e}")
                 yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CEO', 'content': f'[STREAM FRACTURE: {str(e)}]'})}\n\n"
@@ -1095,6 +1111,16 @@ async def review(req: ReviewRequest):
                     )
                 
                 text = response.text.strip()
+
+                # Telemetry: record token usage for the Triad review generation.
+                try:
+                    _um = getattr(response, "usage_metadata", None)
+                    if _um:
+                        _record_usage("ma_builder_review", "gemini-2.5-pro",
+                                      getattr(_um, "prompt_token_count", 0),
+                                      getattr(_um, "candidates_token_count", 0))
+                except Exception:
+                    pass
 
                 # Clean markdown code fences for Path A
                 if not is_conversational and intent == "BUILDER":
@@ -1506,6 +1532,15 @@ async def review(req: ReviewRequest):
                         )
                     )
                     blueprint_json = cto_resp.text.strip()
+                    # Telemetry: record token usage for CTO blueprint synthesis.
+                    try:
+                        _um = getattr(cto_resp, "usage_metadata", None)
+                        if _um:
+                            _record_usage("ma_cto_synthesis", "gemini-2.5-pro",
+                                          getattr(_um, "prompt_token_count", 0),
+                                          getattr(_um, "candidates_token_count", 0))
+                    except Exception:
+                        pass
                 except Exception as cto_err:
                     logger.error(f"CTO final blueprint synthesis failed: {cto_err}")
                     # Fallback matching WorkspaceBlueprintSchema
