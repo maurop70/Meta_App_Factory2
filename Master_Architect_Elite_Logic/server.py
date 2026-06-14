@@ -1150,6 +1150,7 @@ async def review(req: ReviewRequest):
                     "temperature": 0.2,
                     "response_mime_type": "application/json",
                     "response_schema": BUILDER_BLUEPRINT_SCHEMA,
+                    "max_output_tokens": 32768,
                 }
 
                 # Step B: Instantiate ChatSession if history is present, ensuring strict context binding
@@ -1191,11 +1192,36 @@ async def review(req: ReviewRequest):
                         # Re-serialize blueprint_data back to text so it is clean JSON
                         text = json.dumps(blueprint_data, indent=2)
                     except json.JSONDecodeError as jde:
-                        logger.error(f"[CTO Node] Pre-spool validation failed. Malformed JSON returned: {jde}\nRaw response:\n{response.text}")
-                        raise HTTPException(
-                            status_code=500,
-                            detail=f"CRITICAL MALFORMED PAYLOAD: Synthesized blueprint contains invalid JSON architecture: {jde}"
-                        )
+                        logger.warning(f"[CTO Node] Pre-spool validation failed. Retrying at temperature 0.0...")
+                        try:
+                            # Single retry at temperature 0.0 for maximum determinism
+                            retry_config = builder_gen_config.copy()
+                            retry_config["temperature"] = 0.0
+                            if formatted_history:
+                                chat = model.start_chat(history=formatted_history)
+                                retry_response = chat.send_message(
+                                    contents_payload,
+                                    generation_config=retry_config
+                                )
+                            else:
+                                retry_response = model.generate_content(
+                                    contents_payload,
+                                    generation_config=retry_config
+                                )
+                            retry_text = retry_response.text.strip()
+                            retry_extracted = retry_text
+                            retry_match = re.search(r"(\{.*\})", retry_extracted, re.DOTALL)
+                            if retry_match:
+                                retry_extracted = retry_match.group(1).strip()
+                            blueprint_data = json.loads(retry_extracted)
+                            text = json.dumps(blueprint_data, indent=2)
+                            logger.info("[CTO Node] Pre-spool validation passed on retry.")
+                        except Exception as retry_err:
+                            logger.error(f"[CTO Node] Pre-spool validation retry failed: {retry_err}\nRaw response:\n{response.text}")
+                            raise HTTPException(
+                                status_code=500,
+                                detail=f"CRITICAL MALFORMED PAYLOAD: Synthesized blueprint contains invalid JSON architecture: {jde}"
+                            )
 
                     # [BUILDER Socratic gate removed 2026-06-14] The business-strategy Critic
                     # (ICP / financial-model rubric, 9.5 pass bar) is category-mismatched for

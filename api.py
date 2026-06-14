@@ -7098,18 +7098,20 @@ async def challenge_override(payload: ChallengeOverridePayload):
     
     try:
         loop = asyncio.get_running_loop()
-        def _call_api():
+        def _call_api(temp=0.2):
             response = model.generate_content(
                 compiled_prompt,
                 generation_config={
                     "response_mime_type": "application/json",
-                    "response_schema": schema_dict
+                    "response_schema": schema_dict,
+                    "max_output_tokens": 32768,
+                    "temperature": temp
                 }
             )
             return response.text
             
         logger.info("[CTO Override Node] Querying gemini-2.5-pro to synthesize AST blueprint...")
-        response_text = await loop.run_in_executor(None, _call_api)
+        response_text = await loop.run_in_executor(None, lambda: _call_api(0.2))
         
         # 1. Robust Extraction (Tolerates conversational padding)
         extracted_text = response_text.strip()
@@ -7121,11 +7123,22 @@ async def challenge_override(payload: ChallengeOverridePayload):
         try:
             blueprint_data = json.loads(extracted_text)
         except json.JSONDecodeError as jde:
-            logger.error(f"[CTO Override Node] Pre-spool validation failed. Malformed JSON returned: {jde}\nRaw response:\n{response_text}")
-            raise HTTPException(
-                status_code=500,
-                detail=f"CRITICAL MALFORMED PAYLOAD: Synthesized blueprint contains invalid JSON architecture: {jde}"
-            )
+            logger.warning(f"[CTO Override Node] Pre-spool validation failed. Retrying at temperature 0.0...")
+            try:
+                # Single retry at temperature 0.0 for maximum determinism
+                response_text = await loop.run_in_executor(None, lambda: _call_api(0.0))
+                extracted_text = response_text.strip()
+                match = re.search(r"(\{.*\})", extracted_text, re.DOTALL)
+                if match:
+                    extracted_text = match.group(1).strip()
+                blueprint_data = json.loads(extracted_text)
+                logger.info("[CTO Override Node] Pre-spool validation passed on retry.")
+            except Exception as retry_err:
+                logger.error(f"[CTO Override Node] Pre-spool validation retry failed: {retry_err}\nRaw response:\n{response_text}")
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"CRITICAL MALFORMED PAYLOAD: Synthesized blueprint contains invalid JSON architecture: {jde}"
+                )
         
         # 3. Spool synthesized blueprint JSON atomically to watchdog queue
         queue_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Master_Architect_Elite_Logic", "ay2_dispatch_queue")
