@@ -1263,6 +1263,51 @@ async def review(req: ReviewRequest):
                 # Yield the precise SSE actuation token
                 yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CTO', 'content': '\n\n⚙️ [CTO Node] Blueprint spooled. IPC Bridge actuating...\n'})}\n\n"
 
+                # ── Build completion watcher ──
+                # The dispatch queue is shared across all server instances, so the process
+                # that actually actuates (and broadcasts the bridge ✅) may not be the one
+                # this UI is connected to — leaving the user without a "done" signal. Since
+                # THIS server spooled the blueprint, it watches the sandbox for its own
+                # build's output and reports completion in *this* stream, so the user always
+                # gets a definitive done/failed message no matter which instance did the work.
+                try:
+                    _bp_inner = blueprint_data if isinstance(blueprint_data, dict) else json.loads(text)
+                except Exception:
+                    _bp_inner = {}
+                _raw_app = str(_bp_inner.get("app_name", "app")).strip()
+                _safe_app = "".join(c if (c.isalnum() or c in "-_") else "-" for c in _raw_app).strip("-_") or "app"
+                _app_dir = os.path.join(_SCRIPT_DIR, "generated_builds", _safe_app)
+                _targets = [m.get("target_file", "") for m in _bp_inner.get("ast_mutations", []) if isinstance(m, dict)]
+                _broken = os.path.join(ay2_queue_dir, f"broken_blueprint_{timestamp}.json")
+
+                _built = False
+                _deadline = time.time() + 45
+                while time.time() < _deadline:
+                    await asyncio.sleep(0.7)
+                    if _targets:
+                        _ok = True
+                        for _tf in _targets:
+                            _rel = str(_tf).replace("\\", "/").lstrip("/")
+                            _dest = os.path.join(_app_dir, *[p for p in _rel.split("/") if p])
+                            # Success = every targeted file exists and was (re)written at/after spool.
+                            if not (os.path.exists(_dest) and os.path.getmtime(_dest) >= timestamp - 1):
+                                _ok = False
+                                break
+                        if _ok:
+                            _built = True
+                            break
+                    if os.path.exists(_broken):
+                        break
+
+                if _built:
+                    _rel_dir = f"generated_builds/{_safe_app}"
+                    _first = _targets[0] if _targets else "index.html"
+                    _msg = f"\n✅ [Build Complete] {len(_targets)} file(s) written to {_rel_dir}/. Open {_rel_dir}/{_first} to view your app.\n"
+                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CTO', 'content': _msg})}\n\n"
+                else:
+                    _msg = "\n⚠️ [Build Watch] Blueprint spooled, but no output appeared in generated_builds within 45s. The actuator may have failed or is still running — check the generated_builds folder.\n"
+                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CRITIC', 'content': _msg})}\n\n"
+
             else:
                 agent_identity = "VENTURE_ARCHITECT"
                 yield f"data: {json.dumps({'type': 'agent_identity', 'agent': agent_identity})}\n\n"
