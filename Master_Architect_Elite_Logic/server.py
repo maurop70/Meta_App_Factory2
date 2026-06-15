@@ -683,7 +683,12 @@ def root():
 @app.get("/builds")
 @app.get("/builds/")
 def builds_gallery():
-    """Browsable gallery of every app produced by autonomous builds (generated_builds/)."""
+    """Browsable gallery + live control center for apps produced by autonomous builds."""
+    try:
+        import preview_manager
+        active_previews = preview_manager.status()
+    except Exception:
+        active_previews = {}
     root = os.path.join(_SCRIPT_DIR, "generated_builds")
     cards = []
     if os.path.isdir(root):
@@ -691,8 +696,11 @@ def builds_gallery():
             app_path = os.path.join(root, name)
             if not os.path.isdir(app_path):
                 continue
+            is_fs = os.path.isdir(os.path.join(app_path, "frontend"))
             files, newest = [], 0
             for dp, _dirs, fnames in os.walk(app_path):
+                # Never descend into the node_modules junction (symlinked + huge).
+                _dirs[:] = [d for d in _dirs if d != "node_modules"]
                 for fn in fnames:
                     fp = os.path.join(dp, fn)
                     files.append(os.path.relpath(fp, app_path).replace("\\", "/"))
@@ -702,26 +710,57 @@ def builds_gallery():
                         pass
             if not files:
                 continue
-            entry = "index.html" if "index.html" in files else sorted(files)[0]
             when = datetime.fromtimestamp(newest).strftime("%Y-%m-%d %H:%M") if newest else "—"
-            cards.append(
-                f'<div class="card"><h2>{name}</h2>'
-                f'<p>{len(files)} file(s) · built {when}</p>'
-                f'<a class="btn" href="/builds/{name}/{entry}" target="_blank">▶ Open app</a></div>'
-            )
+            if is_fs:
+                status_info = active_previews.get(name)
+                is_running = bool(status_info and status_info.get("alive"))
+                if is_running:
+                    port = status_info["port"]
+                    btn_html = (
+                        f'<a class="btn" href="http://localhost:{port}/" target="_blank">▶ Open live preview (:{port})</a> '
+                        f'<button class="btn btn-danger" onclick="stopPreview(\'{name}\', this)">⏹ Stop</button>'
+                    )
+                else:
+                    btn_html = f'<button class="btn btn-success" onclick="startPreview(\'{name}\', this)">⚡ Start live preview</button>'
+                cards.append(
+                    f'<div class="card"><h2>{name} <span class="badge">Full-Stack</span></h2>'
+                    f'<p>React + FastAPI · built {when}</p>'
+                    f'{btn_html}</div>'
+                )
+            else:
+                entry = "index.html" if "index.html" in files else sorted(files)[0]
+                cards.append(
+                    f'<div class="card"><h2>{name}</h2>'
+                    f'<p>{len(files)} file(s) · built {when}</p>'
+                    f'<a class="btn" href="/builds/{name}/{entry}" target="_blank">▶ Open app</a></div>'
+                )
     body = "".join(cards) or '<p class="empty">No apps built yet — describe one in Builder Chat.</p>'
     html = (
         '<!doctype html><html><head><meta charset="utf-8"><title>MAF Built Apps</title><style>'
         'body{font-family:Inter,system-ui,sans-serif;background:#0B0F19;color:#e5e7eb;margin:0;padding:32px}'
         'h1{font-weight:700;margin:0 0 4px}.sub{color:#9ca3af;margin:0 0 24px;font-size:13px}'
-        '.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}'
-        '.card{background:#111827;border:1px solid #1f2937;border-radius:14px;padding:18px}'
+        '.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}'
+        '.card{background:#111827;border:1px solid #1f2937;border-radius:14px;padding:18px;position:relative}'
         '.card h2{margin:0 0 6px;font-size:16px;color:#5eead4}.card p{margin:0 0 12px;font-size:12px;color:#9ca3af}'
-        '.btn{display:inline-block;background:#0d9488;color:#fff;text-decoration:none;padding:8px 14px;border-radius:8px;font-size:13px}'
-        '.btn:hover{background:#14b8a6}.empty{color:#9ca3af}code{color:#cbd5e1}</style></head><body>'
+        '.btn{display:inline-block;background:#0d9488;color:#fff;text-decoration:none;padding:8px 14px;border:none;border-radius:8px;font-size:13px;cursor:pointer}'
+        '.btn:hover{background:#14b8a6}'
+        '.btn-danger{background:#b91c1c}.btn-danger:hover{background:#dc2626}'
+        '.btn-success{background:#047857}.btn-success:hover{background:#059669}'
+        '.badge{background:#1e293b;color:#38bdf8;font-size:10px;padding:2px 6px;border-radius:4px;vertical-align:middle;margin-left:6px}'
+        '.empty{color:#9ca3af}code{color:#cbd5e1}</style>'
+        '<script>'
+        'async function startPreview(name, btn){btn.innerText="Starting...";btn.disabled=true;'
+        'try{const res=await fetch("/api/preview/start",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({app_name:name})});'
+        'if(res.ok){const data=await res.json();window.open(data.url,"_blank");location.reload();}'
+        'else{alert("Failed to start preview.");btn.innerText="⚡ Start live preview";btn.disabled=false;}}'
+        'catch(err){alert("Error starting preview: "+err.message);btn.innerText="⚡ Start live preview";btn.disabled=false;}}'
+        'async function stopPreview(name, btn){btn.innerText="Stopping...";btn.disabled=true;'
+        'try{const res=await fetch("/api/preview/stop",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({app_name:name})});'
+        'if(res.ok){location.reload();}else{alert("Failed to stop preview.");btn.innerText="⏹ Stop";btn.disabled=false;}}'
+        'catch(err){alert("Error stopping preview: "+err.message);btn.innerText="⏹ Stop";btn.disabled=false;}}'
+        '</script></head><body>'
         '<h1>🏗️ MAF Built Apps</h1>'
-        '<p class="sub">Every app produced by Builder Chat. Each lives in its own folder under '
-        '<code>generated_builds/&lt;name&gt;/</code>.</p>'
+        '<p class="sub">Every app produced by Builder Chat. Full-stack apps boot on demand; static apps open directly.</p>'
         f'<div class="grid">{body}</div></body></html>'
     )
     return HTMLResponse(html)
