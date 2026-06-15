@@ -231,6 +231,12 @@ async def startup_event():
     # Start the Asynchronous IPC Bridge
     from ipc_bridge import start_ipc_bridge
     asyncio.create_task(start_ipc_bridge(PORT))
+    # Reap idle/dead full-stack preview dev servers (Phase 4).
+    try:
+        import preview_manager
+        preview_manager.start_reaper()
+    except Exception as _e:
+        logger.warning(f"preview reaper not started: {_e}")
 
 from genesis_orchestrator import ON_COMPILE_SUCCESS_CALLBACKS
 
@@ -512,6 +518,32 @@ BUILDER_BLUEPRINT_SCHEMA = {
     "required": ["app_name", "ast_mutations"],
 }
 
+# Full-stack (Phase 4) builder: a Vite+React project scaffold already exists in the
+# sandbox (index.html, src/main.jsx, package.json, node_modules) — the model only
+# overlays the app's React source so it runs on a live dev server.
+FULLSTACK_BLUEPRINT = (
+    "You are the MAF Full-Stack Build Architect. You generate a React (Vite) application. "
+    "A working Vite + React project ALREADY EXISTS in the sandbox: index.html, src/main.jsx, "
+    "package.json, vite.config.js, and node_modules are provided — you MUST NOT regenerate any "
+    "of those. You output ONLY the app's React source as ast_mutations, every target_file under "
+    "frontend/src/, at minimum frontend/src/App.jsx (the default export that the existing "
+    "src/main.jsx renders). You may add more frontend/src/*.jsx and *.css files and import them "
+    "from App.jsx with relative paths.\n\n"
+    "Same JSON shape as before:\n"
+    "{\n"
+    '  "app_name": "<short kebab-case name>",\n'
+    '  "summary": "<one sentence>",\n'
+    '  "ast_mutations": [ { "target_file": "frontend/src/App.jsx", "code_payload": "<COMPLETE file content>" } ]\n'
+    "}\n\n"
+    "Rules:\n"
+    "- code_payload is the full, final content of the file (a valid React component module).\n"
+    "- Use ONLY local, self-contained code — no external CDN <script> tags or remote assets "
+    "(network egress is blocked during verification). Use React (already installed) and inline styles or .css files.\n"
+    "- frontend/src/App.jsx MUST `export default` a React component.\n"
+    "- target_file paths are relative, never absolute or with '..'.\n"
+    "- Output raw JSON only: no markdown, no backticks, no prose."
+)
+
 VENTURE_ARCHITECT = (
     "You are the Venture Architect. Your persona is strategic, analytical, C-Suite corporate-aligned, and business-focused. "
     "Your primary directives are C-Suite business strategy, marketing plans, capex budgets, operational risk assessment, "
@@ -712,6 +744,37 @@ def serve_build(app_name: str, file_path: str = "index.html"):
     return FileResponse(target)
 
 
+@app.get("/api/preview/status")
+async def preview_status():
+    """Active full-stack preview dev servers (ports, PIDs, idle time)."""
+    try:
+        import preview_manager
+        return preview_manager.status()
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.post("/api/preview/stop")
+async def preview_stop(payload: dict):
+    import preview_manager
+    app_name = os.path.basename(str(payload.get("app_name", "")))
+    stopped = await asyncio.to_thread(preview_manager.stop_preview, app_name)
+    return {"status": "stopped" if stopped else "not_running", "app_name": app_name}
+
+
+@app.post("/api/preview/start")
+async def preview_start(payload: dict):
+    import preview_manager
+    app_name = os.path.basename(str(payload.get("app_name", "")))
+    fe = os.path.join(_SCRIPT_DIR, "generated_builds", app_name, "frontend")
+    if not os.path.isdir(fe):
+        raise HTTPException(status_code=404, detail=f"No full-stack build for '{app_name}'")
+    info = await asyncio.to_thread(preview_manager.start_preview, app_name, fe)
+    ready = await asyncio.to_thread(preview_manager.wait_ready, info["port"], 45)
+    return {"status": "started" if ready else "starting", "app_name": app_name,
+            "port": info["port"], "url": f"http://localhost:{info['port']}/"}
+
+
 @app.get("/api/health")
 def health():
     stats = _memory.get_stats()
@@ -868,12 +931,14 @@ async def review(req: ReviewRequest):
     # stays None in AUTO mode. Inline prefixes are stripped from the prompt here
     # (the client keeps the original text in its local chat history).
     forced_intent = None
-    _prefix_map = {"/build": "BUILDER", "/venture": "VENTURE", "/csuite": "VENTURE"}
+    is_full_stack = False
+    _prefix_map = {"/fullstack": "BUILDER", "/build": "BUILDER", "/venture": "VENTURE", "/csuite": "VENTURE"}
     _stripped = user_query.lstrip()
     _low = _stripped.lower()
     for _pfx, _pintent in _prefix_map.items():
         if _low == _pfx or (_low.startswith(_pfx) and _low[len(_pfx):len(_pfx) + 1].isspace()):
             forced_intent = _pintent
+            is_full_stack = (_pfx == "/fullstack")
             user_query = _stripped[len(_pfx):].lstrip()
             query_lower = user_query.lower()
             break
@@ -1118,7 +1183,7 @@ async def review(req: ReviewRequest):
                     
                     return # Exit stream
 
-                system_prompt = BUILDER_BLUEPRINT
+                system_prompt = FULLSTACK_BLUEPRINT if is_full_stack else BUILDER_BLUEPRINT
                 agent_identity = "EXECUTIVE_ARCHITECT"
                 
                 # CRITICAL: Yield the SSE agent identity tag as the very first chunk
@@ -1461,10 +1526,40 @@ async def review(req: ReviewRequest):
                     return json.loads(_resp.text.strip())
 
                 await _await_actuation(timestamp, _targets)
+
+                # Full-stack: boot the dev server and verify the RUNNING app (not static files).
+                _is_fs = is_full_stack or any(
+                    str(t).replace("\\", "/").lstrip("/").startswith(("frontend/", "backend/")) for t in _targets
+                )
+                _preview = None
+                if _is_fs:
+                    try:
+                        import preview_manager
+                        _frontend_dir = os.path.join(_app_dir, "frontend")
+                        _preview = await asyncio.to_thread(preview_manager.start_preview, _safe_app, _frontend_dir)
+                        _pport = _preview["port"]
+                        _build_url = f"http://127.0.0.1:{_pport}/"
+                        _open_url = f"http://localhost:{_pport}/"
+                        yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CTO', 'content': f'🚀 [Preview] Dev server on :{_pport} — waiting for readiness...\n'})}\n\n"
+                        _ready = await asyncio.to_thread(preview_manager.wait_ready, _pport, 45)
+                        if not _ready:
+                            yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CRITIC', 'content': '⚠️ [Preview] Dev server slow to boot; verifying anyway...\n'})}\n\n"
+                    except Exception as _pe:
+                        logger.error(f"[Preview] start failed: {_pe}")
+                        _is_fs = False
+                        yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CRITIC', 'content': f'⚠️ [Preview] Could not start dev server: {_pe}\n'})}\n\n"
+
                 _final_ok = False
                 _last_report = {}
                 for _round in range(1, MAX_ROUNDS + 1):
                     _report, _shot = await _run_verify()
+                    if _is_fs and not _report.get("success"):
+                        try:
+                            _vlog = await asyncio.to_thread(preview_manager.tail_log, _safe_app)
+                            if _vlog.strip():
+                                _report.setdefault("consoleErrors", []).append("[vite dev-server log]\n" + _vlog[-1500:])
+                        except Exception:
+                            pass
                     _last_report = _report
                     if _report.get("success"):
                         _final_ok = True
@@ -1483,14 +1578,22 @@ async def review(req: ReviewRequest):
                     _new_ts = _spool_blueprint(_fixed)
                     yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CTO', 'content': '⚙️ [Self-Heal] Actuating revised blueprint...\n'})}\n\n"
                     await _await_actuation(_new_ts, _targets)
+                    if _is_fs:
+                        await asyncio.sleep(2)  # let Vite HMR reload the rewritten files
 
                 if _final_ok:
                     _verified = "" if _last_report.get("_skipped") else " (verified clean)"
-                    _msg = (
-                        f"\n✅ [Build Complete]{_verified} {len(_targets)} file(s) in generated_builds/{_safe_app}/.\n"
-                        f"▶ Open your app:  {_open_url}\n"
-                        f"📂 All your built apps:  {_gallery_url}\n"
-                    )
+                    if _is_fs:
+                        _msg = (
+                            f"\n✅ [Build Complete]{_verified} full-stack app running live.\n"
+                            f"▶ Open your app:  {_open_url}\n"
+                        )
+                    else:
+                        _msg = (
+                            f"\n✅ [Build Complete]{_verified} {len(_targets)} file(s) in generated_builds/{_safe_app}/.\n"
+                            f"▶ Open your app:  {_open_url}\n"
+                            f"📂 All your built apps:  {_gallery_url}\n"
+                        )
                     yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CTO', 'content': _msg})}\n\n"
                     yield f"data: {json.dumps({'type': 'build_complete', 'app_name': _safe_app, 'open_url': _open_url, 'gallery_url': _gallery_url, 'files': _targets})}\n\n"
                 else:

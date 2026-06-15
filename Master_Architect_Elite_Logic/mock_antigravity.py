@@ -2,6 +2,8 @@ import sys
 import os
 import json
 import time
+import shutil
+import subprocess
 
 # ─────────────────────────────────────────────────────────────────────────────
 # LOCAL AY2 ACTUATOR
@@ -44,6 +46,52 @@ def _resolve_within(root: str, relative: str) -> str:
     if dest_abs != root_abs and not dest_abs.startswith(root_abs + os.sep):
         raise RuntimeError(f"SECURITY: path traversal rejected: {relative!r}")
     return dest_abs
+
+
+def _scaffold_fullstack(app_root, mutations):
+    """If any mutation targets frontend/ or backend/, lay down the dev template first.
+
+    Copies the pre-built Vite scaffold (only files that don't already exist, so it's
+    idempotent across self-heal rounds) and junctions the pre-installed node_modules
+    (instant, no per-build duplication). The mutation write loop then overlays the
+    model's source on top.
+    """
+    targets = [str(m.get("target_file", "")).replace("\\", "/").lstrip("/")
+               for m in mutations if isinstance(m, dict)]
+    if not any(t.startswith("frontend/") for t in targets):
+        return
+
+    tpl = os.path.join(_SCRIPT_DIR, "templates", "dev_frontend")
+    if not os.path.isdir(tpl):
+        print(f"[AY2 Actuator WARN] dev_frontend template missing at {tpl}", file=sys.stderr)
+        return
+    fe = os.path.join(app_root, "frontend")
+    os.makedirs(fe, exist_ok=True)
+
+    # Copy template files that aren't already present (preserve prior overlays).
+    for dp, dirs, files in os.walk(tpl):
+        if "node_modules" in dirs:
+            dirs.remove("node_modules")
+        rel = os.path.relpath(dp, tpl)
+        dst_dir = fe if rel == "." else os.path.join(fe, rel)
+        os.makedirs(dst_dir, exist_ok=True)
+        for fn in files:
+            dst = os.path.join(dst_dir, fn)
+            if not os.path.exists(dst):
+                shutil.copy2(os.path.join(dp, fn), dst)
+
+    # Junction the pre-installed node_modules (instant; falls back to symlink off-Windows).
+    nm = os.path.join(fe, "node_modules")
+    tpl_nm = os.path.join(tpl, "node_modules")
+    if not os.path.exists(nm) and os.path.isdir(tpl_nm):
+        try:
+            if os.name == "nt":
+                subprocess.run(["cmd", "/c", "mklink", "/J", nm, tpl_nm], capture_output=True)
+            else:
+                os.symlink(tpl_nm, nm, target_is_directory=True)
+        except Exception as e:
+            print(f"[AY2 Actuator WARN] node_modules link failed: {e}", file=sys.stderr)
+    print(f"[AY2 Actuator] Scaffolded full-stack frontend template into {os.path.relpath(fe, SANDBOX_ROOT)}/")
 
 
 def main():
@@ -97,6 +145,13 @@ def main():
 
     app_name = _sanitize_app_name(inner.get("app_name", "app"))
     app_root = os.path.join(SANDBOX_ROOT, app_name)
+
+    # Full-stack builds: lay down the dev template before overlaying the model's files.
+    try:
+        _scaffold_fullstack(app_root, mutations)
+    except Exception as e:
+        print(f"[AY2 Actuator ERROR] Scaffold failed: {e}", file=sys.stderr)
+        sys.exit(1)
 
     print(f"[AY2 Actuator] Applying {len(mutations)} mutation(s) for app '{app_name}'...")
     written = []
