@@ -2,7 +2,7 @@
 # =====================================================
 # Version: 2.0.0 (v2.0.0 Standard)
 # Created: 2026-03-28
-# Revised: 2026-06-07
+# Revised: 2026-06-14
 # Authority: This file is the PRIMARY configuration for all Antigravity agents.
 # Supersedes: AGENTS.md v1.x (2026-03-28)
 # Format: §0 Constraints → §1 ClaudeAY → §2 Wire System → §3 Agents → §4 Infrastructure → §5 Maintenance Rules → §6 Deprecated
@@ -475,6 +475,28 @@ indefinite looping. Recommended fix: add `MAX_ITERATIONS = 10` guard to
 
 ---
 
+## Builder Chat Self-Healing Build Pipeline (added 2026-06-14)
+
+Turns a plain-language Builder Chat request into a verified, runnable app with no
+human in the loop: **generate → run → observe → fix → verify**.
+
+| Stage | Component | Behavior |
+|---|---|---|
+| **Route** | factory_stream.py | Explicit Build-vs-Venture routing (mode + `/build`, `/venture`, `/csuite`). BUILDER path no longer runs the Socratic gate. |
+| **Generate** | Master Architect | Hardened blueprint JSON: `max_output_tokens=32768`, temperature-0.0 retry fallback on `JSONDecodeError`. |
+| **Actuate** | `Master_Architect_Elite_Logic/ipc_bridge.py` | `start_ipc_bridge(owner_port)` claims each blueprint via atomic `os.rename` (single owner across the shared-queue fleet). VENTURE/SRE blueprint producers untouched. Output → `Master_Architect_Elite_Logic/generated_builds/<app-slug>/`. |
+| **Verify** | `factory_ui/verify_app.mjs` | Headless Chromium render; blocks non-local egress; reports console / page / network errors + screenshot as JSON. |
+| **Heal** | `Master_Architect_Elite_Logic/server.py` | verify→heal loop: feeds errors back to Gemini for **up to 3 repair passes**. `✅ Build Complete` is gated on a clean render. Verifier failures **fail-open** (build still reported) so a verifier hiccup can't block builds. |
+| **Serve** | server.py + factory_ui | Built apps served over HTTP; in-chat **Open app** button on completion; **Built Apps** sidebar links to the builds gallery. |
+
+- **Gallery**: `Master_Architect_Elite_Logic/generated_builds/` (see its `README.md`).
+- **Demo apps built by this pipeline**: `maf-blueprint-inspector` (validate blueprint/JSON payloads),
+  `maf-token-cost-estimator` (LLM token + cost estimate), `maf-uuid-generator` (UUID v4).
+- **Cost tracking**: LLM call sites are instrumented for centralized token cost-tracking across MAF.
+- **Test**: `scratch/test_self_healing.py`; `ReviewRequest.test_inject_broken` (gated by `ALLOW_TEST_INJECTION`) for deterministic verify→heal tests.
+
+---
+
 ## cio_crawler.py
 
 | | |
@@ -614,6 +636,12 @@ to disk (never in-memory) so any Uvicorn worker can serve the SSE stream.
 - Update `ssh_wire.py` `APPROVED_HOSTS` if new droplet added
 - Update `mcp_server/server.py` approved host list (two sources of truth — update both)
 - Update `CLAUDE_RULES.md` §9.4 deployment sequence
+
+### When a new app is built into `generated_builds/` (or the build pipeline changes):
+- Add the app to the gallery table in `Master_Architect_Elite_Logic/generated_builds/README.md`
+- Update the demo-app list + pipeline table in §3 (Builder Chat Self-Healing Build Pipeline)
+- These docs feed the **Ecosystem Guide** chat (`factory_stream.py` → `_load_ecosystem_docs`);
+  AGENTS.md is ingested in full, so keep it current — stale docs = wrong Guide answers
 
 ### Commit discipline:
 - Wire + docs must be in the same commit — never ship a wire without its docs
