@@ -484,16 +484,17 @@ human in the loop: **generate → run → observe → fix → verify**.
 |---|---|---|
 | **Route** | factory_stream.py | Explicit Build-vs-Venture routing (mode + `/build`, `/venture`, `/csuite`). BUILDER path no longer runs the Socratic gate. |
 | **Generate** | Master Architect | Hardened blueprint JSON: `max_output_tokens=32768`, temperature-0.0 retry fallback on `JSONDecodeError`. |
-| **Actuate** | `Master_Architect_Elite_Logic/ipc_bridge.py` | `start_ipc_bridge(owner_port)` claims each blueprint via atomic `os.rename` (single owner across the shared-queue fleet). VENTURE/SRE blueprint producers untouched. Output → `Master_Architect_Elite_Logic/generated_builds/<app-slug>/`. |
-| **Verify** | `factory_ui/verify_app.mjs` | Headless Chromium render; blocks non-local egress; reports console / page / network errors + screenshot as JSON. |
-| **Heal** | `Master_Architect_Elite_Logic/server.py` | verify→heal loop: feeds errors back to Gemini for **up to 3 repair passes**. `✅ Build Complete` is gated on a clean render. Verifier failures **fail-open** (build still reported) so a verifier hiccup can't block builds. |
+| **Actuate** | `Master_Architect_Elite_Logic/ipc_bridge.py` → `mock_antigravity.py` | `start_ipc_bridge(owner_port)` claims each blueprint via atomic `os.rename` (single owner across the shared-queue fleet). VENTURE/SRE blueprint producers untouched. The actuator scaffolds full-stack apps from `templates/dev_frontend` + `dev_backend` and **junctions** `node_modules` (`mklink /J`, instant — no per-build copy). Output → `Master_Architect_Elite_Logic/generated_builds/<app-slug>/`. |
+| **Preview / Run (full-stack, Phase 4)** | `Master_Architect_Elite_Logic/preview_manager.py` | Boots Vite + (optional) uvicorn from `templates/shared_backend_venv` on dynamic ports (6001–8000; reserved fleet + Chromium-unsafe ports excluded). Strict **`127.0.0.1`** binding; scrubbed child env with **`PYTHONUNBUFFERED=1`** (crash tracebacks flush immediately for the heal tail); 3-preview cap + 10-min idle reaper; `CTRL_BREAK→taskkill /T→port-kill` teardown. Previews outlive the SSE connection so **Open app** keeps working. |
+| **Verify** | `factory_ui/verify_app.mjs` | Headless Chromium render against the live preview port; blocks non-local egress; reports console / page / network errors + screenshot as JSON. |
+| **Heal** | `Master_Architect_Elite_Logic/server.py` | verify→heal loop: feeds errors (plus the Vite/uvicorn **dev-server log tail**) back to Gemini for **up to 3 repair passes**. `✅ Build Complete` is gated on a clean render. Verifier failures **fail-open** (build still reported) so a verifier hiccup can't block builds. |
 | **Serve** | server.py + factory_ui | Built apps served over HTTP; in-chat **Open app** button on completion; **Built Apps** sidebar links to the builds gallery. |
 
 - **Gallery**: `Master_Architect_Elite_Logic/generated_builds/` (see its `README.md`).
 - **Demo apps built by this pipeline**: `maf-blueprint-inspector` (validate blueprint/JSON payloads),
   `maf-token-cost-estimator` (LLM token + cost estimate), `maf-uuid-generator` (UUID v4).
 - **Cost tracking**: LLM call sites are instrumented for centralized token cost-tracking across MAF.
-- **Test**: `scratch/test_self_healing.py`; `ReviewRequest.test_inject_broken` (gated by `ALLOW_TEST_INJECTION`) for deterministic verify→heal tests.
+- **Test**: `scratch/test_self_healing.py`; `ReviewRequest.test_inject_broken` (gated by `ALLOW_TEST_INJECTION`) for deterministic verify→heal tests. **Phase-4 full-stack suite**: `Master_Architect_Elite_Logic/test_fullstack_healing.py` — Stage 1 deterministic checks (PYTHONUNBUFFERED injection, secret-scrub, port-allocation rules, idle reaper, concurrency cap, full-stack scaffold + `node_modules` junction) always run; Stage 2 live e2e (boot on loopback → verifier detects an injected runtime bug → re-actuated corrected blueprint recovers clean → port freed) is gated behind `RUN_FULLSTACK_E2E=1`. The suite never invokes the LLM — the heal **loop mechanics** are tested by substituting a known-good blueprint for the model's fix, keeping the regression deterministic and offline.
 
 ---
 

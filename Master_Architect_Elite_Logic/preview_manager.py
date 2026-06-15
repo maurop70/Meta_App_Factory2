@@ -53,7 +53,10 @@ _lock = threading.RLock()
 
 
 def _scrubbed_env(extra=None):
-    env = {}
+    # Seed PYTHONUNBUFFERED so the spawned uvicorn backend flushes startup/crash
+    # tracebacks to backend.log immediately, before the self-heal sweep tails it
+    # (Python buffers stdout/stderr by default when not attached to a TTY).
+    env = {"PYTHONUNBUFFERED": "1"}
     for k in _ENV_ALLOWLIST:
         for ek, ev in os.environ.items():
             if ek.upper() == k:
