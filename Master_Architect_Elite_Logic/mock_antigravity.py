@@ -58,7 +58,24 @@ def _scaffold_fullstack(app_root, mutations):
     """
     targets = [str(m.get("target_file", "")).replace("\\", "/").lstrip("/")
                for m in mutations if isinstance(m, dict)]
-    if not any(t.startswith("frontend/") for t in targets):
+    needs_frontend = any(t.startswith("frontend/") for t in targets)
+    needs_backend = any(t.startswith("backend/") for t in targets)
+    if not (needs_frontend or needs_backend):
+        return
+
+    # Backend skeleton (FastAPI app:app) — overlaid by the model's backend/app.py.
+    if needs_backend:
+        btpl = os.path.join(_SCRIPT_DIR, "templates", "dev_backend")
+        be = os.path.join(app_root, "backend")
+        os.makedirs(be, exist_ok=True)
+        if os.path.isdir(btpl):
+            for fn in os.listdir(btpl):
+                s, d = os.path.join(btpl, fn), os.path.join(be, fn)
+                if os.path.isfile(s) and not os.path.exists(d):
+                    shutil.copy2(s, d)
+        print(f"[AY2 Actuator] Scaffolded backend skeleton into {os.path.relpath(be, SANDBOX_ROOT)}/")
+
+    if not needs_frontend:
         return
 
     tpl = os.path.join(_SCRIPT_DIR, "templates", "dev_frontend")

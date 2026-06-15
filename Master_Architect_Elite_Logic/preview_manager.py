@@ -1,17 +1,16 @@
 """Preview process manager for full-stack builds (Phase 4).
 
-Governs the lifecycle of long-lived dev-server subprocesses (Vite, and later
-uvicorn) spawned for generated apps: dynamic port allocation, launch with a
-scrubbed environment, readiness health-checks, a concurrency cap, an idle
-reaper, and robust Windows process-tree teardown (CTRL_BREAK -> taskkill /T ->
-netstat+taskkill port force-kill).
+Governs the lifecycle of long-lived dev-server subprocesses for generated apps:
+a Vite frontend and (optionally) a FastAPI backend run from a shared, pre-built
+Python venv. Handles dynamic port allocation, launch with a scrubbed environment,
+readiness health-checks, a concurrency cap, an idle reaper, and robust Windows
+process-tree teardown (CTRL_BREAK -> taskkill /T -> netstat+taskkill port kill).
 
 Lifetimes are decoupled from the build's SSE connection: previews persist until
 the idle reaper (default 10 min) or an explicit stop, so the "Open app" link
 keeps working after the build finishes.
 """
 import os
-import sys
 import time
 import socket
 import signal
@@ -23,6 +22,12 @@ logger = logging.getLogger("MasterArchitect.PreviewManager")
 
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 IS_WIN = os.name == "nt"
+
+# Shared, pre-installed backend venv (FastAPI + uvicorn). No per-build pip install.
+_VENV_PY = os.path.join(
+    _SCRIPT_DIR, "templates", "shared_backend_venv",
+    "Scripts" if IS_WIN else "bin", "python.exe" if IS_WIN else "python",
+)
 
 # Ports owned by the MAF ecosystem — never hand these out.
 _RESERVED_PORTS = {5000, 5050, 5173, 8000, 9000}
@@ -43,14 +48,13 @@ _ENV_ALLOWLIST = (
     "NUMBER_OF_PROCESSORS", "PROCESSOR_ARCHITECTURE", "HOMEDRIVE", "HOMEPATH",
 )
 
-_previews = {}          # app_name -> {"proc","port","backend_port","started","last_active","app_dir"}
+_previews = {}   # app_name -> dict (procs, ports, dirs, logfs, timestamps)
 _lock = threading.RLock()
 
 
 def _scrubbed_env(extra=None):
     env = {}
     for k in _ENV_ALLOWLIST:
-        # match case-insensitively (Windows env keys vary in case)
         for ek, ev in os.environ.items():
             if ek.upper() == k:
                 env[ek] = ev
@@ -70,20 +74,23 @@ def _port_free(port):
             return False
 
 
-def allocate_port():
+def allocate_port(extra_taken=None):
     """Return a free TCP port in the scan range, skipping reserved/in-use ports."""
     with _lock:
-        taken = {p["port"] for p in _previews.values()} | {p.get("backend_port") for p in _previews.values()}
+        taken = {p["port"] for p in _previews.values()}
+        taken |= {p.get("backend_port") for p in _previews.values()}
+        taken |= set(extra_taken or [])
         for port in range(_SCAN_LO, _SCAN_HI):
             if port in _RESERVED_PORTS or port in taken:
                 continue
             if _port_free(port):
                 return port
-    raise RuntimeError("No free preview port available in range 6000-8000")
+    raise RuntimeError("No free preview port available in range 6001-8000")
 
 
 def health_check(port, timeout=0.4):
-    """True if something is accepting connections on the port."""
+    if not port:
+        return False
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.settimeout(timeout)
         try:
@@ -94,7 +101,6 @@ def health_check(port, timeout=0.4):
 
 
 def wait_ready(port, timeout_s=40):
-    """Block until the port accepts connections or the timeout elapses."""
     deadline = time.time() + timeout_s
     while time.time() < deadline:
         if health_check(port):
@@ -103,56 +109,88 @@ def wait_ready(port, timeout_s=40):
     return False
 
 
-def _vite_bin(frontend_dir):
-    return os.path.join(frontend_dir, "node_modules", "vite", "bin", "vite.js")
+def _spawn(cmd, cwd, log_path, env):
+    logf = open(log_path, "w", encoding="utf-8", errors="ignore")
+    creationflags = subprocess.CREATE_NEW_PROCESS_GROUP if IS_WIN else 0
+    proc = subprocess.Popen(
+        cmd, cwd=cwd, env=env,
+        stdout=logf, stderr=subprocess.STDOUT,
+        creationflags=creationflags,
+    )
+    return proc, logf
 
 
-def start_preview(app_name, frontend_dir, backend_port=None):
-    """Launch the Vite dev server for `frontend_dir` on a freshly allocated port.
+def start_preview(app_name, app_dir, backend_port=None):
+    """Boot the dev server(s) for a generated app under `app_dir`.
 
-    Returns {"port", "log_path", "pid"}. Stops any existing preview for the app
-    first, and enforces the concurrency cap by reaping the oldest idle preview.
+    Always starts Vite (frontend/). If backend/app.py exists, also starts uvicorn
+    from the shared venv on a second port and points Vite's /api proxy at it via
+    the BACKEND_PORT env. Returns {"port","backend_port","pid","log_path"}.
     """
     stop_preview(app_name)
     _enforce_concurrency_cap()
 
-    port = allocate_port()
-    log_path = os.path.join(frontend_dir, "frontend.log")
-    vite_js = _vite_bin(frontend_dir)
+    frontend_dir = os.path.join(app_dir, "frontend")
+    backend_dir = os.path.join(app_dir, "backend")
+    vite_js = os.path.join(frontend_dir, "node_modules", "vite", "bin", "vite.js")
     if not os.path.isfile(vite_js):
         raise RuntimeError(f"vite not found in template node_modules: {vite_js}")
+    has_backend = os.path.isfile(os.path.join(backend_dir, "app.py"))
 
-    env = _scrubbed_env({"BACKEND_PORT": str(backend_port or 0)})
-    cmd = ["node", vite_js, "--port", str(port), "--strictPort", "--host", "127.0.0.1"]
+    fe_port = allocate_port()
+    be_port = allocate_port(extra_taken=[fe_port]) if has_backend else None
 
-    creationflags = subprocess.CREATE_NEW_PROCESS_GROUP if IS_WIN else 0
-    logf = open(log_path, "w", encoding="utf-8", errors="ignore")
-    proc = subprocess.Popen(
-        cmd, cwd=frontend_dir, env=env,
-        stdout=logf, stderr=subprocess.STDOUT,
-        creationflags=creationflags,
-    )
+    backend_proc = be_logf = None
+    if has_backend:
+        if not os.path.isfile(_VENV_PY):
+            raise RuntimeError(f"shared backend venv missing: {_VENV_PY}")
+        be_log = os.path.join(backend_dir, "backend.log")
+        # --reload so a self-heal rewrite of app.py auto-restarts the backend
+        # (the frontend gets the same effect from Vite HMR).
+        be_cmd = [_VENV_PY, "-m", "uvicorn", "app:app", "--port", str(be_port),
+                  "--host", "127.0.0.1", "--reload"]
+        backend_proc, be_logf = _spawn(be_cmd, backend_dir, be_log, _scrubbed_env())
+        logger.info(f"[Preview] backend uvicorn '{app_name}' (pid {backend_proc.pid}) on :{be_port}")
+
+    fe_log = os.path.join(frontend_dir, "frontend.log")
+    fe_env = _scrubbed_env({"BACKEND_PORT": str(be_port or 0)})
+    fe_cmd = ["node", vite_js, "--port", str(fe_port), "--strictPort", "--host", "127.0.0.1"]
+    proc, fe_logf = _spawn(fe_cmd, frontend_dir, fe_log, fe_env)
+
     with _lock:
         _previews[app_name] = {
-            "proc": proc, "port": port, "backend_port": backend_port,
+            "proc": proc, "backend_proc": backend_proc,
+            "port": fe_port, "backend_port": be_port,
+            "frontend_dir": frontend_dir, "backend_dir": backend_dir,
+            "fe_logf": fe_logf, "be_logf": be_logf,
             "started": time.time(), "last_active": time.time(),
-            "app_dir": frontend_dir, "logf": logf,
         }
-    logger.info(f"[Preview] started '{app_name}' (pid {proc.pid}) on :{port}")
-    return {"port": port, "log_path": log_path, "pid": proc.pid}
+    logger.info(f"[Preview] started '{app_name}' (pid {proc.pid}) on :{fe_port}")
+
+    # Give the backend a head start so /api works when the frontend is verified.
+    if has_backend:
+        wait_ready(be_port, 25)
+    return {"port": fe_port, "backend_port": be_port, "pid": proc.pid, "log_path": fe_log}
 
 
 def tail_log(app_name, max_chars=4000):
+    """Combined tail of the Vite and backend logs (for the self-heal prompt)."""
     with _lock:
         rec = _previews.get(app_name)
-    path = os.path.join(rec["app_dir"], "frontend.log") if rec else None
-    if not path or not os.path.exists(path):
+    if not rec:
         return ""
-    try:
-        with open(path, "r", encoding="utf-8", errors="ignore") as f:
-            return f.read()[-max_chars:]
-    except Exception:
-        return ""
+    out = []
+    for label, path in (("vite", os.path.join(rec["frontend_dir"], "frontend.log")),
+                        ("backend", os.path.join(rec["backend_dir"], "backend.log"))):
+        if os.path.exists(path):
+            try:
+                with open(path, "r", encoding="utf-8", errors="ignore") as f:
+                    body = f.read()[-max_chars:]
+                if body.strip():
+                    out.append(f"--- {label}.log ---\n{body}")
+            except Exception:
+                pass
+    return "\n".join(out)
 
 
 def touch(app_name):
@@ -166,7 +204,9 @@ def status():
         return {
             name: {
                 "port": r["port"], "backend_port": r.get("backend_port"),
-                "pid": r["proc"].pid, "alive": r["proc"].poll() is None,
+                "pid": r["proc"].pid,
+                "backend_pid": r["backend_proc"].pid if r.get("backend_proc") else None,
+                "alive": r["proc"].poll() is None,
                 "idle_s": int(time.time() - r["last_active"]),
             }
             for name, r in _previews.items()
@@ -174,8 +214,7 @@ def status():
 
 
 def _kill_tree(proc, port):
-    """Best-effort Windows-friendly teardown of a dev-server process tree."""
-    if proc.poll() is not None:
+    if proc is None or proc.poll() is not None:
         return
     try:
         if IS_WIN:
@@ -191,13 +230,11 @@ def _kill_tree(proc, port):
     if proc.poll() is None:
         try:
             if IS_WIN:
-                subprocess.run(["taskkill", "/F", "/T", "/PID", str(proc.pid)],
-                               capture_output=True)
+                subprocess.run(["taskkill", "/F", "/T", "/PID", str(proc.pid)], capture_output=True)
             else:
                 proc.kill()
         except Exception:
             pass
-    # Port-level force-kill fallback (handles orphaned grandchildren still bound).
     if port and health_check(port):
         try:
             from chaos_kill import kill_port_process
@@ -211,11 +248,14 @@ def stop_preview(app_name):
         rec = _previews.pop(app_name, None)
     if not rec:
         return False
+    _kill_tree(rec.get("backend_proc"), rec.get("backend_port"))
     _kill_tree(rec["proc"], rec["port"])
-    try:
-        rec["logf"].close()
-    except Exception:
-        pass
+    for key in ("fe_logf", "be_logf"):
+        try:
+            if rec.get(key):
+                rec[key].close()
+        except Exception:
+            pass
     logger.info(f"[Preview] stopped '{app_name}'")
     return True
 
@@ -229,7 +269,6 @@ def _enforce_concurrency_cap():
 
 
 def reap_idle():
-    """Stop previews idle past IDLE_TIMEOUT_S (or whose process has died)."""
     now = time.time()
     with _lock:
         doomed = [n for n, r in _previews.items()
@@ -239,7 +278,6 @@ def reap_idle():
 
 
 def start_reaper(interval_s=60):
-    """Launch a daemon thread that periodically reaps idle/dead previews."""
     def _loop():
         while True:
             time.sleep(interval_s)

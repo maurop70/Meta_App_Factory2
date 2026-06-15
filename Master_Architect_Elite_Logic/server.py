@@ -528,7 +528,11 @@ FULLSTACK_BLUEPRINT = (
     "of those. You output ONLY the app's React source as ast_mutations, every target_file under "
     "frontend/src/, at minimum frontend/src/App.jsx (the default export that the existing "
     "src/main.jsx renders). You may add more frontend/src/*.jsx and *.css files and import them "
-    "from App.jsx with relative paths.\n\n"
+    "from App.jsx with relative paths.\n"
+    "OPTIONAL BACKEND: if the app needs to persist data or expose APIs, also output backend/app.py — "
+    "a FastAPI app with a module-level `app = FastAPI()` and routes under /api/... The Vite dev server "
+    "proxies /api to this backend automatically, so the frontend calls it with relative fetch('/api/...'). "
+    "Persist data with the standard-library sqlite3 module (DB file inside the backend dir).\n\n"
     "Same JSON shape as before:\n"
     "{\n"
     '  "app_name": "<short kebab-case name>",\n'
@@ -540,6 +544,8 @@ FULLSTACK_BLUEPRINT = (
     "- Use ONLY local, self-contained code — no external CDN <script> tags or remote assets "
     "(network egress is blocked during verification). Use React (already installed) and inline styles or .css files.\n"
     "- frontend/src/App.jsx MUST `export default` a React component.\n"
+    "- Backend (if any): ONLY FastAPI + the Python standard library (sqlite3, json, datetime, etc.) are "
+    "available — do NOT import any other third-party package (none can be installed). All routes under /api/.\n"
     "- target_file paths are relative, never absolute or with '..'.\n"
     "- Output raw JSON only: no markdown, no backticks, no prose."
 )
@@ -766,10 +772,10 @@ async def preview_stop(payload: dict):
 async def preview_start(payload: dict):
     import preview_manager
     app_name = os.path.basename(str(payload.get("app_name", "")))
-    fe = os.path.join(_SCRIPT_DIR, "generated_builds", app_name, "frontend")
-    if not os.path.isdir(fe):
+    app_dir = os.path.join(_SCRIPT_DIR, "generated_builds", app_name)
+    if not os.path.isdir(os.path.join(app_dir, "frontend")):
         raise HTTPException(status_code=404, detail=f"No full-stack build for '{app_name}'")
-    info = await asyncio.to_thread(preview_manager.start_preview, app_name, fe)
+    info = await asyncio.to_thread(preview_manager.start_preview, app_name, app_dir)
     ready = await asyncio.to_thread(preview_manager.wait_ready, info["port"], 45)
     return {"status": "started" if ready else "starting", "app_name": app_name,
             "port": info["port"], "url": f"http://localhost:{info['port']}/"}
@@ -1535,8 +1541,7 @@ async def review(req: ReviewRequest):
                 if _is_fs:
                     try:
                         import preview_manager
-                        _frontend_dir = os.path.join(_app_dir, "frontend")
-                        _preview = await asyncio.to_thread(preview_manager.start_preview, _safe_app, _frontend_dir)
+                        _preview = await asyncio.to_thread(preview_manager.start_preview, _safe_app, _app_dir)
                         _pport = _preview["port"]
                         _build_url = f"http://127.0.0.1:{_pport}/"
                         _open_url = f"http://localhost:{_pport}/"
@@ -1579,7 +1584,9 @@ async def review(req: ReviewRequest):
                     yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CTO', 'content': '⚙️ [Self-Heal] Actuating revised blueprint...\n'})}\n\n"
                     await _await_actuation(_new_ts, _targets)
                     if _is_fs:
-                        await asyncio.sleep(2)  # let Vite HMR reload the rewritten files
+                        await asyncio.sleep(3)  # let Vite HMR + uvicorn --reload pick up the rewrite
+                        if _preview and _preview.get("backend_port"):
+                            await asyncio.to_thread(preview_manager.wait_ready, _preview["backend_port"], 12)
 
                 if _final_ok:
                     _verified = "" if _last_report.get("_skipped") else " (verified clean)"
