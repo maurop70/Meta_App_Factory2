@@ -180,3 +180,77 @@ code {
 .maf-data-row:hover {
   background: rgba(99, 102, 241, 0.05);
 }
+
+/* ========================================================= */
+/* MOBILE / RESPONSIVE BREAKPOINTS (<= 768px)                */
+/* Many screens use inline styles; element + class rules     */
+/* below carry !important where they must beat inline width. */
+/* ========================================================= */
+@media (max-width: 768px) {
+  /* Fluid shell: drop the fixed 1126px desktop column */
+  #root {
+    width: 100% !important;
+    border-inline: none;
+  }
+
+  :root {
+    font-size: 15px;
+  }
+
+  /* Collapse multi-column grids to a single column */
+  .maf-layout-grid,
+  [class*="grid"],
+  [style*="grid-template-columns"] {
+    display: block !important;
+    padding: 1rem !important;
+    max-width: 100% !important;
+  }
+
+  /* Stack flex rows (headers, toolbars, sub-nav) vertically */
+  .factory-main > div:first-child,
+  .sub-nav-matrix,
+  [class*="header"],
+  [class*="toolbar"] {
+    flex-wrap: wrap !important;
+  }
+
+  /* Tap targets: minimum 48px for anything interactive */
+  button,
+  input,
+  select,
+  textarea,
+  a.action-btn,
+  [role="button"] {
+    min-height: 48px;
+  }
+
+  input[type="checkbox"],
+  input[type="radio"] {
+    min-width: 24px;
+    min-height: 24px;
+  }
+
+  /* Full-width form controls and primary actions */
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea,
+  button:not(.pin-pad-key) {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Any wide table scrolls horizontally instead of breaking layout */
+  table {
+    display: block;
+    overflow-x: auto;
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Modals/cards should not exceed the viewport */
+  [class*="modal"],
+  [class*="card"] {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+}

@@ -192,3 +192,5 @@ Master_Architect_Elite_Logic/ay2_dispatch_queue/*.tmp
 ERP/Maintenance_Work_Order/logs/po_emails/PO-*.html
 logs/e2e_reports/
 
+# ── Generated archive output ──────────────────────────────
+Corporate_Secretary/archives/

@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import ProfileSettings from './ProfileSettings';
 import { useAuth } from '../context/AuthContext';
 
 const CreateMWOForm = ({ onMWOCreated }) => {
+  const [showProfile, setShowProfile] = useState(false);
   const [description, setDescription] = useState('');
   const [equipmentId, setEquipmentId] = useState('');
   const [location, setLocation] = useState('');
@@ -124,7 +126,11 @@ const CreateMWOForm = ({ onMWOCreated }) => {
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
         <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#ffffff', margin: 0 }}>Create Maintenance Work Order (DM)</h3>
+        <button type="button" onClick={() => setShowProfile(true)} style={{ padding: '0.4rem 0.9rem', borderRadius: '8px', border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(99,102,241,0.1)', color: 'var(--accent-hover, #818cf8)', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem' }}>
+          Profile
+        </button>
       </div>
+      {showProfile && <ProfileSettings onClose={() => setShowProfile(false)} />}
       
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border, rgba(99, 102, 241, 0.15))', paddingBottom: '1.5rem', marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', gap: '1rem', color: '#94a3b8', fontSize: '0.8rem', fontWeight: '500', alignItems: 'center' }}>

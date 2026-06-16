@@ -4,6 +4,7 @@ import api from '../services/api';
 import HMAssignmentModal from './HMAssignmentModal';
 import HMReviewModal from './HMReviewModal';
 import HODWorkspace from './HODWorkspace';
+import ProfileSettings from './ProfileSettings';
 import { useAuth } from '../context/AuthContext';
 
 const HMDashboard = () => {
@@ -28,6 +29,7 @@ const HMDashboard = () => {
 
   // [BACK OFFICE INVENTORY] Command console view switcher
   const [activeView, setActiveView] = useState('mwo');
+  const [showProfile, setShowProfile] = useState(false);
 
   // [SAFETY ALERTS] Low-stock alert feed + draft PO deep-link target
   const [inventoryAlerts, setInventoryAlerts] = useState([]);
@@ -203,7 +205,11 @@ const HMDashboard = () => {
         <button onClick={() => setActiveView('inventory')} style={{ padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid var(--border, rgba(99,102,241,0.15))', background: 'rgba(15, 23, 42, 0.5)', color: 'var(--text-muted, #64748b)', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem', transition: 'all 0.2s' }}>
           Inventory & Procurement
         </button>
+        <button onClick={() => setShowProfile(true)} style={{ marginLeft: 'auto', padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(99,102,241,0.1)', color: 'var(--accent-hover, #818cf8)', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>
+          Profile
+        </button>
       </div>
+      {showProfile && <ProfileSettings onClose={() => setShowProfile(false)} />}
 
       {/* Mobile-First CSS Reflow Matrix */}
       <style>{`
