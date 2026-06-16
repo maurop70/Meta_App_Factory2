@@ -167,3 +167,6 @@ build/
 
 # ── Local Backup Files ───────────────────────────────────
 *.bak
+
+# ── Claude Code local settings (machine-specific, never commit) ──
+.claude/settings.local.json

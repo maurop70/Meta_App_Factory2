@@ -2,8 +2,7 @@
   "mcpServers": {
     "claude-mcp-bridge": {
       "command": "python",
-      "args": ["claude-mcp-bridge/mcp_server/server.py"],
-      "cwd": "C:\\Dev\\Antigravity_AI_Agents\\Meta_App_Factory"
+      "args": ["claude-mcp-bridge/mcp_server/server.py"]
     }
   }
 }
