@@ -1,12 +1,23 @@
 import axios from 'axios';
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
-let accessToken = null;
+// Defaults target production. `.env.development` overrides these to the Vite
+// dev-proxy paths ('/api') for local development (see vite.config.js). Because
+// `vite build` runs in production mode it does NOT load `.env.development`, so
+// production bundles keep the absolute URLs below unchanged.
+export const AUTH_API_BASE_URL = import.meta.env.VITE_AUTH_API_BASE_URL ?? 'http://68.183.30.128/auth/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://68.183.30.128/mwo/api';
+
+let accessToken = localStorage.getItem('accessToken');
 let isRefreshing = false;
 let failedQueue = [];
 
 export const setAccessToken = (token) => {
     accessToken = token;
+    if (token) {
+        localStorage.setItem('accessToken', token);
+    } else {
+        localStorage.removeItem('accessToken');
+    }
 };
 
 const processQueue = (error, token = null) => {
@@ -28,7 +39,7 @@ export const triggerRefresh = async () => {
     }
     isRefreshing = true;
     try {
-        const { data } = await axios.post(`${API_BASE_URL}/v1/auth/refresh`, {}, { withCredentials: true });
+        const { data } = await axios.post(`${AUTH_API_BASE_URL}/v1/auth/refresh`, {}, { withCredentials: true });
         setAccessToken(data.access_token);
         processQueue(null, data.access_token);
         return data.access_token;
@@ -46,7 +57,7 @@ export const triggerRefresh = async () => {
 const apiClient = axios.create({
     baseURL: API_BASE_URL,
     headers: { 'Content-Type': 'application/json' },
-    withCredentials: true 
+    withCredentials: true
 });
 
 apiClient.interceptors.request.use(config => {

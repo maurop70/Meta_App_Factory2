@@ -38,7 +38,19 @@ def login(request: LoginRequest, response: Response):
         cursor.execute("SELECT * FROM erp_employees WHERE emp_id = ?", (request.emp_id,))
         user = cursor.fetchone()
         
-        if not user or user["pin"] != request.pin:
+        import bcrypt
+        
+        pin_verified = False
+        if user:
+            if user["pin_hash"]:
+                try:
+                    pin_verified = bcrypt.checkpw(request.pin.encode("utf-8"), user["pin_hash"].encode("utf-8"))
+                except Exception:
+                    pass
+            if not pin_verified and user["pin"]:
+                pin_verified = (user["pin"] == request.pin)
+                
+        if not user or not pin_verified:
             raise HTTPException(status_code=401, detail="Invalid Employee ID or PIN")
             
         if user["status"] != "ACTIVE":

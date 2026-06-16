@@ -101,6 +101,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "backend
 from backend.app.routers.inventory_router import router as inventory_router
 from backend.app.routers.cio_router import router as backend_cio_router
 from backend.app.routers.vector_router import router as vector_router
+from pydantic import BaseModel as _CostBaseModel
+import shared_modules.telemetry as _telemetry
 
 app = FastAPI(title="Antigravity Meta App Factory API", version="3.0", lifespan=lifespan)
 app.include_router(builder_router, prefix="/api/v1")
@@ -127,6 +129,26 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# -- Cost-Tracking Telemetry (data/maf_telemetry.db) -----------
+class _TelemetryRecord(_CostBaseModel):
+    input_tokens: int
+    output_tokens: int
+    model_name: str
+    parent_app_id: str
+
+
+@app.post("/api/telemetry/record")
+def telemetry_record(rec: _TelemetryRecord):
+    saved = _telemetry.record_usage(rec.parent_app_id, rec.model_name,
+                                    rec.input_tokens, rec.output_tokens)
+    return {"status": "success", **saved}
+
+
+@app.get("/api/telemetry/stats")
+def telemetry_stats():
+    return _telemetry.get_stats()
 
 REGISTRY_PATH = os.path.join(SCRIPT_DIR, "registry.json")
 
@@ -7076,18 +7098,20 @@ async def challenge_override(payload: ChallengeOverridePayload):
     
     try:
         loop = asyncio.get_running_loop()
-        def _call_api():
+        def _call_api(temp=0.2):
             response = model.generate_content(
                 compiled_prompt,
                 generation_config={
                     "response_mime_type": "application/json",
-                    "response_schema": schema_dict
+                    "response_schema": schema_dict,
+                    "max_output_tokens": 32768,
+                    "temperature": temp
                 }
             )
             return response.text
             
         logger.info("[CTO Override Node] Querying gemini-2.5-pro to synthesize AST blueprint...")
-        response_text = await loop.run_in_executor(None, _call_api)
+        response_text = await loop.run_in_executor(None, lambda: _call_api(0.2))
         
         # 1. Robust Extraction (Tolerates conversational padding)
         extracted_text = response_text.strip()
@@ -7099,11 +7123,22 @@ async def challenge_override(payload: ChallengeOverridePayload):
         try:
             blueprint_data = json.loads(extracted_text)
         except json.JSONDecodeError as jde:
-            logger.error(f"[CTO Override Node] Pre-spool validation failed. Malformed JSON returned: {jde}\nRaw response:\n{response_text}")
-            raise HTTPException(
-                status_code=500,
-                detail=f"CRITICAL MALFORMED PAYLOAD: Synthesized blueprint contains invalid JSON architecture: {jde}"
-            )
+            logger.warning(f"[CTO Override Node] Pre-spool validation failed. Retrying at temperature 0.0...")
+            try:
+                # Single retry at temperature 0.0 for maximum determinism
+                response_text = await loop.run_in_executor(None, lambda: _call_api(0.0))
+                extracted_text = response_text.strip()
+                match = re.search(r"(\{.*\})", extracted_text, re.DOTALL)
+                if match:
+                    extracted_text = match.group(1).strip()
+                blueprint_data = json.loads(extracted_text)
+                logger.info("[CTO Override Node] Pre-spool validation passed on retry.")
+            except Exception as retry_err:
+                logger.error(f"[CTO Override Node] Pre-spool validation retry failed: {retry_err}\nRaw response:\n{response_text}")
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"CRITICAL MALFORMED PAYLOAD: Synthesized blueprint contains invalid JSON architecture: {jde}"
+                )
         
         # 3. Spool synthesized blueprint JSON atomically to watchdog queue
         queue_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Master_Architect_Elite_Logic", "ay2_dispatch_queue")

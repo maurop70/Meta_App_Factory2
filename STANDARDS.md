@@ -26,3 +26,11 @@ High-priority alerts must use the `app_notifications` SQL ledger for persistence
 
 ## 4. Work Order Traceability
 Every status change must be logged to `work_order_history` with the `user_id` and a mandatory `note`.
+
+## 5. Deterministic Regression Suites (MANDATORY)
+Regression suites must be deterministic and offline-capable. They MUST NOT depend on a live LLM call to pass — model output is non-deterministic and bills credits on every run.
+
+- To test a self-healing / generative **loop**, exercise the mechanical piping (detect → re-actuate → re-verify) by substituting a **known-good** artifact for the model's output. Do not assert that the LLM produced a correct fix.
+- Heavyweight or environment-dependent checks (real browsers, dev-server boots, network) belong in a **gated** stage (e.g. `RUN_FULLSTACK_E2E=1`) that is skipped by default, so the always-on suite stays fast and hermetic.
+- New features get **new** suites — never mutate the assertions/counts of an existing suite.
+- Reference implementation: `Master_Architect_Elite_Logic/test_fullstack_healing.py`.

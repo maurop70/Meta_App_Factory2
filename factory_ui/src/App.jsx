@@ -19,6 +19,8 @@ import AppRegistry from './components/AppRegistry';
 import CIOIntel from './components/CIOIntel';
 import TelemetryPanel from './components/TelemetryPanel';
 import WorkspaceVault from './components/WorkspaceVault';
+import CostOperations from './components/CostOperations';
+import SupportFAB from './SupportFAB';
 
 // ═══════════════════════════════════════════════════════════
 //  META APP FACTORY — BUILDER DASHBOARD (Full Feature Parity)
@@ -1597,10 +1599,12 @@ function App() {
     { icon: '🧠', label: 'Agent Status', view: 'agents' },
     { icon: '🎨', label: 'Brand Studio', view: 'brand', badge: 'NEW' },
     { icon: '📂', label: 'Workspace Vault', view: 'workspaces' },
+    { icon: '🏗️', label: 'Built Apps', external: 'http://localhost:5050/builds/', badge: 'NEW' },
     { icon: '🔧', label: 'Refine App', view: 'refine' },
     { icon: '⚛️', label: 'Atomizer', view: 'atomizer' },
     { icon: '📊', label: 'Telemetry', view: 'telemetry', badge: 'Beta' },
     { icon: '📦', label: 'Inventory', view: 'inventory', badge: 'MAF' },
+    { icon: '💰', label: 'Cost Operations', view: 'cost-operations', badge: 'NEW' },
   ];
 
   return (
@@ -1623,6 +1627,23 @@ function App() {
         <div className="sidebar-section">
           <h3>Navigation</h3>
           {sidebarItems.map(item => {
+            // External links (e.g. the Built Apps gallery served by :5050) open in a new tab.
+            if (item.external) {
+              return (
+                <a
+                  key={item.label}
+                  href={item.external}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="sidebar-item"
+                  style={{ textDecoration: 'none' }}
+                >
+                  <span className="icon">{item.icon}</span>
+                  <span>{item.label}</span>
+                  {item.badge && <span className="badge">{item.badge}</span>}
+                </a>
+              );
+            }
             const pathMap = {
               systemmap: '/system-map',
               warroom: '/warroom',
@@ -1779,6 +1800,7 @@ function App() {
           <Route path="/commands" element={<CommandPalette onCommand={handleCommand} />} />
           <Route path="/agents" element={<TelemetryPanel />} />
           <Route path="/telemetry" element={<TelemetryPanel />} />
+          <Route path="/cost-operations" element={<CostOperations />} />
           <Route path="/brand" element={<BrandStudioPanel registry={registry} />} />
           <Route path="/refine" element={
             <RefinePanel 
@@ -1843,6 +1865,7 @@ function App() {
           </div>
         </div>
       )}
+      <SupportFAB activeApp="ecosystem" themeColor="#818cf8" />
       <GlobalDiagnosticOverlay />
     </div>
   );

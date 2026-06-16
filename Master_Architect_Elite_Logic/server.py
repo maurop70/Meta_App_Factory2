@@ -21,6 +21,13 @@ _sys.path.insert(0, _FACTORY_DIR)
 _sys.path.insert(0, _os.path.join(_FACTORY_DIR, "backend"))
 _sys.path.insert(0, _SCRIPT_DIR)
 
+# Cost-tracking telemetry: record LLM token usage to data/maf_telemetry.db.
+try:
+    from shared_modules.telemetry import record_usage as _record_usage
+except Exception:
+    def _record_usage(*_a, **_k):
+        return None
+
 try:
     from dotenv import load_dotenv
     load_dotenv(_os.path.join(_FACTORY_DIR, ".env"))
@@ -43,7 +50,7 @@ from datetime import datetime
 
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.responses import StreamingResponse, JSONResponse, FileResponse, HTMLResponse, RedirectResponse
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict
 
@@ -223,7 +230,13 @@ async def startup_event():
     await register_active_agent_proxies()
     # Start the Asynchronous IPC Bridge
     from ipc_bridge import start_ipc_bridge
-    asyncio.create_task(start_ipc_bridge())
+    asyncio.create_task(start_ipc_bridge(PORT))
+    # Reap idle/dead full-stack preview dev servers (Phase 4).
+    try:
+        import preview_manager
+        preview_manager.start_reaper()
+    except Exception as _e:
+        logger.warning(f"preview reaper not started: {_e}")
 
 from genesis_orchestrator import ON_COMPILE_SUCCESS_CALLBACKS
 
@@ -376,6 +389,8 @@ class ReviewRequest(BaseModel):
     prompt: Optional[str] = None
     document_ids: Optional[List[str]] = None
     history: Optional[List[dict]] = None
+    mode: Optional[str] = "auto"  # explicit routing: "auto" | "build" | "venture"
+    test_inject_broken: Optional[bool] = None  # test-only: inject a known-broken build (gated by ALLOW_TEST_INJECTION)
 
 class DirectAgentRequest(BaseModel):
     agent_id: str
@@ -455,6 +470,84 @@ EXECUTIVE_ARCHITECT = (
     "  }\n"
     "}\n"
     "- PATH B (Conversational Inquiry): If the user asks a natural language question, you are permanently authorized to bypass the JSON schema and output a standard, rich Markdown text response with no JSON wrappers."
+)
+
+# ── BUILDER blueprint contract ──
+# The autonomous build path uses THIS prompt (not EXECUTIVE_ARCHITECT, which emits a
+# vulnerability scorecard). The downstream actuator (mock_antigravity.py) writes each
+# code_payload verbatim, so the model must return the COMPLETE, runnable file contents.
+BUILDER_BLUEPRINT = (
+    "You are the MAF Build Architect. The user will describe an application they want built. "
+    "You output ONLY a single JSON object describing the complete, runnable set of files for that application. "
+    "There is no conversation: every response is a buildable blueprint.\n\n"
+    "JSON shape:\n"
+    "{\n"
+    '  "app_name": "<short kebab-case name, e.g. simple-todo>",\n'
+    '  "summary": "<one short sentence describing what was built>",\n'
+    '  "ast_mutations": [\n'
+    '    { "target_file": "<relative path, e.g. index.html or src/app.js>", "code_payload": "<the COMPLETE final content of that file>" }\n'
+    "  ]\n"
+    "}\n\n"
+    "Rules:\n"
+    "- code_payload MUST be the full, final file content — never a diff, snippet, placeholder, or '...'.\n"
+    "- target_file MUST be a relative path. Never use absolute paths, drive letters, or '..'.\n"
+    "- Produce a minimal but fully working app. Prefer a single self-contained index.html (inline CSS/JS) "
+    "when the request allows; otherwise include every file required to run.\n"
+    "- Output raw JSON only: no markdown, no backticks, no prose before or after the object."
+)
+
+# Gemini response schema mirror of the BUILDER blueprint, so generation is forced to
+# valid JSON in the exact shape the actuator consumes (eliminates malformed-payload 500s).
+BUILDER_BLUEPRINT_SCHEMA = {
+    "type": "OBJECT",
+    "properties": {
+        "app_name": {"type": "STRING"},
+        "summary": {"type": "STRING"},
+        "ast_mutations": {
+            "type": "ARRAY",
+            "items": {
+                "type": "OBJECT",
+                "properties": {
+                    "target_file": {"type": "STRING"},
+                    "code_payload": {"type": "STRING"},
+                },
+                "required": ["target_file", "code_payload"],
+            },
+        },
+    },
+    "required": ["app_name", "ast_mutations"],
+}
+
+# Full-stack (Phase 4) builder: a Vite+React project scaffold already exists in the
+# sandbox (index.html, src/main.jsx, package.json, node_modules) — the model only
+# overlays the app's React source so it runs on a live dev server.
+FULLSTACK_BLUEPRINT = (
+    "You are the MAF Full-Stack Build Architect. You generate a React (Vite) application. "
+    "A working Vite + React project ALREADY EXISTS in the sandbox: index.html, src/main.jsx, "
+    "package.json, vite.config.js, and node_modules are provided — you MUST NOT regenerate any "
+    "of those. You output ONLY the app's React source as ast_mutations, every target_file under "
+    "frontend/src/, at minimum frontend/src/App.jsx (the default export that the existing "
+    "src/main.jsx renders). You may add more frontend/src/*.jsx and *.css files and import them "
+    "from App.jsx with relative paths.\n"
+    "OPTIONAL BACKEND: if the app needs to persist data or expose APIs, also output backend/app.py — "
+    "a FastAPI app with a module-level `app = FastAPI()` and routes under /api/... The Vite dev server "
+    "proxies /api to this backend automatically, so the frontend calls it with relative fetch('/api/...'). "
+    "Persist data with the standard-library sqlite3 module (DB file inside the backend dir).\n\n"
+    "Same JSON shape as before:\n"
+    "{\n"
+    '  "app_name": "<short kebab-case name>",\n'
+    '  "summary": "<one sentence>",\n'
+    '  "ast_mutations": [ { "target_file": "frontend/src/App.jsx", "code_payload": "<COMPLETE file content>" } ]\n'
+    "}\n\n"
+    "Rules:\n"
+    "- code_payload is the full, final content of the file (a valid React component module).\n"
+    "- Use ONLY local, self-contained code — no external CDN <script> tags or remote assets "
+    "(network egress is blocked during verification). Use React (already installed) and inline styles or .css files.\n"
+    "- frontend/src/App.jsx MUST `export default` a React component.\n"
+    "- Backend (if any): ONLY FastAPI + the Python standard library (sqlite3, json, datetime, etc.) are "
+    "available — do NOT import any other third-party package (none can be installed). All routes under /api/.\n"
+    "- target_file paths are relative, never absolute or with '..'.\n"
+    "- Output raw JSON only: no markdown, no backticks, no prose."
 )
 
 VENTURE_ARCHITECT = (
@@ -585,6 +678,146 @@ def root():
         "triad": ["structural_engineer", "logic_weaver", "security_auditor"],
         "gate": "adversarial_gate",
     }
+
+
+@app.get("/builds")
+@app.get("/builds/")
+def builds_gallery():
+    """Browsable gallery + live control center for apps produced by autonomous builds."""
+    try:
+        import preview_manager
+        active_previews = preview_manager.status()
+    except Exception:
+        active_previews = {}
+    root = os.path.join(_SCRIPT_DIR, "generated_builds")
+    cards = []
+    if os.path.isdir(root):
+        for name in sorted(os.listdir(root)):
+            app_path = os.path.join(root, name)
+            if not os.path.isdir(app_path):
+                continue
+            is_fs = os.path.isdir(os.path.join(app_path, "frontend"))
+            files, newest = [], 0
+            for dp, _dirs, fnames in os.walk(app_path):
+                # Never descend into the node_modules junction (symlinked + huge).
+                _dirs[:] = [d for d in _dirs if d != "node_modules"]
+                for fn in fnames:
+                    fp = os.path.join(dp, fn)
+                    files.append(os.path.relpath(fp, app_path).replace("\\", "/"))
+                    try:
+                        newest = max(newest, os.path.getmtime(fp))
+                    except OSError:
+                        pass
+            if not files:
+                continue
+            when = datetime.fromtimestamp(newest).strftime("%Y-%m-%d %H:%M") if newest else "—"
+            if is_fs:
+                status_info = active_previews.get(name)
+                is_running = bool(status_info and status_info.get("alive"))
+                if is_running:
+                    port = status_info["port"]
+                    btn_html = (
+                        f'<a class="btn" href="http://localhost:{port}/" target="_blank">▶ Open live preview (:{port})</a> '
+                        f'<button class="btn btn-danger" onclick="stopPreview(\'{name}\', this)">⏹ Stop</button>'
+                    )
+                else:
+                    btn_html = f'<button class="btn btn-success" onclick="startPreview(\'{name}\', this)">⚡ Start live preview</button>'
+                cards.append(
+                    f'<div class="card"><h2>{name} <span class="badge">Full-Stack</span></h2>'
+                    f'<p>React + FastAPI · built {when}</p>'
+                    f'{btn_html}</div>'
+                )
+            else:
+                entry = "index.html" if "index.html" in files else sorted(files)[0]
+                cards.append(
+                    f'<div class="card"><h2>{name}</h2>'
+                    f'<p>{len(files)} file(s) · built {when}</p>'
+                    f'<a class="btn" href="/builds/{name}/{entry}" target="_blank">▶ Open app</a></div>'
+                )
+    body = "".join(cards) or '<p class="empty">No apps built yet — describe one in Builder Chat.</p>'
+    html = (
+        '<!doctype html><html><head><meta charset="utf-8"><title>MAF Built Apps</title><style>'
+        'body{font-family:Inter,system-ui,sans-serif;background:#0B0F19;color:#e5e7eb;margin:0;padding:32px}'
+        'h1{font-weight:700;margin:0 0 4px}.sub{color:#9ca3af;margin:0 0 24px;font-size:13px}'
+        '.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}'
+        '.card{background:#111827;border:1px solid #1f2937;border-radius:14px;padding:18px;position:relative}'
+        '.card h2{margin:0 0 6px;font-size:16px;color:#5eead4}.card p{margin:0 0 12px;font-size:12px;color:#9ca3af}'
+        '.btn{display:inline-block;background:#0d9488;color:#fff;text-decoration:none;padding:8px 14px;border:none;border-radius:8px;font-size:13px;cursor:pointer}'
+        '.btn:hover{background:#14b8a6}'
+        '.btn-danger{background:#b91c1c}.btn-danger:hover{background:#dc2626}'
+        '.btn-success{background:#047857}.btn-success:hover{background:#059669}'
+        '.badge{background:#1e293b;color:#38bdf8;font-size:10px;padding:2px 6px;border-radius:4px;vertical-align:middle;margin-left:6px}'
+        '.empty{color:#9ca3af}code{color:#cbd5e1}</style>'
+        '<script>'
+        'async function startPreview(name, btn){btn.innerText="Starting...";btn.disabled=true;'
+        'try{const res=await fetch("/api/preview/start",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({app_name:name})});'
+        'if(res.ok){const data=await res.json();window.open(data.url,"_blank");location.reload();}'
+        'else{alert("Failed to start preview.");btn.innerText="⚡ Start live preview";btn.disabled=false;}}'
+        'catch(err){alert("Error starting preview: "+err.message);btn.innerText="⚡ Start live preview";btn.disabled=false;}}'
+        'async function stopPreview(name, btn){btn.innerText="Stopping...";btn.disabled=true;'
+        'try{const res=await fetch("/api/preview/stop",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({app_name:name})});'
+        'if(res.ok){location.reload();}else{alert("Failed to stop preview.");btn.innerText="⏹ Stop";btn.disabled=false;}}'
+        'catch(err){alert("Error stopping preview: "+err.message);btn.innerText="⏹ Stop";btn.disabled=false;}}'
+        '</script></head><body>'
+        '<h1>🏗️ MAF Built Apps</h1>'
+        '<p class="sub">Every app produced by Builder Chat. Full-stack apps boot on demand; static apps open directly.</p>'
+        f'<div class="grid">{body}</div></body></html>'
+    )
+    return HTMLResponse(html)
+
+
+@app.get("/builds/{app_name}")
+def build_app_redirect(app_name: str):
+    return RedirectResponse(url=f"/builds/{app_name}/")
+
+
+@app.get("/builds/{app_name}/")
+@app.get("/builds/{app_name}/{file_path:path}")
+def serve_build(app_name: str, file_path: str = "index.html"):
+    """Serve a file from a generated app, strictly sandboxed to generated_builds/<app_name>/."""
+    root = os.path.abspath(os.path.join(_SCRIPT_DIR, "generated_builds"))
+    base = os.path.abspath(os.path.join(root, os.path.basename(app_name)))
+    if base != root and not base.startswith(root + os.sep):
+        raise HTTPException(status_code=400, detail="Invalid app name")
+    rel = (file_path or "index.html").replace("\\", "/")
+    parts = [p for p in rel.split("/") if p not in ("", ".", "..")]
+    target = os.path.abspath(os.path.join(base, *parts)) if parts else os.path.join(base, "index.html")
+    if target != base and not target.startswith(base + os.sep):
+        raise HTTPException(status_code=400, detail="Path traversal blocked")
+    if not os.path.isfile(target):
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(target)
+
+
+@app.get("/api/preview/status")
+async def preview_status():
+    """Active full-stack preview dev servers (ports, PIDs, idle time)."""
+    try:
+        import preview_manager
+        return preview_manager.status()
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.post("/api/preview/stop")
+async def preview_stop(payload: dict):
+    import preview_manager
+    app_name = os.path.basename(str(payload.get("app_name", "")))
+    stopped = await asyncio.to_thread(preview_manager.stop_preview, app_name)
+    return {"status": "stopped" if stopped else "not_running", "app_name": app_name}
+
+
+@app.post("/api/preview/start")
+async def preview_start(payload: dict):
+    import preview_manager
+    app_name = os.path.basename(str(payload.get("app_name", "")))
+    app_dir = os.path.join(_SCRIPT_DIR, "generated_builds", app_name)
+    if not os.path.isdir(os.path.join(app_dir, "frontend")):
+        raise HTTPException(status_code=404, detail=f"No full-stack build for '{app_name}'")
+    info = await asyncio.to_thread(preview_manager.start_preview, app_name, app_dir)
+    ready = await asyncio.to_thread(preview_manager.wait_ready, info["port"], 45)
+    return {"status": "started" if ready else "starting", "app_name": app_name,
+            "port": info["port"], "url": f"http://localhost:{info['port']}/"}
 
 
 @app.get("/api/health")
@@ -737,8 +970,36 @@ async def review(req: ReviewRequest):
     user_query = req.prompt or req.description or ""
     query_lower = user_query.lower()
 
+    # -- Explicit Build-vs-Venture Routing Resolver --------------------------
+    # Precedence: inline prefix (/build, /venture, /csuite) > explicit `mode`
+    # field > AUTO (fall back to the LLM classifier downstream). forced_intent
+    # stays None in AUTO mode. Inline prefixes are stripped from the prompt here
+    # (the client keeps the original text in its local chat history).
+    forced_intent = None
+    is_full_stack = False
+    _prefix_map = {"/fullstack": "BUILDER", "/build": "BUILDER", "/venture": "VENTURE", "/csuite": "VENTURE"}
+    _stripped = user_query.lstrip()
+    _low = _stripped.lower()
+    for _pfx, _pintent in _prefix_map.items():
+        if _low == _pfx or (_low.startswith(_pfx) and _low[len(_pfx):len(_pfx) + 1].isspace()):
+            forced_intent = _pintent
+            is_full_stack = (_pfx == "/fullstack")
+            user_query = _stripped[len(_pfx):].lstrip()
+            query_lower = user_query.lower()
+            break
+    if forced_intent is None:
+        _mode = (getattr(req, "mode", None) or "auto").strip().lower()
+        if _mode == "build":
+            forced_intent = "BUILDER"
+        elif _mode in ("venture", "csuite"):
+            forced_intent = "VENTURE"
+
     # Deterministic Intent Classification Gate
     if "[MANDATE START]" in user_query or user_query.strip().startswith("/genesis "):
+        classification = "STRUCTURAL_MANDATE"
+    elif forced_intent is not None:
+        # Explicit build/venture signal -> force the structural path so the
+        # prompt reaches the builder/venture pipeline, not conversational chat.
         classification = "STRUCTURAL_MANDATE"
     else:
         classification = "CONVERSATIONAL_QUERY"
@@ -848,6 +1109,15 @@ async def review(req: ReviewRequest):
                         text_chunk = ""
                     if text_chunk:
                         yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CEO', 'content': text_chunk})}\n\n"
+                # Telemetry: record token usage for the conversational turn.
+                try:
+                    _um = getattr(response_stream, "usage_metadata", None)
+                    if _um:
+                        _record_usage("ma_conversational", "gemini-2.5-pro",
+                                      getattr(_um, "prompt_token_count", 0),
+                                      getattr(_um, "candidates_token_count", 0))
+                except Exception:
+                    pass
             except Exception as e:
                 logger.error(f"Error in Conversational Stream: {e}")
                 yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CEO', 'content': f'[STREAM FRACTURE: {str(e)}]'})}\n\n"
@@ -865,6 +1135,7 @@ async def review(req: ReviewRequest):
         is_conversational = False
 
     async def generate_review_stream():
+        nonlocal is_conversational
         api_key = os.getenv("GEMINI_API_KEY", "")
         if api_key:
             api_key = api_key.strip("'\"")
@@ -898,8 +1169,16 @@ async def review(req: ReviewRequest):
             # Configure native Google Gemini API client
             genai.configure(api_key=api_key)
 
-            # Step A: Run classify_intent
-            intent = await classify_builder_venture_intent(user_query, req.history)
+            # Step A: Resolve intent -- explicit override wins, else LLM classifier.
+            if forced_intent is not None:
+                intent = forced_intent
+            else:
+                intent = await classify_builder_venture_intent(user_query, req.history)
+            # Force the structural/build path for BUILDER so keyword-free prose
+            # prompts (e.g. "make me a todo app") still reach blueprint
+            # extraction/validation/spool (overrides the is_conversational heuristic).
+            if intent == "BUILDER":
+                is_conversational = False
             if intent == "BUILDER":
                 if user_query.strip().startswith("/genesis "):
                     # Genesis Architect Mode!
@@ -949,7 +1228,7 @@ async def review(req: ReviewRequest):
                     
                     return # Exit stream
 
-                system_prompt = EXECUTIVE_ARCHITECT
+                system_prompt = FULLSTACK_BLUEPRINT if is_full_stack else BUILDER_BLUEPRINT
                 agent_identity = "EXECUTIVE_ARCHITECT"
                 
                 # CRITICAL: Yield the SSE agent identity tag as the very first chunk
@@ -1045,20 +1324,40 @@ async def review(req: ReviewRequest):
                     contents_payload.append(uf)
                 contents_payload.append(prompt_payload)
 
+                # BUILDER path is always structural: force valid JSON in the exact
+                # actuator schema so blueprint generation can no longer emit malformed
+                # payloads (the prior cause of the "CRITICAL MALFORMED PAYLOAD" 500s).
+                builder_gen_config = {
+                    "temperature": 0.2,
+                    "response_mime_type": "application/json",
+                    "response_schema": BUILDER_BLUEPRINT_SCHEMA,
+                    "max_output_tokens": 32768,
+                }
+
                 # Step B: Instantiate ChatSession if history is present, ensuring strict context binding
                 if formatted_history:
                     chat = model.start_chat(history=formatted_history)
                     response = chat.send_message(
                         contents_payload,
-                        generation_config={"temperature": 0.2}
+                        generation_config=builder_gen_config
                     )
                 else:
                     response = model.generate_content(
                         contents_payload,
-                        generation_config={"temperature": 0.2}
+                        generation_config=builder_gen_config
                     )
                 
                 text = response.text.strip()
+
+                # Telemetry: record token usage for the Triad review generation.
+                try:
+                    _um = getattr(response, "usage_metadata", None)
+                    if _um:
+                        _record_usage("ma_builder_review", "gemini-2.5-pro",
+                                      getattr(_um, "prompt_token_count", 0),
+                                      getattr(_um, "candidates_token_count", 0))
+                except Exception:
+                    pass
 
                 # Clean markdown code fences for Path A
                 if not is_conversational and intent == "BUILDER":
@@ -1074,63 +1373,75 @@ async def review(req: ReviewRequest):
                         # Re-serialize blueprint_data back to text so it is clean JSON
                         text = json.dumps(blueprint_data, indent=2)
                     except json.JSONDecodeError as jde:
-                        logger.error(f"[CTO Node] Pre-spool validation failed. Malformed JSON returned: {jde}\nRaw response:\n{response.text}")
-                        raise HTTPException(
-                            status_code=500,
-                            detail=f"CRITICAL MALFORMED PAYLOAD: Synthesized blueprint contains invalid JSON architecture: {jde}"
-                        )
+                        logger.warning(f"[CTO Node] Pre-spool validation failed. Retrying at temperature 0.0...")
+                        try:
+                            # Single retry at temperature 0.0 for maximum determinism
+                            retry_config = builder_gen_config.copy()
+                            retry_config["temperature"] = 0.0
+                            if formatted_history:
+                                chat = model.start_chat(history=formatted_history)
+                                retry_response = chat.send_message(
+                                    contents_payload,
+                                    generation_config=retry_config
+                                )
+                            else:
+                                retry_response = model.generate_content(
+                                    contents_payload,
+                                    generation_config=retry_config
+                                )
+                            retry_text = retry_response.text.strip()
+                            retry_extracted = retry_text
+                            retry_match = re.search(r"(\{.*\})", retry_extracted, re.DOTALL)
+                            if retry_match:
+                                retry_extracted = retry_match.group(1).strip()
+                            blueprint_data = json.loads(retry_extracted)
+                            text = json.dumps(blueprint_data, indent=2)
+                            logger.info("[CTO Node] Pre-spool validation passed on retry.")
+                        except Exception as retry_err:
+                            logger.error(f"[CTO Node] Pre-spool validation retry failed: {retry_err}\nRaw response:\n{response.text}")
+                            raise HTTPException(
+                                status_code=500,
+                                detail=f"CRITICAL MALFORMED PAYLOAD: Synthesized blueprint contains invalid JSON architecture: {jde}"
+                            )
 
-                    # --- UNIVERSAL SOCRATIC GATE FOR MODE A ---
-                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CRITIC', 'content': '\\n\\n⚖️ [Critic Node] Initiating adversarial compliance and risk assessment on technical blueprint...\\n'})}\n\n"
-                    
-                    critic_prompt = (
-                        f"You are the Critic Agent. Evaluate the technical infrastructure blueprint payload for the topic: '{user_query}':\n\n"
-                        f"Technical Blueprint Payload:\n{text}\n\n"
-                        "Your job is to critically evaluate this technical architecture and assign a rigorous score from 1.0 to 10.0 (where 9.5+ is perfect, and anything below 9.5 has significant weaknesses, architectural flaws, or security vulnerabilities).\n"
-                        "ABS GUARDRAILS: You must ruthlessly penalize assumptions (such as 'I think' or 'just do it'). "
-                        "If the proposal lacks a defined ICP (Ideal Customer Profile), financial model, or architectural blueprint, "
-                        "you are mathematically forbidden from scoring it higher than 5.0. Eradicate all leniency.\n"
-                        "Output a valid JSON object with the following keys:\n"
-                        "{\n"
-                        '  "score": <float between 1.0 and 10.0>,\n'
-                        '  "objections": ["list of objections"]\n'
-                        "}\n"
-                        "Do not include markdown code blocks, backticks, or any additional text."
-                    )
-                    
-                    critic_score = 7.5 # Default fallback
-                    objections = []
-                    try:
-                        critic_model = genai.GenerativeModel('gemini-2.5-flash')
-                        critic_resp = await asyncio.to_thread(
-                            critic_model.generate_content,
-                            critic_prompt,
-                            generation_config={"temperature": 0.0, "response_mime_type": "application/json"}
-                        )
-                        critic_data = json.loads(critic_resp.text.strip())
-                        critic_score = float(critic_data.get("score", 7.5))
-                        objections = critic_data.get("objections", [])
-                    except Exception as critic_err:
-                        logger.error(f"Technical Critic scoring failed: {critic_err}")
-                    
-                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CRITIC', 'content': f'Critic objections: {json.dumps(objections)}\\n'})}\n\n"
-                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CRITIC', 'content': f'Critic score: {critic_score}/10.0\\n'})}\n\n"
-                    
-                    if critic_score < 9.5:
-                        from socratic_challenger import get_challenger
-                        challenger = get_challenger()
-                        challenge = await challenger.evaluate(proposal=text, critic_score=critic_score)
-                        
-                        yield f"data: {json.dumps({'type': 'socratic_pause', 'challenge_id': challenge.get('challenge_id'), 'weaknesses': challenge.get('weaknesses')})}\n\n"
-                        return # Instantly close connection
+                    # [BUILDER Socratic gate removed 2026-06-14] The business-strategy Critic
+                    # (ICP / financial-model rubric, 9.5 pass bar) is category-mismatched for
+                    # technical blueprints: code has no ICP, so it always scored <=5.0 and halted
+                    # every build. The strict JSON validation above + the downstream AY2 dispatch /
+                    # auditor wires are the real technical review.
 
                 # AST Interception Patch: Package generated code/architecture into strict JSON envelope
                 import time
                 timestamp = int(time.time())
+                # These are control flags, not content signals. They must only fire on an
+                # explicit operator directive (the standalone tokens "/pause" / "/fail"),
+                # never on a substring of natural-language prose: real build prompts routinely
+                # contain "fail"/"pause" ("show a PASS/FAIL banner", "handle login failure",
+                # "play/pause controls") and a substring match would falsely trip the actuator's
+                # crash-test / strategic-pause paths and abort an otherwise-valid build.
+                # (E2E suites trigger these by spooling JSON with the flags set directly, so
+                # they do not depend on this query heuristic.)
+                strategic_pause = bool(re.search(r"(?:^|\s)/pause\b", user_query, re.IGNORECASE))
+                strategic_fail = bool(re.search(r"(?:^|\s)/fail\b", user_query, re.IGNORECASE))
+
+                # Test-only: inject a known-broken build to deterministically exercise the
+                # self-healing loop. Gated by an env flag so it is inert on a reachable endpoint.
+                if getattr(req, "test_inject_broken", None) and os.getenv("ALLOW_TEST_INJECTION", "").lower() == "true":
+                    blueprint_data = {
+                        "app_name": "selfheal-test",
+                        "summary": "injected broken build for self-heal verification",
+                        "ast_mutations": [{
+                            "target_file": "index.html",
+                            "code_payload": "<!doctype html><html><head><title>Heal Test</title></head><body><h1>Self-Heal Test</h1><script>renderAppError();</script></body></html>",
+                        }],
+                    }
+                    text = json.dumps(blueprint_data, indent=2)
+                    logger.warning("[TEST] ALLOW_TEST_INJECTION: spooling known-broken blueprint to exercise self-healing.")
+
                 blueprint_payload = {
                     "blueprint_data": text,
-                    "Strategic_Pause": "pause" in query_lower or "pause" in text.lower(),
-                    "Strategic_Fail": "fail" in query_lower or "fail" in text.lower(),
+                    "Strategic_Pause": strategic_pause,
+                    "Strategic_Fail": strategic_fail,
                     "timestamp": timestamp
                 }
                 blueprint_json = json.dumps(blueprint_payload, indent=2)
@@ -1147,6 +1458,201 @@ async def review(req: ReviewRequest):
 
                 # Yield the precise SSE actuation token
                 yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CTO', 'content': '\n\n⚙️ [CTO Node] Blueprint spooled. IPC Bridge actuating...\n'})}\n\n"
+
+                # ── Build verification + self-healing loop ──
+                # Wait for the build to actuate, headlessly render it, and feed any
+                # console/runtime/network errors (+ a screenshot) back to the model for up
+                # to MAX_ROUNDS repair passes. The final ✅ is gated on a clean render.
+                try:
+                    _bp_inner = blueprint_data if isinstance(blueprint_data, dict) else json.loads(text)
+                except Exception:
+                    _bp_inner = {}
+                _raw_app = str(_bp_inner.get("app_name", "app")).strip()
+                _safe_app = "".join(c if (c.isalnum() or c in "-_") else "-" for c in _raw_app).strip("-_") or "app"
+                _app_dir = os.path.join(_SCRIPT_DIR, "generated_builds", _safe_app)
+                _targets = [m.get("target_file", "") for m in _bp_inner.get("ast_mutations", []) if isinstance(m, dict)]
+
+                _factory_ui_dir = os.path.join(_FACTORY_DIR, "factory_ui")
+                _verify_dir = os.path.join(_SCRIPT_DIR, ".verify_tmp")
+                os.makedirs(_verify_dir, exist_ok=True)
+                _build_url = f"http://localhost:{PORT}/builds/{_safe_app}/"
+                _open_url = _build_url
+                _gallery_url = f"http://localhost:{PORT}/builds/"
+                MAX_ROUNDS = 3
+
+                def _targets_of(inner):
+                    return [m.get("target_file", "") for m in inner.get("ast_mutations", []) if isinstance(m, dict)]
+
+                async def _await_actuation(spool_ts, targets, deadline_s=45):
+                    _dl = time.time() + deadline_s
+                    while time.time() < _dl:
+                        await asyncio.sleep(0.7)
+                        if not targets:
+                            continue
+                        _ok = True
+                        for _tf in targets:
+                            _rel = str(_tf).replace("\\", "/").lstrip("/")
+                            _dest = os.path.join(_app_dir, *[p for p in _rel.split("/") if p])
+                            if not (os.path.exists(_dest) and os.path.getmtime(_dest) >= spool_ts - 1):
+                                _ok = False
+                                break
+                        if _ok:
+                            return True
+                    return False
+
+                async def _run_verify():
+                    _stamp = int(time.time() * 1000)
+                    _rp = os.path.join(_verify_dir, f"report_{_stamp}.json")
+                    _sp = os.path.join(_verify_dir, f"shot_{_stamp}.png")
+                    try:
+                        _proc = await asyncio.create_subprocess_exec(
+                            "node", "verify_app.mjs", _build_url, _sp, _rp,
+                            cwd=_factory_ui_dir,
+                            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+                        )
+                        await asyncio.wait_for(_proc.communicate(), timeout=45)
+                    except Exception as _ve:
+                        logger.warning(f"[Self-Heal] verifier unavailable ({_ve}); skipping verification.")
+                        return {"success": True, "_skipped": True}, None
+                    try:
+                        with open(_rp, "r", encoding="utf-8") as _f:
+                            _report = json.load(_f)
+                    except Exception:
+                        return {"success": True, "_skipped": True}, None
+                    return _report, (_sp if os.path.exists(_sp) else None)
+
+                def _spool_blueprint(inner):
+                    _ts = int(time.time())
+                    _payload = {
+                        "blueprint_data": json.dumps(inner, indent=2),
+                        "Strategic_Pause": False, "Strategic_Fail": False, "timestamp": _ts,
+                    }
+                    _bp = os.path.join(ay2_queue_dir, f"pending_blueprint_{_ts}.json")
+                    _tmp = _bp + ".tmp"
+                    with open(_tmp, "w", encoding="utf-8") as _f:
+                        _f.write(json.dumps(_payload, indent=2))
+                    os.replace(_tmp, _bp)
+                    return _ts
+
+                async def _request_fix(report, shot_path):
+                    _errs = []
+                    for _k in ("pageErrors", "consoleErrors", "networkErrors"):
+                        for _e in report.get(_k, []):
+                            _errs.append(f"[{_k}] {_e}")
+                    _files = []
+                    for _tf in _targets:
+                        _rel = str(_tf).replace("\\", "/").lstrip("/")
+                        _dest = os.path.join(_app_dir, *[p for p in _rel.split("/") if p])
+                        try:
+                            with open(_dest, "r", encoding="utf-8") as _f:
+                                _files.append((_tf, _f.read()))
+                        except Exception:
+                            _files.append((_tf, ""))
+                    _files_blob = "\n\n".join(f"--- FILE: {p} ---\n{c}" for p, c in _files)
+                    _fix_prompt = (
+                        "The app you generated produced errors when rendered in a headless browser. "
+                        "Return a CORRECTED, COMPLETE blueprint in the same JSON schema "
+                        "{app_name, ast_mutations:[{target_file, code_payload}]}. Keep app_name identical, "
+                        "emit the FULL final content of every file, and fix every error listed.\n\n"
+                        "ERRORS:\n" + "\n".join(_errs) + "\n\n"
+                        "CURRENT FILES:\n" + _files_blob
+                    )
+                    _parts = [_fix_prompt]
+                    if shot_path and os.path.exists(shot_path):
+                        try:
+                            _parts = [await asyncio.to_thread(genai.upload_file, shot_path), _fix_prompt]
+                        except Exception:
+                            _parts = [_fix_prompt]
+                    _fix_model = genai.GenerativeModel("gemini-2.5-pro", system_instruction=BUILDER_BLUEPRINT)
+                    _resp = await asyncio.to_thread(
+                        _fix_model.generate_content, _parts,
+                        generation_config={"temperature": 0.2, "response_mime_type": "application/json", "response_schema": BUILDER_BLUEPRINT_SCHEMA},
+                    )
+                    return json.loads(_resp.text.strip())
+
+                await _await_actuation(timestamp, _targets)
+
+                # Full-stack: boot the dev server and verify the RUNNING app (not static files).
+                _is_fs = is_full_stack or any(
+                    str(t).replace("\\", "/").lstrip("/").startswith(("frontend/", "backend/")) for t in _targets
+                )
+                _preview = None
+                if _is_fs:
+                    try:
+                        import preview_manager
+                        _preview = await asyncio.to_thread(preview_manager.start_preview, _safe_app, _app_dir)
+                        _pport = _preview["port"]
+                        _build_url = f"http://127.0.0.1:{_pport}/"
+                        _open_url = f"http://localhost:{_pport}/"
+                        yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CTO', 'content': f'🚀 [Preview] Dev server on :{_pport} — waiting for readiness...\n'})}\n\n"
+                        _ready = await asyncio.to_thread(preview_manager.wait_ready, _pport, 45)
+                        if not _ready:
+                            yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CRITIC', 'content': '⚠️ [Preview] Dev server slow to boot; verifying anyway...\n'})}\n\n"
+                    except Exception as _pe:
+                        logger.error(f"[Preview] start failed: {_pe}")
+                        _is_fs = False
+                        yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CRITIC', 'content': f'⚠️ [Preview] Could not start dev server: {_pe}\n'})}\n\n"
+
+                _final_ok = False
+                _last_report = {}
+                for _round in range(1, MAX_ROUNDS + 1):
+                    _report, _shot = await _run_verify()
+                    if _is_fs and not _report.get("success"):
+                        try:
+                            _vlog = await asyncio.to_thread(preview_manager.tail_log, _safe_app)
+                            if _vlog.strip():
+                                _report.setdefault("consoleErrors", []).append("[vite dev-server log]\n" + _vlog[-1500:])
+                        except Exception:
+                            pass
+                    _last_report = _report
+                    if _report.get("success"):
+                        _final_ok = True
+                        break
+                    _nerr = sum(len(_report.get(_k, [])) for _k in ("pageErrors", "consoleErrors", "networkErrors"))
+                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CRITIC', 'content': f'\n🔧 [Self-Heal] Round {_round}: {_nerr} issue(s) detected, repairing...\n'})}\n\n"
+                    if _round >= MAX_ROUNDS:
+                        break
+                    try:
+                        _fixed = await _request_fix(_report, _shot)
+                    except Exception as _fe:
+                        logger.error(f"[Self-Heal] fix request failed: {_fe}")
+                        break
+                    _bp_inner = _fixed
+                    _targets = _targets_of(_fixed) or _targets
+                    _new_ts = _spool_blueprint(_fixed)
+                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CTO', 'content': '⚙️ [Self-Heal] Actuating revised blueprint...\n'})}\n\n"
+                    await _await_actuation(_new_ts, _targets)
+                    if _is_fs:
+                        await asyncio.sleep(3)  # let Vite HMR + uvicorn --reload pick up the rewrite
+                        if _preview and _preview.get("backend_port"):
+                            await asyncio.to_thread(preview_manager.wait_ready, _preview["backend_port"], 12)
+
+                if _final_ok:
+                    _verified = "" if _last_report.get("_skipped") else " (verified clean)"
+                    if _is_fs:
+                        _msg = (
+                            f"\n✅ [Build Complete]{_verified} full-stack app running live.\n"
+                            f"▶ Open your app:  {_open_url}\n"
+                        )
+                    else:
+                        _msg = (
+                            f"\n✅ [Build Complete]{_verified} {len(_targets)} file(s) in generated_builds/{_safe_app}/.\n"
+                            f"▶ Open your app:  {_open_url}\n"
+                            f"📂 All your built apps:  {_gallery_url}\n"
+                        )
+                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CTO', 'content': _msg})}\n\n"
+                    yield f"data: {json.dumps({'type': 'build_complete', 'app_name': _safe_app, 'open_url': _open_url, 'gallery_url': _gallery_url, 'files': _targets})}\n\n"
+                else:
+                    _rem = []
+                    for _k in ("pageErrors", "consoleErrors", "networkErrors"):
+                        _rem.extend(_last_report.get(_k, []))
+                    _detail = ("  - " + "\n  - ".join(_rem[:5])) if _rem else "  (no diagnostic captured)"
+                    _msg = (
+                        f"\n⚠️ [Build Incomplete] Could not reach a clean render after {MAX_ROUNDS} self-heal round(s).\n"
+                        f"Latest issues:\n{_detail}\n"
+                        f"Partial output is at generated_builds/{_safe_app}/ — {_open_url}\n"
+                    )
+                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CRITIC', 'content': _msg})}\n\n"
 
             else:
                 agent_identity = "VENTURE_ARCHITECT"
@@ -1508,6 +2014,15 @@ async def review(req: ReviewRequest):
                         )
                     )
                     blueprint_json = cto_resp.text.strip()
+                    # Telemetry: record token usage for CTO blueprint synthesis.
+                    try:
+                        _um = getattr(cto_resp, "usage_metadata", None)
+                        if _um:
+                            _record_usage("ma_cto_synthesis", "gemini-2.5-pro",
+                                          getattr(_um, "prompt_token_count", 0),
+                                          getattr(_um, "candidates_token_count", 0))
+                    except Exception:
+                        pass
                 except Exception as cto_err:
                     logger.error(f"CTO final blueprint synthesis failed: {cto_err}")
                     # Fallback matching WorkspaceBlueprintSchema

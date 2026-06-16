@@ -1,5 +1,3 @@
-from auto_heal import healed_post, auto_heal, diagnose
-
 """
 document_router.py — App-Specific Document Routing
 ═══════════════════════════════════════════════════════
@@ -129,6 +127,9 @@ class DocumentRouter:
 
         # Attempt delivery
         try:
+            # Deferred import: factory is the heavyweight orchestrator; importing it
+            # lazily here avoids a circular load (mirrors auto_heal.healed_post_n8n).
+            from factory import safe_post
             _v3_status = safe_post(endpoint, payload)
 
             r = type("Resp", (), {"status_code": 200 if _v3_status == "sent" else 503, "ok": _v3_status == "sent", "text": _v3_status, "json": lambda: {"status": _v3_status}})()

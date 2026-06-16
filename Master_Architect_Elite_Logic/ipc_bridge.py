@@ -50,10 +50,13 @@ async def broadcast_event(event: dict):
         except Exception as e:
             logger.error(f"Failed to queue event to SSE client: {e}")
 
-async def start_ipc_bridge():
+async def start_ipc_bridge(owner_port: int = None):
     """
     Continuous async polling loop targeting ay2_dispatch_queue.
     Coordinates subprocess execution, strategic pauses, and life-cycle archival.
+
+    owner_port: when set, blueprints are claimed via an atomic rename so exactly one
+    instance in the shared-queue fleet actuates each one (prevents the cross-process race).
     """
     ay2_queue_dir = os.path.join(_SCRIPT_DIR, "ay2_dispatch_queue")
     os.makedirs(ay2_queue_dir, exist_ok=True)
@@ -78,6 +81,22 @@ async def start_ipc_bridge():
                 
             filename = files[0]
             file_path = os.path.join(ay2_queue_dir, filename)
+
+            # ── Atomic claim: single owner across the shared-queue fleet ──
+            # Rename the pending file to a port-scoped "claimed" name. os.rename is
+            # atomic on one filesystem, so exactly one instance wins; losers get an
+            # error and skip. `filename` keeps the ORIGINAL name so the downstream
+            # paused_/archived_/broken_ renames preserve the legacy filenames the
+            # existing E2E suite asserts on.
+            if owner_port is not None:
+                claimed_path = os.path.join(ay2_queue_dir, f"claimed_{owner_port}_{filename}")
+                try:
+                    os.rename(file_path, claimed_path)
+                except (FileNotFoundError, OSError):
+                    await asyncio.sleep(0.05)
+                    continue
+                file_path = claimed_path
+
             logger.info(f"IPC Watchdog discovered blueprint: {filename}")
             
             # Read spooled JSON to evaluate properties

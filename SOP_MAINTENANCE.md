@@ -90,7 +90,31 @@ This guarantees:
 
 ---
 
-## 5. Audit Logging
+## 5. Full-Stack Preview & Self-Heal Verification (Phase 4)
+
+The Builder Chat `/build` path can produce **running** full-stack apps (React/Vite + FastAPI). `preview_manager.py` supervises their dev servers; `mock_antigravity.py` actuates the files. Key operational guarantees:
+
+| Guarantee | Detail |
+|:--|:--|
+| **Loopback only** | All dev servers bind `127.0.0.1` (never `0.0.0.0`/`localhost`) — avoids Windows Defender Firewall prompts that would block headless sweeps |
+| **No per-build installs** | `node_modules` is **junctioned** to `templates/dev_frontend` (instant); the backend runs from `templates/shared_backend_venv`. Never add per-build `npm install` / `venv` creation — it reintroduces 30–90s build latency |
+| **Immediate tracebacks** | Spawned children inherit `PYTHONUNBUFFERED=1` (seeded in `_scrubbed_env`) so startup/crash stacks reach `backend.log` before the heal loop tails them |
+| **Resource caps** | Max 3 concurrent previews; idle previews reaped after 10 min; teardown is `CTRL_BREAK → taskkill /T → port-kill` |
+
+### Verifying after a change to these modules
+```bash
+# Always-on deterministic checks (fast, offline — no node/chromium/LLM):
+python -m pytest Master_Architect_Elite_Logic/test_fullstack_healing.py -v
+
+# Full live boot→detect→heal-loop e2e (needs node + factory_ui playwright/chromium):
+RUN_FULLSTACK_E2E=1 python -m pytest Master_Architect_Elite_Logic/test_fullstack_healing.py -v -s
+```
+> [!IMPORTANT]
+> `preview_manager.py` / `server.py` run as plain `python` processes with **no hot-reload**. After editing them, restart the MAE server for the change to take effect — `py_compile` and a green test suite confirm validity but not that the live process picked up the change.
+
+---
+
+## 6. Audit Logging
 
 All critical system changes must be logged in **`MASTER_INDEX.md`** with the following conventions:
 
@@ -126,6 +150,9 @@ All critical system changes must be logged in **`MASTER_INDEX.md`** with the fol
 | `swdr_heartbeat.py` | 60s health monitor + Safe-Buffer auto-toggle |
 | `app_generator.py` | Scaffolds new V3-hardened agents |
 | `child_app_template.py` | Canonical template for all agents |
+| `Master_Architect_Elite_Logic/preview_manager.py` | Phase-4 dev-server supervisor (loopback bind, junctioned node_modules, PYTHONUNBUFFERED, port caps + idle reaper) |
+| `Master_Architect_Elite_Logic/mock_antigravity.py` | Sandboxed build actuator — writes blueprint files under `generated_builds/`, scaffolds full-stack templates |
+| `Master_Architect_Elite_Logic/test_fullstack_healing.py` | Phase-4 regression suite (deterministic Stage 1 + gated live e2e Stage 2) |
 | `pending_sync/` | Queued payload files during cloud outages |
 | `synced_archive.json` | Archive of successfully recovered payloads |
 | `MASTER_INDEX.md` | System audit log |

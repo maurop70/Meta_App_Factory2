@@ -170,3 +170,25 @@ build/
 
 # ── Claude Code local settings (machine-specific, never commit) ──
 .claude/settings.local.json
+
+# ── Local Deploy Scripts & Legacy Telemetry ────────────────
+ERP/my_deploy.py
+ERP/commit.py
+ERP/temp_deploy.bat
+remote_script*.sh
+
+# Legacy telemetry (untracked)
+backend/app/routers/telemetry_router.py
+backend/schemas/telemetry.py
+backend/scripts/
+
+# Generated Builds (except README.md)
+Master_Architect_Elite_Logic/generated_builds/*/
+Master_Architect_Elite_Logic/ay2_dispatch_queue/archived_blueprint_*.json
+Master_Architect_Elite_Logic/ay2_dispatch_queue/pending_blueprint_*.json.tmp
+Master_Architect_Elite_Logic/ay2_dispatch_queue/*.tmp
+
+# Local logs
+ERP/Maintenance_Work_Order/logs/po_emails/PO-*.html
+logs/e2e_reports/
+

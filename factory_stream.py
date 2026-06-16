@@ -189,6 +189,34 @@ def _load_local_files():
     return "\n\n".join(snippets) if snippets else ""
 
 
+# Core ecosystem manuals injected ONLY for the Ecosystem Guide (active_app == "ecosystem").
+# Loaded in full (no character cap) — curated reference docs, not the append-only error log.
+# MASTER_INDEX.md is deliberately excluded (append-only post-mortem registry → unbounded growth).
+ECOSYSTEM_DOCS = (
+    ("AGENTS.md", SCRIPT_DIR),
+    ("SOP_MAINTENANCE.md", SCRIPT_DIR),
+    ("SOP_TRIAD_PROTOCOL.md", SCRIPT_DIR),
+    ("STANDARDS.md", SCRIPT_DIR),
+    ("MAF_Architecture_Manifest.md", os.path.dirname(SCRIPT_DIR)),
+    ("COOPERATION_MANUAL.md", os.path.dirname(SCRIPT_DIR)),
+)
+
+
+def _load_ecosystem_docs():
+    """Load the core MAF ecosystem manuals in full (no 4000-char cap) for the Ecosystem Guide."""
+    snippets = []
+    for fname, base in ECOSYSTEM_DOCS:
+        fpath = os.path.join(base, fname)
+        if os.path.exists(fpath):
+            try:
+                with open(fpath, "r", encoding="utf-8", errors="replace") as f:
+                    content = f.read()  # full document — no truncation
+                snippets.append(f"--- {fname} ---\n{content}")
+            except Exception:
+                pass
+    return "\n\n".join(snippets) if snippets else ""
+
+
 def _build_system_prompt(dashboard_context=None):
     parts = [BASE_SYSTEM_PROMPT]
     
@@ -239,7 +267,24 @@ def _build_system_prompt(dashboard_context=None):
         else:
             parts.append("\n\n--- 🗣️ INTERACTION STYLE: SOCRATIC MODE ---")
             parts.append("STRICT RULE: Ask one question at a time to build the specification. Use the persona's vocabulary and depth.")
-            
+
+        # ── Ecosystem Guide Injection (gated strictly to active_app == "ecosystem") ──
+        if dashboard_context.get("active_app") == "ecosystem":
+            parts.append("\n\n--- 🧭 ECOSYSTEM GUIDE MODE ACTIVE ---")
+            parts.append(
+                "You are the official MAF Ecosystem Guide. Help operators and developers "
+                "navigate and utilize the Meta App Factory — its architecture, AI agents "
+                "(CFO, CMO, HR, Critic, Architect), workflows, and protocols. Treat the "
+                "official documentation below as your source of truth, and explain concepts "
+                "at the user's active profile depth. Use the real ecosystem terminology "
+                "(e.g. Triad Protocol, Atomizer, Self-Heal) — do not translate it into "
+                "customer-facing euphemisms. Never reveal raw credentials, API keys, or secrets."
+            )
+            ecosystem_docs = _load_ecosystem_docs()
+            if ecosystem_docs:
+                parts.append("\n\n--- 📚 OFFICIAL MAF ECOSYSTEM DOCUMENTATION ---")
+                parts.append(ecosystem_docs)
+
     local_files = _load_local_files()
     if local_files:
         parts.append("\n\n--- FACTORY CONFIG FILES ---")
