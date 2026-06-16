@@ -45,7 +45,8 @@ def run_command(command, description, cwd=None):
         if process.returncode != 0:
             print(f"[!] FAILED: {description}")
             print(f"    Exit Code: {process.returncode}")
-            print(f"    Error: {stderr.strip()}")
+            print(f"    Stdout:\n{stdout.strip()}")
+            print(f"    Error:\n{stderr.strip()}")
             sys.exit(1)
             
         print(f"[+] SUCCESS: {description}\n")
@@ -72,14 +73,17 @@ def deploy():
     # 2. Zip the payload securely
     run_command(
         [
-            "tar", "-czf", "payload.tar.gz", 
-            "--exclude=Maintenance_Work_Order/data/*.db*", 
-            "--exclude=Maintenance_Work_Order/__pycache__", 
+            "tar", "-czf", "payload.tar.gz",
+            "--exclude=Maintenance_Work_Order/data/*.db*",
+            "--exclude=Maintenance_Work_Order/__pycache__",
             "--exclude=maintenance_frontend/node_modules",
+            "--exclude=Module_0_Gateway/data/*.db*",
+            "--exclude=Module_0_Gateway/__pycache__",
             "Maintenance_Work_Order",
+            "Module_0_Gateway",
             "maintenance_frontend/dist"
         ],
-        "Archiving Phase 47 payload (excluding database, including static binary)"
+        "Archiving Phase 47 payload (excluding databases, including gateway + static binary)"
     )
     
     # 3. Transmit via SCP
@@ -98,7 +102,7 @@ def deploy():
         "git_sha": git_sha,
         "db_backup": db_backup,
         "code_snapshot": f"{REMOTE_DIR}/backend_prev",
-        "services": ["erp-backend.service", "nginx.service"],
+        "services": ["erp-backend.service", "erp-auth.service", "nginx.service"],
         "rollback": ("auto on failed probe; manual: restore backend_prev + "
                      "frontend_prev, restart services"),
     })
@@ -110,9 +114,10 @@ def deploy():
     cd {REMOTE_DIR}
 
     # Code snapshot for auto-rollback (includes pre-deploy data/ state)
-    rm -rf backend_prev frontend_prev
+    rm -rf backend_prev frontend_prev gateway_prev
     [ -d backend ]  && cp -a backend  backend_prev
     [ -d frontend ] && cp -a frontend frontend_prev
+    [ -d gateway ]  && cp -a gateway  gateway_prev
 
     rollback() {{
         echo "!! DEPLOY FAILED — AUTO-ROLLBACK INITIATED (recipe ts={ts}, prev sha) !!"
@@ -124,7 +129,11 @@ def deploy():
             rm -rf {REMOTE_DIR}/frontend
             cp -a {REMOTE_DIR}/frontend_prev {REMOTE_DIR}/frontend
         fi
-        systemctl restart erp-backend.service nginx.service || true
+        if [ -d {REMOTE_DIR}/gateway_prev ]; then
+            rm -rf {REMOTE_DIR}/gateway
+            cp -a {REMOTE_DIR}/gateway_prev {REMOTE_DIR}/gateway
+        fi
+        systemctl restart erp-backend.service erp-auth.service nginx.service || true
         sleep 3
         RB_STATUS=$(curl -s -o /dev/null -w "%{{http_code}}" --max-time 5 http://localhost/ || echo 000)
         echo "ROLLBACK_STATUS: HTTP $RB_STATUS"
@@ -133,6 +142,7 @@ def deploy():
 
     tar -xzf payload.tar.gz \\
         --transform='s|^Maintenance_Work_Order|backend|' \\
+        --transform='s|^Module_0_Gateway|gateway|' \\
         --transform='s|^maintenance_frontend/dist|frontend|'
     rm payload.tar.gz
 
@@ -158,8 +168,16 @@ def deploy():
     echo "Running inventory schema migration..."
     venv/bin/python3 migration_inventory.py
 
-    echo "Restarting erp-backend..."
+    # Gateway device-recognition migration. Runs with the shared backend venv
+    # (the gateway has no venv of its own — erp-auth.service uses backend/venv).
+    # The script targets /opt/erp/gateway/data/gateway_core.db via __file__, so
+    # cwd is irrelevant. Failure triggers the ERR trap -> auto-rollback.
+    echo "Running gateway device-recognition migration..."
+    /opt/erp/backend/venv/bin/python3 /opt/erp/gateway/migrate_device_recognition.py
+
+    echo "Restarting erp-backend, erp-auth, nginx..."
     systemctl restart erp-backend.service
+    systemctl restart erp-auth.service
     systemctl restart nginx.service
 
     # Closed-loop probe: 5 attempts, 3s apart. Non-200 -> auto-rollback.
@@ -175,7 +193,24 @@ def deploy():
         rollback
         exit 1
     fi
-    echo "DEPLOY_VERIFIED: HTTP 200 (sha {git_sha}, backup {db_backup})"
+
+    # Gateway health probe: the auth service must answer, not just the frontend.
+    # A broken auth deploy would otherwise pass on the frontend-only probe above.
+    # Wrap in retry loop to allow service startup latency.
+    GW_OK=0
+    for i in 1 2 3 4 5; do
+        sleep 3
+        GW_STATUS=$(curl -s -o /dev/null -w "%{{http_code}}" --max-time 5 http://localhost/auth/api/v1/auth/public-key || echo 000)
+        echo "Gateway probe $i: HTTP $GW_STATUS"
+        if [ "$GW_STATUS" = "200" ]; then GW_OK=1; break; fi
+    done
+    if [ "$GW_OK" != "1" ]; then
+        echo "!! Gateway unhealthy after deploy — rolling back !!"
+        rollback
+        exit 1
+    fi
+
+    echo "DEPLOY_VERIFIED: HTTP 200 + gateway 200 (sha {git_sha}, backup {db_backup})"
     """
 
     run_command(

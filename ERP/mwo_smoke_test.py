@@ -74,7 +74,7 @@ async def test_dm_personnel_api(page):
     not a 404 (missing ERP-4000 DM record) or 500 (swallowed HTTPException)."""
     try:
         login = await page.request.post(
-            f"{BASE_URL}/api/v1/auth/login",
+            f"{BASE_URL}/auth/api/v1/auth/login",
             data=json.dumps({"emp_id": DM_EMP_ID, "pin": DM_PIN}),
             headers={"Content-Type": "application/json"},
             timeout=8000,
@@ -85,7 +85,7 @@ async def test_dm_personnel_api(page):
             return
         log("DM gateway login (API)", "PASS")
         resp = await page.request.get(
-            f"{BASE_URL}/api/dm/personnel",
+            f"{BASE_URL}/mwo/api/dm/personnel",
             headers={"Authorization": f"Bearer {token}"},
             timeout=8000,
         )
@@ -102,10 +102,10 @@ async def test_dm_personnel_api(page):
 
 async def test_api_endpoints(page):
     endpoints = [
-        ("/api/system/directive",     "API health (system/directive)"),
-        ("/api/work-orders/queue",    "Dispatch Queue API"),
-        ("/api/mwo",                  "Work Orders API"),
-        ("/api/mwo/archive/list",     "Archive API"),
+        ("/mwo/api/system/directive",     "API health (system/directive)"),
+        ("/mwo/api/work-orders/queue",    "Dispatch Queue API"),
+        ("/mwo/api/mwo",                  "Work Orders API"),
+        ("/mwo/api/mwo/archive/list",     "Archive API"),
     ]
     for path, label in endpoints:
         try:
@@ -122,7 +122,7 @@ async def test_api_endpoints(page):
 
 async def test_pdf_serve(page):
     try:
-        resp = await page.request.get(f"{BASE_URL}/api/work-orders/pdf/test", timeout=8000)
+        resp = await page.request.get(f"{BASE_URL}/mwo/api/work-orders/pdf/test", timeout=8000)
         if resp.status in [200, 404, 401, 422]:
             log("PDF serve route reachable", "PASS", f"HTTP {resp.status}")
         else:
@@ -132,7 +132,7 @@ async def test_pdf_serve(page):
 
 async def test_nginx_proxy(page):
     try:
-        resp = await page.request.get(f"{BASE_URL}/api/mwo", timeout=8000)
+        resp = await page.request.get(f"{BASE_URL}/mwo/api/mwo", timeout=8000)
         server_header = resp.headers.get("server", "")
         if resp.status in [200, 401, 403]:
             log("Nginx /api/ proxy", "PASS", f"HTTP {resp.status}, server: {server_header}")
@@ -144,12 +144,12 @@ async def test_nginx_proxy(page):
 async def test_auth_gateway(page):
     try:
         resp = await page.request.post(
-            f"{BASE_URL}/api/v1/auth/login",
+            f"{BASE_URL}/auth/api/v1/auth/login",
             data=json.dumps({"pin": "wrongpin", "role": "tech"}),
             headers={"Content-Type": "application/json"},
             timeout=8000
         )
-        if resp.status in [401, 403, 422, 200]:
+        if resp.status in [400, 401, 403, 422, 200]:
             log("Gateway auth route reachable", "PASS", f"HTTP {resp.status}")
         else:
             log("Gateway auth route reachable", "FAIL", f"HTTP {resp.status}")

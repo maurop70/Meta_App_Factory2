@@ -167,3 +167,6 @@ build/
 
 # ── Local Backup Files ───────────────────────────────────
 *.bak
+
+# ── Generated archive output ──────────────────────────────
+Corporate_Secretary/archives/

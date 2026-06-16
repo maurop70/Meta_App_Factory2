@@ -10,9 +10,11 @@ import SkuLedger from '../components/SkuLedger';
 import ProcurementMatrix from '../components/ProcurementMatrix';
 import DispatchQueueTable from '../components/DispatchQueueTable';
 import TechDashboard from '../components/TechDashboard';
+import ProfileSettings from '../components/ProfileSettings';
 
 const AdminConsole = () => {
   const { userRole, logout } = useAuth();
+  const [showProfile, setShowProfile] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [activeTab, setActiveTab] = useState('dispatch');
   const [ingestionTab, setIngestionTab] = useState('PERSONNEL');
@@ -40,10 +42,16 @@ const AdminConsole = () => {
             Security clearance verified. Active Role: <span style={{ color: 'var(--accent-hover, #818cf8)', fontWeight: 600 }}>{userRole}</span>
           </div>
         </div>
-        <button onClick={logout} className="action-btn" style={{ padding: '0.5rem 1rem', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger, #ef4444)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s', fontSize: '0.8rem', fontWeight: 600 }}>
-          Terminate Session
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <button onClick={() => setShowProfile(true)} className="action-btn" style={{ padding: '0.5rem 1rem', background: 'rgba(99,102,241,0.1)', color: 'var(--accent-hover, #818cf8)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: '8px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>
+            Profile
+          </button>
+          <button onClick={logout} className="action-btn" style={{ padding: '0.5rem 1rem', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger, #ef4444)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s', fontSize: '0.8rem', fontWeight: 600 }}>
+            Terminate Session
+          </button>
+        </div>
       </div>
+      {showProfile && <ProfileSettings onClose={() => setShowProfile(false)} />}
 
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem' }}>
         {tabs.map(tab => (
