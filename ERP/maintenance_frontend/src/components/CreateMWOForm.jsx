@@ -3,9 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import ProfileSettings from './ProfileSettings';
 import { useAuth } from '../context/AuthContext';
+import HODWorkspace from './HODWorkspace';
 
 const CreateMWOForm = ({ onMWOCreated }) => {
   const [showProfile, setShowProfile] = useState(false);
+  // Inventory & Procurement tab: shown when the user has SKU clearance.
+  const [procurementEnabled, setProcurementEnabled] = useState(false);
+  const [activeTab, setActiveTab] = useState('workorders');
   const [description, setDescription] = useState('');
   const [equipmentId, setEquipmentId] = useState('');
   const [location, setLocation] = useState('');
@@ -55,6 +59,16 @@ const CreateMWOForm = ({ onMWOCreated }) => {
     fetchLookups();
   }, [currentUserId, currentUserName]);
 
+  // Probe procurement clearance: /inventory/skus returns 200 only for
+  // globally-cleared roles or restricted users with >=1 assigned SKU.
+  useEffect(() => {
+    let mounted = true;
+    api.get('/inventory/skus?limit=1&offset=0')
+      .then(res => { if (mounted) setProcurementEnabled((res.data?.items || []).length > 0); })
+      .catch(() => { if (mounted) setProcurementEnabled(false); });
+    return () => { mounted = false; };
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setStatusMsg('Submitting...');
@@ -89,6 +103,30 @@ const CreateMWOForm = ({ onMWOCreated }) => {
   const selectedUser = personnel.find(p => p.id === impersonatedCreatorId);
 
   return (
+    <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+      {procurementEnabled && (
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+          {[['workorders', 'Work Orders'], ['procurement', 'Inventory & Procurement']].map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setActiveTab(key)}
+              style={{
+                padding: '0.55rem 1.2rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 700, fontSize: '0.82rem',
+                border: '1px solid rgba(99, 102, 241, 0.3)',
+                background: activeTab === key ? 'rgba(99, 102, 241, 0.25)' : 'rgba(15, 23, 42, 0.6)',
+                color: activeTab === key ? '#c7d2fe' : '#94a3b8'
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {procurementEnabled && activeTab === 'procurement' ? (
+        <HODWorkspace />
+      ) : (
     <div style={{ background: 'var(--bg-card, rgba(15, 23, 42, 0.85))', border: '1px solid var(--border, rgba(99, 102, 241, 0.15))', borderRadius: '12px', padding: '1.5rem', backdropFilter: 'blur(8px)', fontFamily: "var(--font, Inter)", maxWidth: '800px', margin: '0 auto', textAlign: 'left' }}>
       
       <style>{`
@@ -250,6 +288,8 @@ const CreateMWOForm = ({ onMWOCreated }) => {
           )}
         </div>
       </form>
+    </div>
+      )}
     </div>
   );
 };

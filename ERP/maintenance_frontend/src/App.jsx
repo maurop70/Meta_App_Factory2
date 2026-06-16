@@ -115,7 +115,7 @@ function App() {
             <Route
               path="/cfo/*"
               element={
-                <ProtectedRoute allowedRoles={['CFO']}>
+                <ProtectedRoute allowedRoles={['CFO', 'ADMIN', 'ADMINISTRATOR']}>
                   <CFODashboard />
                 </ProtectedRoute>
               }

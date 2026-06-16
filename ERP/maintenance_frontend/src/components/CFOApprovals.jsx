@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
+import CfoPODetailModal from './CfoPODetailModal';
 
 /**
  * [BACK OFFICE INVENTORY] CFO Approval Queue.
@@ -12,6 +13,7 @@ const CFOApprovals = () => {
   const [status, setStatus] = useState({ type: 'loading', message: 'Loading approval queue...' });
   const [banner, setBanner] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [inspecting, setInspecting] = useState(null);
 
   const fetchQueue = useCallback(async () => {
     try {
@@ -159,9 +161,26 @@ const CFOApprovals = () => {
                 ))}
               </tbody>
             </table>
+            <div style={{ marginTop: '0.6rem', textAlign: 'right' }}>
+              <button
+                className="cfo-bulk-btn"
+                onClick={() => setInspecting(po)}
+                style={{ background: 'rgba(99, 102, 241, 0.15)', color: '#818cf8', border: '1px solid rgba(99, 102, 241, 0.4)' }}
+              >
+                Inspect PO
+              </button>
+            </div>
           </div>
         </div>
       ))}
+
+      {inspecting && (
+        <CfoPODetailModal
+          po={inspecting}
+          onClose={() => setInspecting(null)}
+          onActuationSuccess={() => { setInspecting(null); setSelected(new Set()); fetchQueue(); }}
+        />
+      )}
     </div>
   );
 };

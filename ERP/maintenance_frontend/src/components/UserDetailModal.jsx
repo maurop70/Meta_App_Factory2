@@ -13,6 +13,16 @@ const UserDetailModal = ({ userId, onClose, onActuationSuccess }) => {
   const [escalationRole, setEscalationRole] = useState('TECH');
   const [escalationDept, setEscalationDept] = useState('');
 
+  // Procurement SKU clearance state
+  const [skuAccess, setSkuAccess] = useState({ assigned: [], available: [] });
+  const [skuToAssign, setSkuToAssign] = useState('');
+  const [procMsg, setProcMsg] = useState(null);
+
+  // Quick-issue draft state
+  const [issueSku, setIssueSku] = useState('');
+  const [issueQty, setIssueQty] = useState(1);
+  const [issueNotes, setIssueNotes] = useState('');
+
   const closeTimerRef = useRef(null);
 
   // Esc Key Interception & Timer Cleanup
@@ -81,6 +91,60 @@ const UserDetailModal = ({ userId, onClose, onActuationSuccess }) => {
       }, 2000);
     } catch (err) {
       setActuationStatus({ type: 'error', message: err.response?.data?.detail || 'System actuation failed.' });
+    }
+  };
+
+  const loadSkuAccess = async () => {
+    try {
+      const { data } = await api.get(`/admin/users/${userId}/skus`);
+      setSkuAccess({ assigned: data.assigned || [], available: data.available || [] });
+    } catch (err) {
+      // Non-fatal: leave the clearances panel empty if the fetch degrades.
+      console.warn('SKU access fetch degraded', err.response?.status || err.message);
+    }
+  };
+
+  useEffect(() => { loadSkuAccess(); }, [userId]);
+
+  const handleAssignSku = async () => {
+    if (!skuToAssign) return;
+    setProcMsg(null);
+    try {
+      await api.post(`/admin/users/${userId}/skus`, { sku_id: skuToAssign });
+      setSkuToAssign('');
+      await loadSkuAccess();
+      setProcMsg({ type: 'success', message: 'SKU clearance assigned.' });
+    } catch (err) {
+      setProcMsg({ type: 'error', message: err.response?.data?.detail || 'Assignment failed.' });
+    }
+  };
+
+  const handleRevokeSku = async (skuId) => {
+    setProcMsg(null);
+    try {
+      await api.delete(`/admin/users/${userId}/skus/${skuId}`);
+      if (issueSku === skuId) setIssueSku('');
+      await loadSkuAccess();
+      setProcMsg({ type: 'success', message: `Revoked ${skuId}.` });
+    } catch (err) {
+      setProcMsg({ type: 'error', message: err.response?.data?.detail || 'Revoke failed.' });
+    }
+  };
+
+  const handleIssueDraft = async () => {
+    if (!issueSku || !(Number(issueQty) > 0)) return;
+    setProcMsg(null);
+    try {
+      const { data } = await api.post(`/admin/users/${userId}/orders/drafts/add-item`, {
+        sku_id: issueSku,
+        quantity: Number(issueQty),
+        notes: issueNotes || null
+      });
+      setProcMsg({ type: 'success', message: `Draft ${data.po_id} ${data.created ? 'created' : 'updated'} on behalf of ${userId}.` });
+      setIssueQty(1);
+      setIssueNotes('');
+    } catch (err) {
+      setProcMsg({ type: 'error', message: err.response?.data?.detail || 'Draft issuance failed.' });
     }
   };
 
@@ -191,6 +255,113 @@ const UserDetailModal = ({ userId, onClose, onActuationSuccess }) => {
               >
                 EXECUTE ESCALATION
               </button>
+            </div>
+
+            {/* Procurement SKU Clearances */}
+            <div className="sku-clearance-zone" style={{ border: '1px solid rgba(45, 212, 191, 0.3)', borderRadius: '8px', padding: '1.5rem', background: 'rgba(45, 212, 191, 0.05)', marginBottom: '1.5rem' }}>
+              <h3 style={{ color: '#2dd4bf', fontSize: '1rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ fontSize: '1.2rem' }}>🔐</span> Procurement SKU Clearances
+              </h3>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem', lineHeight: 1.5 }}>
+                Restrict this subject's Inventory &amp; Procurement panel to the SKUs assigned below.
+              </p>
+
+              {skuAccess.assigned.length === 0 ? (
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontStyle: 'italic', marginBottom: '1rem' }}>No SKU clearances assigned.</p>
+              ) : (
+                <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 1rem 0', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  {skuAccess.assigned.map((s) => (
+                    <li key={s.sku_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', background: 'rgba(0,0,0,0.25)', borderRadius: '6px', padding: '0.5rem 0.75rem' }}>
+                      <span style={{ fontSize: '0.82rem', color: 'var(--text-primary)' }}>
+                        <span style={{ color: '#2dd4bf', fontWeight: 600, fontFamily: 'monospace', marginRight: '0.5rem' }}>{s.sku_id}</span>
+                        {s.nomenclature}
+                      </span>
+                      <button
+                        onClick={() => handleRevokeSku(s.sku_id)}
+                        style={{ background: 'rgba(239, 68, 68, 0.12)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '4px', padding: '0.3rem 0.7rem', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                      >
+                        Revoke
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <select
+                  value={skuToAssign}
+                  onChange={(e) => setSkuToAssign(e.target.value)}
+                  style={{ flex: 1, padding: '0.6rem', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border)', color: 'white', borderRadius: '4px', fontSize: '0.82rem' }}
+                >
+                  <option value="">Select a SKU to clear...</option>
+                  {skuAccess.available.map((s) => (
+                    <option key={s.sku_id} value={s.sku_id}>{s.sku_id} — {s.nomenclature}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={handleAssignSku}
+                  disabled={!skuToAssign}
+                  style={{ padding: '0.6rem 1rem', fontWeight: 700, borderRadius: '4px', border: 'none', whiteSpace: 'nowrap', cursor: skuToAssign ? 'pointer' : 'not-allowed', background: skuToAssign ? '#2dd4bf' : 'rgba(45, 212, 191, 0.15)', color: skuToAssign ? '#0a0e17' : 'var(--text-muted, #64748b)', fontSize: '0.8rem' }}
+                >
+                  Assign SKU Clearance
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Issue Draft Order */}
+            <div className="quick-issue-zone" style={{ border: '1px solid rgba(251, 191, 36, 0.3)', borderRadius: '8px', padding: '1.5rem', background: 'rgba(251, 191, 36, 0.05)', marginBottom: '1.5rem' }}>
+              <h3 style={{ color: '#fbbf24', fontSize: '1rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ fontSize: '1.2rem' }}>📝</span> Quick Issue Draft Order
+              </h3>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem', lineHeight: 1.5 }}>
+                Issue a draft purchase order on this subject's behalf, scoped to their assigned SKUs.
+              </p>
+
+              {skuAccess.assigned.length === 0 ? (
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontStyle: 'italic' }}>Assign a SKU clearance above to enable draft issuance.</p>
+              ) : (
+                <>
+                  <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                    <select
+                      value={issueSku}
+                      onChange={(e) => setIssueSku(e.target.value)}
+                      style={{ flex: 2, padding: '0.6rem', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border)', color: 'white', borderRadius: '4px', fontSize: '0.82rem' }}
+                    >
+                      <option value="">Select assigned SKU...</option>
+                      {skuAccess.assigned.map((s) => (
+                        <option key={s.sku_id} value={s.sku_id}>{s.sku_id} — {s.nomenclature}</option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      min="1"
+                      value={issueQty}
+                      onChange={(e) => setIssueQty(e.target.value)}
+                      placeholder="Qty"
+                      style={{ flex: 1, padding: '0.6rem', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border)', color: 'white', borderRadius: '4px', fontSize: '0.82rem' }}
+                    />
+                  </div>
+                  <textarea
+                    value={issueNotes}
+                    onChange={(e) => setIssueNotes(e.target.value)}
+                    placeholder="Notes / special instructions for supplier..."
+                    style={{ width: '100%', boxSizing: 'border-box', minHeight: '60px', resize: 'vertical', padding: '0.6rem', marginBottom: '0.75rem', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border)', color: 'white', borderRadius: '4px', fontSize: '0.82rem', fontFamily: 'inherit' }}
+                  />
+                  <button
+                    onClick={handleIssueDraft}
+                    disabled={!issueSku || !(Number(issueQty) > 0)}
+                    style={{ width: '100%', padding: '0.75rem', fontWeight: 700, borderRadius: '4px', border: 'none', cursor: (issueSku && Number(issueQty) > 0) ? 'pointer' : 'not-allowed', background: (issueSku && Number(issueQty) > 0) ? '#fbbf24' : 'rgba(251, 191, 36, 0.15)', color: (issueSku && Number(issueQty) > 0) ? '#0a0e17' : 'var(--text-muted, #64748b)', fontSize: '0.85rem', letterSpacing: '0.03em' }}
+                  >
+                    Issue Draft PO on Behalf of User
+                  </button>
+                </>
+              )}
+
+              {procMsg && (
+                <div style={{ marginTop: '1rem', padding: '0.6rem', borderRadius: '4px', textAlign: 'center', fontSize: '0.82rem', fontWeight: 600, color: procMsg.type === 'error' ? 'var(--danger, #ef4444)' : 'var(--success, #10b981)', background: procMsg.type === 'error' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)' }}>
+                  {procMsg.message}
+                </div>
+              )}
             </div>
 
             <div className="actuation-zone" style={{ border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '8px', padding: '1.5rem', background: 'rgba(239, 68, 68, 0.05)' }}>

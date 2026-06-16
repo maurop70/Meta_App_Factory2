@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 import ManualLogWidget from './ManualLogWidget';
 import SkuLedger from './SkuLedger';
+import { useAuth } from '../context/AuthContext';
 
 /**
  * [BACK OFFICE INVENTORY] HOD (Head of Department) Procurement Workspace.
@@ -9,6 +10,10 @@ import SkuLedger from './SkuLedger';
  * line-item exclusion, ETA override, and High Priority pulse toggle.
  */
 const HODWorkspace = ({ highlightPoId = null, onHighlightConsumed = null }) => {
+  const { userRole } = useAuth();
+  // Restricted procurement roles (DM/TECH) may draft + edit but not submit,
+  // receive, or change priority — those remain HOD-gated on the backend.
+  const restricted = ['DM', 'TECH'].includes(userRole);
   const [drafts, setDrafts] = useState([]);
   const [inbound, setInbound] = useState([]);
   const [status, setStatus] = useState({ type: 'loading', message: 'Synchronizing procurement state...' });
@@ -225,17 +230,23 @@ const HODWorkspace = ({ highlightPoId = null, onHighlightConsumed = null }) => {
               </div>
             </div>
 
-            {/* High Priority Pulse Switch */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: po.priority === 1 ? '#f97316' : '#64748b' }}>High Priority</span>
-              <div
-                className="hod-switch"
-                onClick={() => togglePriority(po)}
-                style={{ background: po.priority === 1 ? 'rgba(249, 115, 22, 0.6)' : 'rgba(30, 41, 59, 0.9)' }}
-              >
-                <div className="hod-switch-knob" style={{ left: po.priority === 1 ? '24px' : '3px' }} />
+            {/* High Priority Pulse Switch — HOD-only; restricted roles see a static badge */}
+            {restricted ? (
+              po.priority === 1 && (
+                <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#f97316' }}>⬆ High Priority</span>
+              )
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: po.priority === 1 ? '#f97316' : '#64748b' }}>High Priority</span>
+                <div
+                  className="hod-switch"
+                  onClick={() => togglePriority(po)}
+                  style={{ background: po.priority === 1 ? 'rgba(249, 115, 22, 0.6)' : 'rgba(30, 41, 59, 0.9)' }}
+                >
+                  <div className="hod-switch-knob" style={{ left: po.priority === 1 ? '24px' : '3px' }} />
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           <table className="hod-item-table">
@@ -313,9 +324,11 @@ const HODWorkspace = ({ highlightPoId = null, onHighlightConsumed = null }) => {
             <button className="hod-btn" onClick={() => persistDraft(po)} style={{ background: 'rgba(99, 102, 241, 0.15)', color: '#818cf8', border: '1px solid rgba(99, 102, 241, 0.35)' }}>
               Save Draft
             </button>
-            <button className="hod-btn" onClick={() => submitToCfo(po.po_id)} style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.35)' }}>
-              Submit to CFO
-            </button>
+            {!restricted && (
+              <button className="hod-btn" onClick={() => submitToCfo(po.po_id)} style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.35)' }}>
+                Submit to CFO
+              </button>
+            )}
           </div>
         </div>
       ))}
@@ -347,9 +360,13 @@ const HODWorkspace = ({ highlightPoId = null, onHighlightConsumed = null }) => {
                   <td style={{ color: '#e2e8f0', fontWeight: 600 }}>${po.total_cost.toFixed(2)}</td>
                   <td>
                     {po.status === 'APPROVED' ? (
-                      <button className="hod-btn" onClick={() => receiveShipment(po.po_id)} style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.35)' }}>
-                        Receive Shipment
-                      </button>
+                      restricted ? (
+                        <span style={{ fontSize: '0.72rem', color: '#10b981' }}>Approved</span>
+                      ) : (
+                        <button className="hod-btn" onClick={() => receiveShipment(po.po_id)} style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.35)' }}>
+                          Receive Shipment
+                        </button>
+                      )
                     ) : (
                       <span style={{ fontSize: '0.72rem', color: '#475569' }}>Awaiting CFO</span>
                     )}

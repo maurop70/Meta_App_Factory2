@@ -4,10 +4,14 @@ import api from '../services/api';
 import TechMWODetailModal from './TechMWODetailModal';
 import TechConsumePartModal from './TechConsumePartModal';
 import { useAuth } from '../context/AuthContext';
+import HODWorkspace from './HODWorkspace';
 
 const TechDashboard = () => {
   const { userRole, jwtPayload } = useAuth();
   const [workOrders, setWorkOrders] = useState([]);
+  // Inventory & Procurement tab: shown when the tech holds SKU clearance.
+  const [procurementEnabled, setProcurementEnabled] = useState(false);
+  const [activeTab, setActiveTab] = useState('tasks');
   const [status, setStatus] = useState({ type: 'loading', message: 'Loading Assigned Work Orders...' });
   const [actuatingMwo, setActuatingMwo] = useState({});
   const [offlineLedger, setOfflineLedger] = useState([]);
@@ -35,6 +39,16 @@ const TechDashboard = () => {
       fetchRoster();
     }
   }, [userRole]);
+
+  // Probe procurement clearance: /inventory/skus returns 200 only for
+  // globally-cleared roles or restricted users with >=1 assigned SKU.
+  useEffect(() => {
+    let mounted = true;
+    api.get('/inventory/skus?limit=1&offset=0')
+      .then(res => { if (mounted) setProcurementEnabled((res.data?.items || []).length > 0); })
+      .catch(() => { if (mounted) setProcurementEnabled(false); });
+    return () => { mounted = false; };
+  }, []);
 
   const syncLedgerState = useCallback(() => {
     const queue = JSON.parse(localStorage.getItem('mwoExecutionQueue') || '[]');
@@ -167,6 +181,30 @@ const TechDashboard = () => {
 
   return (
     <div className="erp-dashboard-container">
+      {procurementEnabled && (
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
+          {[['tasks', 'Assigned Tasks'], ['procurement', 'Inventory & Procurement']].map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setActiveTab(key)}
+              style={{
+                padding: '0.55rem 1.2rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 700, fontSize: '0.82rem',
+                border: '1px solid rgba(56, 189, 248, 0.3)',
+                background: activeTab === key ? 'rgba(56, 189, 248, 0.2)' : 'rgba(15, 23, 42, 0.6)',
+                color: activeTab === key ? '#38bdf8' : '#94a3b8'
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {procurementEnabled && activeTab === 'procurement' ? (
+        <HODWorkspace />
+      ) : (
+      <>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid var(--border, rgba(56, 189, 248, 0.2))', paddingBottom: '1rem' }}>
         <h2 style={{ color: 'var(--text-primary, #e2e8f0)', fontSize: '1.25rem', fontWeight: 600, margin: 0 }}>
           Technician Execution
@@ -343,6 +381,8 @@ const TechDashboard = () => {
           })
         )}
       </div>
+      </>
+      )}
 
       <TechMWODetailModal
         mwo={selectedDetailMWO}

@@ -11,6 +11,7 @@ import ProcurementMatrix from '../components/ProcurementMatrix';
 import DispatchQueueTable from '../components/DispatchQueueTable';
 import TechDashboard from '../components/TechDashboard';
 import ProfileSettings from '../components/ProfileSettings';
+import CFOApprovals from '../components/CFOApprovals';
 
 const AdminConsole = () => {
   const { userRole, logout } = useAuth();
@@ -28,6 +29,7 @@ const AdminConsole = () => {
     { id: 'dm', label: 'DM View' },
     { id: 'hm', label: 'HM View' },
     { id: 'tech', label: 'Tech View' },
+    { id: 'cfo', label: 'CFO View' },
     { id: 'procurement', label: 'Procurement' },
     { id: 'dispatch', label: 'Dispatch Queue' }
   ];
@@ -149,6 +151,10 @@ const AdminConsole = () => {
 
       {activeTab === 'tech' && (
         <TechDashboard />
+      )}
+      
+      {activeTab === 'cfo' && (
+        <CFOApprovals />
       )}
       
       {activeTab === 'procurement' && (

@@ -191,6 +191,20 @@ def init_tables():
         ''')
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_manual_logs_sku ON erp_inventory_manual_logs(sku_id)")
 
+        # [RESTRICTED SKU PROCUREMENT] Employee -> SKU clearance junction.
+        # Plain TEXT columns (no FKs) mirror the erp_purchase_order_items
+        # convention: erp_employees / erp_skus are provisioned by separate
+        # migration paths, so cross-init foreign keys would risk bootstrap
+        # ordering failures. Referential cleanup is enforced in app code.
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS erp_employee_sku_access (
+                employee_id TEXT NOT NULL,
+                sku_id TEXT NOT NULL,
+                PRIMARY KEY (employee_id, sku_id)
+            )
+        ''')
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_employee_sku_access_emp ON erp_employee_sku_access(employee_id)")
+
         conn.commit()
     except Exception as e:
         logger.error(f"Failed to initialize tables: {e}")
