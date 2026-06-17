@@ -19,6 +19,10 @@ GATEWAY_DB_PATH = os.path.join(os.path.dirname(_here), "Module_0_Gateway", "data
 CFO_EMP_ID = "ERP-5000"
 CFO_PIN = "4567"
 
+DM_EMP_ID = "ERP-4000"
+DM_PIN = "1234"
+DM_NAME = "Castro, Monica"
+
 
 def _column_exists(cursor, table: str, column: str) -> bool:
     cursor.execute(f"PRAGMA table_info({table})")
@@ -106,6 +110,14 @@ def migrate_erp_database():
         cursor.execute("ALTER TABLE erp_skus ADD COLUMN min_order_qty INTEGER DEFAULT 1")
         print("[DDL] erp_skus.min_order_qty added")
 
+    # --- 5b. Category manager + CFO PO notes columns ---
+    if not _column_exists(cursor, "erp_categories", "manager_id"):
+        cursor.execute("ALTER TABLE erp_categories ADD COLUMN manager_id TEXT REFERENCES erp_employees(id)")
+        print("[DDL] erp_categories.manager_id added")
+    if not _column_exists(cursor, "erp_purchase_orders", "cfo_notes"):
+        cursor.execute("ALTER TABLE erp_purchase_orders ADD COLUMN cfo_notes TEXT")
+        print("[DDL] erp_purchase_orders.cfo_notes added")
+
     # --- 6. Rebuild erp_employees with CFO admitted to the role CHECK ---
     cursor.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='erp_employees'")
     ddl = cursor.fetchone()[0]
@@ -139,6 +151,11 @@ def migrate_erp_database():
     cursor.execute("INSERT OR IGNORE INTO erp_categories (id, name) VALUES ('CAT-ADMIN', 'Administrative Supplies')")
     cursor.execute("INSERT OR IGNORE INTO erp_categories (id, name) VALUES ('CAT-MAINT', 'Maintenance Parts')")
 
+    # Default category-manager assignments (only fill when unassigned; admins can
+    # reassign live via PUT /admin/categories/{id}/manager).
+    cursor.execute("UPDATE erp_categories SET manager_id = 'ERP-1030' WHERE id = 'CAT-MAINT' AND manager_id IS NULL")
+    cursor.execute("UPDATE erp_categories SET manager_id = 'ERP-1000' WHERE id = 'CAT-ADMIN' AND manager_id IS NULL")
+
     # Existing maintenance SKUs default to the maintenance supplier/category
     cursor.execute("UPDATE erp_skus SET supplier_id = 'SUP-MAINT-01' WHERE supplier_id IS NULL")
     cursor.execute("UPDATE erp_skus SET category_id = 'CAT-MAINT' WHERE category_id IS NULL")
@@ -168,8 +185,24 @@ def migrate_erp_database():
         )
         print(f"[SEED] CFO identity {CFO_EMP_ID} provisioned in ERP ledger")
 
+    # DM operator identity (local ERP ledger). Department DEPT-MECH matches the
+    # equipment department so the archive dept-match check passes. The local
+    # pin_hash is never used for auth (login flows through the Gateway) but the
+    # column is NOT NULL, so we store a valid bcrypt hash.
+    dm_hash = bcrypt.hashpw(DM_PIN.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    cursor.execute("SELECT 1 FROM erp_employees WHERE id = ?", (DM_EMP_ID,))
+    if not cursor.fetchone():
+        cursor.execute(
+            "INSERT INTO erp_employees (id, name, role, pin_hash, is_active, department_id) VALUES (?, ?, 'DM', ?, 1, 'DEPT-MECH')",
+            (DM_EMP_ID, DM_NAME, dm_hash)
+        )
+        print(f"[SEED] DM identity {DM_EMP_ID} provisioned in ERP ledger")
+
     conn.commit()
     cursor.execute("PRAGMA foreign_keys=ON;")
+    # Fold WAL back into the main .db file so the new columns are durably present
+    # for consumers that read/copy the raw file (e.g. hermetic test DB copies).
+    cursor.execute("PRAGMA wal_checkpoint(TRUNCATE)")
     conn.close()
     print("[OK] maintenance_erp.db migration complete")
     return cfo_hash
@@ -195,6 +228,26 @@ def migrate_gateway_database(cfo_hash: str):
         print(f"[SEED] CFO identity {CFO_EMP_ID} provisioned in Gateway (PIN {CFO_PIN})")
     else:
         print("[SKIP] CFO identity already present in Gateway")
+
+    # DM login identity. Business ID lives in emp_id (login resolves by emp_id);
+    # id holds a synthetic key. department_id is NULL (DEPT-MECH does not exist in
+    # the Gateway departments table) with the human label kept in free-text
+    # department; status='ACTIVE' is what the login gate checks.
+    cursor.execute("SELECT 1 FROM erp_employees WHERE emp_id = ?", (DM_EMP_ID,))
+    if not cursor.fetchone():
+        import uuid
+        import bcrypt
+        dm_hash = bcrypt.hashpw(DM_PIN.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+        cursor.execute('''
+            INSERT INTO erp_employees
+            (id, emp_id, name, first_name, last_name, role, pin, pin_hash, is_active, department_id, reports_to_hm_id, status, department)
+            VALUES (?, ?, ?, ?, ?, 'DM', ?, ?, 1, NULL, NULL, 'ACTIVE', 'Mechanical Maintenance')
+        ''', (f"U-{uuid.uuid4().hex[:6].upper()}", DM_EMP_ID, DM_NAME,
+              "Monica", "Castro", DM_PIN, dm_hash))
+        conn.commit()
+        print(f"[SEED] DM identity {DM_EMP_ID} provisioned in Gateway (PIN {DM_PIN})")
+    else:
+        print("[SKIP] DM identity already present in Gateway")
     conn.close()
 
 
@@ -213,10 +266,22 @@ def verify():
     admin_skus = cursor.fetchone()[0]
     cursor.execute("SELECT role FROM erp_employees WHERE id = ?", (CFO_EMP_ID,))
     cfo = cursor.fetchone()
+
+    # New-column + seed integrity (Phase 1)
+    cat_mgr_ok = _column_exists(cursor, "erp_categories", "manager_id")
+    cfo_notes_ok = _column_exists(cursor, "erp_purchase_orders", "cfo_notes")
+    cursor.execute("SELECT manager_id FROM erp_categories WHERE id = 'CAT-MAINT'")
+    cat_maint_mgr = (cursor.fetchone() or [None])[0]
+    cursor.execute("SELECT role FROM erp_employees WHERE id = ?", (DM_EMP_ID,))
+    dm = cursor.fetchone()
     conn.close()
     print(f"[VERIFY] suppliers={suppliers}, admin_skus={admin_skus}, cfo_role={cfo[0] if cfo else 'MISSING'}")
+    print(f"[VERIFY] manager_id_col={cat_mgr_ok}, cfo_notes_col={cfo_notes_ok}, "
+          f"CAT-MAINT.manager={cat_maint_mgr}, dm_role={dm[0] if dm else 'MISSING'}")
     if suppliers < 2 or admin_skus < 4 or not cfo or cfo[0] != "CFO":
         raise SystemExit("[FAIL] Seed verification failed")
+    if not cat_mgr_ok or not cfo_notes_ok or not dm or dm[0] != "DM":
+        raise SystemExit("[FAIL] Phase 1 schema/seed verification failed")
     print("[VERIFY] Migration integrity confirmed.")
 
 

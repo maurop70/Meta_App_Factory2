@@ -48,6 +48,22 @@ const HMDashboard = () => {
     }
   };
 
+  const downloadCsv = async (path, filename) => {
+    try {
+      const res = await api.get(path, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      alert('Download failed.');
+    }
+  };
+
   useEffect(() => {
     fetchAlerts();
   }, [activeView]); // re-sync when returning from the procurement view
@@ -205,6 +221,12 @@ const HMDashboard = () => {
         <button onClick={() => setActiveView('inventory')} style={{ padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid var(--border, rgba(99,102,241,0.15))', background: 'rgba(15, 23, 42, 0.5)', color: 'var(--text-muted, #64748b)', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem', transition: 'all 0.2s' }}>
           Inventory & Procurement
         </button>
+        <button onClick={() => downloadCsv('/reports/hm-work-orders/download', 'hm_work_orders.csv')} style={{ padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid rgba(16,185,129,0.3)', background: 'rgba(16,185,129,0.1)', color: '#34d399', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>
+          Export Work Orders (CSV)
+        </button>
+        <button onClick={() => downloadCsv('/reports/inventory/download', 'inventory_report.csv')} style={{ padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid rgba(16,185,129,0.3)', background: 'rgba(16,185,129,0.1)', color: '#34d399', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>
+          Download Inventory Report
+        </button>
         <button onClick={() => setShowProfile(true)} style={{ marginLeft: 'auto', padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(99,102,241,0.1)', color: 'var(--accent-hover, #818cf8)', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>
           Profile
         </button>
@@ -337,7 +359,14 @@ const HMDashboard = () => {
                 <span style={{ color: '#94a3b8' }}>
                   is below safety threshold ({alert.quantity_on_hand} / {alert.reorder_threshold} on hand)
                 </span>
-                {alert.draft_po_id ? (
+                {alert.active_po_id ? (
+                  <span
+                    title={`An active purchase order already covers this SKU (${alert.active_po_id}).`}
+                    style={{ padding: '0.2rem 0.7rem', borderRadius: '6px', border: '1px solid rgba(251, 191, 36, 0.4)', background: 'rgba(251, 191, 36, 0.12)', color: '#fbbf24', fontWeight: 700, fontSize: '0.72rem' }}
+                  >
+                    PO {alert.active_po_status}: {alert.active_po_id}
+                  </span>
+                ) : alert.draft_po_id ? (
                   <button
                     onClick={() => openAlertDraft(alert)}
                     style={{ padding: '0.2rem 0.7rem', borderRadius: '6px', border: '1px solid rgba(99, 102, 241, 0.4)', background: 'rgba(99, 102, 241, 0.15)', color: '#818cf8', cursor: 'pointer', fontWeight: 700, fontSize: '0.72rem' }}

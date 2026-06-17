@@ -353,7 +353,12 @@ const HODWorkspace = ({ highlightPoId = null, onHighlightConsumed = null }) => {
               {inbound.map(po => (
                 <tr key={po.po_id}>
                   <td style={{ color: '#818cf8', fontWeight: 600 }}>{po.po_id}</td>
-                  <td>{po.supplier_name}</td>
+                  <td>
+                    {po.supplier_name}
+                    {po.cfo_notes && (
+                      <div style={{ marginTop: '0.25rem', fontSize: '0.72rem', color: '#818cf8', fontStyle: 'italic' }}>CFO: {po.cfo_notes}</div>
+                    )}
+                  </td>
                   <td>{statusChip(po.status)}</td>
                   <td style={{ color: '#94a3b8' }}>{po.eta_date || '—'}</td>
                   <td style={{ color: '#94a3b8' }}>{po.items.length}</td>

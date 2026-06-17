@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
+import api from '../services/api';
 
 const HMReviewModal = ({ selectedMWO, closeModal, executeApproval }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
+  const [consumedParts, setConsumedParts] = useState([]);
   
   // Memory Leak Prevention: Track physical mount state
   const isMounted = useRef(true);
@@ -23,6 +25,16 @@ const HMReviewModal = ({ selectedMWO, closeModal, executeApproval }) => {
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isSubmitting, closeModal]);
+
+  // Load consumed parts for the completed work order under review.
+  useEffect(() => {
+    if (!selectedMWO?.mwo_id) { setConsumedParts([]); return; }
+    let mounted = true;
+    api.get(`/mwo/${selectedMWO.mwo_id}/consumed-parts`)
+      .then(res => { if (mounted) setConsumedParts(res.data?.data || []); })
+      .catch(() => { if (mounted) setConsumedParts([]); });
+    return () => { mounted = false; };
+  }, [selectedMWO?.mwo_id]);
 
   if (!selectedMWO) return null;
 
@@ -104,8 +116,18 @@ const HMReviewModal = ({ selectedMWO, closeModal, executeApproval }) => {
               {selectedMWO.manual_log || "No manual log provided."}
             </div>
           </div>
+
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1rem', marginTop: '1rem' }}>
+            <p style={{ margin: '0 0 0.5rem 0', color: '#94a3b8', fontWeight: 600, fontSize: '0.85rem', textTransform: 'uppercase' }}>Consumed Parts:</p>
+            {consumedParts.length > 0 ? consumedParts.map((p, i) => (
+              <div key={p.part_id || i} style={{ display: 'flex', justifyContent: 'space-between', color: '#cbd5e1', fontSize: '0.9rem', padding: '0.35rem 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <span>{p.nomenclature || p.sku_id} <span style={{ color: '#64748b' }}>({p.part_id})</span></span>
+                <span style={{ color: '#94a3b8' }}>Qty {p.quantity_consumed}</span>
+              </div>
+            )) : <div style={{ color: '#64748b', fontSize: '0.9rem' }}>No parts consumed.</div>}
+          </div>
         </div>
-        
+
         {errorMsg && (
           <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '1rem', borderRadius: '6px', color: '#fca5a5', marginBottom: '1.5rem', fontSize: '0.875rem' }}>
             {errorMsg}

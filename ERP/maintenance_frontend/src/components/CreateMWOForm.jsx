@@ -283,6 +283,19 @@ const CreateMWOForm = ({ onMWOCreated }) => {
             View Archives
           </button>
 
+          <button type="button" onClick={async () => {
+            try {
+              const res = await api.get('/reports/dm-work-orders/download', { responseType: 'blob' });
+              const url = window.URL.createObjectURL(new Blob([res.data]));
+              const a = document.createElement('a');
+              a.href = url; a.download = 'dm_work_orders.csv';
+              document.body.appendChild(a); a.click(); a.remove();
+              window.URL.revokeObjectURL(url);
+            } catch { alert('Download failed.'); }
+          }} style={{ padding: '0.7rem 2rem', background: 'rgba(16, 185, 129, 0.12)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.35)', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem', transition: 'all 0.2s' }}>
+            Export Work Orders (CSV)
+          </button>
+
           {statusMsg && (
             <span style={{ fontSize: '0.85rem', fontWeight: 600, color: statusMsg.includes('Failed') ? 'var(--danger, #ef4444)' : 'var(--success, #10b981)' }}>{statusMsg}</span>
           )}

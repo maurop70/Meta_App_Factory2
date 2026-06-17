@@ -11,6 +11,7 @@ import api from '../services/api';
 const CfoPODetailModal = ({ po, onClose, onActuationSuccess }) => {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const [cfoNotes, setCfoNotes] = useState('');
 
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape' && !busy) onClose(); };
@@ -18,13 +19,15 @@ const CfoPODetailModal = ({ po, onClose, onActuationSuccess }) => {
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose, busy]);
 
+  useEffect(() => { setCfoNotes(po?.cfo_notes || ''); }, [po?.po_id]);
+
   if (!po) return null;
 
   const actuate = async (action) => {
     setBusy(true);
     setError(null);
     try {
-      await api.post('/orders/actuate-bulk', { po_ids: [po.po_id], action });
+      await api.post('/orders/actuate-bulk', { po_ids: [po.po_id], action, cfo_notes: cfoNotes.trim() || null });
       onActuationSuccess();
     } catch (err) {
       setError(err.response?.data?.detail || 'Bulk actuation failed.');
@@ -137,6 +140,19 @@ const CfoPODetailModal = ({ po, onClose, onActuationSuccess }) => {
         {error && (
           <div style={{ marginBottom: '1rem', padding: '0.6rem 1rem', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 600, background: 'rgba(239,68,68,0.12)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)' }}>{error}</div>
         )}
+
+        {/* CFO supplier notes */}
+        <div style={{ marginBottom: '1.25rem' }}>
+          <label style={{ display: 'block', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: '#818cf8', fontWeight: 700, marginBottom: '0.4rem' }}>CFO Notes to Supplier (Optional)</label>
+          <textarea
+            value={cfoNotes}
+            onChange={(e) => setCfoNotes(e.target.value)}
+            disabled={busy}
+            rows="3"
+            placeholder="Instructions appended to the supplier dispatch email…"
+            style={{ width: '100%', padding: '0.7rem', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: '6px', color: '#e2e8f0', outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontSize: '0.85rem' }}
+          />
+        </div>
 
         {/* Actuation */}
         <div style={{ display: 'flex', gap: '0.75rem' }}>

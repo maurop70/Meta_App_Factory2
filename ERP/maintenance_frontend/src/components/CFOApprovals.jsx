@@ -105,6 +105,18 @@ const CFOApprovals = () => {
           Select All ({selected.size}/{orders.length})
         </label>
         <div style={{ flex: 1 }} />
+        <button className="cfo-bulk-btn" onClick={async () => {
+          try {
+            const res = await api.get('/reports/cfo-procurement/download', { responseType: 'blob' });
+            const url = window.URL.createObjectURL(new Blob([res.data]));
+            const a = document.createElement('a');
+            a.href = url; a.download = 'cfo_procurement.csv';
+            document.body.appendChild(a); a.click(); a.remove();
+            window.URL.revokeObjectURL(url);
+          } catch { flash('error', 'Download failed.'); }
+        }} style={{ background: 'rgba(99, 102, 241, 0.12)', color: '#818cf8', border: '1px solid rgba(99, 102, 241, 0.4)' }}>
+          Export POs (CSV)
+        </button>
         <button className="cfo-bulk-btn" disabled={busy || selected.size === 0} onClick={() => actuate('APPROVE')}
           style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.4)' }}>
           Bulk Approve

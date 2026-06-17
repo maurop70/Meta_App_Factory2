@@ -9,6 +9,11 @@ const SkuLedger = () => {
   const { userRole } = useAuth();
   // HOD operators (HM) manage the catalog alongside administrators
   const canIngest = ['ADMINISTRATOR', 'ADMIN', 'HM'].includes(userRole);
+  // Only administrators can reassign category responsibility.
+  const isAdmin = ['ADMINISTRATOR', 'ADMIN'].includes(userRole);
+  const [categories, setCategories] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [mgrMsg, setMgrMsg] = useState(null);
   const [skus, setSkus] = useState([]);
   const [totalRecords, setTotalRecords] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -31,6 +36,36 @@ const SkuLedger = () => {
   useEffect(() => {
     if (canIngest) fetchSuppliers();
   }, [canIngest]);
+
+  const fetchCategoryManagers = async () => {
+    try {
+      const [cats, emps] = await Promise.all([
+        api.get('/admin/lookups/categories'),
+        api.get('/employees?is_active=1'),
+      ]);
+      setCategories(cats.data.data || []);
+      const eligible = (emps.data.data || []).filter(e => ['HM', 'DM', 'ADMINISTRATOR', 'ADMIN', 'CFO'].includes(e.role));
+      setEmployees(eligible);
+    } catch (err) {
+      console.warn('Category-manager fetch failed.', err);
+    }
+  };
+
+  useEffect(() => {
+    if (isAdmin) fetchCategoryManagers();
+  }, [isAdmin]);
+
+  const assignManager = async (categoryId, managerId) => {
+    try {
+      setMgrMsg(null);
+      await api.put(`/admin/categories/${categoryId}/manager`, { manager_id: managerId || null });
+      setMgrMsg(`Category ${categoryId} manager updated.`);
+      setTimeout(() => setMgrMsg(null), 4000);
+      await fetchCategoryManagers();
+    } catch (err) {
+      setMgrMsg(err.response?.data?.detail || 'Manager assignment failed.');
+    }
+  };
 
   const reassignSupplier = async (skuId, supplierId) => {
     try {
@@ -133,6 +168,40 @@ const SkuLedger = () => {
           </div>
         )}
       </div>
+
+      {isAdmin && (
+        <div style={{ marginBottom: '1.5rem', padding: '1rem 1.25rem', borderRadius: '10px', background: 'rgba(99, 102, 241, 0.06)', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
+          <h3 style={{ margin: '0 0 0.75rem 0', fontSize: '0.95rem', color: '#818cf8' }}>Inventory Category Responsibility Mapping</h3>
+          {mgrMsg && <div style={{ marginBottom: '0.6rem', fontSize: '0.78rem', color: '#a5b4fc', fontWeight: 600 }}>{mgrMsg}</div>}
+          <table className="erp-data-matrix">
+            <thead>
+              <tr><th>Category</th><th>Category ID</th><th>Assigned Manager</th></tr>
+            </thead>
+            <tbody>
+              {categories.length === 0 ? (
+                <tr><td colSpan={3} className="matrix-status-msg">No categories defined.</td></tr>
+              ) : categories.map(cat => (
+                <tr key={cat.id}>
+                  <td data-label="Category">{cat.name}</td>
+                  <td data-label="Category ID"><span className="badge badge-role">{cat.id}</span></td>
+                  <td data-label="Assigned Manager">
+                    <select
+                      value={cat.manager_id || ''}
+                      onChange={e => assignManager(cat.id, e.target.value)}
+                      style={{ background: 'rgba(15, 23, 42, 0.6)', color: cat.manager_id ? '#94a3b8' : '#475569', border: '1px solid rgba(99, 102, 241, 0.2)', borderRadius: '6px', padding: '0.3rem 0.4rem', fontSize: '0.78rem', fontFamily: 'inherit', cursor: 'pointer', outline: 'none', maxWidth: '240px' }}
+                    >
+                      <option value="">Unassigned</option>
+                      {employees.map(emp => (
+                        <option key={emp.id} value={emp.id}>{emp.name} ({emp.role}) — {emp.id}</option>
+                      ))}
+                    </select>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {error && <div className="matrix-error-msg">{error}</div>}
       {success && (

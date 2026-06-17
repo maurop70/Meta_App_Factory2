@@ -933,7 +933,7 @@ def get_categories(
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
-        cursor.execute("SELECT id, name FROM erp_categories ORDER BY name LIMIT ? OFFSET ?", (limit, offset))
+        cursor.execute("SELECT id, name, manager_id FROM erp_categories ORDER BY name LIMIT ? OFFSET ?", (limit, offset))
         return {"data": [dict(r) for r in cursor.fetchall()]}
     finally:
         conn.close()
@@ -1629,17 +1629,25 @@ def archive_mwo_pdf_worker(mwo_id: str, resolution_notes: str, labor_hours: floa
             logger.error(f"[WORKER FATAL] MWO {mwo_id} not found during archival extraction.")
             return
 
-        # 1b. Extract consumed parts from inventory ledger
+        # 1b. Extract consumed parts from mwo_consumed_parts (single source of
+        # truth for tech consumption). Aliased to the legacy ledger column names
+        # the PDF table below expects.
         cursor.execute(
             """
-            SELECT transaction_id, part_id, quantity_consumed, tech_id, transaction_timestamp
-            FROM erp_inventory_ledger
-            WHERE mwo_id = ?
-            ORDER BY transaction_timestamp ASC
+            SELECT c.consumption_id AS transaction_id, c.part_id, c.quantity_consumed,
+                   c.logged_by_tech_id AS tech_id, c.consumed_at AS transaction_timestamp
+            FROM mwo_consumed_parts c
+            WHERE c.mwo_id = ?
+            ORDER BY c.consumed_at ASC
             """,
             (mwo_id,)
         )
         consumed_parts = [dict(row) for row in cursor.fetchall()]
+        # consumed_at is a float epoch; render it as a readable timestamp.
+        for part in consumed_parts:
+            ts = part.get("transaction_timestamp")
+            if isinstance(ts, (int, float)):
+                part["transaction_timestamp"] = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(ts))
 
         # 2. Native Python PDF Byte-Compilation (fpdf2 Spatial Doctrine)
         pdf = FPDF()
@@ -1780,6 +1788,24 @@ def get_archive_list(jwt_payload: dict = Depends(verify_jwt_token)):
     except Exception as e:
         logger.error(f"Failed to fetch archive list: {e}")
         raise HTTPException(status_code=500, detail="Internal server error while fetching archive list.")
+    finally:
+        conn.close()
+
+@api_router.get("/mwo/{mwo_id}/consumed-parts")
+def get_mwo_consumed_parts(mwo_id: str, jwt_payload: dict = Depends(verify_jwt_token)):
+    """Read-only list of parts consumed against an MWO (mwo_consumed_parts is the
+    single source of truth), with SKU nomenclature resolved for display."""
+    conn = get_db_connection()
+    try:
+        rows = conn.execute("""
+            SELECT c.part_id, p.sku_id, s.nomenclature, c.quantity_consumed, c.consumed_at
+            FROM mwo_consumed_parts c
+            JOIN erp_parts p ON c.part_id = p.part_id
+            JOIN erp_skus s ON p.sku_id = s.sku_id
+            WHERE c.mwo_id = ?
+            ORDER BY c.consumed_at ASC
+        """, (mwo_id,)).fetchall()
+        return {"status": "success", "data": [dict(r) for r in rows]}
     finally:
         conn.close()
 
@@ -3688,6 +3714,41 @@ def hydrate_category(payload: CategoryCreate, jwt_payload: dict = Depends(verify
         conn.close()
 
 
+class CategoryManagerPayload(BaseModel):
+    manager_id: Optional[str] = None
+
+
+@api_router.put("/admin/categories/{category_id}/manager")
+def update_category_manager(category_id: str, payload: CategoryManagerPayload, jwt_payload: dict = Depends(verify_jwt_token)):
+    """Admin-only: assign / change / clear the manager of an inventory category."""
+    role = jwt_payload.get("role")
+    if role not in SKU_ACCESS_ADMIN_ROLES:
+        raise HTTPException(status_code=403, detail="RBAC Violation: Admin clearance required.")
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("BEGIN IMMEDIATE TRANSACTION")
+        cursor.execute("SELECT 1 FROM erp_categories WHERE id = ?", (category_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail=f"Category {category_id} not found.")
+        if payload.manager_id:
+            cursor.execute("SELECT 1 FROM erp_employees WHERE id = ?", (payload.manager_id,))
+            if not cursor.fetchone():
+                raise HTTPException(status_code=400, detail=f"Employee {payload.manager_id} not found.")
+        cursor.execute("UPDATE erp_categories SET manager_id = ? WHERE id = ?", (payload.manager_id, category_id))
+        conn.commit()
+        return {"status": "success", "message": f"Category {category_id} manager updated to {payload.manager_id}."}
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Category manager update error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+
 # --- LEVEL 1 ROUTES ---
 
 @api_router.post("/employees", status_code=201)
@@ -3939,6 +4000,7 @@ class SkuSupplierAssign(BaseModel):
 class BulkActuationPayload(BaseModel):
     po_ids: List[str] = Field(..., min_length=1)
     action: str = Field(..., description="APPROVE / HOLD / REJECT")
+    cfo_notes: Optional[str] = None
 
     @field_validator('action', mode='before')
     @classmethod
@@ -3961,20 +4023,51 @@ PROCUREMENT_RESTRICTED_ROLES = ["DM", "TECH"]
 
 
 def get_employee_cleared_skus(conn, employee_id: str) -> set:
-    """Return the set of sku_ids an employee has explicit clearance for."""
+    """
+    Return the union of an employee's explicit SKU clearances and every SKU in
+    the categories they manage. Managing a category grants access to all of its
+    SKUs (OR with explicit clearances).
+    """
     rows = conn.execute(
         "SELECT sku_id FROM erp_employee_sku_access WHERE employee_id = ?",
         (employee_id,)
     ).fetchall()
-    return {r["sku_id"] for r in rows}
+    cleared = {r["sku_id"] for r in rows}
+
+    managed_cats = [
+        r["id"] for r in conn.execute(
+            "SELECT id FROM erp_categories WHERE manager_id = ?", (employee_id,)
+        ).fetchall()
+    ]
+    if managed_cats:
+        placeholders = ",".join("?" * len(managed_cats))
+        for r in conn.execute(
+            f"SELECT sku_id FROM erp_skus WHERE category_id IN ({placeholders})",
+            managed_cats
+        ).fetchall():
+            cleared.add(r["sku_id"])
+
+    return cleared
 
 
 def verify_employee_sku_access(conn, employee_id: str, sku_id: str, role: str) -> bool:
     """
-    True if the role has unrestricted procurement clearance, or the employee
-    holds an explicit clearance row for this SKU.
+    True if the role has unrestricted procurement clearance, the employee
+    manages the SKU's category, or the employee holds an explicit clearance
+    row for this SKU.
     """
     if role in PROCUREMENT_GLOBAL_ROLES:
+        return True
+    row = conn.execute(
+        """
+        SELECT 1
+        FROM erp_skus s
+        JOIN erp_categories c ON s.category_id = c.id
+        WHERE s.sku_id = ? AND c.manager_id = ?
+        """,
+        (sku_id, employee_id)
+    ).fetchone()
+    if row is not None:
         return True
     row = conn.execute(
         "SELECT 1 FROM erp_employee_sku_access WHERE employee_id = ? AND sku_id = ?",
@@ -4187,7 +4280,15 @@ def get_inventory_alerts(jwt_payload: dict = Depends(verify_jwt_token)):
                     FROM erp_purchase_order_items i
                     JOIN erp_purchase_orders po ON po.po_id = i.po_id AND po.status = 'DRAFT'
                     WHERE i.sku_id = s.sku_id
-                    LIMIT 1) AS draft_po_id
+                    LIMIT 1) AS draft_po_id,
+                   (SELECT i.po_id
+                    FROM erp_purchase_order_items i
+                    JOIN erp_purchase_orders po ON po.po_id = i.po_id AND po.status IN ('PENDING_CFO', 'APPROVED', 'HOLD')
+                    WHERE i.sku_id = s.sku_id ORDER BY po.created_at DESC LIMIT 1) AS active_po_id,
+                   (SELECT po.status
+                    FROM erp_purchase_order_items i
+                    JOIN erp_purchase_orders po ON po.po_id = i.po_id AND po.status IN ('PENDING_CFO', 'APPROVED', 'HOLD')
+                    WHERE i.sku_id = s.sku_id ORDER BY po.created_at DESC LIMIT 1) AS active_po_status
             FROM erp_skus s
             WHERE s.quantity_on_hand <= s.reorder_threshold{scope_clause}
             ORDER BY (s.quantity_on_hand * 1.0) / NULLIF(s.reorder_threshold, 0) ASC, s.sku_id
@@ -4250,7 +4351,7 @@ def _hydrate_purchase_orders(conn, statuses: list):
         SELECT po.po_id, po.supplier_id, sup.name AS supplier_name, sup.email AS supplier_email,
                sup.phone AS supplier_phone, sup.address AS supplier_address,
                sup.default_lead_time_days, po.status, po.priority, po.eta_date, po.notes,
-               po.created_at, po.submitted_at, po.decided_at
+               po.cfo_notes, po.created_at, po.submitted_at, po.decided_at
         FROM erp_purchase_orders po
         LEFT JOIN erp_suppliers sup ON po.supplier_id = sup.supplier_id
         WHERE po.status IN ({placeholders})
@@ -4741,6 +4842,142 @@ def dispatch_po_email(po_id: str):
     except Exception as e:
         logger.error(f"[PO EMAIL] SMTP dispatch failed for {po_id}: {e}")
 
+# --- CSV Report Downloads ---
+
+def _csv_download_response(filename: str, header: list, rows: list) -> Response:
+    """Build an Excel-friendly CSV attachment (UTF-8 BOM so Excel detects encoding)."""
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(header)
+    for r in rows:
+        writer.writerow(r)
+    content = ("﻿" + buf.getvalue()).encode("utf-8")
+    return Response(
+        content=content,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@api_router.get("/reports/inventory/download")
+def report_inventory_csv(jwt_payload: dict = Depends(verify_jwt_token)):
+    """Inventory status CSV. Restricted DM/TECH see only their scoped SKUs;
+    HM/CFO/ADMIN see all (gating via resolve_procurement_scope)."""
+    conn = get_db_connection()
+    try:
+        role, cleared = resolve_procurement_scope(conn, jwt_payload)
+        scope_clause = ""
+        params = []
+        if cleared is not None:
+            cl = list(cleared)
+            scope_clause = f" WHERE s.sku_id IN ({','.join('?' * len(cl))})"
+            params = cl
+        rows = conn.execute(f"""
+            SELECT s.sku_id, s.nomenclature, c.name AS category, s.quantity_on_hand,
+                   s.reorder_threshold, s.min_order_qty, sup.name AS supplier
+            FROM erp_skus s
+            LEFT JOIN erp_categories c ON s.category_id = c.id
+            LEFT JOIN erp_suppliers sup ON s.supplier_id = sup.supplier_id
+            {scope_clause}
+            ORDER BY s.sku_id
+        """, params).fetchall()
+        data = [[r["sku_id"], r["nomenclature"], r["category"], r["quantity_on_hand"],
+                 r["reorder_threshold"], r["min_order_qty"], r["supplier"]] for r in rows]
+        return _csv_download_response(
+            "inventory_report.csv",
+            ["SKU", "Nomenclature", "Category", "On Hand", "Reorder Threshold", "Min Order Qty", "Supplier"],
+            data,
+        )
+    finally:
+        conn.close()
+
+
+_WO_REPORT_HEADER = ["MWO ID", "Status", "DM Urgency", "HM Priority", "Equipment",
+                     "Department", "Created By", "Assigned HM", "Assigned Tech",
+                     "Created At", "Completed At"]
+
+
+def _wo_report_rows(conn, where: str, params: list) -> list:
+    rows = conn.execute(f"""
+        SELECT w.mwo_id, w.status, w.dm_urgency, w.hm_priority, w.equipment_id,
+               e.department_id, w.created_by, w.assigned_hm_id, w.assigned_tech,
+               w.created_at, w.completed_at
+        FROM work_orders w
+        LEFT JOIN erp_equipment e ON w.equipment_id = e.equipment_id
+        {where}
+        ORDER BY w.created_at DESC, w.mwo_id DESC
+    """, params).fetchall()
+    return [[r["mwo_id"], r["status"], r["dm_urgency"], r["hm_priority"], r["equipment_id"],
+             r["department_id"], r["created_by"], r["assigned_hm_id"], r["assigned_tech"],
+             r["created_at"], r["completed_at"]] for r in rows]
+
+
+@api_router.get("/reports/dm-work-orders/download")
+def report_dm_work_orders_csv(jwt_payload: dict = Depends(verify_jwt_token)):
+    """Work orders for the DM's department. DM scoped to their department; admins see all."""
+    role = jwt_payload.get("role")
+    if role not in ["DM"] + SKU_ACCESS_ADMIN_ROLES:
+        raise HTTPException(status_code=403, detail="RBAC Violation: DM clearance required.")
+    conn = get_db_connection()
+    try:
+        where, params = "", []
+        if role == "DM":
+            dept_row = conn.execute(
+                "SELECT department_id FROM erp_employees WHERE id = ?", (jwt_payload.get("sub"),)
+            ).fetchone()
+            where = " WHERE e.department_id = ?"
+            params = [dept_row["department_id"] if dept_row else None]
+        data = _wo_report_rows(conn, where, params)
+        return _csv_download_response("dm_work_orders.csv", _WO_REPORT_HEADER, data)
+    finally:
+        conn.close()
+
+
+@api_router.get("/reports/hm-work-orders/download")
+def report_hm_work_orders_csv(jwt_payload: dict = Depends(verify_jwt_token)):
+    """Work orders received by the HM. HM scoped to their assigned orders; admins see all."""
+    role = jwt_payload.get("role")
+    if role not in ["HM"] + SKU_ACCESS_ADMIN_ROLES:
+        raise HTTPException(status_code=403, detail="RBAC Violation: HM clearance required.")
+    conn = get_db_connection()
+    try:
+        where, params = "", []
+        if role == "HM":
+            where = " WHERE w.assigned_hm_id = ?"
+            params = [jwt_payload.get("sub")]
+        data = _wo_report_rows(conn, where, params)
+        return _csv_download_response("hm_work_orders.csv", _WO_REPORT_HEADER, data)
+    finally:
+        conn.close()
+
+
+@api_router.get("/reports/cfo-procurement/download")
+def report_cfo_procurement_csv(jwt_payload: dict = Depends(verify_jwt_token)):
+    """Purchase-order list for the CFO. CFO/Admin only."""
+    if jwt_payload.get("role") not in CFO_ROLES:
+        raise HTTPException(status_code=403, detail="RBAC Violation: CFO clearance required.")
+    conn = get_db_connection()
+    try:
+        rows = conn.execute("""
+            SELECT po.po_id, po.status, po.priority, sup.name AS supplier, po.eta_date,
+                   po.created_at, po.submitted_at, po.decided_at,
+                   (SELECT ROUND(SUM(i.quantity * i.unit_cost), 2)
+                    FROM erp_purchase_order_items i WHERE i.po_id = po.po_id) AS total_cost
+            FROM erp_purchase_orders po
+            LEFT JOIN erp_suppliers sup ON po.supplier_id = sup.supplier_id
+            ORDER BY po.created_at DESC
+        """).fetchall()
+        data = [[r["po_id"], r["status"], r["priority"], r["supplier"], r["eta_date"],
+                 r["created_at"], r["submitted_at"], r["decided_at"], r["total_cost"]] for r in rows]
+        return _csv_download_response(
+            "cfo_procurement.csv",
+            ["PO ID", "Status", "Priority", "Supplier", "ETA", "Created At", "Submitted At", "Decided At", "Total Cost"],
+            data,
+        )
+    finally:
+        conn.close()
+
+
 # --- CFO Actuation Endpoints ---
 
 @api_router.get("/orders/approvals")
@@ -4781,8 +5018,8 @@ def actuate_orders_bulk(payload: BulkActuationPayload, background_tasks: Backgro
                 results.append({"po_id": po_id, "result": "ALREADY_HOLD"})
                 continue
             cursor.execute(
-                "UPDATE erp_purchase_orders SET status = ?, decided_at = ? WHERE po_id = ?",
-                (target_status, decided_at, po_id)
+                "UPDATE erp_purchase_orders SET status = ?, decided_at = ?, cfo_notes = COALESCE(?, cfo_notes) WHERE po_id = ?",
+                (target_status, decided_at, payload.cfo_notes, po_id)
             )
             results.append({"po_id": po_id, "result": target_status})
             if target_status == "APPROVED":

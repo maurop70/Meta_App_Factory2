@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
+import api from '../services/api';
 
 const TechMWODetailModal = ({ mwo, closeModal, executeAction, isActuating, isSyncPending, setConsumeMwoId }) => {
-  const [consumedSku, setConsumedSku] = useState('');
   const [manualLog, setManualLog] = useState('');
   const [error, setError] = useState('');
   const [showCompleteForm, setShowCompleteForm] = useState(false);
+  const [consumedParts, setConsumedParts] = useState([]);
 
   // Strict Actuation Lockout during local I/O / execution
   const isLocked = isActuating || isSyncPending;
@@ -18,6 +19,16 @@ const TechMWODetailModal = ({ mwo, closeModal, executeAction, isActuating, isSyn
     return () => document.removeEventListener('keydown', handleEscape);
   }, [closeModal, isLocked]);
 
+  // Load the read-only consumed-parts ledger for this MWO (mwo_consumed_parts).
+  useEffect(() => {
+    if (!mwo?.mwo_id) { setConsumedParts([]); return; }
+    let mounted = true;
+    api.get(`/mwo/${mwo.mwo_id}/consumed-parts`)
+      .then(res => { if (mounted) setConsumedParts(res.data?.data || []); })
+      .catch(() => { if (mounted) setConsumedParts([]); });
+    return () => { mounted = false; };
+  }, [mwo?.mwo_id]);
+
   if (!mwo) return null;
 
   const handleComplete = async (e) => {
@@ -28,7 +39,6 @@ const TechMWODetailModal = ({ mwo, closeModal, executeAction, isActuating, isSyn
     // The modal is locked (isActuating=true) while this awaits.
     // Once the ledger ingestion completes, the parent will automatically force a teardown.
     await executeAction(mwo.mwo_id, 'COMPLETE', {
-      consumed_sku: consumedSku.trim() || null,
       manual_log: manualLog.trim()
     });
   };
@@ -81,6 +91,18 @@ const TechMWODetailModal = ({ mwo, closeModal, executeAction, isActuating, isSyn
           <div><strong style={{ color: '#94a3b8' }}>Description:</strong><br/>{mwo.description}</div>
         </div>
 
+        {consumedParts.length > 0 && (
+          <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1.25rem', borderRadius: '8px', marginBottom: '2rem' }}>
+            <div style={{ color: '#94a3b8', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '0.75rem' }}>Consumed Parts</div>
+            {consumedParts.map((p, i) => (
+              <div key={p.part_id || i} style={{ display: 'flex', justifyContent: 'space-between', color: '#cbd5e1', fontSize: '0.9rem', padding: '0.35rem 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <span>{p.nomenclature || p.sku_id} <span style={{ color: '#64748b' }}>({p.part_id})</span></span>
+                <span style={{ color: '#94a3b8' }}>Qty {p.quantity_consumed}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
         {error && (
           <div style={{ padding: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '6px', color: '#ef4444', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
             {error}
@@ -117,10 +139,6 @@ const TechMWODetailModal = ({ mwo, closeModal, executeAction, isActuating, isSyn
           </div>
         ) : (
           <form onSubmit={handleComplete} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-            <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#94a3b8', fontSize: '0.85rem', fontWeight: 600 }}>Consumed SKU (Optional)</label>
-              <input type="text" value={consumedSku} onChange={(e) => setConsumedSku(e.target.value)} disabled={isLocked} style={{ width: '100%', padding: '0.75rem', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '6px', color: '#e2e8f0', outline: 'none', boxSizing: 'border-box' }} />
-            </div>
             <div>
               <label style={{ display: 'block', marginBottom: '0.5rem', color: '#94a3b8', fontSize: '0.85rem', fontWeight: 600 }}>Manual Resolution Log <span style={{ color: '#ef4444' }}>*</span></label>
               <textarea value={manualLog} onChange={(e) => setManualLog(e.target.value)} required rows="4" disabled={isLocked} style={{ width: '100%', padding: '0.75rem', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '6px', color: '#e2e8f0', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }} />

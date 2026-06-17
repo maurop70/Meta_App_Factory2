@@ -68,7 +68,8 @@ def init_tables():
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS erp_categories (
                 id   TEXT PRIMARY KEY,
-                name TEXT UNIQUE NOT NULL
+                name TEXT UNIQUE NOT NULL,
+                manager_id TEXT REFERENCES erp_employees(id)
             )
         ''')
         cursor.execute('''
@@ -155,6 +156,7 @@ def init_tables():
                 priority INTEGER DEFAULT 0,
                 eta_date TEXT,
                 notes TEXT,
+                cfo_notes TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 submitted_at TIMESTAMP,
                 decided_at TIMESTAMP
