@@ -117,13 +117,29 @@ const HODWorkspace = ({ highlightPoId = null, onHighlightConsumed = null }) => {
     }
   };
 
-  const submitToCfo = async (poId) => {
+  const submitToCfo = async (po) => {
+    const poId = po.po_id;
+    const hasUnsavedQty = po.items.some(item => dirtyQty[`${poId}|${item.sku_id}`] !== undefined);
+    const hasUnsavedMeta = dirtyMeta[poId] !== undefined;
+    if (hasUnsavedQty || hasUnsavedMeta) {
+      await persistDraft(po);
+    }
     try {
       await api.post('/orders/submit', { po_id: poId });
       flash('success', `${poId} routed to CFO approval queue.`);
       await fetchOrders();
     } catch (err) {
       flash('error', err.response?.data?.detail || 'Submission failed.');
+    }
+  };
+
+  const recallOrder = async (poId) => {
+    try {
+      await api.post(`/orders/${poId}/recall`);
+      flash('success', `${poId} recalled to Draft.`);
+      await fetchOrders();
+    } catch (err) {
+      flash('error', err.response?.data?.detail || 'Recall failed.');
     }
   };
 
@@ -325,7 +341,7 @@ const HODWorkspace = ({ highlightPoId = null, onHighlightConsumed = null }) => {
               Save Draft
             </button>
             {!restricted && (
-              <button className="hod-btn" onClick={() => submitToCfo(po.po_id)} style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.35)' }}>
+              <button className="hod-btn" onClick={() => submitToCfo(po)} style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.35)' }}>
                 Submit to CFO
               </button>
             )}
@@ -372,6 +388,10 @@ const HODWorkspace = ({ highlightPoId = null, onHighlightConsumed = null }) => {
                           Receive Shipment
                         </button>
                       )
+                    ) : po.status === 'PENDING_CFO' && !restricted ? (
+                      <button className="hod-btn" onClick={() => recallOrder(po.po_id)} style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#fbbf24', border: '1px solid rgba(245, 158, 11, 0.35)' }}>
+                        Recall
+                      </button>
                     ) : (
                       <span style={{ fontSize: '0.72rem', color: '#475569' }}>Awaiting CFO</span>
                     )}

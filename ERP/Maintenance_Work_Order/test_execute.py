@@ -10,8 +10,19 @@ db_path = os.path.join(os.path.dirname(__file__), 'data', 'maintenance_erp.db')
 def setup_db():
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
-    c.execute("INSERT OR IGNORE INTO work_orders (mwo_id, status, assigned_tech) VALUES ('TEST-MWO-01', 'ASSIGNED', 'TECH-001')")
-    c.execute("UPDATE work_orders SET status='ASSIGNED', assigned_tech='TECH-001' WHERE mwo_id='TEST-MWO-01'")
+    # Seed with a valid equipment_id and start_date so COMPLETE clears the
+    # terminal-state prerequisite guard (missing prerequisites [equipment_id]).
+    seed_start = time.strftime('%Y-%m-%dT%H:%M:%S')
+    c.execute(
+        "INSERT OR IGNORE INTO work_orders (mwo_id, status, assigned_tech, equipment_id, start_date) "
+        "VALUES ('TEST-MWO-01', 'ASSIGNED', 'TECH-001', 'EQ-ASSEMBLY-01', ?)",
+        (seed_start,)
+    )
+    c.execute(
+        "UPDATE work_orders SET status='ASSIGNED', assigned_tech='TECH-001', "
+        "equipment_id='EQ-ASSEMBLY-01', start_date=COALESCE(start_date, ?) WHERE mwo_id='TEST-MWO-01'",
+        (seed_start,)
+    )
     conn.commit()
     conn.close()
 

@@ -1608,22 +1608,25 @@ def archive_mwo_pdf_worker(mwo_id: str, resolution_notes: str, labor_hours: floa
         # 1. Explicit Data Extraction (Strict Enumeration)
         cursor.execute(
             """
-            SELECT w.mwo_id, w.status, w.assigned_tech, w.equipment_id, e.nomenclature as equipment_name, w.description
+            SELECT w.mwo_id, w.status, w.assigned_tech, w.equipment_id, e.nomenclature as equipment_name, w.description, w.completed_at
             FROM work_orders w
             LEFT JOIN erp_equipment e ON w.equipment_id = e.equipment_id
             WHERE w.mwo_id = ?
-            """, 
+            """,
             (mwo_id,)
         )
         row = cursor.fetchone()
         if not row:
             logger.error(f"[WORKER FATAL] MWO {mwo_id} not found during archival extraction.")
             return
-            
+
         mwo_data = dict(row)
         mwo_data["resolution_notes"] = resolution_notes
         mwo_data["labor_hours"] = labor_hours
-        mwo_data["completed_at"] = current_time
+        # Preserve original completion timestamp if already recorded (e.g. PDF
+        # recovery for previously-completed MWOs); only stamp now for fresh seals.
+        orig_completed_at = mwo_data.get("completed_at")
+        mwo_data["completed_at"] = orig_completed_at if orig_completed_at else current_time
         
         if not mwo_data:
             logger.error(f"[WORKER FATAL] MWO {mwo_id} not found during archival extraction.")
@@ -1740,10 +1743,10 @@ def archive_mwo_pdf_worker(mwo_id: str, resolution_notes: str, labor_hours: floa
         cursor.execute(
             """
             UPDATE work_orders 
-            SET archival_pdf_path = ?, status = 'COMPLETED', completed_at = ?, resolution_notes = ?, labor_hours = ? 
+            SET archival_pdf_path = ?, status = 'COMPLETED', completed_at = ?, resolution_notes = ?, labor_hours = ?
             WHERE mwo_id = ?
             """,
-            (file_path, current_time, resolution_notes, labor_hours, mwo_id)
+            (file_path, mwo_data["completed_at"], resolution_notes, labor_hours, mwo_id)
         )
         conn.commit()
         logger.info(f"[WORKER SUCCESS] Archival cycle finalized for MWO: {mwo_id}")
@@ -4779,6 +4782,37 @@ def submit_draft_order(payload: POSubmitPayload, jwt_payload: dict = Depends(ver
         conn.rollback()
         logger.error(f"PO submission error: {e}")
         raise HTTPException(status_code=500, detail="PO submission failed.")
+    finally:
+        conn.close()
+
+@api_router.post("/orders/{po_id}/recall")
+def recall_submitted_order(po_id: str, jwt_payload: dict = Depends(verify_jwt_token)):
+    if jwt_payload.get("role") not in HOD_ROLES:
+        raise HTTPException(status_code=403, detail="RBAC Violation: HOD clearance required.")
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("BEGIN IMMEDIATE TRANSACTION")
+        cursor.execute("SELECT status FROM erp_purchase_orders WHERE po_id = ?", (po_id,))
+        po = cursor.fetchone()
+        if not po:
+            raise HTTPException(status_code=404, detail="Purchase order not found.")
+        if po["status"] != "PENDING_CFO":
+            raise HTTPException(status_code=400, detail=f"State Violation: Only PENDING_CFO orders can be recalled (current: {po['status']}).")
+        cursor.execute(
+            "UPDATE erp_purchase_orders SET status = 'DRAFT', submitted_at = NULL WHERE po_id = ?",
+            (po_id,)
+        )
+        conn.commit()
+        emit_inventory_event("po_recalled", {"po_id": po_id, "recalled_by": jwt_payload.get("sub")})
+        return {"status": "success", "detail": f"{po_id} successfully recalled to DRAFT."}
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"PO recall error: {e}")
+        raise HTTPException(status_code=500, detail="PO recall failed.")
     finally:
         conn.close()
 

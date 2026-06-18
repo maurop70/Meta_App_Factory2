@@ -82,7 +82,13 @@ const HMDashboard = () => {
     setCreatingDraftFor(alert.sku_id);
     setDraftError(null);
     try {
-      const quantity = Math.max(1, alert.min_order_qty || 1);
+      // Mirror the backend reorder heuristic (maintenance_backend.py): target
+      // twice the threshold less current stock, floored at 1 and the SKU MOQ.
+      const threshold = alert.reorder_threshold || 5;
+      const onHand = alert.quantity_on_hand || 0;
+      const moq = alert.min_order_qty || 1;
+      const calculatedQty = Math.max((threshold * 2) - onHand, 1);
+      const quantity = Math.max(calculatedQty, moq);
       const response = await api.post('/orders/drafts/add-item', {
         sku_id: alert.sku_id,
         quantity,
