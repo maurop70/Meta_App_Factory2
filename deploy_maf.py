@@ -225,9 +225,21 @@ echo "Extraction complete"
             "Installing Python dependencies",
         )
 
+        # ── 6a. Install master-architect systemd unit if missing ──
+        _remote(ssh, f"""
+if [ ! -f /etc/systemd/system/master-architect.service ]; then
+  cp {REMOTE_DIR}/systemd_units/master-architect.service /etc/systemd/system/master-architect.service
+  systemctl daemon-reload
+  systemctl enable master-architect
+  echo "master-architect unit installed and enabled"
+else
+  echo "master-architect unit already present"
+fi
+""", "Ensuring master-architect systemd unit is installed", allow_fail=True)
+
         # ── 6. Restart services ────────────────────────────────
-        _remote(ssh, "systemctl restart core-engine phantom-qa",
-                "Restarting core-engine and phantom-qa")
+        _remote(ssh, "systemctl restart core-engine phantom-qa master-architect",
+                "Restarting core-engine, phantom-qa, and master-architect")
 
         # ── 7. Post-restart verify ─────────────────────────────
         print("\n[4/4] Waiting 5s for services to settle...")
@@ -235,7 +247,7 @@ echo "Extraction complete"
 
         _remote(
             ssh,
-            "systemctl status core-engine phantom-qa --no-pager",
+            "systemctl status core-engine phantom-qa master-architect --no-pager",
             "Post-restart service status",
             allow_fail=True,
         )

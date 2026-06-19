@@ -1,9 +1,59 @@
+import os
+import sys
 import json
 import logging
 from model_router import route
 from cfo_excel_architect import get_cfo_architect
 
 logger = logging.getLogger("CFOAgent")
+
+_FACTORY_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def _build_cfo_bottom_up(cost_inputs: dict, vault_dir: str = None) -> dict:
+    """Run the deterministic bottom-up model (Core_Framework.cost_accountancy) from
+    LLM-extracted line-item inputs. Produces the structures the Critic gate mandates:
+    cogs_line_items, cash_flow_5yr, capex_schedule, and an exported .xlsx path.
+    Returns {} if inputs are insufficient (the gate then correctly rejects)."""
+    if not cost_inputs or not cost_inputs.get("raw_materials"):
+        return {}
+    try:
+        _cf_dir = os.path.join(_FACTORY_DIR, "Core_Framework")
+        if _cf_dir not in sys.path:
+            sys.path.insert(0, _cf_dir)
+        import cost_accountancy as ca
+        inp = ca.CostInputs(
+            product_name=cost_inputs.get("product_name", "Venture Product"),
+            units_per_month=int(cost_inputs.get("units_per_month", 0) or 0),
+            raw_materials=[ca.RawMaterial(r.get("item", ""), float(r.get("qty_per_unit", 0) or 0),
+                                          float(r.get("unit_cost", 0) or 0))
+                           for r in cost_inputs.get("raw_materials", [])],
+            line_time_minutes_per_unit=float(cost_inputs.get("line_time_minutes_per_unit", 0) or 0),
+            line_cost_per_minute=float(cost_inputs.get("line_cost_per_minute", 0) or 0),
+            labor_cost_per_unit=float(cost_inputs.get("labor_cost_per_unit", 0) or 0),
+            packaging_cost_per_unit=float(cost_inputs.get("packaging_cost_per_unit", 0) or 0),
+            logistics_cost_per_unit=float(cost_inputs.get("logistics_cost_per_unit", 0) or 0),
+            retail_price_per_unit=float(cost_inputs.get("retail_price_per_unit", 0) or 0),
+            monthly_fixed_opex=float(cost_inputs.get("monthly_fixed_opex", 0) or 0),
+            capex_items=[ca.CapExItem(c.get("item", ""), float(c.get("cost", 0) or 0),
+                                      float(c.get("useful_life_years", 1) or 1))
+                         for c in cost_inputs.get("capex_items", [])],
+            annual_growth_rate=float(cost_inputs.get("annual_growth_rate", 0) or 0),
+        )
+        vault_dir = vault_dir or os.path.join(_FACTORY_DIR, "vault", "venture")
+        model = ca.build_cfo_model(inp, xlsx_dir=vault_dir)
+        return {
+            "cogs_line_items": model["cogs_line_items"],
+            "cogs_per_unit": model["cogs_per_unit"],
+            "gross_margin_pct": model["gross_margin_pct"],
+            "capex_schedule": model["capex_schedule"],
+            "cash_flow_5yr": model["cash_flow_5yr"],
+            "xlsx_path": model.get("xlsx_path"),
+        }
+    except Exception as e:
+        logger.error(f"CFO bottom-up model build failed: {e}")
+        return {}
+
 
 class CFOAgent:
     def synthesize(self, project_id: str, cmo_data: dict, cto_data: dict, market_pulse: dict = None) -> dict:
@@ -25,6 +75,11 @@ Synthesize the data and provide reasonable estimations for the following foundat
 - projected_monthly_sales: The estimated number of units sold per month at launch.
 - risk_multiplier_1_to_2: A float between 1.0 (low risk) and 2.0 (high risk) scaling the total portfolio cost based on technical debt and market sentiment.
 
+CPG/VENTURE STRUCTURAL MANDATE (Critic-enforced — NON-NEGOTIABLE):
+- Speculative NPV/ROI projections built on raw revenue assumptions are STRICTLY PROHIBITED and will be rejected.
+- Lump-sum cost estimates without line-item breakdowns are STRICTLY PROHIBITED and will be rejected.
+- You MUST provide a granular bottom-up "cost_inputs" object so the deterministic engine can build the COGS line items, a 5-year cash-flow projection, and an amortized CapEx schedule. Provide your best line-item figures; if a value is unknown, give a clearly-reasoned estimate rather than a lump sum.
+
 You must ALSO provide two substantive CFO narrative sections (3+ sentences each):
 - financial_analysis: detailed pricing-strategy commentary and the break-even rationale (why this price, margin structure, what drives the break-even point).
 - investment_recommendations: recommendations on funding (bootstrap vs raise), capex priorities, and cash-management / runway guidance.
@@ -36,7 +91,21 @@ Return ONLY valid JSON with these EXACT keys:
     "projected_monthly_sales": 0,
     "risk_multiplier_1_to_2": 1.0,
     "financial_analysis": "",
-    "investment_recommendations": ""
+    "investment_recommendations": "",
+    "cost_inputs": {{
+        "product_name": "",
+        "units_per_month": 0,
+        "raw_materials": [{{"item": "", "qty_per_unit": 0.0, "unit_cost": 0.0}}],
+        "line_time_minutes_per_unit": 0.0,
+        "line_cost_per_minute": 0.0,
+        "labor_cost_per_unit": 0.0,
+        "packaging_cost_per_unit": 0.0,
+        "logistics_cost_per_unit": 0.0,
+        "retail_price_per_unit": 0.0,
+        "monthly_fixed_opex": 0.0,
+        "capex_items": [{{"item": "", "cost": 0.0, "useful_life_years": 0.0}}],
+        "annual_growth_rate": 0.0
+    }}
 }}
 Do NOT wrap the JSON in Markdown block formatting. Output raw JSON only.
 """
@@ -65,4 +134,9 @@ Do NOT wrap the JSON in Markdown block formatting. Output raw JSON only.
         if isinstance(result, dict):
             result.setdefault("financial_analysis", metrics.get("financial_analysis", ""))
             result.setdefault("investment_recommendations", metrics.get("investment_recommendations", ""))
+            # Attach the deterministic bottom-up structures the Critic gate mandates
+            # (COGS line items, 5-yr cash flow, CapEx schedule, exported .xlsx).
+            bottom_up = _build_cfo_bottom_up(metrics.get("cost_inputs", {}))
+            if bottom_up:
+                result.update(bottom_up)
         return result

@@ -1,0 +1,14 @@
+[Unit]
+Description=Meta App Factory Master Architect Elite Logic (FastAPI)
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/meta_app_factory/backend/Master_Architect_Elite_Logic
+Environment="PATH=/var/www/meta_app_factory/backend/venv/bin"
+ExecStart=/var/www/meta_app_factory/backend/venv/bin/uvicorn server:app --host 127.0.0.1 --port 5050
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

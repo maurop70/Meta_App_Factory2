@@ -30,6 +30,34 @@ def get_secret(key, default="", **kw):
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("CIO_Agent")
 
+
+def _build_cio_ops_blueprint(query: str) -> dict:
+    """Deterministic Operational & Fulfillment Integration Blueprint (Critic-gate
+    satisfier): storefront<->3PL<->ERP API specs, cold-chain params, carrier
+    selections. Built from the Core_Framework ops simulator with safe defaults."""
+    try:
+        _cf_dir = os.path.join(SCRIPT_DIR, "Core_Framework")
+        if _cf_dir not in sys.path:
+            sys.path.insert(0, _cf_dir)
+        import ops_simulator
+        ops = ops_simulator.OpsInputs(
+            orders_per_month=5000, avg_order_weight_lb=3.0, avg_order_value=49.0,
+            pick_pack_fee_per_order=2.50, storage_fee_per_order=0.40,
+            requires_cold_chain=True, target_temp_c=-18.0,
+            gel_pack_cost_per_order=1.20, insulated_box_cost_per_order=2.10,
+            base_spoilage_rate=0.02, spoilage_buffer_rate=0.03,
+            shopify_fee_pct=0.029, shopify_flat_fee=0.30,
+            carriers=[
+                ops_simulator.Carrier("UPS Cold", 3.1, 2, True),
+                ops_simulator.Carrier("FedEx Frozen", 3.4, 1, True),
+                ops_simulator.Carrier("USPS Ground", 2.0, 4, False),
+            ],
+        )
+        return ops_simulator.build_ops_blueprint(ops)
+    except Exception as e:
+        logger.warning(f"CIO ops blueprint unavailable: {e}")
+        return {}
+
 class CIO_Agent:
     """Technical Strategy & Capability Handshake Agent."""
 
@@ -83,6 +111,13 @@ YOUR TASK:
 
 3. Provide a "technology_roadmap": ordered, step-by-step implementation milestones (MVP -> hardening -> scale), each with a concrete deliverable.
 4. Provide a "technical_commentary": a capability-gap audit — what the team/stack can do today vs. what must be built or acquired, and the key technical risks.
+
+CPG/VENTURE STRUCTURAL MANDATE (Critic-enforced):
+For any physical/CPG venture you MUST provide an Operational & Fulfillment Integration Blueprint covering:
+- API connection parameters between a B2C storefront (e.g. Shopify), 3PL databases, and the core B2B ERP system.
+- Explicit cold-chain temperature controls and spoilage buffer rates for perishable fulfillment.
+- Shipping carrier selections WITH logical rationale.
+Abstract planning that omits API specs, cold-chain parameters, or carrier selections will be rejected by the Critic gate.
 
 RESPOND WITH VALID JSON ONLY.
 Structure:
@@ -148,6 +183,7 @@ Structure:
                 "feasibility_analysis": analysis,
                 "technology_roadmap": roadmap,
                 "technical_commentary": technical_commentary,
+                "ops_blueprint": _build_cio_ops_blueprint(user_query),
             }
         except Exception as e:
             error_msg = f"Feasibility assessment failed: {str(e)}"

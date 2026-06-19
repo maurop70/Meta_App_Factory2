@@ -665,6 +665,20 @@ to disk (never in-memory) so any Uvicorn worker can serve the SSE stream.
 - These docs feed the **Ecosystem Guide** chat (`factory_stream.py` → `_load_ecosystem_docs`);
   AGENTS.md is ingested in full, so keep it current — stale docs = wrong Guide answers
 
+## Venture Analysis Workbench & C-Suite structural gate (added 2026-06-19)
+
+MAF V3 is pivoting from conversational ideation to a **data-grounded Venture Analysis Workbench**. Deterministic, bottom-up engines replace speculative C-Suite assumptions, enforced by a structural Critic gate.
+
+- **Disciplinary rule files** (NON-OPTIONAL, must confirm `"C-Suite Disciplinary Rules: ACTIVE"`): global `~/.gemini/config/AGENTS.md` + workspace `Meta_App_Factory/.agents/AGENTS.md`. They mandate bottom-up CFO/CMO/CIO outputs (no speculation, no lump sums) and a Critic sign-off before delegation.
+- **`Core_Framework/` deterministic engines** (NB: the dir is capitalized `Core_Framework`; consumed via `sys.path.insert(...,"Core_Framework")` + bare module import, per `war_room_orchestrator.py` — do **not** `import core_framework`, the FS is case-insensitive on Windows but Linux prod is not):
+  - `cost_accountancy.py` (CFO): line-item COGS, 5-yr cash flow, amortized CapEx, `.xlsx` export. Deterministic — flat growth ⇒ identical YoY revenue.
+  - `competitor_pipeline.py` (CMO): ≥3-competitor matrix (MSRP, $/oz, ingredients, flaws); `map_competitors()` (async, live research) and `build_matrix()` (sync, deterministic).
+  - `ops_simulator.py` (CIO): fulfillment/cold-chain model with **spoilage, carrier, Shopify overhead as separate line items**; `build_ops_blueprint()` emits API specs + cold-chain + carrier rationale.
+  - `syndicated_data.py`: SPINS/Nielsen ingestion (live if `SPINS_API_KEY`/`NIELSEN_API_KEY`, else labelled sandbox sample) + TAM/SAM/SOM validation.
+- **Critic gate** `shared_modules/csuite_critic_gate.py`: deterministic, LLM-free. `critic_gate(agent, output)` rejects CFO (missing COGS items / 5-yr cash flow / CapEx / xlsx), CMO (<3 competitors or non-itemized budget), CIO (missing API specs / cold-chain / carriers). `critic_signoff([...])` blocks delegation until all pass.
+- **Agents wired** to the engines so they emit gate structures even on the deterministic fallback path: `cmo_agent.CMOAgent.run` → `competitor_matrix` + line-item `marketing_budget`; `cio_agent._build_cio_ops_blueprint` → `ops_blueprint`; `cfo_agent._build_cfo_bottom_up` → COGS/cash-flow/CapEx/xlsx from LLM-extracted `cost_inputs`. All three agent prompts carry the CPG structural mandate.
+- **Routing bridge**: `api.py` (:5000) now proxies `POST /api/challenge/evaluate` + `/api/challenge/delegate` to the Master Architect on `:5050` (they only exist there); `systemd_units/master-architect.service` + `deploy_maf.py` install/restart that daemon in prod.
+
 ### When document ingestion / supported formats change:
 - Update `DocumentParserService.SUPPORTED_EXTENSIONS` + add a `_extract_<fmt>` handler (single source of extraction)
 - Keep the ingest router allow-list (`backend/app/routers/ingest.py`) in sync with the parser

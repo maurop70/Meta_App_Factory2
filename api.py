@@ -6350,6 +6350,28 @@ def download_eos_document(filename: str):
         return FileResponse(safe_path)
     return JSONResponse({"error": "File not found"}, status_code=404)
 
+
+# ── Socratic Challenge bridge routes ─────────────────────────
+# The challenge endpoints live on the Master Architect server (:5050). The
+# Builder Chat frontend talks to this API (:5000), so proxy them through here
+# to avoid 404s when the UI is served behind api.py.
+@app.post("/api/challenge/evaluate")
+async def challenge_evaluate_bridge(req: dict):
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.post("http://127.0.0.1:5050/api/challenge/evaluate", json=req)
+        if resp.status_code != 200:
+            raise HTTPException(status_code=resp.status_code, detail=resp.text)
+        return resp.json()
+
+
+@app.post("/api/challenge/delegate")
+async def challenge_delegate_bridge(req: dict):
+    async with httpx.AsyncClient(timeout=90.0) as client:
+        resp = await client.post("http://127.0.0.1:5050/api/challenge/delegate", json=req)
+        if resp.status_code != 200:
+            raise HTTPException(status_code=resp.status_code, detail=resp.text)
+        return resp.json()
+
 from fastapi.responses import RedirectResponse
 
 @app.get("/resonance")
