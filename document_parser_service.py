@@ -60,7 +60,7 @@ logger = logging.getLogger("DocumentParser")
 CATEGORIES = ["Legal", "Finance", "Ops", "Medical", "Technical", "Other"]
 
 # ── Supported file types ──────────────────────────────────
-SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".doc", ".txt", ".csv", ".md"}
+SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".doc", ".txt", ".csv", ".md", ".pptx"}
 
 
 # ── Pydantic Validation Gate (Rule 0: Critic Gate) ────────
@@ -223,6 +223,8 @@ class DocumentParserService:
                 return self._extract_pdf(file_path)
             elif ext in (".docx", ".doc"):
                 return self._extract_docx(file_path)
+            elif ext == ".pptx":
+                return self._extract_pptx(file_path)
             elif ext == ".csv":
                 return self._extract_csv(file_path)
             elif ext in (".txt", ".md"):
@@ -260,6 +262,35 @@ class DocumentParserService:
             return "\n\n".join(p.text for p in doc.paragraphs if p.text.strip())
         except ImportError:
             return "ERROR: Install python-docx for DOCX support (pip install python-docx)"
+
+    def _extract_pptx(self, path: str) -> str:
+        try:
+            from pptx import Presentation
+            prs = Presentation(path)
+            slides_text = []
+            for idx, slide in enumerate(prs.slides, start=1):
+                shape_texts = []
+                for shape in slide.shapes:
+                    if shape.has_text_frame:
+                        for para in shape.text_frame.paragraphs:
+                            line = "".join(run.text for run in para.runs).strip()
+                            if line:
+                                shape_texts.append(line)
+                    if shape.has_table:
+                        for row in shape.table.rows:
+                            cells = [cell.text.strip() for cell in row.cells]
+                            if any(cells):
+                                shape_texts.append(" | ".join(cells))
+                # Speaker notes often carry the substance of a pitch deck
+                if slide.has_notes_slide and slide.notes_slide.notes_text_frame:
+                    notes = slide.notes_slide.notes_text_frame.text.strip()
+                    if notes:
+                        shape_texts.append(f"[Speaker Notes] {notes}")
+                if shape_texts:
+                    slides_text.append(f"--- Slide {idx} ---\n" + "\n".join(shape_texts))
+            return "\n\n".join(slides_text) if slides_text else "ERROR: No text found in PPTX"
+        except ImportError:
+            return "ERROR: Install python-pptx for PPTX support (pip install python-pptx)"
 
     def _extract_csv(self, path: str) -> str:
         import csv

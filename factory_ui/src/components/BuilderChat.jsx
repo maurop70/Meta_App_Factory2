@@ -68,6 +68,9 @@ export default function BuilderChat() {
   const [socraticChallenge, setSocraticChallenge] = useState(null);
   const [evidenceText, setEvidenceText] = useState('');
   const [isSocraticSubmitting, setIsSocraticSubmitting] = useState(false);
+  const [isSocraticMinimized, setIsSocraticMinimized] = useState(false);
+  const [isCSuiteDrafted, setIsCSuiteDrafted] = useState(false);
+  const [isDelegating, setIsDelegating] = useState(false);
   const [lastPrompt, setLastPrompt] = useState(() => {
     try {
       return sessionStorage.getItem('ma_last_prompt') || "";
@@ -404,6 +407,32 @@ export default function BuilderChat() {
     }
   };
 
+  // Delegate the Critic's challenge to the C-Suite: the swarm runs live research
+  // and drafts answers directly into the evidence box for the user to edit.
+  const delegateToCSuite = async (challengeId) => {
+    setIsDelegating(true);
+    try {
+      const res = await fetch('/api/challenge/delegate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ challenge_id: challengeId }),
+      });
+      const data = await res.json();
+      if (res.ok && data.draft) {
+        setEvidenceText(data.draft);
+        setIsCSuiteDrafted(true);
+      } else {
+        console.error('[C-SUITE DELEGATION] Failed', data);
+        setChatHistory(prev => [...prev, { role: 'system', content: `[C-SUITE DELEGATION] ${data.detail || 'Draft generation failed.'}`, document_ids: [] }]);
+      }
+    } catch (e) {
+      console.error('[C-SUITE DELEGATION ERROR]', e);
+      setChatHistory(prev => [...prev, { role: 'system', content: `[C-SUITE DELEGATION ERROR] ${e.message}`, document_ids: [] }]);
+    } finally {
+      setIsDelegating(false);
+    }
+  };
+
   useEffect(() => {
     try {
       sessionStorage.setItem('ma_chat_history', JSON.stringify(chatHistory));
@@ -651,6 +680,9 @@ export default function BuilderChat() {
                 }
               } else if (parsed.type === 'socratic_pause') {
                 setSocraticChallenge(parsed);
+                setIsSocraticMinimized(false);
+                setIsCSuiteDrafted(false);
+                setEvidenceText('');
               } else if (parsed.type === 'build_complete') {
                 setChatHistory(prev => [...prev, {
                   role: 'system',
@@ -842,6 +874,9 @@ export default function BuilderChat() {
                 });
               } else if (parsed.type === 'socratic_pause') {
                 setSocraticChallenge(parsed);
+                setIsSocraticMinimized(false);
+                setIsCSuiteDrafted(false);
+                setEvidenceText('');
               } else if (parsed.type === 'build_complete') {
                 setChatHistory(prev => [...prev, {
                   role: 'system',
@@ -1181,19 +1216,50 @@ export default function BuilderChat() {
         <div ref={terminalEndRef} />
       </div>
 
+      {/* Socratic Challenge — minimized floating badge */}
+      {socraticChallenge && isSocraticMinimized && createPortal(
+        <div className="fixed bottom-4 right-4 z-[99999] w-[320px] bg-slate-950 border border-orange-500/50 rounded-xl shadow-2xl p-4 flex flex-col space-y-2">
+          <div className="flex justify-between items-center">
+            <span className="text-xs font-mono font-bold text-orange-400 tracking-wider">
+              🏛️ CHALLENGE: {socraticChallenge.challenge_id}
+            </span>
+            <button
+              type="button"
+              onClick={() => setIsSocraticMinimized(false)}
+              className="text-[10px] font-mono px-2 py-1 bg-orange-950 text-orange-300 border border-orange-700 rounded uppercase font-bold hover:bg-orange-900"
+            >
+              ⤢ Maximize
+            </button>
+          </div>
+          <p className="text-[11px] text-slate-400 font-mono leading-relaxed">
+            {(socraticChallenge.weaknesses || []).length} unresolved objection(s). Review the conversation, then maximize to respond.
+          </p>
+        </div>,
+        document.body
+      )}
+
       {/* Socratic Challenge Form Lock */}
-      {socraticChallenge && createPortal(
+      {socraticChallenge && !isSocraticMinimized && createPortal(
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[99999] flex items-center justify-center p-4" style={{ pointerEvents: 'auto' }}>
           <div className="socratic-panel p-6 bg-slate-950 border border-orange-500/50 rounded-xl shadow-2xl w-full max-w-[500px] backdrop-blur-lg flex flex-col space-y-4 m-0">
             <div className="flex justify-between items-center border-b border-orange-500/30 pb-2">
               <span className="text-sm font-mono font-bold text-orange-400 tracking-wider">
                 🏛️ ADVERSARIAL CHALLENGE: {socraticChallenge.challenge_id}
               </span>
-              <span className="text-[10px] font-mono px-2 py-1 bg-red-950 text-red-300 border border-red-800 rounded uppercase font-bold animate-pulse">
-                Input Locked
-              </span>
+              <div className="flex items-center space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setIsSocraticMinimized(true)}
+                  className="text-[10px] font-mono px-2 py-1 bg-slate-800 text-slate-300 border border-slate-600 rounded uppercase font-bold hover:bg-slate-700"
+                >
+                  ⤡ Minimize
+                </button>
+                <span className="text-[10px] font-mono px-2 py-1 bg-red-950 text-red-300 border border-red-800 rounded uppercase font-bold animate-pulse">
+                  Input Locked
+                </span>
+              </div>
             </div>
-            
+
             <div className="text-xs text-slate-300 font-mono space-y-2">
               {socraticChallenge.critic_score !== undefined && (
                 <div className="px-3 py-2 bg-red-950/60 border border-red-700/50 rounded text-[11px] font-bold text-red-300 font-mono">
@@ -1221,10 +1287,15 @@ export default function BuilderChat() {
             </div>
 
             <div className="flex flex-col space-y-2">
+              {isCSuiteDrafted && (
+                <div className="px-3 py-2 bg-blue-950/60 border border-blue-600/50 rounded text-[11px] font-mono text-blue-300">
+                  🤖 Drafted by C-Suite Swarm — Click to edit or append your own answer.
+                </div>
+              )}
               <textarea
                 value={evidenceText}
                 onChange={(e) => setEvidenceText(e.target.value)}
-                placeholder="___Provide data-driven evidence (e.g. pilot conversions, TAM study, benchmark statistics)___"
+                placeholder={isDelegating ? "___C-Suite swarm is researching and drafting your answer..." : "___Provide data-driven evidence (e.g. pilot conversions, TAM study, benchmark statistics)___"}
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-xs font-mono text-slate-200 focus:border-cyan-500 outline-none"
                 rows={3}
               />
@@ -1232,15 +1303,23 @@ export default function BuilderChat() {
                 <button
                   type="button"
                   onClick={() => submitSocraticEvidence(challenge.id, evidenceText)}
-                  disabled={isSocraticSubmitting || !evidenceText.trim()}
+                  disabled={isSocraticSubmitting || isDelegating || !evidenceText.trim()}
                   className="flex-1 px-4 py-2 bg-emerald-800 hover:bg-emerald-700 text-xs font-mono font-bold text-slate-100 rounded-lg border border-emerald-600 transition-colors"
                 >
                   {isSocraticSubmitting ? 'Evaluating...' : 'Submit Evidence'}
                 </button>
                 <button
                   type="button"
+                  onClick={() => delegateToCSuite(challenge.id)}
+                  disabled={isSocraticSubmitting || isDelegating}
+                  className="px-4 py-2 bg-blue-800 hover:bg-blue-700 text-xs font-mono font-bold text-blue-100 rounded-lg border border-blue-600 transition-colors"
+                >
+                  {isDelegating ? 'Drafting...' : '🤖 Delegate to C-Suite'}
+                </button>
+                <button
+                  type="button"
                   onClick={() => submitSocraticOverride(challenge.id)}
-                  disabled={isSocraticSubmitting}
+                  disabled={isSocraticSubmitting || isDelegating}
                   className="px-4 py-2 bg-rose-950 hover:bg-rose-900 text-xs font-mono font-bold text-rose-400 rounded-lg border border-rose-800 transition-colors"
                 >
                   Hard Override

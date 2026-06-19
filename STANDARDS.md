@@ -34,3 +34,11 @@ Regression suites must be deterministic and offline-capable. They MUST NOT depen
 - Heavyweight or environment-dependent checks (real browsers, dev-server boots, network) belong in a **gated** stage (e.g. `RUN_FULLSTACK_E2E=1`) that is skipped by default, so the always-on suite stays fast and hermetic.
 - New features get **new** suites — never mutate the assertions/counts of an existing suite.
 - Reference implementation: `Master_Architect_Elite_Logic/test_fullstack_healing.py`.
+
+## 6. Server-Side Document Ingestion (MANDATORY)
+Uploaded documents (PDF / DOCX / PPTX / CSV / …) MUST be turned into clean text **server-side** before reaching any LLM. Reading a binary file as raw UTF-8 (`open(path, "r", encoding="utf-8")`) feeds binary noise to the model and produces generic, document-blind output.
+
+- Use the single shared parser, `document_parser_service.DocumentParserService`, for all extraction. New formats are added there (extension in `SUPPORTED_EXTENSIONS` + a `_extract_<fmt>` handler), never reimplemented per call site.
+- Gate on capability before parsing: `parser.is_supported(path)` → `parser._extract_text(path, ext)`; treat an `"ERROR:"`-prefixed return as a failure and fall back deliberately (raw read, or staging an image to the multimodal API).
+- Only **images** belong on the Google File API (`genai.upload_file`). Text-bearing binaries must be inlined as extracted text so that sub-agents without File-API access (CMO/CFO/CIO) actually see the content.
+- Keep the upload allow-lists in sync: a format accepted by an ingest router (`backend/app/routers/ingest.py`) must be supported by the parser.

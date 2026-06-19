@@ -40,6 +40,13 @@ class CMOGeminiOutput(BaseModel):
     public_sentiment_score: float
     summary: str
     sources: list[str] = []
+    # ── Extended business sections (defaulted so a partial model response
+    #    doesn't nuke the whole analysis into fallback) ──
+    market_analysis: str = ""        # TAM/SAM/SOM sizing and competitor gaps
+    market_strategy: str = ""        # Marketing channels and positioning strategy
+    strategy_rationale: str = ""     # Why this strategy is the best fit
+    concept_recommendations: str = ""  # Specific improvements for the concept
+    alternative_concepts: str = ""   # Better pivot ideas if the concept has major risks
 
 
 FIRECRAWL_KEY = os.getenv("FIRECRAWL_API_KEY", "")
@@ -257,8 +264,15 @@ Based strictly on what the search results show, return a JSON object:
     "trend_velocity": <float 1.0-10.0 based on actual search signals>,
     "public_sentiment_score": <float -100.0 to 100.0 based on actual signals>,
     "summary": "<CMO synthesis — 2-3 sentences citing actual search findings>",
-    "sources": ["<article title or domain 1>", "<article title or domain 2>", ...]
+    "sources": ["<article title or domain 1>", "<article title or domain 2>", ...],
+    "market_analysis": "<TAM/SAM/SOM sizing and the specific gaps left open by competitors, grounded in the search results>",
+    "market_strategy": "<concrete go-to-market: channels, positioning, ICP, and the launch wedge>",
+    "strategy_rationale": "<why this strategy beats the alternatives for THIS concept, citing the market signals>",
+    "concept_recommendations": "<specific, actionable improvements to strengthen the user's concept>",
+    "alternative_concepts": "<if the concept carries structural risk, 1-2 stronger pivot ideas; otherwise state why the current concept holds>"
 }}
+
+The five business sections (market_analysis, market_strategy, strategy_rationale, concept_recommendations, alternative_concepts) are MANDATORY and must be substantive (3+ sentences each), grounded in the live search results — never generic boilerplate.
 
 Scoring guide:
 - trend_velocity > 7 only if results show explicit explosive growth signals
@@ -296,6 +310,11 @@ Return only valid JSON. No markdown fences.
             "public_sentiment_score": parsed.public_sentiment_score,
             "summary": parsed.summary,
             "sources": parsed.sources,
+            "market_analysis": parsed.market_analysis,
+            "market_strategy": parsed.market_strategy,
+            "strategy_rationale": parsed.strategy_rationale,
+            "concept_recommendations": parsed.concept_recommendations,
+            "alternative_concepts": parsed.alternative_concepts,
             "live_data": True,
         }
         logger.info(
@@ -328,12 +347,18 @@ def _fallback_sentiment(intent: str, error: str = None) -> dict:
     )
     random.seed()
     note = f" [Error: {error}]" if error else ""
+    sim = "[SIMULATED — live search unavailable" + note + "]"
     return {
         "verdict": verdict,
         "trend_velocity": velocity,
         "public_sentiment_score": sentiment,
-        "summary": f"[SIMULATED — live search unavailable{note}]",
+        "summary": sim,
         "sources": [],
+        "market_analysis": f"{sim} Estimated mid-size addressable market; competitor gaps undetermined without live data.",
+        "market_strategy": f"{sim} Default play: targeted digital outbound to the core ICP, content-led positioning, lean paid pilots.",
+        "strategy_rationale": f"{sim} Chosen for low burn and fast signal; revisit once live market data is available.",
+        "concept_recommendations": f"{sim} Tighten the ICP, validate pricing with 5-10 design partners, and instrument early funnel metrics.",
+        "alternative_concepts": f"{sim} If traction stalls, consider a narrower vertical wedge or a services-first entry before productizing.",
         "live_data": False,
     }
 

@@ -490,11 +490,32 @@ human in the loop: **generate → run → observe → fix → verify**.
 | **Heal** | `Master_Architect_Elite_Logic/server.py` | verify→heal loop: feeds errors (plus the Vite/uvicorn **dev-server log tail**) back to Gemini for **up to 3 repair passes**. `✅ Build Complete` is gated on a clean render. Verifier failures **fail-open** (build still reported) so a verifier hiccup can't block builds. |
 | **Serve** | server.py + factory_ui | Built apps served over HTTP; in-chat **Open app** button on completion; **Built Apps** sidebar links to the builds gallery. |
 
+- **Venture / C-Suite document ingestion (updated 2026-06-18)**: in the VENTURE path of `Master_Architect_Elite_Logic/server.py`, uploaded foundational documents are parsed **server-side** via `document_parser_service.DocumentParserService` and their extracted text is appended to `document_context` → `active_query`, so every sub-agent (CMO/CFO/CIO) and the CEO synthesis see the actual content. PDF/DOCX/**PPTX** (incl. slide tables + speaker notes) are inlined as text; only images (PNG/JPG) fall back to the Google File API (`genai.upload_file`) and those staged objects are now passed into the CEO `generate_content` call for the multimodal pass. The same parser-first rule applies to the War Room Critic upload (`api.py::_analyze_upload`). Supported extensions live in `DocumentParserService.SUPPORTED_EXTENSIONS`; the ingest router allow-list (`backend/app/routers/ingest.py`) is kept in sync. See STANDARDS.md §6.
+
 - **Gallery**: `Master_Architect_Elite_Logic/generated_builds/` (see its `README.md`).
 - **Demo apps built by this pipeline**: `maf-blueprint-inspector` (validate blueprint/JSON payloads),
   `maf-token-cost-estimator` (LLM token + cost estimate), `maf-uuid-generator` (UUID v4).
 - **Cost tracking**: LLM call sites are instrumented for centralized token cost-tracking across MAF.
 - **Test**: `scratch/test_self_healing.py`; `ReviewRequest.test_inject_broken` (gated by `ALLOW_TEST_INJECTION`) for deterministic verify→heal tests. **Phase-4 full-stack suite**: `Master_Architect_Elite_Logic/test_fullstack_healing.py` — Stage 1 deterministic checks (PYTHONUNBUFFERED injection, secret-scrub, port-allocation rules, idle reaper, concurrency cap, full-stack scaffold + `node_modules` junction) always run; Stage 2 live e2e (boot on loopback → verifier detects an injected runtime bug → re-actuated corrected blueprint recovers clean → port freed) is gated behind `RUN_FULLSTACK_E2E=1`. The suite never invokes the LLM — the heal **loop mechanics** are tested by substituting a known-good blueprint for the model's fix, keeping the regression deterministic and offline.
+
+---
+
+## Venture / C-Suite Swarm (added 2026-06-18)
+
+The VENTURE path of `Master_Architect_Elite_Logic/server.py::generate_review_stream` runs an autonomous boardroom:
+
+- **Sub-agents are HTTP-primary, local-fallback.** CMO → `:5020`, CFO → `:5070`, CIO → `:5090`; if a service is down, server.py falls back to the in-repo `cmo_agent.py` / `cfo_agent.py` / `cio_agent.py`. Extended report fields are produced by the **enriched CEO synthesis** (always in-process via `VENTURE_ARCHITECT`) and, on the fallback path, by the agent files themselves.
+- **Extended agent schema**: CMO emits `market_analysis / market_strategy / strategy_rationale / concept_recommendations / alternative_concepts` (defaulted so a partial model response doesn't fail the Pydantic gate); CFO emits `financial_analysis / investment_recommendations`; CIO emits `technology_roadmap / technical_commentary`. The shared validators in `shared_modules/agent_schemas.py` ignore unknown keys, so these are non-breaking.
+- **`VENTURE_ARCHITECT` (CEO) persona** now actively critiques the user's concept, gives actionable recommendations, proposes alternative concepts on structural risk, and outputs fixed Markdown sections (Verdict & Concept Critique / Market Strategy / Pricing & Financial Rationale / Technology Roadmap / Recommendations / Alternative Concepts / Decisive Resolution).
+- **Autonomous debate loop**: `MAX_REVISIONS = 3`, `CONSENSUS_THRESHOLD = 9.5`. The CEO synthesis + Critic scoring run in a loop; if the Critic scores `< 9.5`, its objections are fed back into the next round's CEO prompt and the strategy is re-synthesized. Only after 3 failed revisions does it emit the `socratic_pause` to escalate to the Commander. (The sub-agent web-search reports are gathered once before the loop — revisions re-run the CEO, not the searches, to bound cost/latency.)
+- **Automated deck generation on consensus**: `Aether.presentation_architect.PresentationArchitect` compiles investor + customer PPTX decks into `data/V2_Executive_Reports/`; download links are streamed as CTO-node messages pointing at `http://localhost:5000/api/eos/documents/<file>` (route in `api.py`, served on :5000). **Caveat:** the deck slide copy is largely templated (Antigravity-AI branding); only the CFO figures (`roi` / `breakeven_month` / `y1_revenue`) are injected — the decks are not yet concept-specific. `output_name` MUST end in `.json` (the `.pptx` name is derived via `.replace(".json",".pptx")`).
+
+### Venture robustness, triage & vault (added 2026-06-18)
+- **CIO sweep local fallback**: if port `:5090` is offline, the CIO pre-flight no longer streams a fake "✅ sweep complete"; it warns and runs `shared_modules.deep_research_crawler.deep_research(active_query)` **in-process**, then reports success/empty honestly.
+- **Deadlock triage report**: when the debate loop exhausts all `MAX_REVISIONS` without consensus, a gemini-2.5-pro Markdown report (Executive Summary / PROs / CONs / C-Suite Enhancements / Critic Objections / Entrepreneurial Lessons) is **streamed to the user and saved to vault** before the `socratic_pause`.
+- **Workspace Vault persistence** (`vault/venture/`, written to **both** `Master_Architect_Elite_Logic/` and the project root via the in-stream `_write_vault` helper): `<slug>_Approved_Strategy.md` + `<slug>_Blueprint.json` on consensus; `<slug>_Deadlock_Triage_Report.md` on deadlock. `<slug>` is derived from the user query.
+- **C-Suite delegation**: `POST /api/challenge/delegate` (`ChallengeDelegateRequest{challenge_id}`) loads the active challenge, runs `deep_research` per weakness, and asks gemini-2.5-pro (under the `VENTURE_ARCHITECT` persona) to synthesize a draft rebuttal returned as `{draft, weaknesses_addressed, research_sources}`. The UI drops the draft into the challenge evidence box for the user to edit.
+- **Frontend** (`factory_ui/src/components/BuilderChat.jsx`): the socratic challenge portal can be **minimized** to a bottom-right floating badge (`isSocraticMinimized`) to read the conversation while answering, and **maximized** back; a **"🤖 Delegate to C-Suite"** button calls `/api/challenge/delegate`, populates the evidence textarea, and shows a blue "Drafted by C-Suite Swarm" banner (`isCSuiteDrafted` / `isDelegating`).
 
 ---
 
@@ -643,6 +664,11 @@ to disk (never in-memory) so any Uvicorn worker can serve the SSE stream.
 - Update the demo-app list + pipeline table in §3 (Builder Chat Self-Healing Build Pipeline)
 - These docs feed the **Ecosystem Guide** chat (`factory_stream.py` → `_load_ecosystem_docs`);
   AGENTS.md is ingested in full, so keep it current — stale docs = wrong Guide answers
+
+### When document ingestion / supported formats change:
+- Update `DocumentParserService.SUPPORTED_EXTENSIONS` + add a `_extract_<fmt>` handler (single source of extraction)
+- Keep the ingest router allow-list (`backend/app/routers/ingest.py`) in sync with the parser
+- Update STANDARDS.md §6 and the Venture/C-Suite ingestion note in §3 (above)
 
 ### Commit discipline:
 - Wire + docs must be in the same commit — never ship a wire without its docs

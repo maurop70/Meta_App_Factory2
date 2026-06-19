@@ -25,12 +25,18 @@ Synthesize the data and provide reasonable estimations for the following foundat
 - projected_monthly_sales: The estimated number of units sold per month at launch.
 - risk_multiplier_1_to_2: A float between 1.0 (low risk) and 2.0 (high risk) scaling the total portfolio cost based on technical debt and market sentiment.
 
+You must ALSO provide two substantive CFO narrative sections (3+ sentences each):
+- financial_analysis: detailed pricing-strategy commentary and the break-even rationale (why this price, margin structure, what drives the break-even point).
+- investment_recommendations: recommendations on funding (bootstrap vs raise), capex priorities, and cash-management / runway guidance.
+
 Return ONLY valid JSON with these EXACT keys:
 {{
     "estimated_cogs_per_unit": 0.0,
     "recommended_retail_price": 0.0,
     "projected_monthly_sales": 0,
-    "risk_multiplier_1_to_2": 1.0
+    "risk_multiplier_1_to_2": 1.0,
+    "financial_analysis": "",
+    "investment_recommendations": ""
 }}
 Do NOT wrap the JSON in Markdown block formatting. Output raw JSON only.
 """
@@ -52,4 +58,11 @@ Do NOT wrap the JSON in Markdown block formatting. Output raw JSON only.
             
         architect = get_cfo_architect()
         result = architect.generate_business_plan_from_json(project_id, cmo_data, cto_data, market_pulse, metrics)
+
+        # Thread the CFO narrative sections through to the consumer. The math
+        # engine ignores these extra metric keys, and the schema validator
+        # (CFOOutput) ignores unknown result keys, so this is non-breaking.
+        if isinstance(result, dict):
+            result.setdefault("financial_analysis", metrics.get("financial_analysis", ""))
+            result.setdefault("investment_recommendations", metrics.get("investment_recommendations", ""))
         return result

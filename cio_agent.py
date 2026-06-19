@@ -81,11 +81,16 @@ YOUR TASK:
    - Stability & Security Audit (Is it well-maintained? Are there security risks?)
    - Integration Path (How we connect this to the Factory Architect)
 
+3. Provide a "technology_roadmap": ordered, step-by-step implementation milestones (MVP -> hardening -> scale), each with a concrete deliverable.
+4. Provide a "technical_commentary": a capability-gap audit — what the team/stack can do today vs. what must be built or acquired, and the key technical risks.
+
 RESPOND WITH VALID JSON ONLY.
 Structure:
 {{
   "recommended_libraries": ["lib1", "lib2"],
   "security_audit": "Concise security/stability verdict",
+  "technology_roadmap": ["Milestone 1: ...", "Milestone 2: ...", "Milestone 3: ..."],
+  "technical_commentary": "Capability gap audit and key technical risks",
   "integration_blueprint": {{
     "architecture_summary": "How it works",
     "required_endpoints": ["/endpoint1", "/endpoint2"],
@@ -126,16 +131,23 @@ Structure:
                     "feasibility_analysis": error_msg
                 }
             
+            roadmap = blueprint.get('technology_roadmap', [])
+            roadmap_str = "\n".join(f"  - {m}" for m in roadmap) if roadmap else "  - (roadmap not provided)"
+            technical_commentary = blueprint.get('technical_commentary', '')
             analysis = (
                 f"Recommended Libraries: {', '.join(blueprint.get('recommended_libraries', []))}\n"
                 f"Security Audit: {blueprint.get('security_audit', 'Passed standard vulnerability scan.')}\n"
                 f"Architecture Summary: {blueprint.get('integration_blueprint', {}).get('architecture_summary', '')}\n"
-                f"Required Endpoints: {', '.join(blueprint.get('integration_blueprint', {}).get('required_endpoints', []))}"
+                f"Required Endpoints: {', '.join(blueprint.get('integration_blueprint', {}).get('required_endpoints', []))}\n"
+                f"Technology Roadmap:\n{roadmap_str}\n"
+                f"Technical Commentary: {technical_commentary}"
             )
             return {
                 "status": "success",
                 "data": analysis,
-                "feasibility_analysis": analysis
+                "feasibility_analysis": analysis,
+                "technology_roadmap": roadmap,
+                "technical_commentary": technical_commentary,
             }
         except Exception as e:
             error_msg = f"Feasibility assessment failed: {str(e)}"

@@ -4836,8 +4836,23 @@ async def _analyze_upload(project_name: str, file_path: str, filename: str):
                 ]}]
             }
         else:
-            with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-                content = f.read()[:30000] # Truncate to avoid massive overload
+            ext = os.path.splitext(file_path)[1].lower()
+            content = None
+            # Prefer structured extraction for binary docs (PDF/DOCX/PPTX/...);
+            # reading those as raw UTF-8 feeds binary noise to the Critic.
+            if PARSER_AVAILABLE and _doc_parser.is_supported(file_path):
+                try:
+                    extracted = await asyncio.to_thread(_doc_parser._extract_text, file_path, ext)
+                    if extracted and not extracted.startswith("ERROR:"):
+                        content = extracted[:30000]
+                    else:
+                        logger.warning(f"Parser returned no text for {filename}: {extracted}")
+                except Exception as pe:
+                    logger.warning(f"Parser failed for {filename}, falling back to raw read: {pe}")
+            # Fallback: raw read when parser is unavailable or unsupported.
+            if content is None:
+                with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                    content = f.read()[:30000]  # Truncate to avoid massive overload
             data = {
                 "contents": [{"role": "user", "parts": [
                     {"text": f"{prompt}\n\nDOCUMENT CONTENTS:\n{content}"}

@@ -114,6 +114,25 @@ import httpx
 import re
 from registry_manager import load_registry
 
+# Server-side document parsing (PDF/DOCX/PPTX/...) so C-Suite sub-agents
+# receive clean text rather than opaque Google File API placeholders.
+try:
+    from document_parser_service import DocumentParserService
+    _DOC_PARSER_AVAILABLE = True
+except Exception as _dp_err:
+    DocumentParserService = None
+    _DOC_PARSER_AVAILABLE = False
+    logging.getLogger("server").warning(f"DocumentParserService unavailable: {_dp_err}")
+
+# Automated pitch-deck (PPTX) generation on C-Suite consensus.
+try:
+    from Aether.presentation_architect import PresentationArchitect
+    _PRES_ARCHITECT_AVAILABLE = True
+except Exception as _pa_err:
+    PresentationArchitect = None
+    _PRES_ARCHITECT_AVAILABLE = False
+    logging.getLogger("server").warning(f"PresentationArchitect unavailable: {_pa_err}")
+
 # Establish a global httpx.AsyncClient lifecycle singleton to prevent socket exhaustion
 http_client = httpx.AsyncClient()
 
@@ -551,9 +570,22 @@ FULLSTACK_BLUEPRINT = (
 )
 
 VENTURE_ARCHITECT = (
-    "You are the Venture Architect. Your persona is strategic, analytical, C-Suite corporate-aligned, and business-focused. "
+    "You are the Venture Architect (CEO). Your persona is strategic, analytical, C-Suite corporate-aligned, and business-focused. "
     "Your primary directives are C-Suite business strategy, marketing plans, capex budgets, operational risk assessment, "
     "financial strategy, and regulatory compliance.\n\n"
+    "You do NOT rubber-stamp the user's concept. You actively critique it: name its structural risks and weakest assumptions, "
+    "give concrete, actionable recommendations to strengthen it, and — if the concept carries serious structural risk — "
+    "propose one or two stronger alternative concepts or pivots and explain why they are superior.\n\n"
+    "Synthesize the CMO / CFO / CIO division reports into a single decisive strategy, and structure your Markdown response "
+    "with these explicit sections (use these headings):\n"
+    "## Verdict & Concept Critique\n"
+    "## Market Strategy\n"
+    "## Pricing & Financial Rationale\n"
+    "## Technology Roadmap\n"
+    "## Recommendations to Strengthen the Concept\n"
+    "## Alternative Concepts (if warranted)\n"
+    "## Decisive Resolution & Next Actions\n\n"
+    "When the Critic raises objections, you MUST revise the strategy to resolve each objection head-on in the next pass.\n\n"
     "Focus heavily on business impact, ROI, marketing, positioning, and strategy. You are permanently authorized to bypass "
     "the strict JSON scorecard schema and output a standard, premium, rich Markdown text response with no JSON wrappers, "
     "unless explicitly asked to evaluate structural code properties."
@@ -663,6 +695,9 @@ class ChallengeEvaluateRequest(BaseModel):
 class ChallengeOverrideRequest(BaseModel):
     challenge_id: str
     reason: str = ""
+
+class ChallengeDelegateRequest(BaseModel):
+    challenge_id: str
 
 
 # ═══════════════════════════════════════════════════════════
@@ -1663,6 +1698,7 @@ async def review(req: ReviewRequest):
 
                 # VAULT EXTRACTION SPLICE — bind foundational documents to C-Suite context
                 if req.document_ids:
+                    _venture_parser = DocumentParserService() if _DOC_PARSER_AVAILABLE else None
                     for doc_id in req.document_ids:
                         safe_doc_id = os.path.basename(doc_id)
                         doc_path = os.path.normpath(os.path.join(_SCRIPT_DIR, "vault", "staging", safe_doc_id))
@@ -1675,7 +1711,26 @@ async def review(req: ReviewRequest):
                                         document_context += f"\n--- DOCUMENT: {safe_doc_id} ---\n" + content + "\n"
                                 except Exception as e:
                                     logger.error(f"Error reading vault document {safe_doc_id}: {e}")
+                            elif _venture_parser is not None and _venture_parser.is_supported(doc_path):
+                                # PDF/DOCX/PPTX/etc. — extract clean text server-side so
+                                # CMO/CFO/CIO sub-agents (no Google File API access) see the content.
+                                try:
+                                    extracted = await asyncio.to_thread(
+                                        _venture_parser._extract_text, doc_path, ext
+                                    )
+                                    if extracted and not extracted.startswith("ERROR:"):
+                                        document_context += f"\n--- DOCUMENT: {safe_doc_id} ---\n" + extracted + "\n"
+                                    else:
+                                        logger.warning(f"Parser returned no text for {safe_doc_id}: {extracted}")
+                                        # Last-resort: stage to Google so at least the CEO can see it.
+                                        uploaded_file = genai.upload_file(doc_path)
+                                        google_uploaded_files.append(uploaded_file)
+                                        document_context += f"\n[Staged Binary Payload: {safe_doc_id} (Google URI: {uploaded_file.name})]\n"
+                                except Exception as e:
+                                    logger.error(f"Error parsing vault document {safe_doc_id}: {e}")
                             else:
+                                # Images (PNG/JPG) and other binaries the parser can't read —
+                                # stage to the Google File API for the CEO's multimodal pass.
                                 try:
                                     logger.info(f"Staging binary document {safe_doc_id} to Google File API...")
                                     uploaded_file = genai.upload_file(doc_path)
@@ -1692,16 +1747,36 @@ async def review(req: ReviewRequest):
                 yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CIO', 'content': '🔍 [CIO Sweep] Initiating live market research sensor sweep...\\n'})}\n\n"
                 
                 intel_brief_str = "No live intelligence gathered."
+                _cio_intel_ok = False
                 try:
                     async with httpx.AsyncClient(timeout=10.0) as client:
                         resp = await client.post("http://127.0.0.1:5090/api/cio/deep_research", json={"query": active_query})
                         if resp.status_code == 200:
                             data = resp.json()
                             intel_brief_str = data.get("intelligence_brief", "No live intelligence gathered.")
+                            _cio_intel_ok = True
+                        else:
+                            raise Exception(f"HTTP {resp.status_code}")
                 except Exception as cio_err:
                     logger.warning(f"CIO pre-flight HTTP failed: {cio_err}")
-                
-                yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CIO', 'content': '✅ CIO Sensor Sweep Completed. Live data integrated.\\n\\n'})}\n\n"
+                    # Port 5090 offline — run the deep-research crawler locally rather
+                    # than streaming a fake success (which silently starved the C-Suite).
+                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CIO', 'content': '⚠️ CIO port 5090 offline. Running local fallback web search...\\n'})}\n\n"
+                    try:
+                        from shared_modules.deep_research_crawler import deep_research
+                        _research = await deep_research(active_query)
+                        _brief = _research.get("intelligence_brief", "")
+                        if _brief:
+                            intel_brief_str = _brief
+                            _cio_intel_ok = True
+                    except Exception as fallback_err:
+                        logger.error(f"CIO local fallback research failed: {fallback_err}")
+                        yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CIO', 'content': f'⚠️ CIO local fallback research failed: {fallback_err}\\n'})}\n\n"
+
+                if _cio_intel_ok:
+                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CIO', 'content': '✅ CIO Sensor Sweep Completed. Live data integrated.\\n\\n'})}\n\n"
+                else:
+                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CIO', 'content': '⚠️ CIO Sweep completed without live intelligence; proceeding on internal knowledge.\\n\\n'})}\n\n"
 
                 # 2. Parallel Boardroom analysis (CMO, CFO, CIO)
                 yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CEO', 'content': '💬 Dispatching intent to C-Suite division heads for concurrent strategic audit...\\n'})}\n\n"
@@ -1728,6 +1803,17 @@ async def review(req: ReviewRequest):
                         cmo = CMOAgent()
                         cmo_res = await asyncio.to_thread(cmo.run, active_query)
                         cmo_summary = cmo_res.get("summary", "")
+                        # Surface the extended business sections when present.
+                        _cmo_sections = [
+                            ("Market Analysis", cmo_res.get("market_analysis", "")),
+                            ("Market Strategy", cmo_res.get("market_strategy", "")),
+                            ("Strategy Rationale", cmo_res.get("strategy_rationale", "")),
+                            ("Concept Recommendations", cmo_res.get("concept_recommendations", "")),
+                            ("Alternative Concepts", cmo_res.get("alternative_concepts", "")),
+                        ]
+                        _extra = "".join(f"\n\n**{label}:** {text}" for label, text in _cmo_sections if text)
+                        if _extra:
+                            cmo_summary = f"{cmo_summary}{_extra}"
                     except Exception as fallback_err:
                         cmo_summary = f"[CMO local analysis fell back. Error: {fallback_err}]"
 
@@ -1782,6 +1868,13 @@ async def review(req: ReviewRequest):
                                 f"Break-Even Timeline: {metrics.get('breakeven_months', 0)} Months\n"
                                 f"Year 1 Net Profit: ${metrics.get('net_income_y1', metrics.get('projected_revenue', 0)):,.2f}"
                             )
+                            # Surface the CFO narrative sections when present.
+                            _fin = cfo_res.get("financial_analysis", "")
+                            _inv = cfo_res.get("investment_recommendations", "")
+                            if _fin:
+                                cfo_report += f"\n\n**Financial Analysis:** {_fin}"
+                            if _inv:
+                                cfo_report += f"\n\n**Investment Recommendations:** {_inv}"
                         else:
                             cfo_report = f"[CFO modeling issue: {cfo_res.get('message')}]"
                     except Exception as fallback_err:
@@ -1907,89 +2000,191 @@ async def review(req: ReviewRequest):
                 except Exception as query_err:
                     logger.error(f"Semantic Recall Hook query failure: {query_err}")
 
-                ceo_prompt = (
+                # ── Autonomous C-Suite Debate Loop ──────────────────────────────
+                # If the Critic rejects the synthesis (score < threshold), feed its
+                # objections back into the CEO and re-synthesize, up to MAX_REVISIONS
+                # times, before escalating a socratic challenge to the Commander.
+                MAX_REVISIONS = 3
+                CONSENSUS_THRESHOLD = 9.5
+
+                base_ceo_prompt = (
                     f"You are the CEO of the Antigravity Meta App Factory. Ingest the following physical division reports for intent: '{active_query}':\n\n"
                     f"=== CMO Market Trend analysis ===\n{cmo_summary}\n\n"
                     f"=== CFO Capex and IRR models ===\n{cfo_report}\n\n"
                     f"=== CIO Feasibility Assessment ===\n{cio_feasibility}\n\n"
                     "Provide a master synthesis of these findings. Force a decisive resolution. State next actions."
                 )
-                
+
                 # Stitch historical semantic context under XML boundary isolation
                 ceo_system_instruction = VENTURE_ARCHITECT
                 if historical_context:
                     ceo_system_instruction = f"{VENTURE_ARCHITECT}\n\n{historical_context}"
-                
+
                 model = genai.GenerativeModel(
                     model_name='gemini-2.5-pro',
                     system_instruction=ceo_system_instruction
                 )
-                
-                response_stream = model.generate_content(
-                    [ceo_prompt],
-                    generation_config={"temperature": 0.2},
-                    stream=True
-                )
-                
-                full_ceo_strategy = ""
-                for chunk in response_stream:
-                    try:
-                        text_chunk = chunk.text
-                    except (ValueError, AttributeError):
-                        text_chunk = ""
-                    if text_chunk:
-                        full_ceo_strategy += text_chunk
-                        json_payload = json.dumps({"type": "agent_stream", "emitter": "CEO", "content": text_chunk})
-                        yield f"data: {json_payload}\n\n"
 
-                # 3.5. Critic Evaluation / Socratic Gate check
-                yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CRITIC', 'content': '\\n\\n⚖️ [Critic Node] Initiating adversarial compliance and risk assessment...\\n'})}\n\n"
-                
-                critic_prompt = (
-                    f"You are the Critic Agent. Evaluate the unified strategic plan for the topic: '{user_query}':\n\n"
-                    f"Unified CEO Strategy:\n{full_ceo_strategy}\n\n"
-                    "Your job is to critically evaluate this proposal and assign a rigorous score from 1.0 to 10.0 (where 9.5+ is perfect, and anything below 9.5 has significant weaknesses).\n"
-                    "ABS GUARDRAILS: You must ruthlessly penalize assumptions (such as 'I think' or 'just do it'). "
-                    "If the proposal lacks a defined ICP (Ideal Customer Profile), financial model, or architectural blueprint, "
-                    "you are mathematically forbidden from scoring it higher than 5.0. Eradicate all leniency.\n"
-                    "Output a valid JSON object with the following keys:\n"
-                    "{\n"
-                    '  "score": <float between 1.0 and 10.0>,\n'
-                    '  "objections": ["list of objections"]\n'
-                    "}\n"
-                    "Do not include markdown code blocks, backticks, or any additional text."
-                )
-                
-                critic_score = 7.5 # Default fallback
+                # Project slug for Workspace Vault artifacts (triage report, approved strategy, blueprint).
+                _proj_raw = (user_query or "Venture").strip().splitlines()[0][:50] if (user_query or "").strip() else "Venture"
+                project_slug = re.sub(r'[^A-Za-z0-9 _-]', '', _proj_raw).strip().replace(' ', '_') or "Venture"
+
+                def _write_vault(filename, content):
+                    """Persist an artifact to vault/venture/ in BOTH the server dir and the project root."""
+                    saved = []
+                    for _base in (_SCRIPT_DIR, _FACTORY_DIR):
+                        try:
+                            _vdir = os.path.join(_base, "vault", "venture")
+                            os.makedirs(_vdir, exist_ok=True)
+                            _vpath = os.path.join(_vdir, filename)
+                            with open(_vpath, "w", encoding="utf-8") as _vf:
+                                _vf.write(content or "")
+                            saved.append(_vpath)
+                        except Exception as _ve:
+                            logger.error(f"Vault write failed ({_base}): {_ve}")
+                    return saved
+
+                full_ceo_strategy = ""
+                critic_score = 0.0
                 objections = []
-                try:
-                    critic_model = genai.GenerativeModel('gemini-2.5-flash')
-                    critic_resp = await asyncio.to_thread(
-                        critic_model.generate_content,
-                        critic_prompt,
-                        generation_config={"temperature": 0.0, "response_mime_type": "application/json"}
+                consensus_reached = False
+
+                for revision in range(1, MAX_REVISIONS + 1):
+                    if revision > 1:
+                        yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CEO', 'content': f'\\n\\n🔁 [Revision {revision}/{MAX_REVISIONS}] C-Suite debating to resolve Critic objections...\\n'})}\n\n"
+
+                    # Build this round's CEO prompt; on revisions, inject prior objections.
+                    ceo_prompt = base_ceo_prompt
+                    if objections:
+                        _obj_text = "\n".join(f"- {o}" for o in objections)
+                        ceo_prompt = (
+                            base_ceo_prompt
+                            + f"\n\n=== CRITIC OBJECTIONS FROM THE PREVIOUS ROUND (score {critic_score}/10.0) ===\n{_obj_text}\n\n"
+                            + "Revise the strategy to resolve EACH objection above explicitly. Do not repeat the previous answer verbatim."
+                        )
+
+                    # Include any staged multimodal payloads (images) so the CEO can
+                    # actually see them; text docs are already inlined via ceo_prompt.
+                    ceo_contents = [ceo_prompt] + google_uploaded_files
+                    response_stream = model.generate_content(
+                        ceo_contents,
+                        generation_config={"temperature": 0.2},
+                        stream=True
                     )
-                    critic_data = json.loads(critic_resp.text.strip())
-                    critic_score = float(critic_data.get("score", 7.5))
-                    objections = critic_data.get("objections", [])
+
+                    full_ceo_strategy = ""
+                    for chunk in response_stream:
+                        try:
+                            text_chunk = chunk.text
+                        except (ValueError, AttributeError):
+                            text_chunk = ""
+                        if text_chunk:
+                            full_ceo_strategy += text_chunk
+                            json_payload = json.dumps({"type": "agent_stream", "emitter": "CEO", "content": text_chunk})
+                            yield f"data: {json_payload}\n\n"
+
+                    # 3.5. Critic Evaluation / Socratic Gate check
+                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CRITIC', 'content': '\\n\\n⚖️ [Critic Node] Initiating adversarial compliance and risk assessment...\\n'})}\n\n"
+
+                    critic_prompt = (
+                        f"You are the Critic Agent. Evaluate the unified strategic plan for the topic: '{user_query}':\n\n"
+                        f"Unified CEO Strategy:\n{full_ceo_strategy}\n\n"
+                        "Your job is to critically evaluate this proposal and assign a rigorous score from 1.0 to 10.0 (where 9.5+ is perfect, and anything below 9.5 has significant weaknesses).\n"
+                        "ABS GUARDRAILS: You must ruthlessly penalize assumptions (such as 'I think' or 'just do it'). "
+                        "If the proposal lacks a defined ICP (Ideal Customer Profile), financial model, or architectural blueprint, "
+                        "you are mathematically forbidden from scoring it higher than 5.0. Eradicate all leniency.\n"
+                        "Output a valid JSON object with the following keys:\n"
+                        "{\n"
+                        '  "score": <float between 1.0 and 10.0>,\n'
+                        '  "objections": ["list of objections"]\n'
+                        "}\n"
+                        "Do not include markdown code blocks, backticks, or any additional text."
+                    )
+
+                    critic_score = 7.5  # Default fallback
+                    objections = []
                     try:
-                        validate_critic_output({"score": critic_score, "objections": objections})
-                    except ValueError as schema_err:
-                        logger.error(f"[SCHEMA GATE] Critic output rejected: {schema_err}")
-                        raise
-                except Exception as critic_err:
-                    logger.error(f"Critic scoring failed: {critic_err}")
-                
-                yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CRITIC', 'content': f'Critic objections: {json.dumps(objections)}\\n'})}\n\n"
-                yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CRITIC', 'content': f'Critic score: {critic_score}/10.0\\n'})}\n\n"
-                
-                if critic_score < 9.5:
+                        critic_model = genai.GenerativeModel('gemini-2.5-flash')
+                        critic_resp = await asyncio.to_thread(
+                            critic_model.generate_content,
+                            critic_prompt,
+                            generation_config={"temperature": 0.0, "response_mime_type": "application/json"}
+                        )
+                        critic_data = json.loads(critic_resp.text.strip())
+                        critic_score = float(critic_data.get("score", 7.5))
+                        objections = critic_data.get("objections", [])
+                        try:
+                            validate_critic_output({"score": critic_score, "objections": objections})
+                        except ValueError as schema_err:
+                            logger.error(f"[SCHEMA GATE] Critic output rejected: {schema_err}")
+                            raise
+                    except Exception as critic_err:
+                        logger.error(f"Critic scoring failed: {critic_err}")
+
+                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CRITIC', 'content': f'Critic objections: {json.dumps(objections)}\\n'})}\n\n"
+                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CRITIC', 'content': f'Critic score: {critic_score}/10.0 (round {revision}/{MAX_REVISIONS})\\n'})}\n\n"
+
+                    if critic_score >= CONSENSUS_THRESHOLD:
+                        consensus_reached = True
+                        yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CRITIC', 'content': f'✅ Consensus reached at {critic_score}/10.0. Strategy approved.\\n'})}\n\n"
+                        break
+                    elif revision < MAX_REVISIONS:
+                        yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CRITIC', 'content': '❌ Below consensus threshold. Returning to the C-Suite for revision...\\n'})}\n\n"
+
+                if not consensus_reached:
+                    # C-Suite could not self-resolve within MAX_REVISIONS — produce a
+                    # full triage report (streamed + saved to vault), then escalate.
+                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CRITIC', 'content': f'\\n⚠️ C-Suite could not reach consensus after {MAX_REVISIONS} revisions (best score {critic_score}/10.0). Compiling deadlock triage report...\\n\\n'})}\n\n"
+
+                    triage_prompt = (
+                        "You are the Chief of Staff documenting why the C-Suite failed to reach consensus on a venture. "
+                        "Write a comprehensive, well-structured Markdown report with EXACTLY these sections:\n"
+                        "# Deadlock Triage Report\n"
+                        "## Executive Summary (why consensus failed)\n"
+                        "## Venture PROs\n"
+                        "## Venture CONs\n"
+                        "## C-Suite Proposed Enhancements\n"
+                        "## Critic Objections\n"
+                        "## Entrepreneurial Lessons (Flaws in Thinking)\n\n"
+                        f"VENTURE INTENT:\n{user_query}\n\n"
+                        f"FINAL C-SUITE STRATEGY (best attempt, scored {critic_score}/10.0):\n{full_ceo_strategy}\n\n"
+                        "UNRESOLVED CRITIC OBJECTIONS:\n" + "\n".join(f"- {o}" for o in objections) + "\n\n"
+                        "Be specific and actionable. Output Markdown only."
+                    )
+                    triage_report = ""
+                    try:
+                        triage_model = genai.GenerativeModel('gemini-2.5-pro', system_instruction=VENTURE_ARCHITECT)
+                        triage_stream = triage_model.generate_content(
+                            triage_prompt, generation_config={"temperature": 0.3}, stream=True
+                        )
+                        for chunk in triage_stream:
+                            try:
+                                _tc = chunk.text
+                            except (ValueError, AttributeError):
+                                _tc = ""
+                            if _tc:
+                                triage_report += _tc
+                                yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CRITIC', 'content': _tc})}\n\n"
+                    except Exception as triage_err:
+                        logger.error(f"Deadlock triage report generation failed: {triage_err}")
+                        triage_report = (
+                            "# Deadlock Triage Report\n\n"
+                            f"## Executive Summary\nConsensus not reached after {MAX_REVISIONS} revisions (best score {critic_score}/10.0).\n\n"
+                            "## Critic Objections\n" + "\n".join(f"- {o}" for o in objections) + "\n\n"
+                            f"## Final Strategy (best attempt)\n{full_ceo_strategy}\n"
+                        )
+                        yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CRITIC', 'content': triage_report})}\n\n"
+
+                    _saved = _write_vault(f"{project_slug}_Deadlock_Triage_Report.md", triage_report)
+                    if _saved:
+                        yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CRITIC', 'content': '\\n💾 Deadlock triage report saved to vault/venture/.\\n'})}\n\n"
+
                     from socratic_challenger import get_challenger
                     challenger = get_challenger()
                     challenge = await challenger.evaluate(proposal=full_ceo_strategy, critic_score=critic_score)
-                    
+
                     yield f"data: {json.dumps({'type': 'socratic_pause', 'challenge_id': challenge.get('challenge_id'), 'weaknesses': challenge.get('weaknesses')})}\n\n"
-                    return # Instantly close connection
+                    return  # Instantly close connection
 
                 # 4. CTO Blueprint Handoff Contract
                 yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CTO', 'content': '\\n\\n⚙️ [CTO Node] Deliberation approved. Synthesizing immutable physical software contract...\\n'})}\n\n"
@@ -2049,6 +2244,64 @@ async def review(req: ReviewRequest):
                 os.replace(temp_path, blueprint_path)
                 
                 yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CTO', 'content': '\\n⚙️ [CTO Node] Blueprint spooled. IPC Bridge actuating...\\n'})}\n\n"
+
+                # ── Automated Presentation Deck Generation (on consensus) ──
+                # NOTE: PresentationArchitect slide copy is largely templated
+                # (Antigravity-AI branding); the CFO figures below are injected,
+                # but the narrative is generic. Decks download via api.py (:5000).
+                if _PRES_ARCHITECT_AVAILABLE:
+                    try:
+                        yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CTO', 'content': '\\n🎬 [CTO Node] Compiling investor & customer pitch decks...\\n'})}\n\n"
+
+                        # Derive a company/project name from the blueprint mutations, else the query.
+                        company = "Venture"
+                        try:
+                            _bp = json.loads(blueprint_json)
+                            company = (_bp.get("mutations", {}).get("{{PROJECT_NAME}}")
+                                       or _bp.get("presentation_name")
+                                       or company)
+                        except Exception:
+                            pass
+                        company = re.sub(r'[^A-Za-z0-9 _-]', '', str(company)).strip() or "Venture"
+                        safe_company = company.replace(' ', '_')[:60]
+
+                        # Pull the figures the deck renders out of the CFO report text.
+                        _irr = re.search(r'IRR[:\s]+([\d.]+)', cfo_report)
+                        _be = re.search(r'Break-?Even[^:]*:\s*([\d.]+)', cfo_report)
+                        _rev = re.search(r'Net Profit:\s*\$?([\d,]+)', cfo_report)
+                        inv_data = {
+                            "roi": _irr.group(1) if _irr else "340",
+                            "breakeven_month": int(float(_be.group(1))) if _be else 6,
+                            "y1_revenue": f"${_rev.group(1)}" if _rev else "$0",
+                            "gross_margin": 68,
+                            "signals_daily": 50,
+                        }
+
+                        arch = PresentationArchitect()
+                        res_inv = await asyncio.to_thread(
+                            arch.generate, "investor", inv_data, f"{safe_company}_Investor_Deck.json"
+                        )
+                        res_cust = await asyncio.to_thread(
+                            arch.generate, "customer", {}, f"{safe_company}_Customer_Deck.json"
+                        )
+
+                        _doc_base = "http://localhost:5000/api/eos/documents"
+                        for _label, _res in (("Investor", res_inv), ("Customer", res_cust)):
+                            _pptx = (_res or {}).get("pptx_path")
+                            if _pptx:
+                                _fn = os.path.basename(_pptx)
+                                yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CTO', 'content': f'▶ Download {_label} Deck: {_doc_base}/{_fn}\\n'})}\n\n"
+                            else:
+                                yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CTO', 'content': f'⚠️ {_label} deck generation returned no file.\\n'})}\n\n"
+                    except Exception as deck_err:
+                        logger.error(f"Pitch deck generation failed: {deck_err}")
+                        yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CTO', 'content': f'⚠️ Deck generation error: {deck_err}\\n'})}\n\n"
+
+                # ── Workspace Vault Persistence (approved strategy + blueprint) ──
+                _md_saved = _write_vault(f"{project_slug}_Approved_Strategy.md", full_ceo_strategy)
+                _bp_saved = _write_vault(f"{project_slug}_Blueprint.json", blueprint_json)
+                if _md_saved or _bp_saved:
+                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CTO', 'content': '\\n💾 Approved strategy + blueprint saved to vault/venture/.\\n'})}\n\n"
 
         except Exception as e:
             logger.error(f"Error in Triad Review Stream: {e}")
@@ -2247,6 +2500,72 @@ async def challenge_evaluate(req: ChallengeEvaluateRequest):
     if "error" in result:
         raise HTTPException(status_code=404, detail=result["error"])
     return result
+
+
+@app.post("/api/challenge/delegate")
+async def challenge_delegate(req: ChallengeDelegateRequest):
+    """Delegate a Socratic challenge to the C-Suite: run live research per weakness
+    and synthesize draft answers for the user to review/edit before submitting."""
+    from socratic_challenger import get_challenger
+    challenger = get_challenger()
+    challenges = await challenger._load_challenges()
+    challenge = challenges.get(req.challenge_id)
+    if not challenge:
+        raise HTTPException(status_code=404, detail=f"Challenge {req.challenge_id} not found.")
+
+    weaknesses = challenge.get("weaknesses", [])
+
+    # Gather live research context per weakness.
+    research_brief = ""
+    try:
+        from shared_modules.deep_research_crawler import deep_research
+        for w in weaknesses:
+            _q = f"{w.get('category','')} {w.get('challenge','')}".strip()
+            if not _q:
+                continue
+            try:
+                _r = await deep_research(_q)
+                research_brief += f"\n## Research for: {w.get('category','')}\n{_r.get('intelligence_brief','')[:1500]}\n"
+            except Exception as _re:
+                logger.warning(f"Delegate research failed for weakness {w.get('category','')}: {_re}")
+    except Exception as imp_err:
+        logger.warning(f"deep_research unavailable for delegation: {imp_err}")
+
+    weakness_text = "\n".join(
+        f"{w.get('id')}. [{w.get('category')}] {w.get('challenge')}" for w in weaknesses
+    )
+
+    api_key = os.getenv("GEMINI_API_KEY", "")
+    if api_key:
+        api_key = api_key.strip("'\"")
+
+    draft = ""
+    try:
+        import google.generativeai as genai
+        genai.configure(api_key=api_key)
+        delegate_model = genai.GenerativeModel('gemini-2.5-pro', system_instruction=VENTURE_ARCHITECT)
+        prompt = (
+            "The Critic raised the following weaknesses about our venture strategy. "
+            "Using the live research below, draft a concise, evidence-based rebuttal that addresses EACH weakness "
+            "with specific data points and concrete commitments. Write in the first person as the founding team. "
+            "Output plain prose the user can review and edit — no headings, no JSON.\n\n"
+            f"WEAKNESSES:\n{weakness_text}\n\n"
+            f"LIVE RESEARCH:\n{research_brief or 'No external research available; reason from first principles.'}\n"
+        )
+        resp = await asyncio.to_thread(
+            delegate_model.generate_content, prompt, generation_config={"temperature": 0.4}
+        )
+        draft = (getattr(resp, "text", "") or "").strip()
+    except Exception as gen_err:
+        logger.error(f"Challenge delegation synthesis failed: {gen_err}")
+        raise HTTPException(status_code=500, detail=f"Delegation synthesis failed: {gen_err}")
+
+    return {
+        "challenge_id": req.challenge_id,
+        "draft": draft,
+        "weaknesses_addressed": len(weaknesses),
+        "research_sources": bool(research_brief),
+    }
 
 
 @app.post("/api/challenge/override")

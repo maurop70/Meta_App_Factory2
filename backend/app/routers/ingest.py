@@ -12,7 +12,7 @@ STAGING_VAULT = BASE_DIR / "Master_Architect_Elite_Logic" / "vault" / "staging"
 STAGING_VAULT.mkdir(parents=True, exist_ok=True)
 
 # Strict extension validation matrix
-ALLOWED_EXTENSIONS = {".pdf", ".xlsx", ".csv", ".docx", ".txt", ".md", ".json"}
+ALLOWED_EXTENSIONS = {".pdf", ".xlsx", ".csv", ".docx", ".txt", ".md", ".json", ".pptx"}
 
 @router.post("/document")
 async def ingest_document(file: UploadFile = File(...)):
