@@ -1780,7 +1780,11 @@ async def review(req: ReviewRequest):
 
                 # 2. Parallel Boardroom analysis (CMO, CFO, CIO)
                 yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CEO', 'content': '💬 Dispatching intent to C-Suite division heads for concurrent strategic audit...\\n'})}\n\n"
-                
+
+                # Raw sub-agent payloads for the deterministic Critic structural gate
+                # (populated in both HTTP and fallback paths below).
+                cmo_res, cfo_res, cio_res = {}, {}, {}
+
                 # CMO Analysis (DuckDuckGo live searches)
                 cmo_summary = ""
                 try:
@@ -1793,6 +1797,7 @@ async def review(req: ReviewRequest):
                         })
                         if resp.status_code == 200:
                             cmo_data = resp.json()
+                            cmo_res = cmo_data
                             cmo_summary = cmo_data.get("summary", "")
                         else:
                             raise Exception("HTTP failure")
@@ -1831,6 +1836,7 @@ async def review(req: ReviewRequest):
                         })
                         if resp.status_code == 200:
                             cfo_data = resp.json()
+                            cfo_res = cfo_data
                             if "report" in cfo_data:
                                 inner = cfo_data["report"]
                                 cfo_report = (
@@ -1894,6 +1900,7 @@ async def review(req: ReviewRequest):
                         })
                         if resp.status_code == 200:
                             cio_data = resp.json()
+                            cio_res = cio_data
                             cio_feasibility = cio_data.get("feasibility_analysis", "")
                         else:
                             raise Exception("HTTP failure")
@@ -2101,25 +2108,45 @@ async def review(req: ReviewRequest):
                         "Do not include markdown code blocks, backticks, or any additional text."
                     )
 
+                    # ── Deterministic C-Suite structural gate (CPG/Venture mandate) ──
+                    # Reject sub-agent output lacking the mandated bottom-up structures
+                    # BEFORE spending an LLM Critic call. A failed gate hard-overrides the
+                    # score to 1.0, forcing revisions; if never resolved, the missing
+                    # structures are surfaced verbatim in the Deadlock Triage Report.
+                    from shared_modules.csuite_critic_gate import critic_gate, critic_signoff
+                    cfo_gate = critic_gate("CFO", cfo_res)
+                    cmo_gate = critic_gate("CMO", cmo_res)
+                    cio_gate = critic_gate("CIO", cio_res)
+                    signoff_res = critic_signoff([cfo_gate, cmo_gate, cio_gate])
+
                     critic_score = 7.5  # Default fallback
                     objections = []
-                    try:
-                        critic_model = genai.GenerativeModel('gemini-2.5-flash')
-                        critic_resp = await asyncio.to_thread(
-                            critic_model.generate_content,
-                            critic_prompt,
-                            generation_config={"temperature": 0.0, "response_mime_type": "application/json"}
-                        )
-                        critic_data = json.loads(critic_resp.text.strip())
-                        critic_score = float(critic_data.get("score", 7.5))
-                        objections = critic_data.get("objections", [])
+                    if not signoff_res["signed_off"]:
+                        # Structural rejection — bypass the LLM score entirely.
+                        critic_score = 1.0
+                        objections = [f"[{rej['agent']}] Missing structural requirement: {m}"
+                                      for rej in signoff_res["rejections"]
+                                      for m in rej.get("missing", [])]
+                        yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CRITIC', 'content': '🛑 [Structural Gate] C-Suite output is missing required bottom-up structures — overriding score to 1.0 and returning to sender.\\n'})}\n\n"
+                    else:
+                        # Structures present — proceed to the LLM-based Critic score.
                         try:
-                            validate_critic_output({"score": critic_score, "objections": objections})
-                        except ValueError as schema_err:
-                            logger.error(f"[SCHEMA GATE] Critic output rejected: {schema_err}")
-                            raise
-                    except Exception as critic_err:
-                        logger.error(f"Critic scoring failed: {critic_err}")
+                            critic_model = genai.GenerativeModel('gemini-2.5-flash')
+                            critic_resp = await asyncio.to_thread(
+                                critic_model.generate_content,
+                                critic_prompt,
+                                generation_config={"temperature": 0.0, "response_mime_type": "application/json"}
+                            )
+                            critic_data = json.loads(critic_resp.text.strip())
+                            critic_score = float(critic_data.get("score", 7.5))
+                            objections = critic_data.get("objections", [])
+                            try:
+                                validate_critic_output({"score": critic_score, "objections": objections})
+                            except ValueError as schema_err:
+                                logger.error(f"[SCHEMA GATE] Critic output rejected: {schema_err}")
+                                raise
+                        except Exception as critic_err:
+                            logger.error(f"Critic scoring failed: {critic_err}")
 
                     yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CRITIC', 'content': f'Critic objections: {json.dumps(objections)}\\n'})}\n\n"
                     yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CRITIC', 'content': f'Critic score: {critic_score}/10.0 (round {revision}/{MAX_REVISIONS})\\n'})}\n\n"
