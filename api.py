@@ -6357,6 +6357,7 @@ def download_eos_document(filename: str):
 # to avoid 404s when the UI is served behind api.py.
 @app.post("/api/challenge/evaluate")
 async def challenge_evaluate_bridge(req: dict):
+    import httpx
     async with httpx.AsyncClient(timeout=30.0) as client:
         resp = await client.post("http://127.0.0.1:5050/api/challenge/evaluate", json=req)
         if resp.status_code != 200:
@@ -6366,6 +6367,7 @@ async def challenge_evaluate_bridge(req: dict):
 
 @app.post("/api/challenge/delegate")
 async def challenge_delegate_bridge(req: dict):
+    import httpx
     async with httpx.AsyncClient(timeout=90.0) as client:
         resp = await client.post("http://127.0.0.1:5050/api/challenge/delegate", json=req)
         if resp.status_code != 200:
