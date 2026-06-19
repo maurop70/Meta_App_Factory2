@@ -4,6 +4,10 @@ import json
 import logging
 from model_router import route
 from cfo_excel_architect import get_cfo_architect
+# Additive binding: live formula-driven model (fin-model) + board packaging
+# (fin-model-presentation). Import is lazy-safe — the skills themselves are only
+# loaded when a model is actually requested (see cfo_financial_skills.load_skills).
+from cfo_financial_skills import detect_model_intent, build_model_and_pack
 
 logger = logging.getLogger("CFOAgent")
 
@@ -139,4 +143,78 @@ Do NOT wrap the JSON in Markdown block formatting. Output raw JSON only.
             bottom_up = _build_cfo_bottom_up(metrics.get("cost_inputs", {}))
             if bottom_up:
                 result.update(bottom_up)
+        return result
+
+    # ── Financial-skills binding (fin-model → fin-model-presentation) ─────────
+    # These methods are additive: the CFO Agent reaches for the financial skills
+    # on model/projection/unit-economics/P&L/budget/break-even/sensitivity/
+    # fundraising intents, builds the live model, then packages it for the board.
+
+    def build_financial_model(self, assumptions: dict, brand_tokens=None,
+                              project_id: str = "cfo_model", present_pack: bool = True) -> dict:
+        """Directly build + verify a live model and (optionally) package it for the
+        board. Returns workbook/PDF paths, the recalc gate, an executive summary,
+        and a call trace proving the skills were reached through the binding."""
+        try:
+            return build_model_and_pack(assumptions, brand_tokens=brand_tokens,
+                                        project_id=project_id, present_pack=present_pack)
+        except Exception as e:
+            logger.error(f"CFO financial-model build failed: {e}")
+            return {"status": "error", "message": f"fin-model build failed: {e}"}
+
+    def extract_assumptions(self, instruction: str, context: dict = None) -> dict:
+        """Use the CFO's LLM (Claude via model_router) to turn a natural-language
+        request into the fin-model assumptions dict. Falls back to a minimal,
+        clearly-labelled default if the LLM is unavailable, so the binding still
+        runs end-to-end offline."""
+        context = context or {}
+        prompt = f"""You are an elite CFO preparing inputs for a deterministic Excel model engine.
+From the request below, output ONLY a raw JSON object of model assumptions (no markdown).
+Use these EXACT keys (estimate sensibly where unstated; units are USD):
+{{
+  "product_name": "", "units_per_month": 0, "annual_growth_rate": 0.0,
+  "retail_price_per_unit": 0.0,
+  "raw_materials": [{{"item": "", "qty_per_unit": 0.0, "unit_cost": 0.0}}],
+  "line_time_minutes_per_unit": 0.0, "line_cost_per_minute": 0.0,
+  "labor_cost_per_unit": 0.0, "packaging_cost_per_unit": 0.0,
+  "logistics_cost_per_unit": 0.0, "monthly_fixed_opex": 0.0,
+  "capex_items": [{{"item": "", "cost": 0.0, "useful_life_years": 0.0}}],
+  "tax_rate": 0.21, "nwc_days": 45, "num_stores": 0, "years": 5,
+  "sensitivity": {{"target_year": 5}}
+}}
+REQUEST: {instruction}
+CONTEXT: {json.dumps(context)}
+Output raw JSON only."""
+        try:
+            resp = route("financial_model", prompt,
+                         system_prompt="You are an elite CFO. Output strictly raw JSON.")
+            s, e = resp.find("{"), resp.rfind("}")
+            return json.loads(resp[s:e + 1]) if s != -1 and e > s else {}
+        except Exception as ex:
+            logger.error(f"CFO assumption extraction failed, using fallback: {ex}")
+            return {"product_name": context.get("product_name", "Venture (assumptions estimated)"),
+                    "units_per_month": 10000, "annual_growth_rate": 0.20,
+                    "retail_price_per_unit": 4.0,
+                    "raw_materials": [{"item": "Materials", "qty_per_unit": 1, "unit_cost": 1.0}],
+                    "labor_cost_per_unit": 0.2, "packaging_cost_per_unit": 0.1,
+                    "logistics_cost_per_unit": 0.25, "monthly_fixed_opex": 50000,
+                    "capex_items": [{"item": "Equipment", "cost": 150000, "useful_life_years": 7}],
+                    "tax_rate": 0.21, "nwc_days": 45, "num_stores": 0, "years": 5,
+                    "sensitivity": {"target_year": 5}, "_assumptions_estimated": True}
+
+    def route_and_build(self, instruction: str, assumptions: dict = None, brand_tokens=None,
+                        project_id: str = "cfo_model", context: dict = None) -> dict:
+        """Boardroom entrypoint: detect a model intent in `instruction`; if present,
+        obtain assumptions (provided, or extracted via the CFO's LLM) and chain
+        fin-model → fin-model-presentation. Non-model requests are passed through
+        untouched (returns {'status': 'no_model_intent'}) so existing flows are safe."""
+        if not detect_model_intent(instruction):
+            return {"status": "no_model_intent",
+                    "message": "No financial-model intent detected; CFO Agent handled normally."}
+        if not assumptions:
+            assumptions = self.extract_assumptions(instruction, context)
+        result = self.build_financial_model(assumptions, brand_tokens=brand_tokens,
+                                            project_id=project_id)
+        result["intent"] = "financial_model"
+        result["instruction"] = instruction
         return result

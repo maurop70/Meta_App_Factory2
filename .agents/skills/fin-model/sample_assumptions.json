@@ -1,0 +1,25 @@
+{
+  "product_name": "Cold-Brew Coffee Co.",
+  "units_per_month": 15000,
+  "annual_growth_rate": 0.28,
+  "retail_price_per_unit": 4.25,
+  "raw_materials": [
+    {"item": "Coffee beans", "qty_per_unit": 0.04, "unit_cost": 9.0},
+    {"item": "Bottle + cap", "qty_per_unit": 1, "unit_cost": 0.22},
+    {"item": "Label", "qty_per_unit": 1, "unit_cost": 0.05}
+  ],
+  "line_time_minutes_per_unit": 0.5,
+  "line_cost_per_minute": 0.40,
+  "labor_cost_per_unit": 0.18,
+  "packaging_cost_per_unit": 0.10,
+  "logistics_cost_per_unit": 0.25,
+  "monthly_fixed_opex": 55000,
+  "capex_items": [
+    {"item": "Brewing line", "cost": 180000, "useful_life_years": 7},
+    {"item": "Cold storage", "cost": 60000, "useful_life_years": 10}
+  ],
+  "tax_rate": 0.21,
+  "nwc_days": 45,
+  "num_stores": 120,
+  "sensitivity": {"target_year": 5}
+}
