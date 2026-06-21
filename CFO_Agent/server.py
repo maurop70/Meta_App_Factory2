@@ -1,8 +1,15 @@
 import os
+import sys
 import shutil
 import uuid
 import subprocess
 import asyncio
+
+# Ensure the Meta_App_Factory root (parent of CFO_Agent/) is importable so
+# `from cfo_agent import CFOAgent` resolves regardless of how the server is launched.
+_FACTORY_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _FACTORY_ROOT not in sys.path:
+    sys.path.insert(0, _FACTORY_ROOT)
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, status, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -172,6 +179,44 @@ async def cfo_consult(req: Request):
         logger = logging.getLogger("CFO_Agent")
         logger.error(f"CFO consult failed: {e}")
         return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.post("/api/build_model")
+async def build_model(req: Request):
+    """Boardroom financial-model endpoint. Chains fin-model → fin-model-presentation
+    through the CFO Agent binding.
+
+    Body (JSON): {
+        "instruction": "build me a 5-year model with sensitivity and tell me how much to raise",
+        "assumptions": {...optional explicit fin-model assumptions...},
+        "brand_tokens": {...optional brand palette / path...},
+        "project_id": "optional id"
+    }
+    Returns the workbook + board PDF paths, the recalc gate, the executive summary
+    the agent can quote back, and a call trace proving the skills were reached."""
+    try:
+        body = await req.json()
+        from cfo_agent import CFOAgent
+        cfo = CFOAgent()
+        instruction = body.get("instruction", "")
+        assumptions = body.get("assumptions")
+        brand_tokens = body.get("brand_tokens")
+        project_id = body.get("project_id", "boardroom_model")
+
+        if instruction:
+            result = await asyncio.to_thread(cfo.route_and_build, instruction,
+                                             assumptions, brand_tokens, project_id, body.get("context"))
+        elif assumptions:
+            result = await asyncio.to_thread(cfo.build_financial_model, assumptions,
+                                             brand_tokens, project_id, True)
+        else:
+            return JSONResponse(status_code=400,
+                                content={"error": "Provide 'instruction' and/or 'assumptions'."})
+        return JSONResponse(content=result)
+    except Exception as e:
+        import logging
+        logging.getLogger("CFO_Agent").error(f"build_model failed: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
 
 if __name__ == "__main__":
     import uvicorn

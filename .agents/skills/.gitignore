@@ -1,0 +1,6 @@
+# generated artifacts & caches — never commit skill outputs
+out/
+**/out/
+__pycache__/
+*.pyc
+*_pages/

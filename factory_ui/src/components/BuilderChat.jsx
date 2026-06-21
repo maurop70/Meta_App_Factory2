@@ -95,6 +95,10 @@ export default function BuilderChat() {
     try { sessionStorage.setItem('ma_routing_mode', m); } catch (e) {}
   };
 
+  // Project feedback context seeded by the Workspace Vault "Modify / Give Feedback" action.
+  // Held in a ref so it rides along on every orchestration payload for this session.
+  const feedbackContextRef = useRef(null);
+
   const fetchSystemRegistry = async () => {
     try {
       const res = await fetch('/api/system/registry');
@@ -111,6 +115,35 @@ export default function BuilderChat() {
     fetchSystemRegistry();
     const interval = setInterval(fetchSystemRegistry, 10000);
     return () => clearInterval(interval);
+  }, []);
+
+  // On load, ingest project feedback context seeded by the Workspace Vault feedback button.
+  // One-shot: clear the localStorage keys immediately so revisiting /builder does not re-seed.
+  useEffect(() => {
+    let projName = null;
+    try {
+      projName = localStorage.getItem('builder_feedback_project');
+      const payload = localStorage.getItem('builder_feedback_payload');
+      if (projName) {
+        try {
+          feedbackContextRef.current = payload ? JSON.parse(payload) : { project_name: projName };
+        } catch (e) {
+          feedbackContextRef.current = { project_name: projName };
+        }
+      }
+    } catch (e) { /* localStorage unavailable */ }
+
+    if (projName) {
+      setChatHistory(prev => [...prev, {
+        role: 'system',
+        content: `💬 [PROJECT FEEDBACK MATRIX] Active project context loaded: ${projName}. Ingesting prior approved strategy and blueprints. Input your considerations or modifications below.`,
+        document_ids: []
+      }]);
+      try {
+        localStorage.removeItem('builder_feedback_project');
+        localStorage.removeItem('builder_feedback_payload');
+      } catch (e) {}
+    }
   }, []);
 
   // Poll /api/claudeay/status for pending fix proposals missed while SSE was suspended
@@ -590,12 +623,13 @@ export default function BuilderChat() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         signal: controller.signal,
-        body: JSON.stringify({ 
-          description: userMsg || "Evaluate attached documents.", 
+        body: JSON.stringify({
+          description: userMsg || "Evaluate attached documents.",
           prompt: userMsg || "Evaluate attached documents.",
           document_ids: updatedCachedDocIds,
           history: serializedHistory,
-          mode: routingMode
+          mode: routingMode,
+          project_context: feedbackContextRef.current
         })
       });
       
@@ -815,11 +849,12 @@ export default function BuilderChat() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         signal: controller.signal,
-        body: JSON.stringify({ 
-          description: blueprintJson, 
+        body: JSON.stringify({
+          description: blueprintJson,
           prompt: blueprintJson,
           document_ids: cachedDocumentIds,
-          history: [] // Clean history for strict alternating sequence
+          history: [], // Clean history for strict alternating sequence
+          project_context: feedbackContextRef.current
         })
       });
       

@@ -16,6 +16,7 @@ import logging
 import time
 import subprocess
 from datetime import datetime
+from typing import Optional
 import aiofiles
 
 # Configure unbuffered output for pipeline piping compatibility

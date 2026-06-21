@@ -47,30 +47,43 @@ class ProjectUpdate(BaseModel):
 
 @projects_router.post("/")
 async def create_project(payload: ProjectCreate):
-    """POST /api/projects/: Ingest workspace payload and commit to SQLite."""
-    project_id = str(uuid.uuid4())
+    """POST /api/projects/: Ingest workspace payload and UPSERT into SQLite.
+
+    Idempotent on the UNIQUE project_name: re-running a deliberation updates the
+    existing row's content/updated_at while preserving its original id and
+    created_at, instead of failing with a duplicate-key error.
+    """
     now = datetime.utcnow().isoformat()
     try:
         with closing(sqlite3.connect(DB_PATH)) as conn:
+            # Preserve the original id/created_at if this project_name already exists.
+            existing = conn.execute(
+                "SELECT id, created_at FROM project_workspaces WHERE project_name = ?",
+                (payload.project_name,)
+            ).fetchone()
+            project_id = existing[0] if existing else str(uuid.uuid4())
+            created_at = existing[1] if existing else now
             conn.execute(
                 """
-                INSERT INTO project_workspaces 
-                (id, project_name, financial_matrix, operational_context, created_at, updated_at) 
+                INSERT INTO project_workspaces
+                (id, project_name, financial_matrix, operational_context, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?)
+                ON CONFLICT(project_name) DO UPDATE SET
+                    financial_matrix = excluded.financial_matrix,
+                    operational_context = excluded.operational_context,
+                    updated_at = excluded.updated_at
                 """,
                 (
                     project_id,
                     payload.project_name,
                     json.dumps(payload.financial_matrix),
                     json.dumps(payload.operational_context),
-                    now,
+                    created_at,
                     now
                 )
             )
             conn.commit()
-        return {"status": "success", "id": project_id}
-    except sqlite3.IntegrityError:
-        raise HTTPException(status_code=400, detail=f"Project workspace '{payload.project_name}' already exists.")
+        return {"status": "success", "id": project_id, "updated": bool(existing)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

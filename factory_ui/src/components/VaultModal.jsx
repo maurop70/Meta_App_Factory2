@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 export default function VaultModal({ isOpen, onClose, project, handleActuateProject }) {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('briefing'); // 'briefing' | 'timeline'
   const [eosState, setEosState] = useState(null);
   const [history, setHistory] = useState([]);
@@ -128,7 +130,18 @@ export default function VaultModal({ isOpen, onClose, project, handleActuateProj
             </p>
           </div>
           <div className="flex gap-2">
-            <button 
+            <button
+              onClick={() => {
+                localStorage.setItem('builder_feedback_project', project.project_name);
+                localStorage.setItem('builder_feedback_payload', JSON.stringify(project));
+                onClose();
+                navigate('/builder');
+              }}
+              className="p-1 px-2.5 rounded-lg border border-amber-500/40 bg-amber-950/30 text-amber-400 hover:text-amber-200 hover:bg-amber-900/40 transition-colors text-xs font-mono"
+            >
+              ✏️ MODIFY / GIVE FEEDBACK
+            </button>
+            <button
               onClick={async () => {
                 try {
                   await axios.post('/api/projects/open-folder', { project_name: project.project_name });
