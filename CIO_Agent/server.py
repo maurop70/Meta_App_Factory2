@@ -50,10 +50,9 @@ import aiohttp
 ROOT = Path(__file__).parent
 FACTORY_ROOT = ROOT.parent
 
-for env_path in [ROOT / ".env", FACTORY_ROOT / ".env"]:
+for env_path in [ROOT / ".env", FACTORY_ROOT / ".env", FACTORY_ROOT.parent / ".env"]:
     if env_path.exists():
         load_dotenv(env_path)
-        break
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(message)s")
 logger = logging.getLogger("CIO_Agent")
@@ -697,6 +696,26 @@ async def process_sweep(req: CIOProcessRequest = CIOProcessRequest()):
         return JSONResponse(status_code=500, content={"error": str(e)})
     finally:
         sweep_state["is_running"] = False
+
+
+# ── Fast Feasibility Check (lightweight, bypasses the full 3-phase sweep) ──
+@app.post("/api/cio/feasibility")
+async def cio_feasibility(req: DeepResearchRequest):
+    """Lightweight technical feasibility check for the War Room.
+
+    Instantiates the CIO_Agent class and calls run() directly — a single Gemini
+    inference with no run_full_sweep codebase/web audit — so callers get a fast
+    feasibility_analysis instead of waiting on the heavy background sweep.
+    """
+    try:
+        from cio_agent import CIO_Agent
+        agent = CIO_Agent()
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(None, agent.run, req.query)
+        return result
+    except Exception as e:
+        logger.error(f"Feasibility check failed: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
 
 # ── Deep Research (Live Internet Sensor Matrix) ───────────

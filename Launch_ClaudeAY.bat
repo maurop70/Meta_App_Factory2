@@ -1,5 +1,11 @@
 @echo off
 title ClaudeAY — Architect Terminal
+
+:: Activate local Python 3.12 virtual environment to avoid Python 3.14 incompatibilities
+if exist "%~dp0venv\Scripts\activate.bat" (
+    echo [INFO] Activating virtual environment...
+    call "%~dp0venv\Scripts\activate.bat"
+)
 echo ================================================
 echo   ClaudeAY — Claude + Antigravity Bridge
 echo ================================================

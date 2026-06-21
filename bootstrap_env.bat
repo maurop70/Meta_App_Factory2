@@ -8,6 +8,12 @@
 :: ── 1. Python Auto-Detection (cascading search) ──────────────
 set "PYTHON="
 
+:: Strategy: Try local virtual environment first to support Python 3.12 compatibility layer
+if exist "%~dp0venv\Scripts\python.exe" (
+    set "PYTHON=%~dp0venv\Scripts\python.exe"
+    goto :PYTHON_FOUND
+)
+
 :: Strategy: Try common install locations, then fall back to PATH
 :: This covers: python.org, custom installs. Skip the MS Store alias.
 for /f "delims=" %%p in ('where python 2^>nul') do (

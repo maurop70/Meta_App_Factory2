@@ -18,6 +18,7 @@ except ImportError:
 try:
     from dotenv import load_dotenv
     load_dotenv(os.path.join(SCRIPT_DIR, ".env"))
+    load_dotenv(os.path.join(SCRIPT_DIR, "..", ".env"))
 except ImportError:
     pass
 

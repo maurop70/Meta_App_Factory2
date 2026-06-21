@@ -23,6 +23,17 @@ from pydantic import BaseModel, ValidationError
 from ai_utils import generate_with_backoff_sync
 from agent_base import AgentBase, ProvenanceClaim
 
+# Load .env from the local dir first, then the workspace root (one level up),
+# so standalone runs (python cmo_agent.py) still pick up the valid GEMINI_API_KEY.
+# The root .env is the source of truth, so it overrides any local value.
+try:
+    from dotenv import load_dotenv
+    _HERE = os.path.dirname(os.path.abspath(__file__))
+    load_dotenv(os.path.join(_HERE, ".env"))
+    load_dotenv(os.path.join(_HERE, "..", ".env"), override=True)
+except ImportError:
+    pass
+
 logger = logging.getLogger(__name__)
 
 

@@ -271,5 +271,44 @@
     "created_at": "2026-05-26T23:21:05.497024",
     "resolved_at": null,
     "resolution": null
+  },
+  "CHG-0008": {
+    "challenge_id": "CHG-0008",
+    "status": "PAUSED",
+    "score": 5.0,
+    "threshold": 9.5,
+    "gap": 4.5,
+    "proposal_preview": "test proposal",
+    "weaknesses": [
+      {
+        "id": 1,
+        "category": "User Retention",
+        "severity": "SIGNIFICANT",
+        "challenge": "No push notification or email drip campaign infrastructure is planned.",
+        "required_evidence": "Provide data or reasoning addressing user retention."
+      },
+      {
+        "id": 2,
+        "category": "Team Dependency",
+        "severity": "SIGNIFICANT",
+        "challenge": "Single point of failure: only one engineer understands the core orchestration layer.",
+        "required_evidence": "Provide data or reasoning addressing team dependency."
+      },
+      {
+        "id": 3,
+        "category": "Market Validation",
+        "severity": "SIGNIFICANT",
+        "challenge": "Market size estimate uses top-down TAM methodology without bottom-up validation.",
+        "required_evidence": "Provide data or reasoning addressing market validation."
+      }
+    ],
+    "requires": "user_reasoning",
+    "options": [
+      "convince",
+      "force_proceed"
+    ],
+    "created_at": "2026-06-19T14:59:36.825678",
+    "resolved_at": null,
+    "resolution": null
   }
 }

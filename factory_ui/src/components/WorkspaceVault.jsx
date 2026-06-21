@@ -157,7 +157,18 @@ export default function WorkspaceVault({ setSelectedApp }) {
                   >
                     📁 FOLDER
                   </span>
-                  <span 
+                  <span
+                    className="text-amber-400 hover:text-amber-300 font-semibold cursor-pointer transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      localStorage.setItem('builder_feedback_project', project.project_name);
+                      localStorage.setItem('builder_feedback_payload', JSON.stringify(project));
+                      navigate('/builder');
+                    }}
+                  >
+                    ✏️ MODIFY / FEEDBACK
+                  </span>
+                  <span
                     className="text-cyan-400 hover:text-cyan-300 font-semibold cursor-pointer transition-colors"
                     onClick={() => {
                       setSelectedProject(project);

@@ -1,6 +1,12 @@
 @echo off
 title Meta App Factory Web UI
 
+:: Activate local Python 3.12 virtual environment to avoid Python 3.14 incompatibilities
+if exist "%~dp0venv\Scripts\activate.bat" (
+    echo [INFO] Activating virtual environment...
+    call "%~dp0venv\Scripts\activate.bat"
+)
+
 echo Starting Antigravity Executor (AY2 Daemon)...
 start "AY2 Watchdog" /min cmd /k "cd /d %~dp0 && python alpha_orchestrator.py --daemon"
 
