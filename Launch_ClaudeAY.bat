@@ -6,6 +6,7 @@ if exist "%~dp0venv\Scripts\activate.bat" (
     echo [INFO] Activating virtual environment...
     call "%~dp0venv\Scripts\activate.bat"
 )
+call "%~dp0bootstrap_env.bat"
 echo ================================================
 echo   ClaudeAY — Claude + Antigravity Bridge
 echo ================================================

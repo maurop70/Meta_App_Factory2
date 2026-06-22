@@ -64,6 +64,11 @@ exit /b 1
 :PYTHON_FOUND
 echo  [OK] Python: %PYTHON%
 
+:: ── 1b. System Dependencies Check (Tesseract OCR & LibreOffice) ──────
+if exist "%~dp0setup_system_dependencies.py" (
+    "%PYTHON%" "%~dp0setup_system_dependencies.py"
+)
+
 :: ── 2. Runtime Data Isolation (per-machine) ──────────────────
 :: Use %LOCALAPPDATA% which is unique per Windows user/machine.
 :: This ensures PC1 and PC2 never conflict on runtime files.
