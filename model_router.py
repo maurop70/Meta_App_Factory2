@@ -45,6 +45,7 @@ TASK_ROUTING = {
     "brand_identity":    GEMINI_FLASH,     # Brand DNA, creative/visual
     "legal_analysis":    CLAUDE_SONNET,    # Legal reasoning, structured
     "financial_model":   CLAUDE_SONNET,    # Spreadsheet math, projections
+    "assumptions_extraction": GEMINI_PRO,  # NL request -> structured model-assumptions JSON (Gemini)
     "business_plan":     CLAUDE_SONNET,    # Cross-doc reconciliation
     "funding_strategy":  CLAUDE_SONNET,    # Financial gap analysis
     "pitch_deck":        GEMINI_FLASH,     # Presentation copy, creative

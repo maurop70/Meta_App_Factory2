@@ -316,6 +316,126 @@ def read_docx_table_grid(path: str) -> list:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+#  B2. GOOGLE DOCS — fill a live Google Doc directly via the Docs API
+# ═══════════════════════════════════════════════════════════════════════════
+# Same fill model as the .docx path ({{key}} placeholders), but instead of
+# exporting a local file we authenticate to Google, fetch the document, and push
+# edits straight into the live doc with a single batchUpdate. The request set is
+# built by a pure function (`build_replace_requests`) so the logic is verifiable
+# offline (dry_run) without credentials or network.
+
+GOOGLE_DOCS_SCOPES = ["https://www.googleapis.com/auth/documents"]
+
+
+def _google_docs_service(credentials_path: str = None, token_path: str = None):
+    """OAuth (installed-app) flow for the Google Docs API. Reuses a cached token,
+    refreshes it silently when expired, and only opens the consent browser flow on
+    first use. Paths default to the GOOGLE_OAUTH_CLIENT_SECRET / GOOGLE_OAUTH_TOKEN
+    env vars, else credentials.json / token.json in the cwd."""
+    from google.oauth2.credentials import Credentials
+    from google_auth_oauthlib.flow import InstalledAppFlow
+    from google.auth.transport.requests import Request
+    from googleapiclient.discovery import build
+
+    credentials_path = credentials_path or os.environ.get("GOOGLE_OAUTH_CLIENT_SECRET", "credentials.json")
+    token_path = token_path or os.environ.get("GOOGLE_OAUTH_TOKEN", "token.json")
+
+    creds = None
+    if os.path.exists(token_path):
+        creds = Credentials.from_authorized_user_file(token_path, GOOGLE_DOCS_SCOPES)
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            if not os.path.exists(credentials_path):
+                raise FileNotFoundError(
+                    f"Google OAuth client secret not found at '{credentials_path}'. "
+                    "Download it from the Google Cloud console (OAuth 2.0 Client ID, "
+                    "Desktop app) and point GOOGLE_OAUTH_CLIENT_SECRET at it.")
+            flow = InstalledAppFlow.from_client_secrets_file(credentials_path, GOOGLE_DOCS_SCOPES)
+            creds = flow.run_local_server(port=0)
+        with open(token_path, "w", encoding="utf-8") as f:
+            f.write(creds.to_json())
+    return build("docs", "v1", credentials=creds)
+
+
+def read_google_doc_text(document: dict) -> str:
+    """Flatten a Docs API document resource to plain text (paragraph text runs and
+    table cell text), so we can read back/verify what the live doc contains."""
+    def _walk(content):
+        out = []
+        for el in content or []:
+            para = el.get("paragraph")
+            if para:
+                for pe in para.get("elements", []):
+                    tr = pe.get("textRun")
+                    if tr:
+                        out.append(tr.get("content", ""))
+            table = el.get("table")
+            if table:
+                for row in table.get("tableRows", []):
+                    for cell in row.get("tableCells", []):
+                        out.append(_walk(cell.get("content", [])))
+        return "".join(out)
+    return _walk(document.get("body", {}).get("content", []))
+
+
+def build_replace_requests(placeholders: dict) -> list:
+    """Pure: build the Docs API `replaceAllText` request list for {{key}} placeholders.
+    Separated so the request construction is unit-testable without auth/network."""
+    reqs = []
+    for k, v in placeholders.items():
+        reqs.append({"replaceAllText": {
+            "containsText": {"text": "{{" + str(k) + "}}", "matchCase": True},
+            "replaceText": "" if v is None else str(v)}})
+    return reqs
+
+
+def fill_google_doc(doc_id: str, placeholders: dict, credentials_path: str = None,
+                    token_path: str = None, dry_run: bool = False) -> dict:
+    """Fill a live Google Doc by replacing {{key}} placeholders with values, in place.
+    Authenticates, fetches the document content, pushes one batchUpdate, then reads
+    the doc back to confirm the placeholders are gone and the values are present.
+    dry_run=True returns the request set without touching the network (offline proof)."""
+    requests = build_replace_requests(placeholders)
+    if dry_run:
+        return {"status": "dry_run", "doc_id": doc_id, "n_requests": len(requests),
+                "requests": requests}
+
+    service = _google_docs_service(credentials_path, token_path)
+    before = service.documents().get(documentId=doc_id).execute()
+    before_text = read_google_doc_text(before)
+
+    resp = service.documents().batchUpdate(
+        documentId=doc_id, body={"requests": requests}).execute()
+    replies = resp.get("replies", [])
+    changed = {}
+    for k, r in zip(placeholders.keys(), replies):
+        changed[k] = r.get("replaceAllText", {}).get("occurrencesChanged", 0)
+
+    after = service.documents().get(documentId=doc_id).execute()
+    after_text = read_google_doc_text(after)
+
+    # QA read-back: every value present, no {{placeholders}} left for the filled keys
+    values_present = {k: (str(v) in after_text) for k, v in placeholders.items() if v not in (None, "")}
+    leftover = re.findall(r"\{\{[^}]+\}\}", after_text)
+    report = {
+        "status": "filled",
+        "doc_id": doc_id,
+        "doc_url": f"https://docs.google.com/document/d/{doc_id}/edit",
+        "title": after.get("title"),
+        "occurrences_changed": changed,
+        "filled": [{"placeholder": k, "value": v, "occurrences": changed.get(k, 0)}
+                   for k, v in placeholders.items()],
+        "qa": {"clean": all(values_present.values()) and not leftover,
+               "values_present": values_present,
+               "remaining_placeholders": leftover,
+               "chars_before": len(before_text), "chars_after": len(after_text)},
+    }
+    return report
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 #  C. FILL REPORT
 # ═══════════════════════════════════════════════════════════════════════════
 

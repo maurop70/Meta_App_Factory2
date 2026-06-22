@@ -163,10 +163,13 @@ Do NOT wrap the JSON in Markdown block formatting. Output raw JSON only.
             return {"status": "error", "message": f"fin-model build failed: {e}"}
 
     def extract_assumptions(self, instruction: str, context: dict = None) -> dict:
-        """Use the CFO's LLM (Claude via model_router) to turn a natural-language
-        request into the fin-model assumptions dict. Falls back to a minimal,
-        clearly-labelled default if the LLM is unavailable, so the binding still
-        runs end-to-end offline."""
+        """Parse a natural-language request into the fin-model assumptions dict by
+        routing it through the model router's Gemini path (task
+        'assumptions_extraction' -> Gemini Pro, which the router strictly falls back
+        to Claude on failure). The model returns a structured JSON assumptions object
+        that we parse and hand to the deterministic Excel engine. Falls back to a
+        minimal, clearly-labelled default only if every model is unavailable, so the
+        binding still runs end-to-end offline."""
         context = context or {}
         prompt = f"""You are an elite CFO preparing inputs for a deterministic Excel model engine.
 From the request below, output ONLY a raw JSON object of model assumptions (no markdown).
@@ -186,10 +189,16 @@ REQUEST: {instruction}
 CONTEXT: {json.dumps(context)}
 Output raw JSON only."""
         try:
-            resp = route("financial_model", prompt,
-                         system_prompt="You are an elite CFO. Output strictly raw JSON.")
+            resp = route("assumptions_extraction", prompt,
+                         system_prompt="You are an elite CFO. Output strictly raw JSON.",
+                         high_availability=True)
             s, e = resp.find("{"), resp.rfind("}")
-            return json.loads(resp[s:e + 1]) if s != -1 and e > s else {}
+            if s != -1 and e > s:
+                parsed = json.loads(resp[s:e + 1])
+                if parsed:
+                    parsed.setdefault("_extracted_by", "model_router:assumptions_extraction")
+                    return parsed
+            raise ValueError("model returned no parseable JSON assumptions")
         except Exception as ex:
             logger.error(f"CFO assumption extraction failed, using fallback: {ex}")
             return {"product_name": context.get("product_name", "Venture (assumptions estimated)"),

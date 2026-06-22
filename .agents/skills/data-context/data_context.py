@@ -29,6 +29,54 @@ from dataclasses import dataclass, field
 import pandas as pd
 
 
+# ── OCR engine (live Tesseract for scanned PDFs / images) ────────────────────
+def _resolve_tesseract():
+    """Locate the Tesseract OCR engine binary across the TESSERACT_CMD env override,
+    PATH, and the common Windows/Unix install locations. When found, points
+    pytesseract at it so callers don't need it on PATH. Returns the path or None."""
+    import shutil
+    candidates = [
+        os.environ.get("TESSERACT_CMD"),
+        shutil.which("tesseract"),
+        r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+        r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
+        "/usr/bin/tesseract", "/usr/local/bin/tesseract", "/opt/homebrew/bin/tesseract",
+    ]
+    for c in candidates:
+        if c and os.path.exists(c):
+            try:
+                import pytesseract
+                pytesseract.pytesseract.tesseract_cmd = c
+            except Exception:
+                pass
+            return c
+    return None
+
+
+def ocr_pdf(path, dpi=300, max_pages=50):
+    """Live OCR for scanned/flat PDFs with no extractable text layer. Rasterizes each
+    page with pypdfium2 at `dpi` and runs Tesseract OCR. Returns (text, meta) where
+    meta records the engine, pages OCR'd and per-page char counts. Raises RuntimeError
+    if the OCR engine/libraries are unavailable so the caller can flag (never guess)."""
+    tcmd = _resolve_tesseract()
+    if not tcmd:
+        raise RuntimeError("Tesseract engine not found (set TESSERACT_CMD or add it to PATH)")
+    import pytesseract
+    import pypdfium2 as pdfium
+    pdf = pdfium.PdfDocument(path)
+    scale = dpi / 72.0
+    chunks, per_page = [], []
+    n = min(len(pdf), max_pages)
+    for i in range(n):
+        pil = pdf[i].render(scale=scale).to_pil()
+        txt = pytesseract.image_to_string(pil) or ""
+        chunks.append(txt)
+        per_page.append(len(txt.strip()))
+    text = "\n".join(chunks).strip()
+    return text, {"engine": f"tesseract@{tcmd}", "pages_ocred": n,
+                  "per_page_chars": per_page, "dpi": dpi}
+
+
 # ── vocabulary normalization ─────────────────────────────────────────────────
 GENDER_SYNONYMS = {
     "female": {"female", "f", "w", "woman", "women", "fem", "girl", "lady"},
@@ -169,7 +217,18 @@ class DataContext:
         if text_chunks:
             self.add_text("\n".join(text_chunks), source=os.path.basename(path))
         if not text_chunks and ntables == 0:
-            self.notes.append(f"{path}: no extractable text/tables (scanned? needs OCR).")
+            # Scanned/flat PDF: no text layer. Run live OCR rather than just flagging it.
+            try:
+                ocr_text, meta = ocr_pdf(path)
+                if ocr_text:
+                    self.add_text(ocr_text, source=f"{os.path.basename(path)} (OCR)")
+                    self.notes.append(f"{path}: OCR extracted {len(ocr_text)} chars from "
+                                      f"{meta['pages_ocred']} page(s) via {meta['engine']}.")
+                else:
+                    self.notes.append(f"{path}: OCR produced no text (blank/illegible scan).")
+            except Exception as e:
+                self.notes.append(f"{path}: no text layer and OCR unavailable ({e}) "
+                                  f"— flagged, not guessed.")
 
     def _load_docx(self, path):
         import docx
@@ -186,15 +245,17 @@ class DataContext:
 
     def _load_image(self, path):
         try:
+            if not _resolve_tesseract():
+                raise RuntimeError("Tesseract engine not found")
             import pytesseract
             from PIL import Image
             txt = pytesseract.image_to_string(Image.open(path))
             if txt.strip():
-                self.add_text(txt, source=os.path.basename(path))
+                self.add_text(txt, source=f"{os.path.basename(path)} (OCR)")
             else:
                 self.notes.append(f"{path}: OCR produced no text.")
-        except Exception:
-            self.notes.append(f"{path}: image OCR unavailable (pytesseract/tesseract missing) — flagged, not guessed.")
+        except Exception as e:
+            self.notes.append(f"{path}: image OCR unavailable ({e}) — flagged, not guessed.")
 
     # ---- profiling --------------------------------------------------------
     def profile(self):

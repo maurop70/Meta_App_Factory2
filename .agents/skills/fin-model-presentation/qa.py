@@ -86,3 +86,75 @@ def qa_pdf(pdf_path: str, expect_sections=None) -> dict:
     report["page_count"] = len(report["pages"])
     report["clean"] = len(report["issues"]) == 0
     return report
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  LIVE OFFICE RENDERING — render the actual .xlsx workbook (incl. its native
+#  charts) for visual QA via LibreOffice headless conversion to PDF, then raster.
+# ═══════════════════════════════════════════════════════════════════════════
+
+def _resolve_soffice():
+    """Locate the LibreOffice binary across LIBREOFFICE_PATH, PATH, and the common
+    Windows/Unix/macOS install locations. Returns the path or None."""
+    import shutil
+    candidates = [
+        os.environ.get("LIBREOFFICE_PATH"),
+        shutil.which("soffice"), shutil.which("libreoffice"),
+        r"C:\Program Files\LibreOffice\program\soffice.exe",
+        r"C:\Program Files (x86)\LibreOffice\program\soffice.exe",
+        "/usr/bin/soffice", "/usr/bin/libreoffice", "/opt/libreoffice/program/soffice",
+        "/Applications/LibreOffice.app/Contents/MacOS/soffice",
+    ]
+    for c in candidates:
+        if c and (os.path.exists(c) or shutil.which(c)):
+            return c
+    return None
+
+
+def office_to_pdf(office_path: str, out_dir: str = None, timeout: int = 180) -> str:
+    """Convert an Office file (.xlsx/.pptx/.docx) to PDF with LibreOffice headless.
+    Uses a per-call user-profile dir so a running LibreOffice never blocks the
+    conversion. Raises RuntimeError if LibreOffice is unavailable or no PDF emerges."""
+    import subprocess
+    soffice = _resolve_soffice()
+    if not soffice:
+        raise RuntimeError("LibreOffice (soffice) not found — set LIBREOFFICE_PATH or "
+                           "add it to PATH to enable live .xlsx/.pptx rendering")
+    out_dir = out_dir or (os.path.splitext(office_path)[0] + "_render")
+    os.makedirs(out_dir, exist_ok=True)
+    profile = os.path.abspath(os.path.join(out_dir, "_lo_profile")).replace("\\", "/")
+    cmd = [soffice, "--headless", "--norestore", "--nolockcheck",
+           f"-env:UserInstallation=file:///{profile}",
+           "--convert-to", "pdf", "--outdir", out_dir, os.path.abspath(office_path)]
+    proc = subprocess.run(cmd, capture_output=True, timeout=timeout)
+    pdf = os.path.join(out_dir, os.path.splitext(os.path.basename(office_path))[0] + ".pdf")
+    if not os.path.exists(pdf):
+        raise RuntimeError(f"LibreOffice produced no PDF for {office_path} "
+                           f"(rc={proc.returncode}): {proc.stderr.decode('utf-8','ignore')[:300]}")
+    return pdf
+
+
+def qa_xlsx(xlsx_path: str, out_dir: str = None) -> dict:
+    """Live visual QA of the generated Excel workbook AND its native charts: convert
+    it to PDF with LibreOffice, render each page to PNG, and scan the rendered text
+    for spreadsheet error markers (#REF!/#DIV/0!/#VALUE!/…). `clean` is True only when
+    pages rendered and no error/placeholder text is present."""
+    import pdfplumber
+    pdf = office_to_pdf(xlsx_path, out_dir=out_dir)
+    report = {"source_xlsx": os.path.abspath(xlsx_path), "pdf_path": os.path.abspath(pdf),
+              "png_pages": [], "issues": [], "clean": False}
+    full_text = ""
+    with pdfplumber.open(pdf) as doc:
+        for page in doc.pages:
+            full_text += "\n" + (page.extract_text() or "")
+    hits = _placeholder_hits(full_text)
+    if hits:
+        report["issues"].append({"page": "doc",
+                                 "issues": [f"spreadsheet error/placeholder text: {hits}"]})
+    try:
+        report["png_pages"] = render_pages(pdf, out_dir=out_dir)
+    except Exception as e:
+        report["issues"].append({"page": "render", "issues": [f"render failed: {e!r}"]})
+    report["page_count"] = len(report["png_pages"])
+    report["clean"] = not report["issues"] and report["page_count"] > 0
+    return report

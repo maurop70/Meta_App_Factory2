@@ -26,6 +26,48 @@ ACC = os.path.join(ROOT, "_acceptance")
 PY = sys.executable
 
 
+def _find_factory_dir():
+    """Locate the Meta_App_Factory dir (where cfo_agent.py lives) across layouts:
+    skills vendored INSIDE the factory (ROOT/../..) or as a dev sibling
+    (ROOT/../../Meta_App_Factory). Env MAF_FACTORY_DIR overrides."""
+    candidates = [
+        os.environ.get("MAF_FACTORY_DIR"),
+        os.path.abspath(os.path.join(ROOT, "..", "..")),
+        os.path.abspath(os.path.join(ROOT, "..", "..", "Meta_App_Factory")),
+    ]
+    for c in candidates:
+        if c and os.path.exists(os.path.join(c, "cfo_agent.py")):
+            return c
+    raise FileNotFoundError(f"Could not locate Meta_App_Factory (cfo_agent.py) from {ROOT}")
+
+
+def _make_scanned_pdf(out_path):
+    """Build a 'scanned' PDF (text rasterized into an image, NO text layer) so the
+    OCR live path has something genuine to read. Returns the path or None if the
+    imaging deps are unavailable."""
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+        from reportlab.pdfgen import canvas
+        from reportlab.lib.pagesizes import letter
+    except Exception:
+        return None
+    os.makedirs(os.path.dirname(os.path.abspath(out_path)), exist_ok=True)
+    img = Image.new("RGB", (1100, 320), "white")
+    d = ImageDraw.Draw(img)
+    try:
+        font = ImageFont.truetype("arial.ttf", 46)
+    except Exception:
+        font = ImageFont.load_default()
+    d.text((40, 60), "VENDOR: Cold Brew Coffee Co", fill="black", font=font)
+    d.text((40, 150), "INVOICE TOTAL: 4250 USD", fill="black", font=font)
+    png = os.path.splitext(out_path)[0] + "_scan.png"
+    img.save(png)
+    c = canvas.Canvas(out_path, pagesize=letter)
+    c.drawImage(png, 50, 380, width=520, height=150)
+    c.save()
+    return out_path
+
+
 # ── individual steps (each runs in a fresh interpreter) ──────────────────────
 def step_identity():
     sys.path.insert(0, os.path.join(ROOT, "brand-deck"))
@@ -55,6 +97,14 @@ def step_model_present():
                    pdf_path=os.path.join(ACC, "coldbrew_board.pdf"), qa=True)
     print(f"  PRESENT: qa_clean={pres['qa']['clean']} charts={pres['charts']}")
     assert pres["qa"]["clean"], "presentation QA failed"
+    # LIVE PATH: render the actual .xlsx workbook + its native charts via LibreOffice.
+    import qa as fmp_qa
+    if fmp_qa._resolve_soffice():
+        xq = fmp_qa.qa_xlsx(os.path.join(ACC, "coldbrew_model.xlsx"))
+        print(f"  XLSX RENDER (LibreOffice): clean={xq['clean']} pages={xq['page_count']}")
+        assert xq["clean"], f"xlsx chart render QA failed: {xq['issues']}"
+    else:
+        print("  XLSX RENDER (LibreOffice): SKIPPED (LibreOffice not installed)")
     sm = shadow_model(A); rows = sm["rows"]
     json.dump({"gross_margin_pct": sm["gross_margin_pct"] * 100,
                "peak_funding_requirement": round(sm["peak_funding"]),
@@ -77,6 +127,14 @@ def step_deck():
                      os.path.join(ACC, "coldbrew_deck.pdf"))
     print(f"  DECK: qa_clean={out['qa']['clean']} slides={out['qa']['slide_count']} pptx={bool(out.get('pptx_path'))}")
     assert out["qa"]["clean"], "deck QA failed"
+    # LIVE PATH: render the actual .pptx deck via LibreOffice and QA the rendered slides.
+    import qa as bd_qa
+    if bd_qa._resolve_soffice() and out.get("pptx_path"):
+        pq = bd_qa.qa_pptx(out["pptx_path"], expect_slides=out["qa"]["slide_count"])
+        print(f"  PPTX RENDER (LibreOffice): clean={pq['clean']} slides={pq['slide_count']}")
+        assert pq["clean"], f"pptx render QA failed: {pq['issues']}"
+    else:
+        print("  PPTX RENDER (LibreOffice): SKIPPED (LibreOffice not installed or no .pptx)")
 
 
 def step_formfill():
@@ -99,9 +157,36 @@ def step_formfill():
           f"reconciled={rec} excluded={B['report']['excluded_unknown_rows']}")
     assert A["status"] == "filled" and B["status"] == "filled" and rec, "form-fill failed"
 
+    # LIVE PATH C: scanned PDF (no text layer) -> live Tesseract OCR via data_context.
+    sys.path.insert(0, os.path.join(ROOT, "data-context"))
+    import data_context as dc
+    scanned = _make_scanned_pdf(os.path.join(ACC, "forms", "scanned_invoice.pdf"))
+    if scanned and dc._resolve_tesseract():
+        ctx = dc.DataContext.from_sources([scanned])
+        ocr_txt = " ".join(t["text"] for t in ctx.text_facts)
+        print(f"  CASE C (scanned PDF -> OCR): chars={len(ocr_txt)} "
+              f"read_vendor={'COLD BREW' in ocr_txt.upper()}")
+        assert "COLD" in ocr_txt.upper(), f"OCR failed to read the scanned PDF: {ctx.notes}"
+    else:
+        print("  CASE C (scanned PDF -> OCR): SKIPPED (Tesseract engine not installed)")
+
+    # LIVE PATH D: Google Docs API write. Dry-run proves the batchUpdate request set
+    # is built correctly offline; a live push runs when OAuth creds + a doc_id exist.
+    gdoc_id = os.environ.get("GOOGLE_TEST_DOC_ID")
+    if gdoc_id and (os.environ.get("GOOGLE_OAUTH_CLIENT_SECRET") or os.path.exists("credentials.json")):
+        g = ff.fill_google_doc(gdoc_id, {"EmployeeName": "Jordan Rivera", "Department": "Warehouse"})
+        print(f"  CASE D (Google Docs LIVE): status={g['status']} qa_clean={g['qa']['clean']}")
+        assert g["status"] == "filled" and g["qa"]["clean"], "live Google Docs fill failed"
+    else:
+        g = ff.fill_google_doc("SAMPLE_DOC_ID",
+                               {"EmployeeName": "Jordan Rivera", "Department": "Warehouse"}, dry_run=True)
+        print(f"  CASE D (Google Docs API, dry-run): status={g['status']} requests={g['n_requests']} "
+              "(set GOOGLE_TEST_DOC_ID + OAuth creds for a live push)")
+        assert g["status"] == "dry_run" and g["n_requests"] == 2, "Google Docs request build failed"
+
 
 def step_cfo():
-    fac = os.path.abspath(os.path.join(ROOT, "..", "..", "Meta_App_Factory"))
+    fac = _find_factory_dir()
     sys.path.insert(0, fac)
     os.chdir(fac)
     from cfo_agent import CFOAgent
@@ -114,6 +199,17 @@ def step_cfo():
     print(f"  exec_summary: {r['executive_summary_text']}")
     assert r["status"] == "success" and [t["step"] for t in r["call_trace"]] == \
         ["bind", "fin-model", "fin-model-presentation"], "CFO binding failed"
+
+    # LIVE PATH: assumptions parsed from a natural-language request via the model
+    # router (Gemini). Structure is always asserted; when GEMINI_API_KEY is set we
+    # also require the model (not the offline fallback) produced them.
+    ex = CFOAgent().extract_assumptions(
+        "Launch a premium cold brew brand selling 12000 bottles a month at $4 each.")
+    src = ex.get("_extracted_by") or ("offline-fallback" if ex.get("_assumptions_estimated") else "unknown")
+    print(f"  LIVE ASSUMPTIONS (Gemini): keys={len(ex)} source={src} product={ex.get('product_name')!r}")
+    assert isinstance(ex, dict) and ex.get("product_name"), "assumptions extraction returned nothing usable"
+    if os.environ.get("GEMINI_API_KEY"):
+        assert ex.get("_extracted_by"), "GEMINI_API_KEY set but assumptions came from the offline fallback"
 
 
 STEPS = [("identity", step_identity), ("model_present", step_model_present),

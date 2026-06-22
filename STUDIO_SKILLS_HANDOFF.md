@@ -25,10 +25,23 @@ repo's existing `requirements.txt`):
 ```bash
 python -m venv venv
 venv\Scripts\pip install openpyxl formulas reportlab pdfplumber pypdfium2 \
-    python-pptx python-docx pandas pillow numpy pypdf fastapi uvicorn httpx
+    python-pptx python-docx pandas pillow numpy pypdf fastapi uvicorn httpx \
+    pytesseract google-api-python-client google-auth-oauthlib
 ```
-> No LibreOffice / PowerPoint / Poppler / Node.js needed — rendering is `pypdfium2`/
-> `pdfplumber`; Excel recalc is the pure-Python `formulas` engine.
+> Core deck/model rendering is still pure-Python (`pypdfium2`/`pdfplumber`; Excel
+> recalc via the `formulas` engine). The **live upgrades** add optional system tools:
+> - **Tesseract OCR** — scanned-PDF/image OCR. Windows: `winget install UB-Mannheim.TesseractOCR`
+>   (binary at `C:\Program Files\Tesseract-OCR\tesseract.exe`); Linux: `apt install tesseract-ocr`.
+>   The code auto-discovers it (PATH / common locations / `TESSERACT_CMD` env); no manual PATH edit needed.
+> - **LibreOffice** — live `.pptx`/`.xlsx` render-QA via headless conversion to PDF.
+>   Linux droplet: `apt install libreoffice`; Windows: `winget install TheDocumentFoundation.LibreOffice`
+>   (needs an admin/UAC approval). Auto-discovered (PATH / common locations / `LIBREOFFICE_PATH`).
+>   When absent, the office-render QA steps cleanly **SKIP** (the PDF QA still gates).
+> - **Google Docs API** (Task 2) — needs an OAuth *Desktop* client secret; point
+>   `GOOGLE_OAUTH_CLIENT_SECRET` at it (token cached to `GOOGLE_OAUTH_TOKEN`/`token.json`).
+> - **Gemini** (Task 3) — `extract_assumptions` routes through the model router's
+>   `assumptions_extraction` task → Gemini Pro; needs `GEMINI_API_KEY` in `.env`
+>   (falls back to a clearly-labelled offline default if every model is unavailable).
 
 ## 3. What's where
 ```
@@ -86,7 +99,23 @@ venv\Scripts\python -m uvicorn CFO_Agent.server:app --host 127.0.0.1 --port 5070
 `route_and_build` returns `bound_skill_paths` pointing at `.agents/skills/...` — proof it
 reached the skills through the binding, not a hardcoded shortcut.
 
-## 6. Remaining work
+## 6. Status — live upgrades complete
+The four "graceful fallbacks" were upgraded to full live implementations and the
+combined `acceptance_test.py` passes **6/6, 0 errors** (run from `.agents/skills`):
+1. **OCR** — `data_context.py` rasterizes scanned PDFs (pypdfium2) + runs Tesseract;
+   verified reading a text-free scanned PDF (acceptance CASE C).
+2. **Google Docs API** — `form_fill.fill_google_doc()` (OAuth installed-app flow,
+   fetch, `batchUpdate` replaceAllText, read-back QA) + offline `dry_run` (CASE D).
+3. **Gemini assumptions** — `cfo_agent.extract_assumptions` → model-router
+   `assumptions_extraction` (Gemini Pro); verified live (18 keys extracted).
+4. **LibreOffice render-QA** — `qa.qa_xlsx` / `qa.qa_pptx` convert the workbook/deck
+   to PDF headless and raster for visual QA; SKIP cleanly when LibreOffice is absent.
+   Runs on the droplet after `apt install libreoffice`.
+
+Also fixed: `step_cfo` factory-dir resolution now works in the vendored layout
+(was hardcoded to the dev-sibling layout).
+
+### Earlier remaining work (now also done)
 - **Phase 5 finish:** run the one-call wrapper `deck.build_deck(tokens, content, "out/deck.pdf")`
   end-to-end (its sub-steps already pass; the deck rendered QA-clean across 7 slides).
 - **Phase 6 — combined acceptance test:** one example end-to-end:
