@@ -116,6 +116,24 @@ const SkuLedger = () => {
     return () => teardown.then(t => t && t());
   }, []);
 
+  const handleDownloadCsv = async () => {
+    try {
+      setError(null);
+      const response = await api.get('/reports/inventory/download', { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'inventory_report.csv');
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to download CSV', err);
+      setError(err.response?.data?.detail || 'Inventory report download was not authorized.');
+    }
+  };
+
   const getStockBadge = (qty, threshold) => {
     if (!qty || qty <= 0) return { bg: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', label: 'DEPLETED' };
     if (qty <= threshold) return { bg: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', label: 'CRITICAL LOW' };
@@ -126,8 +144,27 @@ const SkuLedger = () => {
     <div className="parts-matrix-container">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <h2 style={{ color: '#e2e8f0', fontSize: '1.25rem', fontWeight: 600, margin: 0 }}>SKU Master Ledger</h2>
-        {canIngest && (
-          <div style={{ display: 'flex', gap: '0.7rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '0.7rem', flexWrap: 'wrap' }}>
+          <button
+            onClick={handleDownloadCsv}
+            style={{
+              padding: '0.6rem 1.4rem',
+              background: 'rgba(99, 102, 241, 0.12)',
+              color: '#818cf8',
+              border: '1px solid rgba(99, 102, 241, 0.4)',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: 700,
+              fontSize: '0.85rem',
+              transition: 'all 0.2s',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em'
+            }}
+          >
+            [Download CSV Report]
+          </button>
+          {canIngest && (
+            <>
             <button
               onClick={() => setShowSupplierModal(true)}
               style={{
@@ -165,8 +202,9 @@ const SkuLedger = () => {
             >
               [+ Ingest New SKU]
             </button>
-          </div>
-        )}
+            </>
+          )}
+        </div>
       </div>
 
       {isAdmin && (

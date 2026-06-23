@@ -103,7 +103,15 @@ export const AuthProvider = ({ children }) => {
     if (!isBootstrapped) return null; // Or insert a global strict loading indicator here
 
     return (
-        <AuthContext.Provider value={{ userRole, jwtPayload, authenticateContext, logout }}>
+        <AuthContext.Provider value={{
+            userRole,
+            jwtPayload,
+            // First-time users carry setup_required in their JWT until they
+            // activate custom credentials; the app forces an activation gate.
+            setupRequired: !!(jwtPayload && jwtPayload.setup_required),
+            authenticateContext,
+            logout,
+        }}>
             {children}
         </AuthContext.Provider>
     );

@@ -12,6 +12,9 @@ const UserDetailModal = ({ userId, onClose, onActuationSuccess }) => {
   // Escalation State
   const [escalationRole, setEscalationRole] = useState('TECH');
   const [escalationDept, setEscalationDept] = useState('');
+  // Designation: department inventory manager (auto-provisions the department's
+  // inventory category on the backend when checked).
+  const [isInventoryManager, setIsInventoryManager] = useState(false);
 
   // Procurement SKU clearance state
   const [skuAccess, setSkuAccess] = useState({ assigned: [], available: [] });
@@ -74,7 +77,8 @@ const UserDetailModal = ({ userId, onClose, onActuationSuccess }) => {
     try {
       const payload = {
         role: escalationRole,
-        department: escalationDept
+        department: escalationDept,
+        is_inventory_manager: isInventoryManager
       };
       
       const response = await api.put(`/admin/users/${userId}/escalate`, payload);
@@ -242,7 +246,16 @@ const UserDetailModal = ({ userId, onClose, onActuationSuccess }) => {
                   style={{ flex: 2, padding: '0.75rem', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border)', color: 'white', borderRadius: '4px' }}
                 />
               </div>
-              <button 
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)', fontSize: '0.85rem', marginBottom: '1rem', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={isInventoryManager}
+                  onChange={(e) => setIsInventoryManager(e.target.checked)}
+                  disabled={actuationStatus?.type === 'loading' || actuationStatus?.type === 'success'}
+                />
+                Designate as Department Inventory Manager
+              </label>
+              <button
                 onClick={handleEscalateUser}
                 disabled={!escalationRole || !escalationDept.trim() || actuationStatus?.type === 'loading' || actuationStatus?.type === 'success'}
                 style={{ 

@@ -31,7 +31,8 @@ def deploy():
     print("--- INITIATING DIGITALOCEAN DEPLOYMENT ORCHESTRATOR ---")
     
     REMOTE_USER = "root"
-    REMOTE_HOST = "your_digitalocean_ip" # To be injected via environment or Vault
+    import os
+    REMOTE_HOST = os.environ.get("REMOTE_HOST", "your_digitalocean_ip") # To be injected via environment or Vault
     REMOTE_DIR = "/opt/erp/maintenance_module"
     SSH_KEY_PATH = os.path.expanduser("~/.ssh/id_rsa")
     

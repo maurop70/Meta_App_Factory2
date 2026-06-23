@@ -8,9 +8,15 @@ import { AUTH_API_BASE_URL } from '../services/api';
  * (AUTH_API_BASE_URL) with a manually-attached Bearer token, since the auth
  * endpoints sit outside the MWO apiClient interceptor.
  *
- * Props: onClose() — called to dismiss the overlay.
+ * Props:
+ *   onClose()    — dismiss the overlay (ignored in forced mode).
+ *   forced       — first-time activation: the overlay is mandatory and cannot
+ *                  be dismissed until custom credentials are chosen.
+ *   onComplete() — called after a successful forced activation (the app uses
+ *                  this to log the user out so they re-authenticate with the
+ *                  new credentials, clearing the setup_required gate).
  */
-const ProfileSettings = ({ onClose }) => {
+const ProfileSettings = ({ onClose, forced = false, onComplete }) => {
   const [username, setUsername] = useState('');
   const [phone, setPhone] = useState('');
   const [pin, setPin] = useState('');
@@ -21,6 +27,12 @@ const ProfileSettings = ({ onClose }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (saving) return;
+
+    // First-time activation requires the operator to choose all three.
+    if (forced && (!username.trim() || !phone.trim() || !pin.trim())) {
+      setStatus({ type: 'error', message: 'Username, phone number, and a new PIN are all required to activate.' });
+      return;
+    }
 
     // Only submit fields the user actually filled in (all are optional).
     const payload = {};
@@ -51,9 +63,15 @@ const ProfileSettings = ({ onClose }) => {
         headers: { Authorization: `Bearer ${token}` },
         withCredentials: true,
       });
-      setStatus({ type: 'success', message: 'Credentials updated. Use them at your next login.' });
+      setStatus({
+        type: 'success',
+        message: forced ? 'Account activated. Re-authenticating...' : 'Credentials updated. Use them at your next login.',
+      });
       setPin('');
       setConfirmPin('');
+      if (forced && onComplete) {
+        setTimeout(() => onComplete(), 1500);
+      }
     } catch (err) {
       setStatus({
         type: 'error',
@@ -73,7 +91,7 @@ const ProfileSettings = ({ onClose }) => {
         position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
         display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem',
       }}
-      onClick={onClose}
+      onClick={forced ? undefined : onClose}
     >
       <div
         className="profile-settings-card"
@@ -84,12 +102,16 @@ const ProfileSettings = ({ onClose }) => {
         onClick={(e) => e.stopPropagation()}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <h2 style={{ margin: 0 }}>Profile Settings</h2>
-          <button type="button" onClick={onClose} aria-label="Close"
-            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.4rem', cursor: 'pointer' }}>×</button>
+          <h2 style={{ margin: 0 }}>{forced ? 'Activate Your Account' : 'Profile Settings'}</h2>
+          {!forced && (
+            <button type="button" onClick={onClose} aria-label="Close"
+              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.4rem', cursor: 'pointer' }}>×</button>
+          )}
         </div>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1rem' }}>
-          Leave a field blank to keep it unchanged.
+          {forced
+            ? 'First-time access: choose a secure username, your cell phone number, and a new PIN to continue.'
+            : 'Leave a field blank to keep it unchanged.'}
         </p>
 
         <form onSubmit={handleSubmit} autoComplete="off">
@@ -123,7 +145,7 @@ const ProfileSettings = ({ onClose }) => {
               background: 'var(--accent, #6366f1)', color: '#fff', border: 'none', borderRadius: 8,
               cursor: saving ? 'default' : 'pointer', fontWeight: 600, opacity: saving ? 0.6 : 1,
             }}>
-            {saving ? 'Saving...' : 'Save Changes'}
+            {saving ? 'Saving...' : (forced ? 'Activate Account' : 'Save Changes')}
           </button>
         </form>
       </div>

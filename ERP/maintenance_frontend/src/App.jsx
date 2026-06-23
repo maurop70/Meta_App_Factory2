@@ -11,6 +11,7 @@ import HMDashboard from './components/HMDashboard'; // HM Feed
 import CreateMWOForm from './components/CreateMWOForm'; // DM Submission
 import ArchiveDashboard from './components/ArchiveDashboard'; // Unified Archive
 import CFODashboard from './pages/CFODashboard'; // CFO PO Approval Gateway
+import ProfileSettings from './components/ProfileSettings'; // First-time activation gate
 
 // Strict Role-Gating Security Component
 const ProtectedRoute = ({ allowedRoles, children }) => {
@@ -59,6 +60,18 @@ const RoleRouter = () => {
   }
 };
 
+// First-time activation gate: an authenticated user whose JWT still carries
+// setup_required must choose custom credentials before any console access. On
+// completion we log them out so they re-authenticate and receive a fresh token
+// with setup_required cleared.
+const SetupGate = ({ children }) => {
+  const { setupRequired, logout } = useAuth();
+  if (setupRequired) {
+    return <ProfileSettings forced onComplete={logout} />;
+  }
+  return children;
+};
+
 function App() {
   return (
     <AuthProvider>
@@ -74,6 +87,7 @@ function App() {
             flexDirection: 'column'
           }}
         >
+          <SetupGate>
           <Routes>
             {/* Public Authentication Gate */}
             <Route path="/login" element={<Login />} />
@@ -144,6 +158,7 @@ function App() {
             {/* Fallback Catch-All */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </SetupGate>
         </div>
       </Router>
     </AuthProvider>

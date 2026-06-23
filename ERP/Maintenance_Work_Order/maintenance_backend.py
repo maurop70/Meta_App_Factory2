@@ -76,6 +76,36 @@ security = HTTPBearer()
 GLOBAL_AI_DIRECTIVE_CONTEXT = ""
 
 # STRUCTURAL PATCH: Asynchronous boot context to prevent thread-locking
+def _seed_default_administrator():
+    """
+    Pristine bootstrap: guarantee the ERP ledger holds the default administrator
+    identity (ERP-1000) so backend ledger lookups never fail on a fresh deploy.
+    Insert-only — never overwrites an operator's existing record. department_id
+    is left NULL because the FK references erp_departments(id) and no department
+    is guaranteed to exist on a pristine database.
+    """
+    try:
+        import bcrypt
+        conn = get_db_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT 1 FROM erp_employees WHERE id = ?", ("ERP-1000",))
+            if cur.fetchone():
+                return
+            admin_hash = bcrypt.hashpw("1234".encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+            cur.execute(
+                "INSERT INTO erp_employees (id, name, role, pin_hash, is_active, department_id) "
+                "VALUES (?, ?, 'ADMINISTRATOR', ?, 1, NULL)",
+                ("ERP-1000", "System Administrator", admin_hash),
+            )
+            conn.commit()
+            logger.info("[SEED] Administrator identity ERP-1000 provisioned in ERP ledger")
+        finally:
+            conn.close()
+    except Exception as e:
+        logger.error("[SEED] Failed to provision default administrator: %s", e)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global PUBLIC_KEY
@@ -96,6 +126,9 @@ async def lifespan(app: FastAPI):
     # Guard against schema drift (e.g. Phase 46 DDL applied but code stale)
     _assert_work_orders_schema()
     logger.info("[SCHEMA] work_orders projection verified against live database.")
+
+    # Pristine bootstrap: ensure the default administrator exists in the ledger.
+    _seed_default_administrator()
 
     # NGINX DOCTRINE: Trailing slash strictly enforced
     url = "http://127.0.0.1:9000/api/v1/auth/public-key" 
@@ -2815,9 +2848,128 @@ async def terminate_user_access(
     finally:
         conn.close()
 
+# =====================================================================
+# [INVENTORY RESPONSIBILITY] Department category auto-provisioning and
+# real-time Gateway (IAM) personnel sync.
+# =====================================================================
+
+GATEWAY_DB_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "..", "Module_0_Gateway", "data", "gateway_core.db"
+)
+
+
+def _split_name(full_name: str):
+    """Best-effort first/last split for the Gateway's name columns."""
+    name = (full_name or "").strip()
+    if "," in name:                       # "Last, First"
+        last, _, first = name.partition(",")
+        return first.strip(), last.strip()
+    parts = name.split()
+    if len(parts) >= 2:
+        return parts[0], " ".join(parts[1:])
+    return name, ""
+
+
+def sync_employee_to_gateway(emp_id, name, role, pin_hash, department_id=None,
+                             reports_to_hm_id=None, department_name=None,
+                             is_inventory_manager=0):
+    """
+    Real-time dual-write: mirror an ERP-ledger employee into the Gateway IAM
+    store (gateway_core.db) so the identity is immediately loginable. Upserts on
+    emp_id. New rows land with username/phone NULL, which the Gateway surfaces as
+    `setup_required` (first-time activation). The PIN hash is only (re)written
+    while the account is still un-activated (username IS NULL), so an escalation
+    never clobbers a user's self-chosen PIN.
+    """
+    if not os.path.exists(GATEWAY_DB_PATH):
+        logger.warning("[GATEWAY-SYNC] gateway_core.db not found; skipped sync for %s", emp_id)
+        return
+    first_name, last_name = _split_name(name)
+    conn = sqlite3.connect(GATEWAY_DB_PATH)
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO erp_employees
+            (id, emp_id, name, first_name, last_name, role, pin_hash, is_active, department_id, reports_to_hm_id, status, department, username, phone_number, is_inventory_manager)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, 'ACTIVE', ?, NULL, NULL, ?)
+            ON CONFLICT(emp_id) DO UPDATE SET
+                name = excluded.name,
+                first_name = excluded.first_name,
+                last_name = excluded.last_name,
+                role = excluded.role,
+                department_id = excluded.department_id,
+                reports_to_hm_id = excluded.reports_to_hm_id,
+                department = excluded.department,
+                is_inventory_manager = excluded.is_inventory_manager,
+                pin_hash = CASE WHEN username IS NULL THEN excluded.pin_hash ELSE pin_hash END
+            """,
+            (emp_id, emp_id, name, first_name, last_name, role, pin_hash,
+             department_id, reports_to_hm_id, department_name, is_inventory_manager),
+        )
+        conn.commit()
+        logger.info("[GATEWAY-SYNC] Mirrored %s (%s) into IAM store.", emp_id, role)
+    except Exception as e:
+        logger.error("[GATEWAY-SYNC] Failed to mirror %s: %s", emp_id, e)
+    finally:
+        conn.close()
+
+
+def resolve_or_create_department(cursor, department):
+    """
+    Resolve a department reference to (department_id, department_name). Accepts
+    either an existing department id (DEPT-*/DEP-*) or a free department NAME;
+    an unknown name is provisioned as a new erp_departments row.
+    """
+    if not department:
+        return None, None
+    department = department.strip()
+    cursor.execute("SELECT id, name FROM erp_departments WHERE id = ?", (department,))
+    row = cursor.fetchone()
+    if row:
+        return row["id"], row["name"]
+    cursor.execute("SELECT id, name FROM erp_departments WHERE LOWER(name) = LOWER(?)", (department,))
+    row = cursor.fetchone()
+    if row:
+        return row["id"], row["name"]
+    new_id = f"DEP-{uuid.uuid4().hex[:6].upper()}"
+    cursor.execute("INSERT INTO erp_departments (id, name) VALUES (?, ?)", (new_id, department))
+    logger.info("[AUTO-DEPT] Provisioned department %s (%s)", new_id, department)
+    return new_id, department
+
+
+def assert_department_category_exists(cursor, department_id: str, employee_id: str):
+    """Ensure an inventory category exists for the department; create one if missing."""
+    if not department_id:
+        return
+
+    # Check if category already linked to department
+    cursor.execute("SELECT id FROM erp_categories WHERE department_id = ?", (department_id,))
+    if cursor.fetchone():
+        return
+
+    # Fetch department name
+    cursor.execute("SELECT name FROM erp_departments WHERE id = ?", (department_id,))
+    dept_row = cursor.fetchone()
+    dept_name = dept_row["name"] if dept_row else "Department"
+
+    # Generate Category details and insert the new mapping
+    cat_id = f"CAT-{uuid.uuid4().hex[:6].upper()}"
+    cat_name = f"{dept_name} Inventory"
+    cursor.execute(
+        "INSERT INTO erp_categories (id, name, department_id, manager_id) VALUES (?, ?, ?, ?)",
+        (cat_id, cat_name, department_id, employee_id),
+    )
+    logger.info(
+        "[AUTO-INVENTORY] Created category %s (%s) for department %s (Manager: %s)",
+        cat_id, cat_name, department_id, employee_id,
+    )
+
+
 class UserEscalationPayload(BaseModel):
     role: Literal['ADMIN', 'DM', 'HM', 'TECH']
     department: str
+    is_inventory_manager: bool = False
 
 @api_router.put("/admin/users/{user_id}/escalate")
 async def escalate_user(
@@ -2830,38 +2982,53 @@ async def escalate_user(
     actor_role = jwt_payload.get("role")
 
     # Strict Taxonomy Validation
-    if actor_role != "ADMIN":
+    if actor_role not in ["ADMINISTRATOR", "ADMIN"]:
         raise HTTPException(status_code=403, detail="RBAC Violation: ADMIN clearance required.")
-        
+
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
         cursor.execute("BEGIN IMMEDIATE")
-        
-        cursor.execute("SELECT is_active FROM users WHERE user_id = ?", (user_id,))
+
+        # Operate on the live ERP ledger (erp_employees). `department` may be an
+        # existing department id or a free name; resolve / provision either way.
+        cursor.execute(
+            "SELECT id, name, role, pin_hash, is_active FROM erp_employees WHERE id = ?",
+            (user_id,),
+        )
         target_user = cursor.fetchone()
-        
+
         if not target_user:
             raise HTTPException(status_code=404, detail="Target user not found in the matrix.")
         if target_user["is_active"] == 0:
             raise HTTPException(status_code=400, detail="Target user is structurally terminated.")
-            
-        cursor.execute("""
-            UPDATE users 
-            SET role = ?, department = ?, token_version = token_version + 1 
-            WHERE user_id = ?
-        """, (payload.role, payload.department, user_id))
-        
-        event_id = str(uuid.uuid4())
-        action_type = "ROLE_ESCALATION"
-        
-        cursor.execute("""
-            INSERT INTO user_audit_logs (event_id, target_user_id, actor_user_id, action_type) 
-            VALUES (?, ?, ?, ?)
-        """, (event_id, user_id, actor_user_id, action_type))
-        
+
+        dept_id, dept_name = resolve_or_create_department(cursor, payload.department)
+        is_mgr = 1 if payload.is_inventory_manager else 0
+
+        # The first inventory manager designated for a department self-heals an
+        # inventory category ("[Department] Inventory") if none exists yet.
+        if is_mgr == 1:
+            assert_department_category_exists(cursor, dept_id, user_id)
+
+        cursor.execute(
+            """
+            UPDATE erp_employees
+            SET role = ?, department_id = ?, is_inventory_manager = ?
+            WHERE id = ?
+            """,
+            (payload.role, dept_id, is_mgr, user_id),
+        )
+
         conn.commit()
-        
+
+        # Real-time dual-write so the IAM store reflects the new clearance on the
+        # subject's next token refresh / login. PIN hash is carried unchanged.
+        sync_employee_to_gateway(
+            user_id, target_user["name"], payload.role, target_user["pin_hash"],
+            department_id=dept_id, department_name=dept_name, is_inventory_manager=is_mgr,
+        )
+
         if actor_user_id == user_id:
             # Return specific flush signal for synchronous client-side JWT invalidation
             response.status_code = 205
@@ -2869,7 +3036,7 @@ async def escalate_user(
             return None
         else:
             return {"status": "success", "message": "Role escalation successful."}
-        
+
     except HTTPException:
         conn.rollback()
         raise
@@ -3102,10 +3269,15 @@ async def bulk_ingest_personnel(file: UploadFile = File(...), jwt_payload: dict 
             dep_id = dep_map[dep_name.lower()]
             
             new_id = f"U-{uuid.uuid4().hex[:6].upper()}"
-            
+
             if prole in ['HM', 'DM', 'ADMINISTRATOR', 'ADMIN']:
                 hm_map[name.lower().strip()] = new_id
-                
+
+            # Optional column: flags this employee as their department's
+            # inventory manager (accepts 1 / true / yes).
+            raw_mgr = (row_data.get('is_inventory_manager') or '').strip().lower()
+            is_mgr = 1 if raw_mgr in ('1', 'true', 'yes', 'y') else 0
+
             parsed_users.append({
                 'row_index': i + 2,
                 'id': new_id,
@@ -3113,7 +3285,9 @@ async def bulk_ingest_personnel(file: UploadFile = File(...), jwt_payload: dict 
                 'role': prole,
                 'pin': pin,
                 'department_id': dep_id,
-                'reports_to': row_data.get('reports_to_hm_name')
+                'department_name': dep_name.strip(),
+                'reports_to': row_data.get('reports_to_hm_name'),
+                'is_inventory_manager': is_mgr,
             })
 
         # Sort so that Managers are inserted before Technicians to satisfy Foreign Key constraints
@@ -3133,14 +3307,31 @@ async def bulk_ingest_personnel(file: UploadFile = File(...), jwt_payload: dict 
                 raise ValueError(f"Row {user['row_index']}: TECH must have a reports_to_hm_name")
 
             pin_hash = bcrypt.hashpw(user['pin'].encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-            
+            user['pin_hash'] = pin_hash
+            user['reports_to_hm_id'] = hm_id
+
+            # First inventory manager designated for a department self-heals its
+            # inventory category.
+            if user['is_inventory_manager'] == 1:
+                assert_department_category_exists(cursor, user['department_id'], user['id'])
+
             cursor.execute(
-                "INSERT INTO erp_employees (id, name, role, pin_hash, is_active, department_id, reports_to_hm_id) VALUES (?, ?, ?, ?, 1, ?, ?)",
-                (user['id'], user['name'], user['role'], pin_hash, user['department_id'], hm_id)
+                "INSERT INTO erp_employees (id, name, role, pin_hash, is_active, department_id, reports_to_hm_id, is_inventory_manager) VALUES (?, ?, ?, ?, 1, ?, ?, ?)",
+                (user['id'], user['name'], user['role'], pin_hash, user['department_id'], hm_id, user['is_inventory_manager'])
             )
             inserted_count += 1
-            
+
         conn.commit()
+
+        # Real-time dual-write: mirror every ingested identity into the Gateway
+        # IAM store so they are immediately loginable (first-time activation).
+        for user in parsed_users:
+            sync_employee_to_gateway(
+                user['id'], user['name'], user['role'], user['pin_hash'],
+                department_id=user['department_id'], reports_to_hm_id=user['reports_to_hm_id'],
+                department_name=user['department_name'], is_inventory_manager=user['is_inventory_manager'],
+            )
+
         return {"status": "success", "message": f"Successfully ingested {inserted_count} personnel."}
     except Exception as e:
         conn.rollback()
@@ -3624,6 +3815,7 @@ class Phase48EmployeeCreate(BaseModel):
     pin_code: str = Field(..., min_length=4)
     department_id: str = Field(..., description="FK to erp_departments.id")
     reports_to_hm_id: Optional[str] = None
+    is_inventory_manager: Optional[int] = 0
 
 class Phase48SkuCreate(BaseModel):
     id: Optional[str] = None
@@ -3766,11 +3958,31 @@ def hydrate_employee(payload: Phase48EmployeeCreate, jwt_payload: dict = Depends
         cursor.execute("BEGIN IMMEDIATE TRANSACTION")
         emp_id = payload.id if payload.id else f"U-{uuid.uuid4().hex[:6].upper()}"
         pin_hash = bcrypt.hashpw(payload.pin_code.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        is_mgr = 1 if payload.is_inventory_manager else 0
+
+        # Designating an inventory manager at creation self-heals the
+        # department's inventory category.
+        if is_mgr == 1:
+            assert_department_category_exists(cursor, payload.department_id, emp_id)
+
         cursor.execute(
-            "INSERT INTO erp_employees (id, name, role, pin_hash, is_active, department_id, reports_to_hm_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (emp_id, payload.name, payload.role, pin_hash, 1, payload.department_id, payload.reports_to_hm_id)
+            "INSERT INTO erp_employees (id, name, role, pin_hash, is_active, department_id, reports_to_hm_id, is_inventory_manager) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (emp_id, payload.name, payload.role, pin_hash, 1, payload.department_id, payload.reports_to_hm_id, is_mgr)
         )
+
+        dept_row = cursor.execute(
+            "SELECT name FROM erp_departments WHERE id = ?", (payload.department_id,)
+        ).fetchone()
+        dept_name = dept_row["name"] if dept_row else None
+
         conn.commit()
+
+        # Real-time dual-write into the Gateway IAM store (first-time activation).
+        sync_employee_to_gateway(
+            emp_id, payload.name, payload.role, pin_hash,
+            department_id=payload.department_id, reports_to_hm_id=payload.reports_to_hm_id,
+            department_name=dept_name, is_inventory_manager=is_mgr,
+        )
         return {"detail": "Record successfully ingested."}
     except sqlite3.IntegrityError as e:
         conn.rollback()
@@ -4049,6 +4261,26 @@ def get_employee_cleared_skus(conn, employee_id: str) -> set:
             managed_cats
         ).fetchall():
             cleared.add(r["sku_id"])
+
+    # Departmental Inventory Manager: grants access to every SKU in any category
+    # owned by the employee's department.
+    emp = conn.execute(
+        "SELECT department_id, is_inventory_manager FROM erp_employees WHERE id = ?",
+        (employee_id,)
+    ).fetchone()
+    if emp and emp["is_inventory_manager"] == 1 and emp["department_id"]:
+        dept_cats = [
+            r["id"] for r in conn.execute(
+                "SELECT id FROM erp_categories WHERE department_id = ?", (emp["department_id"],)
+            ).fetchall()
+        ]
+        if dept_cats:
+            placeholders = ",".join("?" * len(dept_cats))
+            for r in conn.execute(
+                f"SELECT sku_id FROM erp_skus WHERE category_id IN ({placeholders})",
+                dept_cats
+            ).fetchall():
+                cleared.add(r["sku_id"])
 
     return cleared
 

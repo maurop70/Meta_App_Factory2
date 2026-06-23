@@ -166,12 +166,15 @@ def login(request: LoginRequest, response: Response):
             )
             conn.commit()
 
-        # 4. Construct the JWT Payload
+        # 4. Construct the JWT Payload. `setup_required` flags a first-time user
+        #    who has not yet chosen custom credentials (username still NULL); the
+        #    frontend uses it to force the activation gate before console access.
         token_payload = {
             "sub": user["emp_id"],
             "role": user["role"],
             "department": user["department"],
             "name": f"{user['first_name']} {user['last_name']}",
+            "setup_required": user["username"] is None,
         }
 
         # Mint Dual Tokens
@@ -220,18 +223,20 @@ def refresh(request: Request):
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
-        cursor.execute("SELECT status, role, department, first_name, last_name FROM erp_employees WHERE emp_id = ?", (emp_id,))
+        cursor.execute("SELECT status, role, department, first_name, last_name, username FROM erp_employees WHERE emp_id = ?", (emp_id,))
         user = cursor.fetchone()
 
         if not user or user["status"] != "ACTIVE":
             raise HTTPException(status_code=403, detail="Account is disabled or terminated.")
 
-        # Re-Mint Access Token
+        # Re-Mint Access Token. Carry `setup_required` so the activation gate
+        # clears automatically once the user has chosen custom credentials.
         token_payload = {
             "sub": emp_id,
             "role": user["role"],
             "department": user["department"],
-            "name": f"{user['first_name']} {user['last_name']}"
+            "name": f"{user['first_name']} {user['last_name']}",
+            "setup_required": user["username"] is None,
         }
 
         access_token = minting_engine.mint_access_token(token_payload)
