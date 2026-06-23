@@ -168,6 +168,12 @@ def deploy():
     echo "Running inventory schema migration..."
     venv/bin/python3 migration_inventory.py
 
+    # Departmental inventory responsibility: adds erp_employees.is_inventory_manager
+    # (ERP + gateway IAM) and erp_categories.department_id. Idempotent. Failure
+    # triggers the ERR trap -> auto-rollback.
+    echo "Running inventory responsibility migration..."
+    venv/bin/python3 migrate_inventory_responsibility.py
+
     # Gateway device-recognition migration. Runs with the shared backend venv
     # (the gateway has no venv of its own — erp-auth.service uses backend/venv).
     # The script targets /opt/erp/gateway/data/gateway_core.db via __file__, so

@@ -44,9 +44,16 @@ def run():
     finally:
         conn.close()
 
-    # 2. Update Gateway Database (IAM copy of erp_employees)
-    gateway_db = os.path.join(os.path.dirname(__file__), "..", "Module_0_Gateway", "data", "gateway_core.db")
-    if os.path.exists(gateway_db):
+    # 2. Update Gateway Database (IAM copy of erp_employees). The gateway lives
+    # under "Module_0_Gateway" in the source tree but is deployed as "gateway"
+    # on the droplet (the deploy transforms the dir name), so probe both layouts.
+    here = os.path.dirname(__file__)
+    gateway_candidates = [
+        os.path.join(here, "..", "Module_0_Gateway", "data", "gateway_core.db"),
+        os.path.join(here, "..", "gateway", "data", "gateway_core.db"),
+    ]
+    gateway_db = next((p for p in gateway_candidates if os.path.exists(p)), None)
+    if gateway_db:
         conn = sqlite3.connect(gateway_db)
         try:
             cursor = conn.cursor()
@@ -60,7 +67,7 @@ def run():
         finally:
             conn.close()
     else:
-        print(f"[WARN] Gateway DB not found at {gateway_db}; skipped IAM column.")
+        print(f"[WARN] Gateway DB not found in {gateway_candidates}; skipped IAM column.")
 
 
 if __name__ == "__main__":
