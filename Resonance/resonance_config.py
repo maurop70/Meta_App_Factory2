@@ -214,3 +214,82 @@ def save_config(config, path=PARENT_CONFIG_PATH):
         raise
 
     return path
+
+
+def recompute_conversational_level(metrics: dict) -> int:
+    """Recompute the conversational complexity level based on cognitive metrics.
+
+    Implements §7 of the v2 implementation plan:
+      - Runs at session end (bidirectional).
+      - Combines sentence length, vocabulary retention, and quiz streak.
+      - Implements hysteresis to prevent jitter.
+      - Clamps to parent caps and respects overrides.
+      - Protected behind a feature flag (default off).
+    """
+    from datetime import datetime
+
+    current_level = metrics.get("current_conversational_level", 1)
+    level_min = metrics.get("level_min", 1)
+    parent_level_cap = metrics.get("parent_level_cap", 5)
+    parent_level_override = metrics.get("parent_level_override")
+
+    # 1. Parent override wins immediately
+    if parent_level_override is not None:
+        clamped = max(level_min, min(parent_level_override, parent_level_cap))
+        metrics["current_conversational_level"] = clamped
+        return clamped
+
+    # 2. Check feature flag (increment/decrement is disabled if flag is False)
+    feature_flag = os.getenv("RESONANCE_ADAPTIVE_COMPLEXITY", "OFF").upper() == "ON"
+    if not feature_flag:
+        return current_level
+
+    # 3. Check cooldown
+    last_change_str = metrics.get("last_level_change_iso")
+    cooldown_hours = metrics.get("level_change_cooldown_hours", 48)
+    if last_change_str:
+        try:
+            last_change = datetime.fromisoformat(last_change_str)
+            time_diff = datetime.now() - last_change
+            if time_diff.total_seconds() < cooldown_hours * 3600:
+                return current_level
+        except Exception:
+            pass
+
+    # 4. Calculate weighted score
+    sentence_len = metrics.get("rolling_average_sentence_length", 0.0)
+    retention = metrics.get("active_vocabulary_retention_score", 0.0)
+    streak = metrics.get("quiz_accuracy_streak", 0)
+
+    sentence_score = min(1.0, sentence_len / 12.0)
+    retention_score = min(1.0, retention)
+    streak_score = min(1.0, streak / 5.0)
+
+    # Weights: 40% Sentence Length, 40% Vocabulary, 20% Quiz Streak
+    score = 0.4 * sentence_score + 0.4 * retention_score + 0.2 * streak_score
+
+    # 5. Apply hysteresis logic
+    # Band for current_level L is [(L-1)*0.2, L*0.2]
+    # To step UP, score must clear L_upper + margin (0.05)
+    # To step DOWN, score must fall below L_lower - margin (0.05)
+    margin = 0.05
+    current_lower = (current_level - 1) * 0.2
+    current_upper = current_level * 0.2
+
+    new_level = current_level
+    if score >= current_upper + margin:
+        calculated = int(score // 0.2) + 1
+        new_level = min(5, calculated)
+    elif score < current_lower - margin:
+        calculated = int(score // 0.2) + 1
+        new_level = max(1, calculated)
+
+    # Clamp to parent controls
+    clamped_new_level = max(level_min, min(new_level, parent_level_cap))
+
+    if clamped_new_level != current_level:
+        metrics["current_conversational_level"] = clamped_new_level
+        metrics["last_level_change_iso"] = datetime.now().isoformat()
+
+    return clamped_new_level
+
