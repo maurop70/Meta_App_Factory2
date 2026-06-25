@@ -12,6 +12,7 @@ import DispatchQueueTable from '../components/DispatchQueueTable';
 import TechDashboard from '../components/TechDashboard';
 import ProfileSettings from '../components/ProfileSettings';
 import CFOApprovals from '../components/CFOApprovals';
+import RoleManagement from '../components/RoleManagement';
 
 const AdminConsole = () => {
   const { userRole, logout } = useAuth();
@@ -101,11 +102,17 @@ const AdminConsole = () => {
             >
               PARTS SCHEMA
             </button>
-            <button 
+            <button
               onClick={() => setIngestionTab('SKU')}
               style={{ padding: '0.5rem 1rem', background: ingestionTab === 'SKU' ? 'rgba(99, 102, 241, 0.15)' : 'transparent', color: ingestionTab === 'SKU' ? '#818cf8' : '#94a3b8', border: '1px solid', borderColor: ingestionTab === 'SKU' ? 'rgba(99, 102, 241, 0.5)' : 'transparent', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, transition: 'all 0.2s' }}
             >
               SKU SCHEMA
+            </button>
+            <button
+              onClick={() => setIngestionTab('ROLES')}
+              style={{ padding: '0.5rem 1rem', background: ingestionTab === 'ROLES' ? 'rgba(99, 102, 241, 0.15)' : 'transparent', color: ingestionTab === 'ROLES' ? '#818cf8' : '#94a3b8', border: '1px solid', borderColor: ingestionTab === 'ROLES' ? 'rgba(99, 102, 241, 0.5)' : 'transparent', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, transition: 'all 0.2s' }}
+            >
+              ROLES
             </button>
           </div>
 
@@ -135,6 +142,13 @@ const AdminConsole = () => {
           {ingestionTab === 'SKU' && (
             <div className="sku-view-layer">
               <SkuLedger />
+            </div>
+          )}
+
+          {/* ROLES ISOLATION BOUNDARY */}
+          {ingestionTab === 'ROLES' && (
+            <div className="roles-view-layer">
+              <RoleManagement />
             </div>
           )}
 

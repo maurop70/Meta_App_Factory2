@@ -99,6 +99,7 @@ const HMReviewModal = ({ selectedMWO, closeModal, executeApproval }) => {
             <div>
               <p style={{ margin: '0 0 0.5rem 0' }}><strong style={{ color: '#94a3b8' }}>MWO ID:</strong> <span style={{ color: '#818cf8', fontWeight: 600 }}>{selectedMWO.mwo_id}</span></p>
               <p style={{ margin: '0 0 0.5rem 0' }}><strong style={{ color: '#94a3b8' }}>Equipment:</strong> <span style={{ fontFamily: 'monospace' }}>{selectedMWO.equipment_nomenclature || selectedMWO.equipment_id}</span></p>
+              <p style={{ margin: '0 0 0.5rem 0' }}><strong style={{ color: '#94a3b8' }}>Location:</strong> {selectedMWO.location_nomenclature || selectedMWO.location_id || 'N/A'}</p>
             </div>
             <div>
               <p style={{ margin: '0 0 0.5rem 0', textAlign: 'right' }}><strong style={{ color: '#94a3b8' }}>Tech:</strong> {selectedMWO.assigned_tech}</p>

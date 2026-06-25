@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { AUTH_API_BASE_URL } from '../services/api';
+import api, { AUTH_API_BASE_URL } from '../services/api';
+
+// Render a dash for null/blank values instead of the literal "null".
+const orDash = (v) => (v !== null && v !== undefined && String(v).trim() !== '') ? v : '—';
 
 /**
  * Reusable "Profile Settings" overlay. Lets an authenticated employee set a
@@ -23,6 +26,18 @@ const ProfileSettings = ({ onClose, forced = false, onComplete }) => {
   const [confirmPin, setConfirmPin] = useState('');
   const [status, setStatus] = useState({ type: 'idle', message: '' });
   const [saving, setSaving] = useState(false);
+  const [profile, setProfile] = useState(null);
+
+  // Read-only identity header. Sourced from the MWO backend (GET /profile), which
+  // merges the ERP ledger (name/role/department) with the gateway IAM store
+  // (username/phone). Failure is non-fatal — the form still works without it.
+  useEffect(() => {
+    let mounted = true;
+    api.get('/profile')
+      .then((res) => { if (mounted) setProfile(res.data?.data || null); })
+      .catch(() => { if (mounted) setProfile(null); });
+    return () => { mounted = false; };
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -113,6 +128,29 @@ const ProfileSettings = ({ onClose, forced = false, onComplete }) => {
             ? 'First-time access: choose a secure username, your cell phone number, and a new PIN to continue.'
             : 'Leave a field blank to keep it unchanged.'}
         </p>
+
+        {profile && (
+          <div style={{
+            background: 'var(--code-bg, #1f2028)', border: '1px solid var(--border, #2e303a)',
+            borderRadius: 8, padding: '0.85rem 1rem', marginBottom: '1.25rem',
+          }}>
+            <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '0.6rem', fontWeight: 600 }}>
+              Active Profile
+            </div>
+            {[
+              ['Username', profile.username],
+              ['Name', profile.name],
+              ['Role', profile.role],
+              ['Department', profile.department],
+              ['Phone', profile.phone_number],
+            ].map(([label, value]) => (
+              <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', padding: '0.2rem 0', fontSize: '0.85rem' }}>
+                <span style={{ color: 'var(--text-muted)' }}>{label}</span>
+                <span style={{ color: 'var(--text-primary, #e2e8f0)', fontWeight: 500, textAlign: 'right' }}>{orDash(value)}</span>
+              </div>
+            ))}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} autoComplete="off">
           <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 4 }}>Username</label>

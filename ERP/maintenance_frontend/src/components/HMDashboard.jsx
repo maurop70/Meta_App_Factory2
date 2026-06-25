@@ -456,6 +456,7 @@ const HMDashboard = () => {
               <th>Status</th>
               <th>DM Urgency</th>
               <th>Equipment</th>
+              <th>Location</th>
               <th>Assigned Tech</th>
               <th>Action</th>
             </tr>
@@ -463,7 +464,7 @@ const HMDashboard = () => {
           <tbody>
             {unassignedOrders.length === 0 ? (
               <tr>
-                <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted, #64748b)' }}>No active work orders in queue.</td>
+                <td colSpan="7" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted, #64748b)' }}>No active work orders in queue.</td>
               </tr>
             ) : (
               unassignedOrders.map((order) => (
@@ -487,6 +488,9 @@ const HMDashboard = () => {
                   </td>
                   <td data-label="EQUIPMENT" style={{ color: '#e2e8f0' }}>
                     {order.equipment_nomenclature || order.equipment_id}
+                  </td>
+                  <td data-label="LOCATION" style={{ color: '#e2e8f0' }}>
+                    {order.location_nomenclature || order.location_id || 'Zone Alpha'}
                   </td>
                   <td data-label="ASSIGNED TECH" style={{ color: '#94a3b8' }}>
                     {order.assigned_tech || 'Unassigned'}
@@ -519,6 +523,7 @@ const HMDashboard = () => {
                 <tr style={{ background: 'rgba(16, 185, 129, 0.1)', borderBottom: '1px solid var(--border, rgba(16, 185, 129, 0.15))', color: 'var(--text-secondary, #94a3b8)' }}>
                   <th>MWO ID</th>
                   <th>Status</th>
+                  <th>Location</th>
                   <th>Tech</th>
                   <th>Labor (Hrs)</th>
                   <th>Action</th>
@@ -534,6 +539,9 @@ const HMDashboard = () => {
                       <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 600, background: 'rgba(245, 158, 11, 0.15)', color: '#fbbf24' }}>
                         {order.status}
                       </span>
+                    </td>
+                    <td data-label="LOCATION" style={{ color: '#e2e8f0' }}>
+                      {order.location_nomenclature || order.location_id || 'Zone Alpha'}
                     </td>
                     <td data-label="TECH" style={{ color: '#e2e8f0' }}>
                       {order.assigned_tech}

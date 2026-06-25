@@ -91,6 +91,7 @@ const HMAssignmentModal = ({ selectedMWO, closeModal, executeAssignment, technic
         <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1.25rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '1.5rem' }}>
           <p style={{ marginBottom: '0.5rem' }}><strong style={{ color: '#94a3b8' }}>MWO ID:</strong> <span style={{ color: '#818cf8', fontWeight: 600 }}>{selectedMWO.mwo_id}</span></p>
           <p style={{ marginBottom: '0.5rem' }}><strong style={{ color: '#94a3b8' }}>Equipment:</strong> <span style={{ fontFamily: 'monospace' }}>{selectedMWO.equipment_nomenclature || selectedMWO.equipment_id}</span></p>
+          <p style={{ marginBottom: '0.5rem' }}><strong style={{ color: '#94a3b8' }}>Location:</strong> {selectedMWO.location_nomenclature || selectedMWO.location_id || 'N/A'}</p>
           <p style={{ marginBottom: '0.5rem' }}><strong style={{ color: '#94a3b8' }}>DM Urgency:</strong> {selectedMWO.dm_urgency || 'Normal'}</p>
           <p style={{ marginBottom: '0' }}><strong style={{ color: '#94a3b8' }}>Description:</strong><br/>
             <span style={{ color: '#e2e8f0', display: 'inline-block', marginTop: '0.5rem', lineHeight: '1.6' }}>
