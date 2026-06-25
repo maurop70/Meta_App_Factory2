@@ -27,7 +27,7 @@ def test_load_valid_file_returns_merged_config(tmp_path):
     assert cfg["student_profile"]["social_level"] == "social"
     # Whole missing sections are filled from defaults.
     assert cfg["bedtime"]["scheduled_time"] == "21:30"
-    assert cfg["interest_store"] == {"topics": [], "last_updated_iso": None}
+    assert cfg["interest_store"] == {"topics": [], "recent_callbacks": [], "last_updated_iso": None}
 
 
 def test_load_missing_file_falls_back_to_defaults(tmp_path, caplog):

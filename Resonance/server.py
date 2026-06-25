@@ -495,7 +495,18 @@ def telemetry_screen_time(req: ScreenTimeRequest, _auth: bool = Depends(require_
             json.dump(log, f, indent=2)
     except Exception as e:
         logger.error(f"Telemetry persist failed (non-fatal): {e}")
-    return {"status": "ok", "recorded": entry}
+
+    # §5.1 — the screen-time hook fires the engagement engine with context + a
+    # goal (it carries NO words). The engine's gates decide whether Alex speaks;
+    # any failure here must never turn a telemetry ping into a 500.
+    engagement = {"triggered": False, "reason": "engine_unavailable"}
+    try:
+        import engagement_engine
+        engagement = engagement_engine.trigger_engagement()
+    except Exception as e:
+        logger.error(f"Engagement trigger failed (non-fatal): {e}")
+
+    return {"status": "ok", "recorded": entry, "engagement": engagement}
 
 
 @app.post("/api/google-home/cast")

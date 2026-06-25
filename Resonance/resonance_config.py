@@ -72,6 +72,7 @@ DEFAULT_CONFIG = {
     },
     "interest_store": {
         "topics": [],
+        "recent_callbacks": [],
         "last_updated_iso": None,
     },
 }
