@@ -2773,7 +2773,7 @@ async def get_admin_users(
 ):
     # Strict RBAC Enforcement
     actor_role = jwt_payload.get("role")
-    if actor_role != "ADMIN":
+    if actor_role not in ["ADMINISTRATOR", "ADMIN"]:
         raise HTTPException(status_code=403, detail="RBAC Violation: ADMIN clearance required.")
         
     conn = get_db_connection()
@@ -2821,7 +2821,7 @@ async def get_user_audit_log(
     actor_role = jwt_payload.get("role")
     
     # Strict Taxonomy Validation
-    if actor_role != "ADMIN":
+    if actor_role not in ["ADMINISTRATOR", "ADMIN"]:
 
         raise HTTPException(status_code=403, detail="RBAC Violation: ADMIN clearance required.")
         
@@ -2940,7 +2940,7 @@ async def terminate_user_access(
     actor_role = jwt_payload.get("role")
 
     # Strict Taxonomy Validation
-    if actor_role != "ADMIN":
+    if actor_role not in ["ADMINISTRATOR", "ADMIN"]:
         raise HTTPException(status_code=403, detail="RBAC Violation: ADMIN clearance required.")
         
     if actor_user_id == user_id:
