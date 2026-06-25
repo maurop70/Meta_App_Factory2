@@ -174,6 +174,14 @@ def deploy():
     echo "Running inventory responsibility migration..."
     venv/bin/python3 migrate_inventory_responsibility.py
 
+    # Dynamic role registry: seeds erp_roles and rebuilds erp_employees without
+    # the static CHECK(role IN ...) constraint across the default DB AND every
+    # tenant DB under data/tenants/ (the script globs them itself). Each DB is
+    # snapshotted to archives/ first. Idempotent. Failure triggers the ERR trap
+    # -> auto-rollback.
+    echo "Running dynamic roles migration..."
+    venv/bin/python3 migrate_dynamic_roles.py
+
     # Gateway device-recognition migration. Runs with the shared backend venv
     # (the gateway has no venv of its own — erp-auth.service uses backend/venv).
     # The script targets /opt/erp/gateway/data/gateway_core.db via __file__, so
