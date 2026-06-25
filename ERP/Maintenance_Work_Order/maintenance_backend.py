@@ -62,8 +62,24 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, field_validator
 from contextlib import asynccontextmanager
 
-from local_db import get_db_connection
+from local_db import (
+    get_db_connection,
+    get_default_db_connection,
+    set_current_tenant,
+    reset_current_tenant,
+    get_current_tenant,
+    _validate_tenant_id,
+    DEFAULT_TENANT_ID,
+)
+from starlette.middleware.base import BaseHTTPMiddleware
+from plugin_manager import trigger_tenant_hook
+import agent_matrix
+import ipaddress
 import os
+
+# Persist logs to a tenant-tagged rotating file so the Sentry agent's /logs
+# endpoint has a durable source (stdout handler above is retained for Docker).
+agent_matrix.attach_file_logging(logger)
 import openpyxl
 from openpyxl.worksheet.datavalidation import DataValidation
 from fpdf import FPDF
@@ -155,7 +171,10 @@ app = FastAPI(title="Maintenance Work Order API - Global ERP Connected", lifespa
 api_router = APIRouter(prefix="/api")
 
 def is_jti_revoked(jti: str) -> bool:
-    conn = get_db_connection()
+    # GLOBAL table: the JTI blacklist is cross-tenant (tokens are issued/revoked
+    # by the Module 0 Gateway), so this MUST bypass tenant routing. A tenant-bound
+    # connection would read an empty per-tenant copy and miss revoked tokens.
+    conn = get_default_db_connection()
     try:
         row = conn.execute("SELECT 1 FROM revoked_tokens WHERE jti = ?", (jti,)).fetchone()
         return row is not None
@@ -199,6 +218,108 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# --- MULTI-TENANT CONTEXT ROUTING -------------------------------------------
+# Optional explicit base domain (e.g. "domain.com"). When set, the tenant is the
+# label immediately preceding it (clientA.domain.com -> "clientA"). When unset we
+# fall back to a heuristic: any host with 3+ labels treats its leftmost label as
+# the tenant. Apex domains, "localhost", and raw IPs always map to the default
+# tenant, keeping direct-IP access to the live console unbothered.
+TENANT_BASE_DOMAIN = os.environ.get("TENANT_BASE_DOMAIN", "").strip().strip(".").lower()
+
+
+def _resolve_tenant_from_host(host_header: str) -> str:
+    """Derive a validated tenant_id from an incoming Host header, defaulting to
+    DEFAULT_TENANT_ID for direct-IP / localhost / apex / malformed hosts."""
+    if not host_header:
+        return DEFAULT_TENANT_ID
+
+    # Take the first Host value, drop any port (handle IPv6 "[::1]:8000" too).
+    host = host_header.split(",")[0].strip().lower()
+    if host.startswith("["):
+        host = host[1:].split("]")[0]
+    elif host.count(":") == 1:
+        host = host.split(":")[0]
+
+    if not host or host == "localhost":
+        return DEFAULT_TENANT_ID
+
+    # A raw IP address (e.g. 68.183.30.128) carries no subdomain -> default.
+    try:
+        ipaddress.ip_address(host)
+        return DEFAULT_TENANT_ID
+    except ValueError:
+        pass
+
+    candidate = None
+    if TENANT_BASE_DOMAIN:
+        suffix = "." + TENANT_BASE_DOMAIN
+        if host.endswith(suffix):
+            prefix = host[: -len(suffix)]
+            candidate = prefix.split(".")[0] if prefix else None
+    elif host.count(".") >= 2:
+        # No configured base domain: leftmost label of a 3+ label host.
+        candidate = host.split(".")[0]
+
+    if not candidate:
+        return DEFAULT_TENANT_ID
+
+    try:
+        return _validate_tenant_id(candidate)
+    except ValueError:
+        logger.warning(
+            "[TENANT] Rejected invalid subdomain '%s' from host '%s'; using default.",
+            candidate, host_header,
+        )
+        return DEFAULT_TENANT_ID
+
+
+class TenantContextMiddleware(BaseHTTPMiddleware):
+    """Resolve the tenant from the Host header, expose it on request.state, and
+    bind it to the execution context so every get_db_connection() call within the
+    request transparently targets the correct tenant database."""
+
+    async def dispatch(self, request: Request, call_next):
+        tenant_id = _resolve_tenant_from_host(request.headers.get("host", ""))
+        request.state.tenant_id = tenant_id
+        token = set_current_tenant(tenant_id)
+        try:
+            response = await call_next(request)
+        finally:
+            reset_current_tenant(token)
+        response.headers["X-Tenant-Id"] = tenant_id
+        return response
+
+
+app.add_middleware(TenantContextMiddleware)
+
+
+def add_tenant_task(background_tasks: BackgroundTasks, func, *args, **kwargs) -> None:
+    """Schedule a background task that inherits the CURRENT tenant context.
+
+    BackgroundTasks run after the response is sent -- i.e. after the middleware
+    has already reset the context binding -- so without this wrapper a tenant's
+    background DB writes would silently land in the default database. We capture
+    the active tenant at schedule time and re-bind it inside the worker (works
+    for both sync workers run in the threadpool and async workers)."""
+    tenant_id = get_current_tenant()
+
+    if asyncio.iscoroutinefunction(func):
+        async def _runner():
+            tok = set_current_tenant(tenant_id)
+            try:
+                await func(*args, **kwargs)
+            finally:
+                reset_current_tenant(tok)
+    else:
+        def _runner():
+            tok = set_current_tenant(tenant_id)
+            try:
+                func(*args, **kwargs)
+            finally:
+                reset_current_tenant(tok)
+
+    background_tasks.add_task(_runner)
 
 # --- GLOBAL ERP DATA MODELS ---
 
@@ -1947,7 +2068,7 @@ def complete_mwo(
             raise HTTPException(status_code=403, detail="RBAC Violation: Technician is not the assigned operator for this MWO.")
 
         # 2. Asynchronous Dispatch: PDF generation & DB completion in background worker
-        background_tasks.add_task(archive_mwo_pdf_worker, mwo_id, payload.resolution_notes, payload.labor_hours)
+        add_tenant_task(background_tasks, archive_mwo_pdf_worker, mwo_id, payload.resolution_notes, payload.labor_hours)
         
         from fastapi.responses import JSONResponse
         return JSONResponse(status_code=202, content={
@@ -2024,7 +2145,7 @@ async def update_mwo_v2(mwo_id: str, payload: MWOUpdate, background_tasks: Backg
         cursor.execute(sql, tuple(values))
         conn.commit()
         
-        background_tasks.add_task(sync_memory_bus)
+        add_tenant_task(background_tasks, sync_memory_bus)
         
         # Terminal State Actuation: Atomic Drop Protocol
         if update_data.get("status") == "COMPLETED":
@@ -2032,10 +2153,10 @@ async def update_mwo_v2(mwo_id: str, payload: MWOUpdate, background_tasks: Backg
             cursor.execute(f"SELECT {cols} FROM work_orders WHERE mwo_id = ?", (mwo_id,))
             final_row = cursor.fetchone()
             if final_row:
-                background_tasks.add_task(archive_completed_mwo, dict(final_row))
+                add_tenant_task(background_tasks, archive_completed_mwo, dict(final_row))
                 resolution_notes = final_row['manual_log'] or "No manual log provided."
                 labor_hours = final_row['labor_hours'] or 0.0
-                background_tasks.add_task(archive_mwo_pdf_worker, mwo_id, resolution_notes, labor_hours)
+                add_tenant_task(background_tasks, archive_mwo_pdf_worker, mwo_id, resolution_notes, labor_hours)
         
         return {"status": "success", "message": "MWO Updated successfully", "patch": update_data}
     except HTTPException:
@@ -2204,11 +2325,25 @@ async def create_mwo(payload: NewMWO, jwt_payload: dict = Depends(verify_jwt_tok
     
     if role not in ["ADMINISTRATOR", "ADMIN", "DM"]:
         raise HTTPException(status_code=403, detail="RBAC Violation: Unauthorized identity.")
-        
+
+    # [PLUGIN HOOK] before_mwo_create — let the tenant validate / mutate the
+    # payload before persistence. The returned dict is re-validated through the
+    # NewMWO contract; an invalid mutation is logged and ignored (fail-safe).
+    tenant_id = get_current_tenant()
+    hooked_payload = trigger_tenant_hook(tenant_id, "before_mwo_create", payload.dict())
+    if isinstance(hooked_payload, dict):
+        try:
+            payload = NewMWO(**hooked_payload)
+        except ValidationError as ve:
+            logger.warning(
+                "[PLUGIN] before_mwo_create returned an invalid payload for tenant '%s'; "
+                "ignoring mutation: %s", tenant_id, ve,
+            )
+
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
-        
+
         final_creator_id = creator_id
         if payload.impersonated_creator_id and role == "DM":
             # Security check: Verify the impersonated user is in the DM's department
@@ -2260,8 +2395,12 @@ async def create_mwo(payload: NewMWO, jwt_payload: dict = Depends(verify_jwt_tok
         # Fetch the newly created record
         cursor.execute(f"SELECT {WORK_ORDER_COLS} FROM work_orders WHERE mwo_id = ?", (final_mwo_id,))
         new_row = cursor.fetchone()
-        
-        return {"status": "success", "message": "MWO created successfully", "data": dict(new_row) if new_row else {}}
+
+        # [PLUGIN HOOK] after_mwo_created — fire tenant alerts / webhooks / logging.
+        mwo_data = dict(new_row) if new_row else {}
+        trigger_tenant_hook(tenant_id, "after_mwo_created", final_mwo_id, mwo_data)
+
+        return {"status": "success", "message": "MWO created successfully", "data": mwo_data}
     except HTTPException:
         raise
     except Exception as e:
@@ -2434,7 +2573,7 @@ async def bulk_upload_employees(background_tasks: BackgroundTasks, jwt_payload: 
     finally:
         await file.close()
 
-    background_tasks.add_task(process_employee_csv_background, tmp_path)
+    add_tenant_task(background_tasks, process_employee_csv_background, tmp_path)
     
     return {"status": "accepted", "message": "Employee payload queued for secure validation and processing."}
 
@@ -2547,7 +2686,7 @@ async def bulk_upload_mwos(background_tasks: BackgroundTasks, jwt_payload: dict 
     finally:
         await file.close()
 
-    background_tasks.add_task(process_mwo_csv_background, tmp_path)
+    add_tenant_task(background_tasks, process_mwo_csv_background, tmp_path)
     
     return {"status": "accepted", "message": "MWO payload queued for secure validation and processing."}
 
@@ -2569,7 +2708,7 @@ async def bulk_upload_users(background_tasks: BackgroundTasks, file: UploadFile 
         await file.close()
 
     # Offload strictly to background thread
-    background_tasks.add_task(process_csv_background, tmp_path)
+    add_tenant_task(background_tasks, process_csv_background, tmp_path)
     
     return {"status": "accepted", "message": "Payload queued for validation and processing."}
 
@@ -3692,6 +3831,7 @@ def ingest_mwo_consumption(
         
         # 4. Iterate and Execute Discrete Physical Math
         consumed_ledgers = []
+        consumed_skus = set()
         for part_id in payload.part_ids:
             cursor.execute("SELECT sku_id, status FROM erp_parts WHERE part_id = ?", (part_id,))
             part = cursor.fetchone()
@@ -3720,8 +3860,20 @@ def ingest_mwo_consumption(
                 (part["sku_id"],)
             )
             consumed_ledgers.append(part_id)
+            consumed_skus.add(part["sku_id"])
 
         conn.commit()
+
+        # [PLUGIN HOOK] after_inventory_consumed — fire once per affected SKU with
+        # its committed stock level so tenant reorder logic sees the final count.
+        tenant_id = get_current_tenant()
+        for sku_id in consumed_skus:
+            stock_row = conn.execute(
+                "SELECT quantity_on_hand FROM erp_skus WHERE sku_id = ?", (sku_id,)
+            ).fetchone()
+            new_stock = stock_row["quantity_on_hand"] if stock_row else None
+            trigger_tenant_hook(tenant_id, "after_inventory_consumed", sku_id, new_stock)
+
         return {
             "status": "success",
             "message": f"{len(consumed_ledgers)} discrete parts mathematically consumed against MWO {mwo_id}."
@@ -4476,7 +4628,7 @@ def ingest_manual_log(payload: ManualLogPayload, background_tasks: BackgroundTas
 
         # Threshold evaluation strictly decoupled from the response cycle
         if payload.direction == "OUT":
-            background_tasks.add_task(worker_evaluate_sku_threshold, payload.sku_id)
+            add_tenant_task(background_tasks, worker_evaluate_sku_threshold, payload.sku_id)
 
         return {"status": "success", "sku_id": payload.sku_id, "direction": payload.direction,
                 "quantity": payload.quantity, "new_quantity_on_hand": new_qty, "logged_by": operator_id}
@@ -4726,7 +4878,7 @@ def assign_sku_supplier(sku_id: str, payload: SkuSupplierAssign, background_task
         conn.commit()
         logger.info(f"[SUPPLIER] {jwt_payload.get('sub')} reassigned {sku_id} -> {payload.supplier_id or 'UNASSIGNED'}")
         if payload.supplier_id:
-            background_tasks.add_task(worker_evaluate_sku_threshold, sku_id)
+            add_tenant_task(background_tasks, worker_evaluate_sku_threshold, sku_id)
         return {"status": "success", "sku_id": sku_id, "supplier_id": payload.supplier_id}
     except HTTPException:
         conn.rollback()
@@ -4768,7 +4920,7 @@ def update_sku(sku_id: str, payload: SKUUpdate, background_tasks: BackgroundTask
             conn.commit()
             
         logger.info(f"[SKU] {jwt_payload.get('sub')} updated SKU {sku_id}: {payload.dict(exclude_unset=True)}")
-        background_tasks.add_task(worker_evaluate_sku_threshold, sku_id)
+        add_tenant_task(background_tasks, worker_evaluate_sku_threshold, sku_id)
         return {"status": "success", "sku_id": sku_id}
     except HTTPException:
         conn.rollback()
@@ -5300,7 +5452,7 @@ def actuate_orders_bulk(payload: BulkActuationPayload, background_tasks: Backgro
 
     # Supplier email dispatch strictly decoupled from the response cycle
     for po_id in approved_ids:
-        background_tasks.add_task(dispatch_po_email, po_id)
+        add_tenant_task(background_tasks, dispatch_po_email, po_id)
 
     emit_inventory_event("po_decided", {"action": payload.action, "results": results, "decided_by": jwt_payload.get("sub")})
     return {"status": "success", "action": payload.action, "results": results}
@@ -5338,6 +5490,8 @@ def receive_purchase_order(po_id: str, jwt_payload: dict = Depends(verify_jwt_to
         conn.close()
 
 app.include_router(api_router)
+# Component C: AI Support & Ops Agent Matrix (API-key gated, prefix /api/agent).
+app.include_router(agent_matrix.agent_router)
 
 # --- FRONTEND DEPLOYMENT ---
 frontend_dist_path = os.path.join(_erp, 'maintenance_frontend', 'dist')

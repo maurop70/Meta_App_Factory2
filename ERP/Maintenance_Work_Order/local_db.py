@@ -1,34 +1,225 @@
 import os
+import re
 import sqlite3
 import shutil
+import threading
+import contextvars
 import logging
 
 logger = logging.getLogger("LocalDB")
 
 _here = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(_here, "data", "maintenance_erp.db")
+DATA_DIR = os.path.join(_here, "data")
+DB_PATH = os.path.join(DATA_DIR, "maintenance_erp.db")
 
-def get_db_connection() -> sqlite3.Connection:
-    """
-    Returns a thread-safe connection object with strict concurrency pragmas.
-    Connects to the LOCAL copy outside Google Drive to prevent file lock deadlocks.
-    isolation_level=None forces autocommit mode, empowering routes to explicitly
-    declare BEGIN IMMEDIATE TRANSACTION boundaries for concurrency locking.
-    """
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False, timeout=10, isolation_level=None)
-    
+# --- Multi-tenant storage ---------------------------------------------------
+# Each tenant gets a fully isolated SQLite file under data/tenants/. The default
+# database above remains the fallback for the admin command console and any
+# request that does not carry an explicit tenant context.
+TENANTS_DIR = os.path.join(DATA_DIR, "tenants")
+
+# The reserved id that routes back to the legacy default database.
+DEFAULT_TENANT_ID = "default"
+
+# A valid tenant_id is a DNS-label-safe slug: lowercase alphanumerics with
+# optional internal hyphens, 1-63 chars. This allowlist is the PRIMARY defence
+# against path traversal -- '/', '\\', '.' and '..' can never satisfy it.
+_TENANT_ID_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$")
+
+# Guards first-time tenant provisioning so two concurrent requests cannot race
+# to create / bootstrap the same database file. The set memoises tenants whose
+# schema has already been ensured this process, keeping the hot path lock-free.
+_tenant_init_lock = threading.Lock()
+_initialized_tenants = set()
+
+# The active tenant for the current execution context (request or background
+# task). When unset, connections fall back to the default database, so any code
+# path with no tenant bound (lifespan boot, scripts) behaves exactly as before.
+# contextvars are both asyncio-task-safe and copied into worker threads, so this
+# binding survives FastAPI running sync routes in its threadpool.
+_current_tenant_id = contextvars.ContextVar("current_tenant_id", default=None)
+
+
+def set_current_tenant(tenant_id):
+    """Bind ``tenant_id`` to the current execution context. Returns a token that
+    MUST be passed to reset_current_tenant() to restore the prior binding."""
+    return _current_tenant_id.set(tenant_id)
+
+
+def reset_current_tenant(token) -> None:
+    """Restore the tenant binding captured by a prior set_current_tenant()."""
+    _current_tenant_id.reset(token)
+
+
+def get_current_tenant():
+    """Return the tenant bound to the current context, or None if unbound."""
+    return _current_tenant_id.get()
+
+
+def _apply_connection_pragmas(conn: sqlite3.Connection) -> sqlite3.Connection:
+    """Apply the strict concurrency / integrity pragmas shared by every
+    connection (default and per-tenant alike)."""
     # Return dictionary-like rows to mimic JSON responses from the previous API
     conn.row_factory = sqlite3.Row
-    
+
     # Enforce strict SQLite pragmas for concurrency and data integrity
     conn.execute("PRAGMA journal_mode=WAL;")
     conn.execute("PRAGMA synchronous=NORMAL;")
     conn.execute("PRAGMA foreign_keys=ON;")
-    
+
     return conn
 
-def init_tables():
-    conn = get_db_connection()
+def _connect_default() -> sqlite3.Connection:
+    """Open a connection to the default database, bypassing tenant routing.
+    Connects to the LOCAL copy outside Google Drive to prevent file lock deadlocks.
+    isolation_level=None forces autocommit mode, empowering routes to explicitly
+    declare BEGIN IMMEDIATE TRANSACTION boundaries for concurrency locking."""
+    conn = sqlite3.connect(DB_PATH, check_same_thread=False, timeout=10, isolation_level=None)
+    return _apply_connection_pragmas(conn)
+
+
+def get_default_db_connection() -> sqlite3.Connection:
+    """Open a connection to the default GLOBAL database, bypassing tenant context
+    routing entirely. Use this for cross-tenant/global tables that must never be
+    partitioned per tenant -- e.g. the revoked-token (JTI) blacklist and auth
+    rate limits -- so a tenant-bound request cannot read an empty per-tenant copy
+    and miss a globally-revoked token."""
+    return _connect_default()
+
+
+def get_db_connection() -> sqlite3.Connection:
+    """
+    Returns a thread-safe connection object with strict concurrency pragmas.
+
+    Tenant-aware: if a tenant is bound to the current execution context (see
+    set_current_tenant / TenantContextMiddleware), the connection is transparently
+    routed to that tenant's isolated database. With no tenant bound -- the admin
+    command console, lifespan boot, CLI scripts -- it falls back to the default
+    database, preserving the pre-multi-tenant behaviour exactly.
+    """
+    tenant_id = _current_tenant_id.get()
+    if tenant_id and tenant_id != DEFAULT_TENANT_ID:
+        return get_db_connection_for_tenant(tenant_id)
+    return _connect_default()
+
+
+def _validate_tenant_id(tenant_id) -> str:
+    """Normalise and strictly validate a tenant_id, raising ValueError on any
+    value that is not a DNS-label-safe slug. This is the path-traversal guard."""
+    if not isinstance(tenant_id, str):
+        raise ValueError(f"tenant_id must be a string, got {type(tenant_id).__name__}")
+    normalized = tenant_id.strip().lower()
+    if not _TENANT_ID_RE.match(normalized):
+        raise ValueError(f"Invalid tenant_id (must be a 1-63 char DNS label): {tenant_id!r}")
+    return normalized
+
+
+def _resolve_tenant_db_path(tenant_id: str) -> str:
+    """Resolve the on-disk path for a validated tenant_id, with a defence-in-depth
+    containment check ensuring the realpath can never escape data/tenants/."""
+    candidate = os.path.join(TENANTS_DIR, f"tenant_{tenant_id}.db")
+    tenants_root = os.path.realpath(TENANTS_DIR)
+    resolved = os.path.realpath(candidate)
+    # commonpath raises ValueError across drives; a mismatch means traversal.
+    if os.path.commonpath([tenants_root, resolved]) != tenants_root:
+        raise ValueError(f"Resolved tenant path escapes tenant root: {tenant_id!r}")
+    return resolved
+
+
+def _bootstrap_tenant_schema(conn: sqlite3.Connection) -> None:
+    """
+    Create the full ERP schema in a freshly-provisioned tenant database.
+
+    The authoritative schema is the live default database -- the cumulative
+    product of setup_db.py plus every migration script. We clone its DDL
+    (tables / indexes / triggers / views) verbatim so each tenant is an exact
+    structural mirror of production; NO rows are copied, preserving isolation.
+
+    Foreign-key enforcement is disabled during creation so the order in which
+    objects are replayed cannot trip referential checks on not-yet-created
+    parents. If the template is unavailable we fall back to the init_tables()
+    base subset and log loudly, because that subset is known to be incomplete
+    (it omits erp_employees, work_orders, erp_skus, etc.).
+    """
+    if not os.path.exists(DB_PATH):
+        logger.warning(
+            "Authoritative template %s not found; falling back to the INCOMPLETE "
+            "init_tables() base schema for tenant bootstrap.", DB_PATH
+        )
+        _create_base_tables(conn)
+        return
+
+    src = sqlite3.connect(DB_PATH)
+    try:
+        ddl_objects = src.execute(
+            "SELECT sql FROM sqlite_master "
+            "WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%' "
+            "ORDER BY CASE type WHEN 'table' THEN 0 WHEN 'index' THEN 1 ELSE 2 END"
+        ).fetchall()
+    finally:
+        src.close()
+
+    conn.execute("PRAGMA foreign_keys=OFF;")
+    try:
+        for (ddl,) in ddl_objects:
+            conn.execute(ddl)
+        conn.commit()
+    finally:
+        conn.execute("PRAGMA foreign_keys=ON;")
+    logger.info(
+        "Provisioned tenant schema by cloning %d objects from %s",
+        len(ddl_objects), DB_PATH,
+    )
+
+
+def get_db_connection_for_tenant(tenant_id) -> sqlite3.Connection:
+    """
+    Resolve and return a thread-safe connection to an isolated tenant database
+    at data/tenants/tenant_<id>.db.
+
+    - ``tenant_id`` is strictly validated against a DNS-label allowlist, blocking
+      path traversal before any filesystem access.
+    - A ``None`` / empty id, or the reserved id "default", routes to the legacy
+      default database so the existing admin command console is never disturbed.
+      (Uses _connect_default() directly, not get_db_connection(), so an explicit
+      "default" request is honoured even when another tenant is context-bound.)
+    - On first use this process, the tenant file is created and its schema is
+      bootstrapped to mirror production. Provisioning is serialised by a lock so
+      concurrent requests cannot double-create the file.
+    """
+    if tenant_id is None or (
+        isinstance(tenant_id, str) and tenant_id.strip().lower() in ("", DEFAULT_TENANT_ID)
+    ):
+        return _connect_default()
+
+    tenant_id = _validate_tenant_id(tenant_id)
+    db_path = _resolve_tenant_db_path(tenant_id)
+
+    # Fast path: schema already ensured this process. Double-checked under lock.
+    if tenant_id not in _initialized_tenants:
+        with _tenant_init_lock:
+            if tenant_id not in _initialized_tenants:
+                os.makedirs(TENANTS_DIR, exist_ok=True)
+                needs_bootstrap = not os.path.exists(db_path)
+                conn = sqlite3.connect(
+                    db_path, check_same_thread=False, timeout=10, isolation_level=None
+                )
+                _apply_connection_pragmas(conn)
+                try:
+                    if needs_bootstrap:
+                        _bootstrap_tenant_schema(conn)
+                finally:
+                    conn.close()
+                _initialized_tenants.add(tenant_id)
+
+    conn = sqlite3.connect(db_path, check_same_thread=False, timeout=10, isolation_level=None)
+    return _apply_connection_pragmas(conn)
+
+
+def _create_base_tables(conn: sqlite3.Connection) -> None:
+    """Create the base table subset defined inline in this module against the
+    given connection. NOTE: this subset is intentionally narrow and is NOT the
+    complete production schema (see _bootstrap_tenant_schema)."""
     try:
         cursor = conn.cursor()
         cursor.execute('''
@@ -208,6 +399,18 @@ def init_tables():
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_employee_sku_access_emp ON erp_employee_sku_access(employee_id)")
 
         conn.commit()
+    except Exception as e:
+        logger.error(f"Failed to initialize tables: {e}")
+        raise
+
+
+def init_tables():
+    """Ensure the base table subset exists in the default database. Owns the
+    connection lifecycle (open + close); the DDL itself lives in
+    _create_base_tables so it can be reused for tenant fallback bootstrap."""
+    conn = get_db_connection()
+    try:
+        _create_base_tables(conn)
     except Exception as e:
         logger.error(f"Failed to initialize tables: {e}")
     finally:
