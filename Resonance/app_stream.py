@@ -589,6 +589,30 @@ def stream_chat(prompt, dashboard_context=None):
     # 1. Load persistent history
     persistent_history = _load_history()
 
+    # ── §5.3 Engagement reply handling ───────────────────
+    # Resolve any outstanding proactive engagement BEFORE the normal chat flow.
+    # The timeout check runs first; then the reply is read for interest vs
+    # disinterest and the state machine transitions (engaged | declined), with the
+    # outcome recorded and config saved atomically. On explicit disinterest Alex
+    # says ONE warm no-pressure line and backs off — no full reply. Non-fatal.
+    try:
+        import engagement_engine
+        eng_result = engagement_engine.check_and_update_state(reply=raw_prompt, save=True)
+        if eng_result.get("decline_line"):
+            line = eng_result["decline_line"]
+            if not persistent_history or not (
+                persistent_history[-1].get("role") == "user"
+                and persistent_history[-1].get("content") == prompt
+            ):
+                persistent_history.append({"role": "user", "content": prompt})
+            persistent_history.append({"role": "assistant", "content": line})
+            _save_history(persistent_history)
+            yield {"text": line}
+            yield {"text": "", "done": True}
+            return
+    except Exception as e:
+        logger.error(f"Engagement state check failed (non-fatal): {e}")
+
     sys_prompt = build_shared_system_prompt(sandbox_mode, dashboard_context)
 
     # 2. Build the conversation context for the current Gemini API call

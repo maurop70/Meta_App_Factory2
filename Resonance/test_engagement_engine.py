@@ -22,6 +22,12 @@ os.environ["RESONANCE_TEST_MODE"] = "true"
 import engagement_engine as ee
 
 
+@pytest.fixture(autouse=True)
+def _no_sandbox(monkeypatch):
+    """Force sandbox OFF so a stale on-disk sandbox flag can't suppress triggers."""
+    monkeypatch.setattr(ee, "_is_sandbox_mode", lambda: False)
+
+
 # ── Fixtures / helpers ───────────────────────────────────────────────────────
 def _base_config(**eng_overrides):
     eng = {

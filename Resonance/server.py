@@ -435,6 +435,18 @@ class BackingTrackCastRequest(BaseModel):
     speaker_name: Optional[str] = None
 
 
+# ── §5.3 Resolve any engagement left awaiting from a prior run ────────
+@app.on_event("startup")
+async def startup_engagement_sweep():
+    """Run the timeout/state check on boot so a dangling awaiting_response from a
+    previous process resolves (to a silence decline) instead of hanging open."""
+    try:
+        import engagement_engine
+        engagement_engine.check_and_update_state(save=True)
+    except Exception as e:
+        logger.warning(f"Engagement startup sweep failed (non-fatal): {e}")
+
+
 # ── Auto-start Nerve Center Background Monitor ────────
 @app.on_event("startup")
 async def startup_nerve_center():
@@ -502,11 +514,36 @@ def telemetry_screen_time(req: ScreenTimeRequest, _auth: bool = Depends(require_
     engagement = {"triggered": False, "reason": "engine_unavailable"}
     try:
         import engagement_engine
+        # §5.3 — resolve any pending awaiting_response (silence timeout) first,
+        # then consider a fresh initiation (gates honour cooldown/caps/suspension).
+        engagement_engine.check_and_update_state(save=True)
         engagement = engagement_engine.trigger_engagement()
     except Exception as e:
         logger.error(f"Engagement trigger failed (non-fatal): {e}")
 
     return {"status": "ok", "recorded": entry, "engagement": engagement}
+
+
+@app.get("/api/engagement/log")
+def engagement_log(_auth: bool = Depends(require_resonance_token)):
+    """Parent visibility (§5.4): proactive-initiation history with outcomes.
+
+    Secured with the same X-Resonance-Token check as the other LAN endpoints.
+    """
+    try:
+        import resonance_config
+        cfg = resonance_config.load_config()
+    except Exception as e:
+        logger.error(f"Engagement log load failed: {e}")
+        raise HTTPException(status_code=500, detail="Could not load engagement log.")
+    eng = cfg.get("engagement", {}) or {}
+    return {
+        "status": "ok",
+        "state": eng.get("state", "idle"),
+        "cooldown_until_iso": eng.get("cooldown_until_iso"),
+        "proactive_suspended_until_iso": eng.get("proactive_suspended_until_iso"),
+        "initiations": eng.get("initiations", []),
+    }
 
 
 @app.post("/api/google-home/cast")
