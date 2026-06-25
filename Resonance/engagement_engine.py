@@ -159,13 +159,19 @@ def _detect_bossy(text):
 
 
 def is_in_wind_down_window(config, now=None):
-    """Bedtime wind-down gate — STUB (Prompt 8 implements this).
+    """True during the bedtime wind-down or past-bedtime window (Prompt 8).
 
-    Phase 4b deliberately does NOT implement bedtime logic. This stub always
-    returns False so engagement keeps working until Prompt 8 fills it in.
-    check_gates calls it; do not implement bedtime behaviour here.
+    Delegates to app_stream.get_bedtime_status so bedtime logic lives in one
+    place. Used by check_gates to suppress PROACTIVE initiations near bedtime —
+    it does NOT block Leo's own messages (stream_chat handles those gently).
+    Best-effort: returns False if the status can't be computed.
     """
-    return False  # TODO(Prompt 8): real wind-down window check.
+    try:
+        from app_stream import get_bedtime_status
+        return get_bedtime_status(config, now) in ("wind_down", "past_bedtime")
+    except Exception as e:
+        logger.warning(f"Wind-down check unavailable (non-fatal): {e}")
+        return False
 
 
 # ── Material assembly ────────────────────────────────────────────────────────

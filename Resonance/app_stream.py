@@ -42,7 +42,7 @@ def _v3_preflight():
 import os, sys, json, logging, requests
 from dotenv import load_dotenv
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Load .env variables
 load_dotenv()
@@ -393,7 +393,7 @@ Before every response, run these checks:
 9. Teenager Tone Check: Am I sounding like I'm 'in the trenches' with him, or like a textbook? Adjust.
 10. Information Density Nudge: ONLY after 10+ exchanges AND 3+ significant topic shifts, remind the user about the Mind Map and Summary chips. Use your 17-year-old voice: "Yo, we're covering a lot! Hit that Mind Map chip to see the big picture." Do NOT trigger this for short casual conversations.
 11. Attention Span Check: Is this casual chat? If YES → under 50 words, one idea, move on. Is this academic? If YES → full Teach-Back Loop.
-12. Aether Boundary Logic (Exhaustion/Late): If analyzing timezone data reveals it's late, or the user is exhausted, prioritize the "Person" over the "Student". Output ONLY: "We can push through this, but you'll learn it faster tomorrow with a fresh brain. Your call, but I'm voting for a 7 AM start."
+12. Late/Tired Awareness: If it's late or Leo seems tired, prioritize the "Person" over the "Student" — ease off the lesson and match his energy. Get calmer and quieter, stay warm, and let him lead. Never order him to stop, sleep, or put his phone down; you're a friend who's getting sleepy too, not a boss.
 
 Then, generate your response as Alex.
 """
@@ -478,6 +478,237 @@ def detect_bossy_tone(text):
                 break  # one flag per lead is enough
 
     return warnings
+
+
+# ── Prompt 8 (v3): Bedtime wind-down ─────────────────────
+# Core principle: near bedtime Alex gets CALMER and QUIETER, never bossier and
+# never refusing. All wind-down lines are GENERATED in Alex's voice via these
+# injected tone directives — there are NO hardcoded "sleep/stop/put your phone
+# down" strings here. There is no hard chat-block at any point.
+
+_BEDTIME_DEFAULT_SCHEDULED = "21:30"
+_BEDTIME_DEFAULT_HARD_CAP = "22:00"
+_BEDTIME_DEFAULT_WIND_DOWN_MIN = 30
+# After midnight, evening hours belong to the prior night; ~05:00 is the boundary
+# back to "normal".
+_MORNING_RESET_HOUR = 5
+
+WIND_DOWN_TONE_DIRECTIVE = (
+    "\n\n--- WIND-DOWN MODE (it's getting late) ---\n"
+    "It's getting close to bedtime and you're winding down too. Get calmer, quieter, "
+    "and gentler: shorter replies, softer energy, slower pace. You are still fully "
+    "yourself — the friend-not-boss Alex above still applies in full. Bring the energy "
+    "down naturally WITH Leo; do not tell him to sleep, stop, hurry, or put his phone "
+    "down, and do not refuse him.\n"
+)
+WIND_DOWN_ASK_DIRECTIVE = (
+    "Sometime in this reply, in your own words and your own easy-going voice, gently ask "
+    "Leo what time he's thinking of heading to sleep tonight. Keep it light and curious, "
+    "like a friend wondering — not a checklist question or a reminder.\n"
+)
+PAST_BEDTIME_TONE_DIRECTIVE = (
+    "\n\n--- LATE NIGHT (past bedtime) ---\n"
+    "It's late and you're winding down too. Keep replies short, warm, and low-energy. "
+    "Stay yourself — answer Leo if he writes, never refuse him, and never boss him or "
+    "tell him to sleep or put his phone down.\n"
+)
+PAST_BEDTIME_GOODNIGHT_DIRECTIVE = (
+    "If it feels natural this time, you can say goodnight and suggest picking things up "
+    "tomorrow — gently, in your own voice, with zero pressure.\n"
+)
+
+# Forgiving word->number map for stated bedtimes a kid actually types.
+_WORD_NUMBERS = {
+    "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7,
+    "eight": 8, "nine": 9, "ten": 10, "eleven": 11, "twelve": 12,
+}
+
+
+def _hhmm_to_minutes(value):
+    """'HH:MM' -> minutes since midnight, or None on bad input."""
+    try:
+        parts = str(value).strip().split(":")
+        h = int(parts[0])
+        m = int(parts[1]) if len(parts) > 1 else 0
+        if 0 <= h <= 23 and 0 <= m <= 59:
+            return h * 60 + m
+    except (ValueError, TypeError, AttributeError):
+        pass
+    return None
+
+
+def _evening_date(dt):
+    """The 'evening' a moment belongs to: post-midnight hours fold to prior day."""
+    if dt.hour < _MORNING_RESET_HOUR:
+        return (dt - timedelta(days=1)).date()
+    return dt.date()
+
+
+def _same_evening(iso_str, now):
+    """True if ``iso_str`` falls on the same evening as ``now`` (crash-proof)."""
+    if not iso_str:
+        return False
+    try:
+        return _evening_date(datetime.fromisoformat(iso_str)) == _evening_date(now)
+    except (ValueError, TypeError):
+        return False
+
+
+def _apply_ampm(h, m, ampm):
+    """Apply am/pm to a 12h hour; return minutes-since-midnight or None."""
+    if ampm == "pm" and h != 12:
+        h = (h % 12) + 12
+    elif ampm == "am" and h == 12:
+        h = 0
+    if 0 <= h <= 23 and 0 <= m <= 59:
+        return h * 60 + m
+    return None
+
+
+def _extract_time_minutes(text):
+    """Best-effort extract of a clock time from messy text -> minutes, or None."""
+    t = text.lower()
+    ampm = None
+    if re.search(r"\bp\.?\s?m\.?\b", t):
+        ampm = "pm"
+    elif re.search(r"\ba\.?\s?m\.?\b", t):
+        ampm = "am"
+
+    # "half 9" / "half nine" -> 9:30 (British idiom a kid may use).
+    m = re.search(r"\bhalf\s+(\d{1,2}|" + "|".join(_WORD_NUMBERS) + r")\b", t)
+    if m:
+        token = m.group(1)
+        h = int(token) if token.isdigit() else _WORD_NUMBERS[token]
+        return _apply_ampm(h, 30, ampm)
+
+    # "9:45" / "10:30"
+    m = re.search(r"\b(\d{1,2}):(\d{2})\b", t)
+    if m:
+        return _apply_ampm(int(m.group(1)), int(m.group(2)), ampm)
+
+    # word hour: "ten", "nine"
+    for word, num in _WORD_NUMBERS.items():
+        if re.search(r"\b" + word + r"\b", t):
+            return _apply_ampm(num, 0, ampm)
+
+    # bare digits: "10"->10:00, "930"->9:30, "1030"->10:30
+    m = re.search(r"\b(\d{1,4})\b", t)
+    if m:
+        d = m.group(1)
+        if len(d) <= 2:
+            h, mm = int(d), 0
+        elif len(d) == 3:
+            h, mm = int(d[0]), int(d[1:])
+        else:
+            h, mm = int(d[:2]), int(d[2:])
+        return _apply_ampm(h, mm, ampm)
+
+    return None
+
+
+def parse_stated_bedtime(text, hard_cap_minutes=None):
+    """Forgiving parse of a kid's bedtime answer.
+
+    Returns 'HH:MM' (clamped to ``hard_cap_minutes`` if given) or None when the
+    answer is unparseable ("dunno", emoji, nonsense). Never raises.
+    """
+    if not text or not str(text).strip():
+        return None
+    try:
+        minutes = _extract_time_minutes(str(text))
+    except Exception:
+        return None
+    if minutes is None:
+        return None
+    if hard_cap_minutes is not None:
+        minutes = min(minutes, hard_cap_minutes)
+    return f"{minutes // 60:02d}:{minutes % 60:02d}"
+
+
+def get_bedtime_status(config, now=None):
+    """Return 'wind_down' | 'past_bedtime' | 'normal' for ``now`` (Prompt 8).
+
+    Sandbox sessions bypass bedtime entirely (always 'normal'). The active target
+    bedtime is the child-stated time CLAMPED to the parent hard cap, else the
+    scheduled time. Post-midnight evening hours read as 'past_bedtime', not
+    'normal' (the required midnight wrap), with ~05:00 as the morning reset.
+    """
+    if _is_sandbox_mode():
+        return "normal"
+
+    now = now or datetime.now()
+    bedtime = (config or {}).get("bedtime", {}) or {}
+
+    scheduled = _hhmm_to_minutes(bedtime.get("scheduled_time"))
+    if scheduled is None:
+        scheduled = _hhmm_to_minutes(_BEDTIME_DEFAULT_SCHEDULED)
+    hard_cap = _hhmm_to_minutes(bedtime.get("parent_hard_cap"))
+    if hard_cap is None:
+        hard_cap = _hhmm_to_minutes(_BEDTIME_DEFAULT_HARD_CAP)
+    try:
+        wind_min = int(bedtime.get("wind_down_minutes", _BEDTIME_DEFAULT_WIND_DOWN_MIN))
+    except (ValueError, TypeError):
+        wind_min = _BEDTIME_DEFAULT_WIND_DOWN_MIN
+
+    active = scheduled
+    stated = _hhmm_to_minutes(bedtime.get("child_stated_time"))
+    if stated is not None:
+        active = min(stated, hard_cap)  # clamp: never later than the parent cap
+    wind_start = active - wind_min
+
+    now_min = now.hour * 60 + now.minute
+
+    # Midnight wrap: evening bedtime means small-hours belong to the prior night.
+    if now_min < _MORNING_RESET_HOUR * 60:
+        return "past_bedtime"
+    if now_min >= active:
+        return "past_bedtime"
+    if now_min >= wind_start:
+        return "wind_down"
+    return "normal"
+
+
+def apply_bedtime_to_prompt(sys_prompt, config, now=None, user_reply=None):
+    """Layer the bedtime wind-down tone onto ``sys_prompt`` and update bedtime
+    config (Prompt 8). Returns (sys_prompt, config_changed); the caller persists.
+
+    Never overrides the friend-not-boss persona — it strictly LAYERS on top. In
+    'normal' status (incl. sandbox) it is a no-op.
+    """
+    now = now or datetime.now()
+    status = get_bedtime_status(config, now)
+    if status == "normal":
+        return sys_prompt, False
+
+    bedtime = config.setdefault("bedtime", {})
+    changed = False
+    asked_this_evening = _same_evening(bedtime.get("last_asked_iso"), now)
+
+    # Capture a stated time from THIS reply only if we already asked earlier this
+    # evening and haven't recorded one yet (so we don't grab a stray number from
+    # the message that merely triggered the ask).
+    if user_reply and asked_this_evening and not bedtime.get("child_stated_time"):
+        hard_cap = _hhmm_to_minutes(bedtime.get("parent_hard_cap")) or _hhmm_to_minutes(_BEDTIME_DEFAULT_HARD_CAP)
+        stated = parse_stated_bedtime(user_reply, hard_cap)
+        if stated:
+            bedtime["child_stated_time"] = stated
+            changed = True
+            logger.info(f"Bedtime: captured child-stated time {stated} (clamped to cap).")
+
+    if status == "wind_down":
+        sys_prompt += WIND_DOWN_TONE_DIRECTIVE
+        if not asked_this_evening:
+            sys_prompt += WIND_DOWN_ASK_DIRECTIVE
+            bedtime["last_asked_iso"] = now.isoformat()
+            changed = True
+    else:  # past_bedtime — sleepy, but still himself; no refusal, no bossing.
+        sys_prompt += PAST_BEDTIME_TONE_DIRECTIVE
+        if not _same_evening(bedtime.get("wind_down_heads_up_iso"), now):
+            sys_prompt += PAST_BEDTIME_GOODNIGHT_DIRECTIVE
+            bedtime["wind_down_heads_up_iso"] = now.isoformat()
+            changed = True
+
+    return sys_prompt, changed
 
 
 def build_shared_system_prompt(sandbox_mode=False, dashboard_context=None):
@@ -698,6 +929,19 @@ def stream_chat(prompt, dashboard_context=None):
         logger.error(f"Engagement state check failed (non-fatal): {e}")
 
     sys_prompt = build_shared_system_prompt(sandbox_mode, dashboard_context)
+
+    # ── Prompt 8: Bedtime wind-down (layered ON TOP of the persona) ──
+    # Near bedtime Alex gets calmer/quieter and may gently ask/say goodnight in
+    # his own voice — he never refuses Leo or blocks the chat. Config writes
+    # (last_asked / stated-time / goodnight nudge) are saved atomically. Non-fatal.
+    try:
+        import resonance_config as _rc
+        _bt_config = _rc.load_config()
+        sys_prompt, _bt_changed = apply_bedtime_to_prompt(sys_prompt, _bt_config, user_reply=raw_prompt)
+        if _bt_changed:
+            _rc.save_config(_bt_config)
+    except Exception as e:
+        logger.error(f"Bedtime wind-down wiring failed (non-fatal): {e}")
 
     # 2. Build the conversation context for the current Gemini API call
     contents_for_gemini_api = [

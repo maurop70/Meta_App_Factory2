@@ -25,6 +25,8 @@ import engagement_engine as ee
 def _stub_engine(monkeypatch):
     # Never proactively skip via a stale on-disk sandbox flag.
     monkeypatch.setattr(ee, "_is_sandbox_mode", lambda: False)
+    # Pin the wind-down gate OFF so caps/cooldown tests stay wall-clock independent.
+    monkeypatch.setattr(ee, "is_in_wind_down_window", lambda *a, **k: False)
     # Any opener / decline-line generation returns a safe, phone-free line.
     monkeypatch.setattr(ee, "_invoke_llm", lambda u, s=None: "Yo, bet you can't out-jam me today!")
     monkeypatch.setattr(ee, "_build_system_prompt", lambda: "(stub persona)")

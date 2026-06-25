@@ -24,8 +24,11 @@ import engagement_engine as ee
 
 @pytest.fixture(autouse=True)
 def _no_sandbox(monkeypatch):
-    """Force sandbox OFF so a stale on-disk sandbox flag can't suppress triggers."""
+    """Force sandbox OFF so a stale on-disk sandbox flag can't suppress triggers,
+    and pin the wind-down gate OFF so these gate tests stay wall-clock independent
+    (the bedtime window itself is covered by test_bedtime_suppression.py)."""
     monkeypatch.setattr(ee, "_is_sandbox_mode", lambda: False)
+    monkeypatch.setattr(ee, "is_in_wind_down_window", lambda *a, **k: False)
 
 
 # ── Fixtures / helpers ───────────────────────────────────────────────────────

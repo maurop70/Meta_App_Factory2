@@ -47,6 +47,7 @@ DEFAULT_CONFIG = {
         "child_stated_time": None,
         "last_asked_iso": None,
         "parent_hard_cap": "22:00",
+        "wind_down_heads_up_iso": None,
     },
     "engagement": {
         "enabled": True,
