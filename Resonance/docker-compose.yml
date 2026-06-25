@@ -14,9 +14,7 @@ services:
         reservations:
           cpus: '0.50'
           memory: 1G
-    ports:
-      # Zero collision with Alpha (5008), CMO (5020), or API (5000)
-      - "5006:5006"
+    network_mode: host
     environment:
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - PORT=${PORT:-5006}
@@ -30,10 +28,3 @@ services:
       # Global system logic traversal to the root workspace (Read-Only)
       - ../../.system_core:/app/.system_core:ro
     restart: unless-stopped
-    networks:
-      - aether_net
-
-networks:
-  aether_net:
-    external: true
-    name: aether_net
