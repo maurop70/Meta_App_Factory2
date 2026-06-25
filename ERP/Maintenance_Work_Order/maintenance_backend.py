@@ -393,29 +393,22 @@ class EquipmentActuationPayload(BaseModel):
 
 class EmployeeIngestionRecord(BaseModel):
     name: str = Field(..., min_length=2, max_length=100)
-    role: str = Field(..., description="Mapped Role (e.g., ADMIN, TECH)")
-    pin_code: str = Field(..., min_length=4, max_length=12, description="Raw PIN to be hashed")
+    role: str = Field(..., description="Mapped Role; validated dynamically against erp_roles")
+    # Optional: a blank PIN defaults to '1234' at the endpoint (first-login reset).
+    pin_code: Optional[str] = Field(default=None, max_length=12, description="Raw PIN to be hashed")
     is_active: int = Field(default=1, ge=0, le=1)
-    
+
     # [PHASE 35.3 RELATIONAL INJECTIONS]
     department_id: str = Field(..., min_length=2, description="Physical operational department FK")
+    # Optional: a TECH may be ingested without a reporting HM (NULL).
     reports_to_hm_id: Optional[str] = None
-    
+
     @field_validator('role', mode='before')
     @classmethod
-    def validate_role(cls, v):
-        allowed = {"ADMINISTRATOR", "ADMIN", "HM", "TECH"}
-        if str(v).upper() not in allowed:
-            raise ValueError(f"Structural Violation: Role must be one of {allowed}")
-        return str(v).upper()
-    
-    @field_validator('reports_to_hm_id', mode='after')
-    @classmethod
-    def require_hm_for_tech(cls, v, info):
-        role = info.data.get('role', '').upper()
-        if role in ["TECH", "TECHNICIAN"] and not v:
-            raise ValueError("Structural Violation: A TECHNICIAN must be assigned a reporting HM.")
-        return v
+    def normalize_role(cls, v):
+        # Normalise only; the registered-role whitelist is enforced dynamically
+        # against erp_roles at the endpoint layer, not hardcoded here.
+        return str(v).upper().strip()
 
 # [PHASE 34.9] Parts Catalog Ingestion Schema
 class PartIngestionRecord(BaseModel):
@@ -719,29 +712,36 @@ async def ingest_single_user(payload: EmployeeIngestionRecord, jwt_payload: dict
     role = jwt_payload.get("role")
     if role not in ["ADMINISTRATOR", "ADMIN"]:
         raise HTTPException(status_code=403, detail="RBAC Violation: Administrative clearance required.")
-        
-    # Mandatory Silent Patch: Explicit Route-Level Validation
-    if payload.role == 'TECH' and not payload.reports_to_hm_id:
-        raise HTTPException(status_code=400, detail="Structural Violation: TECH must be bound to a reporting HM.")
-        
+
     conn = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        
-        # 2. CPU-Bound Password Hashing
+
+        # 2. Dynamic role validation against the erp_roles registry (replaces the
+        # former hardcoded whitelist). reports_to_hm_id is optional for all roles.
+        registered_roles = get_registered_roles(cursor)
+        if payload.role not in registered_roles:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Structural Violation: '{payload.role}' is not a registered role.",
+            )
+
+        # 3. CPU-Bound Password Hashing. A blank PIN defaults to '1234', which the
+        # user resets on first-time activation (username-NULL gate).
         import bcrypt
         import asyncio
+        pin_to_hash = payload.pin_code if payload.pin_code else '1234'
         pin_hash = await asyncio.to_thread(
-            lambda p: bcrypt.hashpw(p.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'), 
-            payload.pin_code
+            lambda p: bcrypt.hashpw(p.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'),
+            pin_to_hash
         )
         
-        # 3. PK Synthesization
+        # 4. PK Synthesization
         import uuid
         new_id = f"U-{uuid.uuid4().hex[:6].upper()}"
-        
-        # 4. Atomic Database Insertion (Cryptographic isolation - NO plaintext pin_code)
+
+        # 5. Atomic Database Insertion (Cryptographic isolation - NO plaintext pin_code)
         cursor.execute("PRAGMA foreign_keys = ON")
         cursor.execute(
             """
@@ -757,6 +757,12 @@ async def ingest_single_user(payload: EmployeeIngestionRecord, jwt_payload: dict
         if conn:
             conn.rollback()
         raise HTTPException(status_code=409, detail="Structural Violation: Employee ID already exists.")
+    except HTTPException:
+        # Preserve explicit 4xx (e.g. unregistered-role 400) instead of masking
+        # it as a 500 via the generic handler below.
+        if conn:
+            conn.rollback()
+        raise
     except Exception as e:
         logger.error(f"Single Ingestion Error: {e}")
         if conn:
@@ -1652,9 +1658,11 @@ def get_mwo(limit: int = 50, offset: int = 0, jwt_payload: dict = Depends(verify
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cols = "w.mwo_id, w.status, w.dm_urgency, w.hm_priority, w.description, w.assigned_tech, w.assigned_hm_id, w.manual_log, w.created_at, w.triaged_at, w.execution_start, w.execution_end, w.completed_at, w.start_date, w.equipment_id, e.nomenclature as equipment_nomenclature, w.location_id, w.material_cost, w.archival_pdf_path, w.labor_hours"
+        cols = "w.mwo_id, w.status, w.dm_urgency, w.hm_priority, w.description, w.assigned_tech, w.assigned_hm_id, w.manual_log, w.created_at, w.triaged_at, w.execution_start, w.execution_end, w.completed_at, w.start_date, w.equipment_id, e.nomenclature as equipment_nomenclature, w.location_id, l.name AS location_nomenclature, w.material_cost, w.archival_pdf_path, w.labor_hours"
 
-        base_query = f"SELECT {cols} FROM work_orders w LEFT JOIN erp_equipment e ON w.equipment_id = e.equipment_id WHERE w.status IN ('UNASSIGNED', 'ASSIGNED', 'PENDING_REVIEW')"
+        # LEFT (not INNER) join: work orders with a NULL or unmatched location_id
+        # still surface, with location_nomenclature NULL.
+        base_query = f"SELECT {cols} FROM work_orders w LEFT JOIN erp_equipment e ON w.equipment_id = e.equipment_id LEFT JOIN erp_locations l ON l.id = w.location_id WHERE w.status IN ('UNASSIGNED', 'ASSIGNED', 'PENDING_REVIEW')"
         params = []
         
         if role == "HM":
@@ -3106,7 +3114,8 @@ def assert_department_category_exists(cursor, department_id: str, employee_id: s
 
 
 class UserEscalationPayload(BaseModel):
-    role: Literal['ADMIN', 'DM', 'HM', 'TECH']
+    # Validated dynamically against erp_roles in the endpoint (no static whitelist).
+    role: str = Field(..., min_length=1)
     department: str
     is_inventory_manager: bool = False
 
@@ -3128,6 +3137,15 @@ async def escalate_user(
     try:
         cursor = conn.cursor()
         cursor.execute("BEGIN IMMEDIATE")
+
+        # Dynamic role validation against the erp_roles registry (replaces the
+        # former static Literal whitelist).
+        registered_roles = get_registered_roles(cursor)
+        if payload.role not in registered_roles:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Structural Violation: '{payload.role}' is not a registered role.",
+            )
 
         # Operate on the live ERP ledger (erp_employees). `department` may be an
         # existing department id or a free name; resolve / provision either way.
@@ -3189,6 +3207,175 @@ async def escalate_user(
         raise HTTPException(status_code=500, detail="An unexpected error aborted the actuation.")
     finally:
         conn.close()
+
+
+# ============================================================================
+# Dynamic Role Registry — CRUD + helpers
+# ============================================================================
+
+# Roles that ship with the system and may never be deleted. Both TECH and the
+# legacy gateway label TECHNICIAN are protected (back-compat for synced accounts).
+SYSTEM_DEFAULT_ROLES = {"ADMINISTRATOR", "ADMIN", "DM", "HM", "TECH", "TECHNICIAN", "CFO"}
+
+
+def get_registered_roles(cursor) -> set:
+    """The dynamic role whitelist, sourced from the erp_roles registry."""
+    cursor.execute("SELECT role_name FROM erp_roles")
+    return {row["role_name"] for row in cursor.fetchall()}
+
+
+class RoleCreate(BaseModel):
+    role_name: str = Field(..., min_length=1, max_length=50)
+    description: Optional[str] = Field(default=None, max_length=255)
+
+    @field_validator('role_name', mode='before')
+    @classmethod
+    def normalize_name(cls, v):
+        return str(v).upper().strip()
+
+
+@api_router.get("/admin/roles")
+def list_roles(jwt_payload: dict = Depends(verify_jwt_token)):
+    role = jwt_payload.get("role")
+    if role not in ["ADMINISTRATOR", "ADMIN"]:
+        raise HTTPException(status_code=403, detail="RBAC Violation: Administrative clearance required.")
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT role_name, description FROM erp_roles ORDER BY role_name")
+        roles = [dict(r) for r in cursor.fetchall()]
+        # Flag system-default roles so the UI can disable their delete control.
+        for r in roles:
+            r["is_system_default"] = r["role_name"] in SYSTEM_DEFAULT_ROLES
+        return {"status": "success", "data": roles}
+    except Exception as e:
+        logger.error(f"Failed to list roles: {e}")
+        raise HTTPException(status_code=500, detail="Role registry read failed.")
+    finally:
+        conn.close()
+
+
+@api_router.post("/admin/roles")
+def create_role(payload: RoleCreate, jwt_payload: dict = Depends(verify_jwt_token)):
+    role = jwt_payload.get("role")
+    if role not in ["ADMINISTRATOR", "ADMIN"]:
+        raise HTTPException(status_code=403, detail="RBAC Violation: Administrative clearance required.")
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        try:
+            cursor.execute(
+                "INSERT INTO erp_roles (role_name, description) VALUES (?, ?)",
+                (payload.role_name, payload.description),
+            )
+            conn.commit()
+        except sqlite3.IntegrityError:
+            conn.rollback()
+            raise HTTPException(status_code=409, detail=f"Role '{payload.role_name}' already exists.")
+        return {"status": "success", "message": f"Role '{payload.role_name}' registered."}
+    finally:
+        conn.close()
+
+
+@api_router.delete("/admin/roles/{role_name}")
+def delete_role(role_name: str = Path(...), jwt_payload: dict = Depends(verify_jwt_token)):
+    role = jwt_payload.get("role")
+    if role not in ["ADMINISTRATOR", "ADMIN"]:
+        raise HTTPException(status_code=403, detail="RBAC Violation: Administrative clearance required.")
+    target = role_name.upper().strip()
+    # Guard (a): system-default roles are immutable.
+    if target in SYSTEM_DEFAULT_ROLES:
+        raise HTTPException(status_code=400, detail=f"Cannot delete system-default role '{target}'.")
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("BEGIN IMMEDIATE")
+        # Guard (b): never orphan an active employee currently holding the role.
+        held = cursor.execute(
+            "SELECT COUNT(*) AS c FROM erp_employees WHERE role = ? AND is_active = 1",
+            (target,),
+        ).fetchone()["c"]
+        if held > 0:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Role '{target}' is held by {held} active employee(s); reassign them first.",
+            )
+        cursor.execute("DELETE FROM erp_roles WHERE role_name = ?", (target,))
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail=f"Role '{target}' not found.")
+        conn.commit()
+        return {"status": "success", "message": f"Role '{target}' deleted."}
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Failed to delete role '{target}': {e}")
+        raise HTTPException(status_code=500, detail="Role deletion failed.")
+    finally:
+        conn.close()
+
+
+@api_router.get("/profile")
+def get_profile(jwt_payload: dict = Depends(verify_jwt_token)):
+    """Self profile for the authenticated identity (SA-1: backend, not gateway).
+
+    Identity is taken solely from the validated token (never a query param). ERP
+    fields (name/role/department) merge with the gateway IAM fields
+    (username/phone_number). Degrades gracefully: a missing gateway row yields
+    null username/phone; an orphaned department yields null department.
+    """
+    emp_id = jwt_payload.get("sub")
+    if not emp_id:
+        raise HTTPException(status_code=401, detail="Token missing subject identity.")
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        # LEFT JOIN so an orphaned department_id (e.g. the known CFO ERP-5000 case)
+        # returns department=null rather than dropping the row.
+        cursor.execute(
+            """
+            SELECT e.id, e.name, e.role, e.department_id, d.name AS department
+            FROM erp_employees e
+            LEFT JOIN erp_departments d ON e.department_id = d.id
+            WHERE e.id = ?
+            """,
+            (emp_id,),
+        )
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Identity not found in ERP ledger.")
+        profile = {
+            "user_id": row["id"],
+            "name": row["name"],
+            "role": row["role"],
+            "department": row["department"],
+            "username": None,
+            "phone_number": None,
+        }
+    finally:
+        conn.close()
+
+    # Merge gateway IAM fields. Absence of the gateway DB or row is non-fatal.
+    if os.path.exists(GATEWAY_DB_PATH):
+        gconn = sqlite3.connect(GATEWAY_DB_PATH)
+        gconn.row_factory = sqlite3.Row
+        try:
+            grow = gconn.execute(
+                "SELECT username, phone_number FROM erp_employees WHERE emp_id = ?",
+                (emp_id,),
+            ).fetchone()
+            if grow:
+                profile["username"] = grow["username"]
+                profile["phone_number"] = grow["phone_number"]
+        except Exception as e:
+            logger.warning(f"[PROFILE] Gateway lookup failed for {emp_id}: {e}")
+        finally:
+            gconn.close()
+
+    return {"status": "success", "data": profile}
+
 
 # [PHASE 36.1] MWO Queue & Assignment Dispatch
 
@@ -3395,8 +3582,11 @@ async def bulk_ingest_personnel(file: UploadFile = File(...), jwt_payload: dict 
             name = row_data.get('name')
             prole = row_data.get('role', '').upper()
             pin = row_data.get('pin_code')
-            if not name or not prole or not pin:
-                raise ValueError(f"Row {i+2}: Missing required fields.")
+            if not name or not prole:
+                raise ValueError(f"Row {i+2}: Missing required fields (name, role).")
+            # Optional PIN: blank defaults to '1234', reset on first-time activation.
+            if not pin:
+                pin = '1234'
                 
             dep_name = row_data.get('department_name')
             if not dep_name:
@@ -3437,13 +3627,12 @@ async def bulk_ingest_personnel(file: UploadFile = File(...), jwt_payload: dict 
         for user in parsed_users:
             hm_name = user['reports_to']
             hm_id = None
+            # Optional reporting HM: a blank reports_to_hm_name leaves hm_id NULL
+            # (TECHs no longer require an HM). A *provided* name must still resolve.
             if hm_name:
                 if hm_name.lower().strip() not in hm_map:
                     raise ValueError(f"Row {user['row_index']}: Unknown HM Name '{hm_name}'")
                 hm_id = hm_map[hm_name.lower().strip()]
-                
-            if user['role'] in ['TECH', 'TECHNICIAN'] and not hm_id:
-                raise ValueError(f"Row {user['row_index']}: TECH must have a reports_to_hm_name")
 
             pin_hash = bcrypt.hashpw(user['pin'].encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
             user['pin_hash'] = pin_hash

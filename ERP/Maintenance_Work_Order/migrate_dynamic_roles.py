@@ -40,6 +40,7 @@ DEFAULT_ROLES = [
     ("DM", "Department Manager"),
     ("HM", "Head of Maintenance"),
     ("TECH", "Technician"),
+    ("TECHNICIAN", "Technician (legacy gateway label; kept for back-compat)"),
     ("CFO", "Chief Financial Officer"),
 ]
 
