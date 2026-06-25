@@ -2,6 +2,16 @@
 .vault_pw
 vault.enc
 vault.enc.salt
+
+# Child behavioural profile — runtime data, MUST NOT be tracked.
+# Track only the sanitised parent_config.example.json.
+parent_config.json
+
+# Local runtime state that can hold the child's data / utterances.
+.Gemini_state/
+user_profile_hints.json
+uploads/tts_cache/
+
 node_modules/
 dist/
 __pycache__/

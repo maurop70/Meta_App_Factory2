@@ -1,0 +1,60 @@
+{
+  "pin": "0000",
+  "instructions": "",
+  "focus_topics": [],
+  "vocabulary": [],
+  "progress_log": [],
+  "student_profile": {
+    "name": "",
+    "age": 0,
+    "hobbies_interests": [],
+    "social_level": "social",
+    "academic_weak_areas": [],
+    "stress_indicators": [],
+    "learning_style_preferences": []
+  },
+  "bedtime": {
+    "scheduled_time": "21:30",
+    "wind_down_minutes": 30,
+    "child_stated_time": null,
+    "last_asked_iso": null,
+    "parent_hard_cap": "22:00",
+    "wind_down_heads_up_iso": null
+  },
+  "engagement": {
+    "enabled": true,
+    "max_initiations_per_hour": 2,
+    "max_initiations_per_day": 6,
+    "cooldown_after_decline_minutes": 30,
+    "silence_is_decline_after_minutes": 4,
+    "state": "idle",
+    "cooldown_until_iso": null,
+    "proactive_suspended_until_iso": null,
+    "initiations": []
+  },
+  "cognitive_metrics": {
+    "rolling_average_sentence_length": 0.0,
+    "active_vocabulary_retention_score": 0.0,
+    "quiz_accuracy_streak": 0,
+    "current_conversational_level": 1,
+    "level_min": 1,
+    "level_max": 5,
+    "parent_level_cap": 5,
+    "parent_level_override": null,
+    "last_level_change_iso": null,
+    "level_change_cooldown_hours": 48
+  },
+  "interest_store": {
+    "topics": [],
+    "recent_callbacks": [],
+    "max_callbacks": 20,
+    "last_updated_iso": null
+  },
+  "report_intelligence": {
+    "enabled": true,
+    "reports": []
+  },
+  "settings": {
+    "council_intensity": "supportive"
+  }
+}

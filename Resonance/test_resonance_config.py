@@ -27,7 +27,9 @@ def test_load_valid_file_returns_merged_config(tmp_path):
     assert cfg["student_profile"]["social_level"] == "social"
     # Whole missing sections are filled from defaults.
     assert cfg["bedtime"]["scheduled_time"] == "21:30"
-    assert cfg["interest_store"] == {"topics": [], "recent_callbacks": [], "last_updated_iso": None}
+    assert cfg["interest_store"] == {
+        "topics": [], "recent_callbacks": [], "max_callbacks": 20, "last_updated_iso": None,
+    }
 
 
 def test_load_missing_file_falls_back_to_defaults(tmp_path, caplog):
@@ -271,3 +273,30 @@ def test_recompute_level_flagged_off():
     new_level = rc.recompute_conversational_level(metrics)
     assert new_level == 1
 
+
+
+# ── interest_store.max_callbacks enforcement (Prompt 9 §5) ──────────────────
+
+def test_save_config_trims_recent_callbacks_to_max(tmp_path):
+    path = tmp_path / "parent_config.json"
+    cfg = rc.default_config()
+    cfg["interest_store"]["max_callbacks"] = 20
+    cfg["interest_store"]["recent_callbacks"] = [f"callback-{i}" for i in range(30)]
+
+    rc.save_config(cfg, str(path))
+    reloaded = rc.load_config(str(path))
+
+    cbs = reloaded["interest_store"]["recent_callbacks"]
+    assert len(cbs) == 20                     # trimmed to the cap
+    assert cbs[0] == "callback-10"            # oldest 10 dropped
+    assert cbs[-1] == "callback-29"           # newest kept
+
+
+def test_enforce_caps_is_safe_on_malformed_values():
+    # Missing / odd values must not raise.
+    assert rc.enforce_interest_store_caps({}) == {}
+    rc.enforce_interest_store_caps({"interest_store": "nope"})
+    rc.enforce_interest_store_caps({"interest_store": {"recent_callbacks": "x", "max_callbacks": "y"}})
+    cfg = {"interest_store": {"recent_callbacks": [1, 2, 3], "max_callbacks": "bad"}}
+    rc.enforce_interest_store_caps(cfg)  # falls back to default cap, no crash
+    assert cfg["interest_store"]["recent_callbacks"] == [1, 2, 3]  # under default cap, untouched

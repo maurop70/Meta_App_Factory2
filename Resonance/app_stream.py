@@ -237,11 +237,12 @@ def _load_parent_config_for_stream():
         return {}
 
 def _save_parent_config_for_stream(config):
-    """Saves the parent configuration to parent_config.json for internal stream use."""
+    """Saves the parent configuration atomically (temp file + os.replace) via the
+    single config writer, so a crash mid-write can never corrupt child data and
+    interest_store caps are enforced on every write."""
     try:
-        os.makedirs(os.path.dirname(PARENT_CONFIG_PATH), exist_ok=True)
-        with open(PARENT_CONFIG_PATH, "w", encoding="utf-8") as f:
-            json.dump(config, f, indent=2)
+        import resonance_config
+        resonance_config.save_config(config, PARENT_CONFIG_PATH)
     except Exception as e:
         logger.error(f"Error saving parent_config.json for stream: {e}")
 

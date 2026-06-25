@@ -15,9 +15,11 @@ import google_home_client as ghc
 
 TOKEN = "secret-test-token"
 
-# (method, path, json-body) for every endpoint that must be token-protected.
+# (method, path, json-body) for EVERY LAN endpoint added across Phases 3-4 that
+# must reject missing/empty/wrong tokens with 401.
 PROTECTED = [
     ("post", "/api/telemetry/screen-time", {"minutes": 5}),
+    ("get", "/api/engagement/log", None),
     ("post", "/api/google-home/cast", {"text": "Hello Leo"}),
     ("get", "/api/guitar/backing-tracks", None),
     ("post", "/api/guitar/backing-tracks/cast", {"track_name": "riff.mp3"}),
@@ -134,3 +136,42 @@ def test_startup_refuses_to_boot_without_token(monkeypatch):
     with pytest.raises(Exception):
         with TestClient(server.app):
             pass
+
+
+# ── Stored-audio privacy: TTL cleanup prunes the cache map in lockstep ──────
+
+def test_cache_ttl_prunes_map_and_regenerates_on_miss(monkeypatch, tmp_path):
+    """A cache hit can NEVER point at a TTL-deleted file: cleanup_cache prunes the
+    in-memory MD5->UUID map in the same pass, and a miss regenerates a new clip."""
+    import os, time, hashlib
+    monkeypatch.setenv("RESONANCE_TEST_MODE", "true")  # skip mDNS + real cast
+    cache = tmp_path / "tts_cache"; cache.mkdir()
+    monkeypatch.setattr(ghc, "TTS_CACHE_DIR", str(cache))
+    monkeypatch.setattr(ghc, "_generate_tts",
+                        lambda text, out_path: open(out_path, "wb").write(b"ID3-FAKE"))
+    ghc._cache_map.clear()
+
+    text = "Yo Leo, late-night riff?"
+    digest = hashlib.md5(text.encode("utf-8")).hexdigest()
+
+    r1 = ghc.speak_to_room(text, test_mode=True)
+    fname1 = r1["media_url"].rsplit("/", 1)[-1]
+    assert os.path.exists(os.path.join(str(cache), fname1))
+    assert ghc._cache_map.get(digest) == fname1          # cached: md5 -> uuid
+
+    # A cache HIT reuses the same on-disk file while it exists.
+    r2 = ghc.speak_to_room(text, test_mode=True)
+    assert r2["media_url"].endswith(fname1)
+
+    # Simulate TTL expiry: age the file past the TTL, then run cleanup.
+    old = time.time() - (ghc.CACHE_TTL_SECONDS + 10)
+    os.utime(os.path.join(str(cache), fname1), (old, old))
+    ghc.cleanup_cache()
+    assert not os.path.exists(os.path.join(str(cache), fname1))  # file deleted
+    assert digest not in ghc._cache_map                          # map pruned in lockstep
+
+    # The next request is a MISS -> regenerate a fresh clip (never a dangling URL).
+    r3 = ghc.speak_to_room(text, test_mode=True)
+    fname3 = r3["media_url"].rsplit("/", 1)[-1]
+    assert fname3 != fname1
+    assert os.path.exists(os.path.join(str(cache), fname3))

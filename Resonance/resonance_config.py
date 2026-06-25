@@ -74,9 +74,13 @@ DEFAULT_CONFIG = {
     "interest_store": {
         "topics": [],
         "recent_callbacks": [],
+        "max_callbacks": 20,
         "last_updated_iso": None,
     },
 }
+
+# Fallback cap for interest_store.recent_callbacks when none is configured.
+DEFAULT_MAX_CALLBACKS = 20
 
 # Expected python type for each known top-level section. A section with the
 # wrong type is discarded in favour of its default (and logged loudly).
@@ -115,6 +119,29 @@ def _merge_section(default_value, loaded_value):
     merged = copy.deepcopy(default_value)
     merged.update(loaded_value)
     return merged
+
+
+def enforce_interest_store_caps(config):
+    """Trim interest_store.recent_callbacks to its ``max_callbacks`` (drop oldest).
+
+    Keeps the child's behavioural profile bounded so it can't grow without limit.
+    Mutates and returns ``config``; safe on missing/malformed values.
+    """
+    store = config.get("interest_store")
+    if not isinstance(store, dict):
+        return config
+    callbacks = store.get("recent_callbacks")
+    if not isinstance(callbacks, list):
+        return config
+    try:
+        cap = int(store.get("max_callbacks", DEFAULT_MAX_CALLBACKS))
+    except (ValueError, TypeError):
+        cap = DEFAULT_MAX_CALLBACKS
+    if cap < 0:
+        cap = DEFAULT_MAX_CALLBACKS
+    if len(callbacks) > cap:
+        store["recent_callbacks"] = callbacks[-cap:]  # keep newest, drop oldest
+    return config
 
 
 def _strip_secrets(config):
@@ -192,6 +219,7 @@ def save_config(config, path=PARENT_CONFIG_PATH):
         raise TypeError(f"save_config expects a dict, got {type(config).__name__}")
 
     config = _strip_secrets(config)
+    config = enforce_interest_store_caps(config)  # bound child profile growth
 
     directory = os.path.dirname(os.path.abspath(path)) or "."
     os.makedirs(directory, exist_ok=True)
