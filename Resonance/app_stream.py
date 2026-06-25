@@ -398,23 +398,11 @@ Before every response, run these checks:
 Then, generate your response as Alex.
 """
 
-def stream_chat(prompt, dashboard_context=None):
-    api_key = get_secret("GEMINI_API_KEY")
-    if not api_key:
-        yield {"error": "GEMINI_API_KEY not found."}
-        return
-
-    # ── Parent/Sandbox Gate Detection ───────────────────
-    sandbox_mode = _is_sandbox_mode()
-    raw_prompt = re.sub(r'\[Channel: #\w+\]\s*', '', prompt).strip()
-    if re.search(r'\bi am the parent\b', raw_prompt, re.IGNORECASE):
-        _set_sandbox_mode(True)
-        sandbox_mode = True
-        logger.info("Sandbox mode ACTIVATED — parent testing session.")
-
-    # 1. Load persistent history
-    persistent_history = _load_history()
-
+def build_shared_system_prompt(sandbox_mode=False, dashboard_context=None):
+    """
+    Constructs a single, shared system prompt for the Resonance companion app.
+    Injects the Alex persona, parent instructions, hints, and complexity levels.
+    """
     sys_prompt = SYSTEM_PROMPT
 
     # Sandbox mode: suppress learning
@@ -430,10 +418,11 @@ def stream_chat(prompt, dashboard_context=None):
             sys_prompt += "These are passively collected insights about the user. Use them to subtly guide conversations toward their goals WITHOUT sounding like a teacher or therapist. Weave them naturally into your Alex persona.\n"
             sys_prompt += ", ".join(hint_tags)
             sys_prompt += "\n"
+            
     if dashboard_context:
         sys_prompt += "\n\n--- LIVE STATE ---\n" + json.dumps(dashboard_context, indent=2)
 
-    # --- NEW: Load and append uploaded files context ---
+    # --- Load and append uploaded files context ---
     uploaded_files_context = ""
     if os.path.exists(FILE_CONTEXT_PATH):
         try:
@@ -449,14 +438,28 @@ def stream_chat(prompt, dashboard_context=None):
                         uploaded_files_context += f"Filename: {filename}\nContent: {truncated_text}\n---\n"
         except Exception as e:
             logger.error(f"Error loading uploaded file context: {e}")
-    
     sys_prompt += uploaded_files_context
-    # --- END NEW ---
 
     # --- Parent Configuration & Council of Therapists Injection ---
     try:
         parent_config = _load_parent_config_for_stream()
         if parent_config:
+            # 0. Conversational Complexity Level Injection
+            cognitive_metrics = parent_config.get("cognitive_metrics", {})
+            current_level = cognitive_metrics.get("current_conversational_level", 1)
+            override = cognitive_metrics.get("parent_level_override")
+            cap = cognitive_metrics.get("parent_level_cap", 5)
+            
+            level = override if override is not None else current_level
+            if cap is not None:
+                level = min(level, cap)
+                
+            sys_prompt += f"\n\n--- CONVERSATIONAL COMPLEXITY LEVEL ---\n"
+            sys_prompt += f"CONVERSATIONAL COMPLEXITY LEVEL: {level} of 5.\n"
+            sys_prompt += "Level 1 = short, simple sentences, common words.\n"
+            sys_prompt += "Level 5 = rich vocabulary, compound multi-clause sentences.\n"
+            sys_prompt += "Remain warm, encouraging, and friend-like.\n"
+
             # 1. Flat parent instructions (always injected if present)
             if parent_config.get("instructions"):
                 sys_prompt += "\n\n--- PARENT INSTRUCTIONS (PRIORITY) ---\nThe parent/guardian has provided the following instructions. Treat these as high-priority directives:\n"
@@ -502,10 +505,93 @@ def stream_chat(prompt, dashboard_context=None):
                         sys_prompt += f"- {d_text}\n"
     except Exception as e:
         logger.error(f"Error injecting parent config / council into system prompt: {e}")
-    # --- END Parent/Council/Clinical Injection ---
+        
+    return sys_prompt
+
+
+# ── Anthropic (Claude) Streaming Client — Plan v2 §3.3 ───
+ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
+ANTHROPIC_VERSION = "2023-06-01"
+
+def stream_anthropic(prompt, sys_prompt, persistent_history, model, api_key, max_tokens=4096):
+    """Stream a Claude reply from the Anthropic Messages API over raw SSE.
+
+    Yields text chunks as they arrive. Raises on a non-200 status or transport
+    error *before* any text is yielded, so the caller can fall back cleanly to
+    the conversational (Gemini) path.
+
+    The same ``sys_prompt`` built by build_shared_system_prompt() is passed as
+    the Anthropic ``system`` field, so Alex stays Alex regardless of which engine
+    answers (§3.4). The 4.6+ Claude generation uses adaptive thinking, so we send
+    neither ``budget_tokens`` nor a ``thinking:{"type":"disabled"}`` param — we
+    omit ``thinking`` entirely. Sampling params (temperature/top_p) are likewise
+    omitted because Opus 4.7/4.8 and Fable 5 reject them with a 400, so any
+    configured RESONANCE_CLAUDE_MODEL works unchanged.
+    """
+    headers = {
+        "x-api-key": api_key,
+        "anthropic-version": ANTHROPIC_VERSION,
+        "content-type": "application/json",
+    }
+    anthropic_messages = [
+        {"role": "user" if m["role"] == "user" else "assistant", "content": m["content"]}
+        for m in persistent_history
+    ]
+    anthropic_messages.append({"role": "user", "content": prompt})
+    payload = {
+        "model": model,
+        "max_tokens": max_tokens,
+        "system": sys_prompt,
+        "messages": anthropic_messages,
+        "stream": True,
+    }
+
+    with requests.post(ANTHROPIC_API_URL, json=payload, headers=headers, stream=True, timeout=120) as r:
+        r.encoding = "utf-8"
+        if r.status_code != 200:
+            raise RuntimeError(f"Anthropic HTTP {r.status_code}: {r.text[:300]}")
+        for line in r.iter_lines(decode_unicode=True):
+            if not line or not line.startswith("data:"):
+                continue
+            data = line[5:].strip()
+            if not data:
+                continue
+            try:
+                event = json.loads(data)
+            except ValueError:
+                continue
+            etype = event.get("type")
+            if etype == "content_block_delta":
+                delta = event.get("delta", {})
+                if delta.get("type") == "text_delta":
+                    text = delta.get("text", "")
+                    if text:
+                        yield text
+            elif etype == "error":
+                err = event.get("error", {})
+                raise RuntimeError(f"Anthropic stream error: {err.get('message', err)}")
+
+
+def stream_chat(prompt, dashboard_context=None):
+    api_key = get_secret("GEMINI_API_KEY")
+    if not api_key:
+        yield {"error": "GEMINI_API_KEY not found."}
+        return
+
+    # ── Parent/Sandbox Gate Detection ───────────────────
+    sandbox_mode = _is_sandbox_mode()
+    raw_prompt = re.sub(r'\[Channel: #\w+\]\s*', '', prompt).strip()
+    if re.search(r'\bi am the parent\b', raw_prompt, re.IGNORECASE):
+        _set_sandbox_mode(True)
+        sandbox_mode = True
+        logger.info("Sandbox mode ACTIVATED — parent testing session.")
+
+    # 1. Load persistent history
+    persistent_history = _load_history()
+
+    sys_prompt = build_shared_system_prompt(sandbox_mode, dashboard_context)
 
     # 2. Build the conversation context for the current Gemini API call
-    # This list includes the system prompt, initial model response, all loaded history, and the current user prompt.
     contents_for_gemini_api = [
         {"role": "user", "parts": [{"text": sys_prompt + "\nConversation begins."}]},
         {"role": "model", "parts": [{"text": "Ready to assist."}]},
@@ -521,33 +607,83 @@ def stream_chat(prompt, dashboard_context=None):
     if _model_router:
         active_model = _model_router.determine_optimal_model(prompt, sys_prompt)
 
-    if active_model == "o3-mini":
-        # Simulate OpenAI SSE Bridge switch constraint
-        yield {"text": "\n[Aether Router Gateway] -> Diverting payload to Deep Reasoning Cluster (o3-mini). "}
-        # Fallback to local Gemini routing if openai structure is not fully built
-        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse"
-    else:
-        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse"
-
-    headers = {"x-goog-api-key": api_key, "Content-Type": "application/json"}
-    payload = {"contents": contents_for_gemini_api, "generationConfig": {"temperature": 0.7, "maxOutputTokens": 4096}}
     full_assistant_response = []
 
     try:
-        with requests.post(url, json=payload, headers=headers, stream=True, timeout=120) as r:
-            r.encoding = 'utf-8' # FIX: Ensure correct UTF-8 decoding for SSE stream
-            if r.status_code != 200:
-                yield {"error": f"Gemini {r.status_code}: {r.text}"}
-                return
-            for line in r.iter_lines(decode_unicode=True):
-                if not line or not line.startswith("data: "): continue
-                try: chunk = json.loads(line[6:])
-                except: continue
-                for p in chunk.get("candidates", [{}])[0].get("content", {}).get("parts", []):
-                    t = p.get("text", "")
-                    if t:
-                        full_assistant_response.append(t)
-                        yield {"text": t}
+        claude_succeeded = False
+        claude_emitted = False
+        if "claude" in active_model:
+            anthropic_key = get_secret("ANTHROPIC_API_KEY")
+            if anthropic_key:
+                yield {"text": f"\n[Resonance Router] -> Diverting complex reasoning to Claude ({active_model})...\n"}
+                try:
+                    for text in stream_anthropic(prompt, sys_prompt, persistent_history, active_model, anthropic_key):
+                        claude_emitted = True
+                        full_assistant_response.append(text)
+                        yield {"text": text}
+                    claude_succeeded = True
+                except Exception as e:
+                    logger.warning(f"Claude stream failed: {e}. Falling back to Gemini.")
+                    if claude_emitted:
+                        # A partial answer already streamed to Leo — don't replay a
+                        # second, full answer from Gemini on top of it.
+                        yield {"text": "", "done": True}
+                        return
+            else:
+                logger.warning("Anthropic key missing. Falling back to Gemini.")
+
+        if not claude_succeeded:
+            # Either routed to Gemini, or Claude was unavailable. A Claude outage
+            # must never dead-end Leo's chat, so Alex answers on Gemini instead.
+            if "claude" in active_model:
+                yield {"text": "\n[Resonance Router] -> Claude unavailable. Falling back to Alex on Gemini...\n"}
+
+            # Gemini streaming
+            url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse"
+            headers = {"x-goog-api-key": api_key, "Content-Type": "application/json"}
+            payload = {"contents": contents_for_gemini_api, "generationConfig": {"temperature": 0.7, "maxOutputTokens": 4096}}
+            gemini_failed = False
+            try:
+                with requests.post(url, json=payload, headers=headers, stream=True, timeout=120) as r:
+                    r.encoding = 'utf-8' # FIX: Ensure correct UTF-8 decoding for SSE stream
+                    if r.status_code in [400, 429]:
+                        gemini_failed = True
+                    elif r.status_code != 200:
+                        yield {"error": f"Gemini {r.status_code}: {r.text}"}
+                        return
+                    else:
+                        for line in r.iter_lines(decode_unicode=True):
+                            if not line or not line.startswith("data: "): continue
+                            try: chunk = json.loads(line[6:])
+                            except: continue
+                            for p in chunk.get("candidates", [{}])[0].get("content", {}).get("parts", []):
+                                t = p.get("text", "")
+                                if t:
+                                    full_assistant_response.append(t)
+                                    yield {"text": t}
+            except Exception as e:
+                gemini_failed = True
+
+            if gemini_failed:
+                # Gemini exhausted/unavailable — try Claude as the reverse fallback,
+                # unless this request already came from a failed Claude attempt.
+                if "claude" not in active_model:
+                    fallback_model = _model_router.deep_model if _model_router else "claude-sonnet-4-6"
+                    anthropic_key = get_secret("ANTHROPIC_API_KEY")
+                    if not anthropic_key:
+                        yield {"error": "Anthropic API Key not found for fallback."}
+                        return
+                    yield {"text": f"\n[Resonance Router] -> Gemini unavailable. Falling back to Claude ({fallback_model})...\n"}
+                    try:
+                        for text in stream_anthropic(prompt, sys_prompt, persistent_history, fallback_model, anthropic_key):
+                            full_assistant_response.append(text)
+                            yield {"text": text}
+                    except Exception as e:
+                        yield {"error": f"Anthropic fallback error: {str(e)}"}
+                        return
+                else:
+                    yield {"error": "Both Claude and Gemini streams failed."}
+                    return
         
         # 3. After successful streaming, update persistent history
         if full_assistant_response:
