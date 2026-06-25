@@ -12,6 +12,7 @@ import CreateMWOForm from './components/CreateMWOForm'; // DM Submission
 import ArchiveDashboard from './components/ArchiveDashboard'; // Unified Archive
 import CFODashboard from './pages/CFODashboard'; // CFO PO Approval Gateway
 import ProfileSettings from './components/ProfileSettings'; // First-time activation gate
+import ConciergeChatWidget from './components/ConciergeChatWidget'; // Floating support concierge
 
 // Strict Role-Gating Security Component
 const ProtectedRoute = ({ allowedRoles, children }) => {
@@ -158,6 +159,8 @@ function App() {
             {/* Fallback Catch-All */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          {/* Globally-available floating support concierge (hides itself when unauthenticated) */}
+          <ConciergeChatWidget />
           </SetupGate>
         </div>
       </Router>

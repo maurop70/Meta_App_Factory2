@@ -139,10 +139,37 @@ def verify_sentry_patch_key(x_sentry_patch_key: Optional[str] = Header(None, ali
     return True
 
 
+def verify_concierge_auth(
+    request: Request,
+    authorization: Optional[str] = Header(None),
+    x_agent_matrix_key: Optional[str] = Header(None, alias="X-Agent-Matrix-Key"),
+):
+    """Dual-auth gate for the in-app concierge endpoints.
+
+    Accepts EITHER a valid in-app Bearer JWT (so logged-in tenant users can reach
+    the concierge from the ERP UI) OR the Agent Matrix API key (so autonomous
+    agents keep working). The JWT is tried first; if it is absent or invalid we
+    fall back to the API-key check.
+    """
+    if authorization and authorization.lower().startswith("bearer "):
+        token = authorization.split(" ", 1)[1].strip()
+        # Local import: maintenance_backend imports this module's agent_router,
+        # so importing it at load time would create a circular dependency.
+        from maintenance_backend import verify_jwt_token
+        from fastapi.security import HTTPAuthorizationCredentials
+        # A Bearer token was presented: verify it and let any HTTPException
+        # (Token Expired / Token Revoked / verification failure) propagate to
+        # the client. We do NOT fall back to the API key for a bad JWT.
+        return verify_jwt_token(
+            HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
+        )
+
+    return verify_agent_matrix_key(x_agent_matrix_key)
+
+
 agent_router = APIRouter(
     prefix="/api/agent",
     tags=["agent-matrix"],
-    dependencies=[Depends(verify_agent_matrix_key)],
 )
 
 
@@ -161,7 +188,7 @@ def _resolve_tenant(request: Request, tenant_id: Optional[str]) -> str:
 # ===========================================================================
 # 1. SENTRY AGENT
 # ===========================================================================
-@agent_router.get("/sentry/logs")
+@agent_router.get("/sentry/logs", dependencies=[Depends(verify_agent_matrix_key)])
 def sentry_logs(
     request: Request,
     tenant_id: Optional[str] = Query(None, description="Tenant to filter logs by; defaults to request context."),
@@ -208,7 +235,7 @@ def _safe_app_py_path(file_path: str) -> str:
     return resolved
 
 
-@agent_router.post("/sentry/apply-patch", dependencies=[Depends(verify_sentry_patch_key)])
+@agent_router.post("/sentry/apply-patch", dependencies=[Depends(verify_agent_matrix_key), Depends(verify_sentry_patch_key)])
 def sentry_apply_patch(payload: PatchRequest, request: Request):
     """Backup -> write -> compile-verify -> rollback-on-failure. Restricted to .py
     files inside the app root. Every attempt and outcome is audit-logged."""
@@ -264,7 +291,7 @@ def _tenant_schema(conn) -> dict:
     return tables
 
 
-@agent_router.get("/concierge/context")
+@agent_router.get("/concierge/context", dependencies=[Depends(verify_concierge_auth)])
 def concierge_context(request: Request, tenant_id: Optional[str] = Query(None)):
     """Dump schema definitions, active plugin hooks, and core parameters so an LLM
     agent can understand the tenant's specific setup."""
@@ -335,7 +362,7 @@ def _call_claude(system_prompt: str, user_message: str) -> str:
     ).strip()
 
 
-@agent_router.post("/concierge/chat")
+@agent_router.post("/concierge/chat", dependencies=[Depends(verify_concierge_auth)])
 def concierge_chat(payload: ChatRequest, request: Request):
     """Answer a tenant support query with Claude, grounded in the tenant's real
     schema and active plugin hooks. Fail-closed: returns 503 if ANTHROPIC_API_KEY
@@ -360,7 +387,12 @@ def concierge_chat(payload: ChatRequest, request: Request):
         f"Active database tables and their columns (JSON):\n{json.dumps(schema)}\n\n"
         f"Active tenant plugin hooks: {active_hooks or 'none'}\n"
         f"Supported lifecycle hooks: {list(plugin_manager.CORE_HOOKS)}\n\n"
-        "Reply with concise, actionable troubleshooting steps."
+        "Reply with concise, actionable troubleshooting steps.\n\n"
+        "Do not output raw source code, python scripts, file layouts, database "
+        "initialization scripts, or SQL query statements under any circumstances. "
+        "If the user asks for code, configuration files, or database schemas in a "
+        "structural format (such as SQL DDL), politely decline and instruct them "
+        "conceptually on how to perform the action using the ERP UI."
     )
 
     try:
@@ -438,7 +470,7 @@ def _run_cmd(cmd: list) -> dict:
         return {"ran": True, "error": str(e)}
 
 
-@agent_router.post("/provision/tenant", status_code=201)
+@agent_router.post("/provision/tenant", status_code=201, dependencies=[Depends(verify_agent_matrix_key)])
 def provision_tenant(payload: ProvisionRequest):
     """Instantiate the tenant database (schema cloned from production via the
     local_db resolver), seed the master catalog + ERP-1000 admin, then optionally
