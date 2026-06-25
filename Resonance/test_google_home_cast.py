@@ -1,0 +1,136 @@
+"""Phase 3 tests: secured LAN endpoints + Google Home casting.
+
+Covers fail-closed auth (missing/empty/wrong X-Resonance-Token -> 401), authorized
+access with gTTS + pychromecast fully mocked, and verification that unit tests
+never perform real mDNS discovery. TestClient is used WITHOUT its context manager
+so the app lifespan (and the fail-closed boot check / nerve-center thread) does
+not run for the per-request tests; the boot check is exercised separately.
+"""
+
+import pytest
+from fastapi.testclient import TestClient
+
+import server
+import google_home_client as ghc
+
+TOKEN = "secret-test-token"
+
+# (method, path, json-body) for every endpoint that must be token-protected.
+PROTECTED = [
+    ("post", "/api/telemetry/screen-time", {"minutes": 5}),
+    ("post", "/api/google-home/cast", {"text": "Hello Leo"}),
+    ("get", "/api/guitar/backing-tracks", None),
+    ("post", "/api/guitar/backing-tracks/cast", {"track_name": "riff.mp3"}),
+]
+
+
+def _call(client, method, path, body, headers=None):
+    if method == "post":
+        return client.post(path, json=body, headers=headers or {})
+    return client.get(path, headers=headers or {})
+
+
+@pytest.fixture
+def client(monkeypatch, tmp_path):
+    monkeypatch.setenv("RESONANCE_TOKEN", TOKEN)
+    monkeypatch.setenv("RESONANCE_TEST_MODE", "true")  # bypass mDNS + real casting
+
+    # Hermetic cache/track dirs so tests never touch the real uploads/ tree.
+    cache = tmp_path / "tts_cache"; cache.mkdir()
+    tracks = tmp_path / "backing_tracks"; tracks.mkdir()
+    monkeypatch.setattr(ghc, "TTS_CACHE_DIR", str(cache))
+    monkeypatch.setattr(ghc, "BACKING_TRACKS_DIR", str(tracks))
+    (tracks / "riff.mp3").write_bytes(b"FAKE-MP3")
+
+    # Mock gTTS: write a dummy file instead of calling Google's TTS service.
+    monkeypatch.setattr(ghc, "_generate_tts",
+                        lambda text, out_path: open(out_path, "wb").write(b"ID3-FAKE"))
+    return TestClient(server.app)
+
+
+# ── Fail-closed auth: 401 without a valid token ─────────────────────────────
+
+@pytest.mark.parametrize("method,path,body", PROTECTED)
+def test_missing_token_is_401(client, method, path, body):
+    assert _call(client, method, path, body).status_code == 401
+
+
+@pytest.mark.parametrize("method,path,body", PROTECTED)
+def test_empty_token_is_401(client, method, path, body):
+    resp = _call(client, method, path, body, headers={"X-Resonance-Token": ""})
+    assert resp.status_code == 401
+
+
+@pytest.mark.parametrize("method,path,body", PROTECTED)
+def test_wrong_token_is_401(client, method, path, body):
+    resp = _call(client, method, path, body, headers={"X-Resonance-Token": "wrong"})
+    assert resp.status_code == 401
+
+
+# ── Authorized access (mocked gTTS + pychromecast bypass) ───────────────────
+
+def test_authorized_telemetry_ok(client):
+    resp = client.post("/api/telemetry/screen-time",
+                       json={"minutes": 12, "app_name": "YouTube"},
+                       headers={"X-Resonance-Token": TOKEN})
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "ok"
+
+
+def test_authorized_cast_ok_with_mocked_tts(client):
+    resp = client.post("/api/google-home/cast",
+                       json={"text": "Yo Leo, nice riff!", "speaker_name": "Mock Living Room"},
+                       headers={"X-Resonance-Token": TOKEN})
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    assert data["status"] == "ok"
+    assert "/static/tts_cache/" in data["media_url"]
+    assert data["media_url"].endswith(".mp3")
+    # Random (non-enumerable) filename — never MD5(text).
+    import hashlib
+    assert hashlib.md5(b"Yo Leo, nice riff!").hexdigest() not in data["media_url"]
+    assert data["cast"] is False  # test mode: no real device contacted
+
+
+def test_authorized_list_backing_tracks(client):
+    resp = client.get("/api/guitar/backing-tracks", headers={"X-Resonance-Token": TOKEN})
+    assert resp.status_code == 200
+    assert "riff.mp3" in resp.json()["tracks"]
+
+
+def test_authorized_cast_backing_track(client):
+    resp = client.post("/api/guitar/backing-tracks/cast",
+                       json={"track_name": "riff.mp3", "speaker_name": "Mock Living Room"},
+                       headers={"X-Resonance-Token": TOKEN})
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["media_url"].endswith("/static/backing_tracks/riff.mp3")
+
+
+def test_unknown_backing_track_rejected(client):
+    resp = client.post("/api/guitar/backing-tracks/cast",
+                       json={"track_name": "../../etc/passwd"},
+                       headers={"X-Resonance-Token": TOKEN})
+    assert resp.status_code == 400
+
+
+# ── Discovery bypass: no real mDNS during tests ─────────────────────────────
+
+def test_discovery_bypass_returns_mock_without_mdns(monkeypatch):
+    monkeypatch.setenv("RESONANCE_TEST_MODE", "true")
+    speakers = ghc.discover_speakers()
+    assert speakers and speakers[0]["name"] == "Mock Living Room"
+
+
+def test_explicit_test_mode_bypass():
+    # Works even if pychromecast were absent — proves no scan path is taken.
+    speakers = ghc.discover_speakers(test_mode=True)
+    assert speakers[0]["uuid"] == "mock-uuid"
+
+
+# ── Fail-closed boot: refuse to start without a token ───────────────────────
+
+def test_startup_refuses_to_boot_without_token(monkeypatch):
+    monkeypatch.delenv("RESONANCE_TOKEN", raising=False)
+    with pytest.raises(Exception):
+        with TestClient(server.app):
+            pass

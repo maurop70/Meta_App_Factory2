@@ -21,7 +21,7 @@ import logging
 
 # Ensure telemetry directory exists
 log_dir = "/var/log/aether_net"
-os.makedirs(log_dir, exist_ok=True)
+_os.makedirs(log_dir, exist_ok=True)
 
 # Configure Telemetry with both Stream and File handlers
 logger = logging.getLogger("resonance")
@@ -30,12 +30,12 @@ logger.setLevel(logging.INFO)
 formatter = logging.Formatter('%(asctime)s [%(name)s] %(levelname)s: %(message)s', datefmt="%H:%M:%S")
 
 # Console Handler
-ch = logging.StreamHandler(sys.stdout)
+ch = logging.StreamHandler(_sys.stdout)
 ch.setFormatter(formatter)
 logger.addHandler(ch)
 
 # Telemetry File Handler
-fh = logging.FileHandler(os.path.join(log_dir, "resonance.log"))
+fh = logging.FileHandler(_os.path.join(log_dir, "resonance.log"))
 fh.setFormatter(formatter)
 logger.addHandler(fh)
 
@@ -60,9 +60,9 @@ def _v3_preflight():
         return False
 
 
-import os, sys, json, logging, shutil, base64, requests as _requests
+import os, sys, json, logging, shutil, base64, hmac, requests as _requests
 from typing import Optional, List
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
@@ -383,6 +383,58 @@ class PinResetRequest(BaseModel):
 class ReportSettingsRequest(BaseModel):
     enabled: Optional[bool] = None
 
+# ── Phase 3: Secured LAN endpoints (X-Resonance-Token) ───
+def require_resonance_token(x_resonance_token: str = Header(default=None)):
+    """Fail-closed bearer check for LAN-facing endpoints.
+
+    Returns 401 if the server token is unset/empty, if the header is missing or
+    empty, or if it doesn't match (constant-time via hmac.compare_digest). The
+    server also refuses to boot without a token (see the startup hook below), so
+    an unset token reaching here is defence-in-depth.
+    """
+    server_token = os.environ.get("RESONANCE_TOKEN", "")
+    if not server_token:
+        raise HTTPException(status_code=401, detail="RESONANCE_TOKEN not configured (fail-closed).")
+    if not x_resonance_token or not hmac.compare_digest(str(x_resonance_token), server_token):
+        raise HTTPException(status_code=401, detail="Invalid or missing X-Resonance-Token.")
+    return True
+
+
+@app.on_event("startup")
+async def enforce_resonance_token():
+    """Refuse to boot without a token, so secured endpoints are never wide open."""
+    if not os.environ.get("RESONANCE_TOKEN", "").strip():
+        logger.error("FATAL: RESONANCE_TOKEN missing/empty — refusing to boot (fail-closed).")
+        raise RuntimeError("RESONANCE_TOKEN missing or empty; refusing to start (fail-closed).")
+    logger.info("RESONANCE_TOKEN present — secured LAN endpoints armed.")
+
+
+# Google Home / Chromecast casting integration (lazy heavy deps — import is safe).
+try:
+    import google_home_client as ghc
+    GOOGLE_HOME_AVAILABLE = True
+except Exception as _ghc_err:
+    ghc = None
+    GOOGLE_HOME_AVAILABLE = False
+    logger.warning(f"google_home_client unavailable: {_ghc_err}")
+
+
+class ScreenTimeRequest(BaseModel):
+    minutes: int
+    app_name: Optional[str] = None
+    timestamp: Optional[str] = None
+
+
+class CastRequest(BaseModel):
+    text: str
+    speaker_name: Optional[str] = None
+
+
+class BackingTrackCastRequest(BaseModel):
+    track_name: str
+    speaker_name: Optional[str] = None
+
+
 # ── Auto-start Nerve Center Background Monitor ────────
 @app.on_event("startup")
 async def startup_nerve_center():
@@ -406,6 +458,81 @@ if _HAS_FRONTEND:
     logger.info(f"Frontend mounted from {_FRONTEND_DIST}")
 else:
     logger.warning(f"No frontend build at {_FRONTEND_DIST}. Run 'npm run build' in resonance_ui/.")
+
+# ── Phase 3: Secured static media mounts (no directory listing) ───
+# Starlette StaticFiles does not serve autoindex pages (html=False by default),
+# so mounting a directory exposes only explicitly-named files, never a listing.
+if GOOGLE_HOME_AVAILABLE:
+    app.mount("/static/tts_cache", StaticFiles(directory=ghc.TTS_CACHE_DIR), name="tts-cache")
+    app.mount("/static/backing_tracks", StaticFiles(directory=ghc.BACKING_TRACKS_DIR), name="backing-tracks")
+    logger.info("Secured media mounts armed: /static/tts_cache, /static/backing_tracks")
+
+# Telemetry sink for screen-time pings from the child device.
+_TELEMETRY_LOG = os.path.join(SCRIPT_DIR, ".Gemini_state", "screen_time_log.json")
+
+
+@app.post("/api/telemetry/screen-time")
+def telemetry_screen_time(req: ScreenTimeRequest, _auth: bool = Depends(require_resonance_token)):
+    """Record a screen-time ping. Persistence failures are non-fatal (never 500)."""
+    entry = {
+        "minutes": req.minutes,
+        "app_name": req.app_name,
+        "timestamp": req.timestamp or datetime.now().isoformat(),
+        "received_at": datetime.now().isoformat(),
+    }
+    try:
+        os.makedirs(os.path.dirname(_TELEMETRY_LOG), exist_ok=True)
+        log = []
+        if os.path.exists(_TELEMETRY_LOG):
+            try:
+                with open(_TELEMETRY_LOG, "r", encoding="utf-8") as f:
+                    log = json.load(f)
+            except (json.JSONDecodeError, OSError):
+                log = []
+        log.append(entry)
+        log = log[-500:]
+        with open(_TELEMETRY_LOG, "w", encoding="utf-8") as f:
+            json.dump(log, f, indent=2)
+    except Exception as e:
+        logger.error(f"Telemetry persist failed (non-fatal): {e}")
+    return {"status": "ok", "recorded": entry}
+
+
+@app.post("/api/google-home/cast")
+def google_home_cast(req: CastRequest, _auth: bool = Depends(require_resonance_token)):
+    """Speak text on a Google Home speaker. gTTS/cast errors degrade to 502, not 500."""
+    if not GOOGLE_HOME_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Google Home integration unavailable.")
+    try:
+        result = ghc.speak_to_room(req.text, req.speaker_name)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Cast failed: {e}")
+        raise HTTPException(status_code=502, detail=f"Cast failed: {e}")
+    return {"status": "ok", **result}
+
+
+@app.get("/api/guitar/backing-tracks")
+def guitar_backing_tracks(_auth: bool = Depends(require_resonance_token)):
+    if not GOOGLE_HOME_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Google Home integration unavailable.")
+    return {"tracks": ghc.list_backing_tracks()}
+
+
+@app.post("/api/guitar/backing-tracks/cast")
+def guitar_backing_tracks_cast(req: BackingTrackCastRequest, _auth: bool = Depends(require_resonance_token)):
+    if not GOOGLE_HOME_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Google Home integration unavailable.")
+    try:
+        result = ghc.play_backing_track(req.track_name, req.speaker_name)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Backing-track cast failed: {e}")
+        raise HTTPException(status_code=502, detail=f"Cast failed: {e}")
+    return {"status": "ok", **result}
+
 
 @app.get("/")
 def root():
