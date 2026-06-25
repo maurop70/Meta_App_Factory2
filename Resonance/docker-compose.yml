@@ -14,9 +14,20 @@ services:
         reservations:
           cpus: '0.50'
           memory: 1G
+    # host networking: required for Chromecast/mDNS on native Linux. NOTE: on
+    # Docker Desktop (Windows/macOS) the engine runs in a VM, so this does NOT
+    # grant the container the physical LAN and mDNS discovery will usually fail —
+    # use the configured-speaker IP fallback (google_home.known_speakers).
     network_mode: host
+    # Secrets are passed THROUGH from the host environment by NAME only (the
+    # idiomatic compose passthrough) — no values are ever written here. Under host
+    # networking RESONANCE_TOKEN is the ONLY barrier to the LAN, so it must reach
+    # the container or the server fails closed and refuses to boot.
     environment:
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_API_KEY
+      - ANTHROPIC_API_KEY
+      - RESONANCE_TOKEN
+      - RESONANCE_CLAUDE_MODEL
       - PORT=${PORT:-5006}
     volumes:
       # Persistent volumes for clinical reports and homework uploads

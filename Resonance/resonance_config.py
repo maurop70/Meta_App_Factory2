@@ -77,6 +77,12 @@ DEFAULT_CONFIG = {
         "max_callbacks": 20,
         "last_updated_iso": None,
     },
+    # Optional, discovery-independent casting: when known_speakers are configured
+    # (friendly_name + ip), the cast client connects by IP and skips mDNS — the
+    # reliable path on Docker Desktop, where host networking can't reach the LAN.
+    "google_home": {
+        "known_speakers": [],
+    },
 }
 
 # Fallback cap for interest_store.recent_callbacks when none is configured.
@@ -95,6 +101,7 @@ _SECTION_TYPES = {
     "engagement": dict,
     "cognitive_metrics": dict,
     "interest_store": dict,
+    "google_home": dict,
 }
 
 # Case-insensitive substrings that mark a top-level key as a secret. Such keys

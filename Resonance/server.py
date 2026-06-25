@@ -1547,5 +1547,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", 5006)))
     args = parser.parse_args()
-    uvicorn.run(app, host="0.0.0.0", port=args.port)
+    host = "0.0.0.0"
+    # Make the exposed surface obvious in logs: under `network_mode: host` there is
+    # no Docker network isolation, so RESONANCE_TOKEN auth (hmac.compare_digest) is
+    # the ONLY barrier between the LAN and the telemetry/cast endpoints.
+    logger.info(
+        "Binding Resonance to %s:%s — all interfaces / LAN-exposed (host networking). "
+        "RESONANCE_TOKEN auth is the only barrier to the secured endpoints.",
+        host, args.port,
+    )
+    uvicorn.run(app, host=host, port=args.port)
 # V3 AUTO-HEAL ACTIVE

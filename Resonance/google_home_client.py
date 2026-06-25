@@ -85,14 +85,46 @@ def cleanup_cache(ttl_seconds=CACHE_TTL_SECONDS):
                 _cache_map.pop(key, None)
 
 
-def discover_speakers(test_mode=False):
+def _load_known_speakers():
+    """Configured Chromecast speakers (friendly_name + ip) for mDNS-free casting.
+
+    Pulled from parent_config's ``google_home.known_speakers``. Only entries with a
+    usable ``ip`` are returned. Best-effort: any failure yields an empty list, so
+    casting simply falls back to mDNS discovery.
+    """
+    try:
+        import resonance_config
+        speakers = (resonance_config.load_config().get("google_home") or {}).get("known_speakers") or []
+        return [s for s in speakers if isinstance(s, dict) and s.get("ip")]
+    except Exception as e:
+        logger.warning(f"Could not load known speakers (non-fatal): {e}")
+        return []
+
+
+def discover_speakers(test_mode=False, known_speakers=None):
     """List available cast devices.
 
-    In test mode (explicit or RESONANCE_TEST_MODE=true) returns a mock list and
-    performs NO mDNS scanning, so unit tests never hang on the network.
+    Resolution order:
+      1. test mode (explicit or RESONANCE_TEST_MODE=true) -> mock list, NO scanning;
+      2. configured ``known_speakers`` (friendly_name + ip) -> returned directly,
+         NO mDNS — the reliable path on Docker Desktop / when mDNS can't reach the LAN;
+      3. otherwise -> an mDNS scan (the convenience path on native Linux).
     """
     if _is_test_mode(test_mode):
         return [{"name": "Mock Living Room", "model": "Google Home Mini", "uuid": "mock-uuid"}]
+
+    if known_speakers is None:
+        known_speakers = _load_known_speakers()
+    if known_speakers:
+        return [
+            {
+                "name": s.get("friendly_name") or s.get("name") or s.get("ip"),
+                "model": s.get("model", "configured"),
+                "ip": s.get("ip"),
+                "uuid": s.get("uuid"),
+            }
+            for s in known_speakers if isinstance(s, dict) and s.get("ip")
+        ]
 
     import pychromecast
     chromecasts, browser = pychromecast.get_chromecasts()
@@ -121,10 +153,23 @@ def _generate_tts(text, out_path):
     gTTS(text=text, lang="en").save(out_path)
 
 
-def _cast_media(media_url, speaker_name=None, content_type="audio/mpeg"):
-    """Resolve a cast device by name (or first found) and play ``media_url``."""
+def _cast_media(media_url, speaker_name=None, content_type="audio/mpeg", known_speakers=None):
+    """Resolve a cast device by name (or first found) and play ``media_url``.
+
+    If ``known_speakers`` are configured (friendly_name + ip), connect directly to
+    those hosts via ``get_chromecasts(known_hosts=[...])`` — no mDNS. This is the
+    reliable route on Docker Desktop, where host networking can't see the LAN.
+    Falls back to an mDNS scan when no IPs are configured.
+    """
     import pychromecast
-    chromecasts, browser = pychromecast.get_chromecasts()
+    if known_speakers is None:
+        known_speakers = _load_known_speakers()
+    known_hosts = [s["ip"] for s in known_speakers if isinstance(s, dict) and s.get("ip")]
+
+    if known_hosts:
+        chromecasts, browser = pychromecast.get_chromecasts(known_hosts=known_hosts)
+    else:
+        chromecasts, browser = pychromecast.get_chromecasts()
     try:
         target = None
         for cc in chromecasts:

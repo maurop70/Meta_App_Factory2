@@ -7,6 +7,9 @@ so the app lifespan (and the fail-closed boot check / nerve-center thread) does
 not run for the per-request tests; the boot check is exercised separately.
 """
 
+import sys
+import types
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -136,6 +139,76 @@ def test_startup_refuses_to_boot_without_token(monkeypatch):
     with pytest.raises(Exception):
         with TestClient(server.app):
             pass
+
+
+# ── Discovery-independent (IP) casting fallback — de-risks mDNS ─────────────
+
+def test_discover_speakers_uses_configured_ips_without_mdns(monkeypatch):
+    """Configured known_speakers are returned directly — no mDNS scan. (If mDNS
+    were attempted, importing the absent-in-test pychromecast path would surface;
+    here we assert the IP list short-circuits it.)"""
+    monkeypatch.delenv("RESONANCE_TEST_MODE", raising=False)  # not the test-mode bypass
+    speakers = ghc.discover_speakers(
+        test_mode=False,
+        known_speakers=[{"friendly_name": "Living Room", "ip": "192.168.1.50"}],
+    )
+    assert speakers == [{"name": "Living Room", "model": "configured",
+                         "ip": "192.168.1.50", "uuid": None}]
+
+
+def test_load_known_speakers_reads_config(monkeypatch):
+    import resonance_config
+    monkeypatch.setattr(
+        resonance_config, "load_config",
+        lambda *a, **k: {"google_home": {"known_speakers": [
+            {"friendly_name": "Kitchen", "ip": "192.168.1.60"},
+            {"friendly_name": "no-ip — ignored"},  # dropped: no ip
+        ]}},
+    )
+    out = ghc._load_known_speakers()
+    assert out == [{"friendly_name": "Kitchen", "ip": "192.168.1.60"}]
+
+
+def test_cast_connects_by_ip_known_hosts_not_mdns(monkeypatch):
+    """The cast client connects via get_chromecasts(known_hosts=[ip]) — never a
+    broad mDNS scan — when speakers are configured."""
+    captured = {}
+
+    class _MediaController:
+        def play_media(self, url, content_type):
+            captured["url"] = url
+            captured["content_type"] = content_type
+        def block_until_active(self, timeout=None):
+            pass
+
+    class _Cast:
+        def __init__(self):
+            self.cast_info = types.SimpleNamespace(friendly_name="Living Room")
+            self.media_controller = _MediaController()
+        def wait(self):
+            captured["waited"] = True
+
+    def _get_chromecasts(known_hosts=None):
+        captured["known_hosts"] = known_hosts
+        return ([_Cast()], "browser-sentinel")
+
+    fake = types.SimpleNamespace(
+        get_chromecasts=_get_chromecasts,
+        discovery=types.SimpleNamespace(
+            stop_discovery=lambda b: captured.__setitem__("stopped", b)),
+    )
+    monkeypatch.setitem(sys.modules, "pychromecast", fake)
+
+    ghc._cast_media(
+        "http://192.168.1.10:5006/static/tts_cache/abc.mp3",
+        speaker_name="Living Room",
+        known_speakers=[{"friendly_name": "Living Room", "ip": "192.168.1.50"}],
+    )
+
+    assert captured["known_hosts"] == ["192.168.1.50"]   # IP path, not mDNS
+    assert captured["url"].endswith("abc.mp3")
+    assert captured["waited"] is True
+    assert captured["stopped"] == "browser-sentinel"     # discovery cleaned up
 
 
 # ── Stored-audio privacy: TTL cleanup prunes the cache map in lockstep ──────

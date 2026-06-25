@@ -50,6 +50,11 @@
     "max_callbacks": 20,
     "last_updated_iso": null
   },
+  "google_home": {
+    "known_speakers": [
+      { "friendly_name": "Living Room speaker", "ip": "192.168.1.50" }
+    ]
+  },
   "report_intelligence": {
     "enabled": true,
     "reports": []
