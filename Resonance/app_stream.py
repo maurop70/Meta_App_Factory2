@@ -398,12 +398,96 @@ Before every response, run these checks:
 Then, generate your response as Alex.
 """
 
+# ── Prompt 3.5 (v2): Core Persona — friend, not boss ─────
+# Appended verbatim to the base prompt so it applies GLOBALLY, across every
+# complexity level and mode (including wind-down). This is the load-bearing
+# attitude contract: Alex influences by pull, never push.
+FRIEND_NOT_BOSS_PERSONA = """You are Alex, Leo's friend — not his parent, teacher, boss, or babysitter.
+
+How you are: warm, genuinely curious, playful, and encouraging. You're interested in what Leo's into, you treat him as capable and smart, you get excited with him, you joke around, and you build him up. You're patient and you never talk down to him.
+
+What you never do: you don't give orders and you don't nag. You never tell Leo to stop something, to get off his phone, to hurry up, or to go to sleep. You don't guilt-trip, lecture, or moralize, and you don't push him with 'you should', 'you need to', or 'you have to'.
+
+How you influence: by pull, never push. If you'd like Leo to do something different, you make something more interesting — or, near bedtime, you get calmer and quieter. If he's not interested, you let it go warmly and leave the door open. A good friend makes you WANT to join in; he never makes you feel managed."""
+
+
+# ── Prompt 3.5 (v2): Soft drift detector ─────────────────
+# detect_bossy_tone flags commanding / nagging language aimed at stopping or
+# limiting Leo. It powers SOFT warnings only (logged for parent visibility); it
+# never blocks or rewrites a response.
+
+# Direct bossy phrases — a plain substring match is enough to flag these.
+_BOSSY_PHRASES = (
+    "go to sleep",
+    "get off your phone",
+    "get off phone",
+    "turn the screen off",
+    "turn it off",
+    "turn screen off",
+    "stop playing",
+    "stop using",
+    "stop it",
+    "it's time to sleep",
+    "it's time to stop",
+    "it's time to go",
+    "hurry up",
+    "that's enough",
+)
+
+# Soft-imperative leads that are bossy ONLY when a stopping / restrictive verb
+# follows shortly after (so enthusiastic "you should totally see this" passes).
+_MODAL_LEADS = ("you should", "you must", "you need to", "you have to")
+_RESTRICTIVE_AFTER_MODAL = (
+    r"\bstop\b",
+    r"\bsleep\b",
+    r"\bgo to bed\b",
+    r"\bget off\b",
+    r"\bput\b[\w\s]{0,20}\bdown\b",   # put ... down
+    r"\bturn\b[\w\s]{0,20}\boff\b",   # turn (it/the screen) off
+    r"\bshut down\b",
+    r"\bhurry\b",
+)
+# How far after a modal lead we look for the restrictive verb.
+_MODAL_WINDOW = 40
+
+
+def detect_bossy_tone(text):
+    """Return a list of bossy/nagging phrases found in ``text`` (empty if clean).
+
+    Two passes: (1) direct bossy phrases by substring; (2) soft-imperative leads
+    ('you should', 'you must', ...) flagged only when a stopping/restrictive verb
+    follows within a short window — so encouraging lines pass cleanly. The result
+    is deduplicated and order-stable.
+    """
+    if not text:
+        return []
+    lowered = text.lower()
+    warnings = []
+
+    for phrase in _BOSSY_PHRASES:
+        if phrase in lowered and phrase not in warnings:
+            warnings.append(phrase)
+
+    for lead in _MODAL_LEADS:
+        for m in re.finditer(re.escape(lead), lowered):
+            window = lowered[m.end():m.end() + _MODAL_WINDOW]
+            if any(re.search(pat, window) for pat in _RESTRICTIVE_AFTER_MODAL):
+                tag = (lead + window).strip()
+                if tag not in warnings:
+                    warnings.append(tag)
+                break  # one flag per lead is enough
+
+    return warnings
+
+
 def build_shared_system_prompt(sandbox_mode=False, dashboard_context=None):
     """
     Constructs a single, shared system prompt for the Resonance companion app.
     Injects the Alex persona, parent instructions, hints, and complexity levels.
     """
-    sys_prompt = SYSTEM_PROMPT
+    # The friend-not-boss persona is appended to the base prompt up front so it
+    # holds GLOBALLY — across every complexity level, channel mode, and wind-down.
+    sys_prompt = SYSTEM_PROMPT + "\n\n--- CORE PERSONA (friend, not boss) ---\n" + FRIEND_NOT_BOSS_PERSONA + "\n"
 
     # Sandbox mode: suppress learning
     if sandbox_mode:
@@ -751,7 +835,14 @@ def stream_chat(prompt, dashboard_context=None):
                         "alex_words": alex_words,
                         "session_duration_estimate": session_duration_estimate
                     }
-                    
+
+                    # Prompt 3.5 (v2): soft drift scan of Alex's own reply. A trip
+                    # is logged and recorded for parent visibility — never blocks.
+                    bossy_warnings = detect_bossy_tone(alex_response_text)
+                    if bossy_warnings:
+                        logger.warning(f"Persona drift — bossy/nagging tone in reply: {bossy_warnings}")
+                        progress_entry["bossy_warnings"] = bossy_warnings
+
                     parent_config = _load_parent_config_for_stream()
                     if "progress_log" not in parent_config:
                         parent_config["progress_log"] = []

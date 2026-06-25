@@ -143,6 +143,21 @@ def _is_sandbox_mode():
     return False
 
 
+def _detect_bossy(text):
+    """Scan ``text`` for bossy/nagging tone (Prompt 3.5 v2), best-effort.
+
+    Delegates to app_stream.detect_bossy_tone so the rule lives in one place.
+    Returns [] if the detector is unavailable — drift logging must never break a
+    cast.
+    """
+    try:
+        from app_stream import detect_bossy_tone
+        return detect_bossy_tone(text)
+    except Exception as e:
+        logger.warning(f"Bossy-tone scan unavailable (non-fatal): {e}")
+        return []
+
+
 def is_in_wind_down_window(config, now=None):
     """Bedtime wind-down gate — STUB (Prompt 8 implements this).
 
@@ -592,6 +607,13 @@ def trigger_engagement(now=None, speaker_name=None, test_mode=False,
         "outcome": OUTCOME_PENDING,
         "cast": bool(cast_result and cast_result.get("cast")),
     }
+
+    # Prompt 3.5 (v2): soft drift scan of the opener. A trip is recorded on the
+    # initiation entry for parent visibility — it never blocks the cast.
+    bossy_warnings = _detect_bossy(opener)
+    if bossy_warnings:
+        logger.warning("Persona drift — bossy/nagging tone in opener: %s", bossy_warnings)
+        initiation["bossy_warnings"] = bossy_warnings
     initiations.append(initiation)
     eng["initiations"] = initiations[-200:]  # bound growth; rotation is by count
     eng["state"] = STATE_AWAITING
