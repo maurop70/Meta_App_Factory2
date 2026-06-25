@@ -60,6 +60,115 @@ HISTORY_FILE = os.path.join(RESONANCE_DIR, ".Gemini_state", ".stream_history.jso
 SANDBOX_FLAG_FILE = os.path.join(RESONANCE_DIR, ".Gemini_state", ".sandbox_flag.json")
 PARENT_CONFIG_PATH = os.path.join(RESONANCE_DIR, "parent_config.json")
 
+import requests as _requests_lib
+
+def safe_post_with_response(target_url: str, payload: dict, project: str = "child_app", timeout: int = 60):
+    """
+    V3.0 Safe-Post Pattern that returns the raw HTTP response object.
+    Auth: Antigravity_Full_v2 inherited automatically via factory.
+    """
+    import time as _time
+    _sm = None
+    _entry_id = None
+
+    try:
+        from local_state_manager import StateManager
+        _sm = StateManager()
+    except ImportError:
+        pass
+
+    if _sm and _sm.is_safe_buffer_mode():
+        _entry_id = _sm.log_outgoing(target_url, payload, project)
+        _sm.mark_failed(_entry_id, "Safe-Buffer mode active")
+        # Queue to disk using factory's queue function
+        try:
+            from factory import _queue_to_disk
+            _queue_to_disk(target_url, payload, project)
+        except ImportError:
+            pass
+        return "buffered", None
+
+    try:
+        _rc_path = _os.path.join(_FACTORY_DIR, "resilience_config.json")
+        if _os.path.exists(_rc_path):
+            with open(_rc_path) as _f:
+                _rc = json.load(_f)
+            _wdog = _rc.get("cloud_health", {}).get("watchdog_url", "")
+            if _wdog:
+                _probe = _requests_lib.get(_wdog, timeout=5)
+                if _probe.status_code != 200:
+                    if _sm:
+                        _entry_id = _sm.log_outgoing(target_url, payload, project)
+                        _sm.mark_failed(_entry_id, f"Watchdog returned {_probe.status_code}")
+                    from factory import _queue_to_disk
+                    _queue_to_disk(target_url, payload, project)
+                    return "buffered", None
+    except Exception:
+        pass
+
+    if _sm:
+        _entry_id = _sm.log_outgoing(target_url, payload, project)
+
+    try:
+        _start = _time.time()
+        resp = _requests_lib.post(target_url, json=payload, timeout=timeout)
+        _latency = (_time.time() - _start) * 1000
+        if resp.status_code >= 500:
+            if _sm and _entry_id:
+                _sm.mark_failed(_entry_id, f"Server Error: {resp.status_code}")
+            return "failed", resp
+        if _sm and _entry_id:
+            _sm.mark_sent(_entry_id, resp.status_code, _latency)
+        return "sent", resp
+    except Exception as e:
+        if _sm and _entry_id:
+            _sm.mark_failed(_entry_id, str(e))
+        try:
+            from factory import _queue_to_disk
+            _queue_to_disk(target_url, payload, project)
+        except ImportError:
+            pass
+        return "buffered", None
+
+def parse_gemini_response(status: str, response) -> dict:
+    """
+    Defensively parse Gemini Response without raising unhandled KeyErrors.
+    Returns: {"status": "success", "text": "..."} or {"status": "error", "error": "..."}
+    """
+    if status == "buffered":
+        return {"status": "buffered", "error": "Request was buffered locally."}
+    if status == "failed":
+        return {"status": "failed", "error": f"Request failed on the server."}
+    if not response:
+        return {"status": "error", "error": "Empty HTTP response."}
+
+    if response.status_code != 200:
+        return {"status": "error", "error": f"HTTP {response.status_code}: {response.text[:200]}"}
+
+    try:
+        data = response.json()
+    except Exception as e:
+        return {"status": "error", "error": f"JSON Decode Error: {str(e)}"}
+
+    if "promptFeedback" in data and "blockReason" in data["promptFeedback"]:
+        return {"status": "blocked", "reason": data["promptFeedback"]["blockReason"]}
+
+    candidates = data.get("candidates", [])
+    if not candidates:
+        return {"status": "error", "error": "No candidates returned in response."}
+
+    candidate = candidates[0]
+    finish_reason = candidate.get("finishReason")
+    if finish_reason and finish_reason not in ["STOP", "MAX_TOKENS"]:
+        return {"status": "error", "error": f"Interrupted with finishReason: {finish_reason}"}
+
+    parts = candidate.get("content", {}).get("parts", [])
+    text = "".join(p.get("text", "") for p in parts).strip()
+    if not text:
+        return {"status": "error", "error": "Empty text candidate parts."}
+
+    return {"status": "success", "text": text}
+
 # ── Crisis Keywords (Offline Regex Scanner) ──────────────────
 CRISIS_PATTERNS = [
     # Self-harm / suicidal ideation
@@ -343,13 +452,11 @@ Generate 1-3 actionable proposals. Each proposed_directive should be a clear, co
             },
         }
 
-        _v3_status = safe_post(url, payload)
-
-
-        response = type("Resp", (), {"status_code": 200 if _v3_status == "sent" else 503, "ok": _v3_status == "sent", "text": _v3_status, "json": lambda: {"status": _v3_status}})()
-        response.raise_for_status()
-        result = response.json()
-        raw_text = result["candidates"][0]["content"]["parts"][0]["text"]
+        _v3_status, response = safe_post_with_response(url, payload)
+        parsed = parse_gemini_response(_v3_status, response)
+        if parsed["status"] != "success":
+            raise Exception(f"Gemini call failed: {parsed.get('error') or parsed.get('reason') or parsed['status']}")
+        raw_text = parsed["text"]
 
         # Clean potential markdown fencing
         cleaned = raw_text.strip()
@@ -624,13 +731,11 @@ Respond with a valid JSON object:
             },
         }
 
-        _v3_status = safe_post(url, payload)
-
-
-        response = type("Resp", (), {"status_code": 200 if _v3_status == "sent" else 503, "ok": _v3_status == "sent", "text": _v3_status, "json": lambda: {"status": _v3_status}})()
-        response.raise_for_status()
-        result = response.json()
-        raw_text = result["candidates"][0]["content"]["parts"][0]["text"]
+        _v3_status, response = safe_post_with_response(url, payload)
+        parsed = parse_gemini_response(_v3_status, response)
+        if parsed["status"] != "success":
+            raise Exception(f"Gemini call failed: {parsed.get('error') or parsed.get('reason') or parsed['status']}")
+        raw_text = parsed["text"]
 
         # Clean potential markdown fencing
         cleaned = raw_text.strip()
