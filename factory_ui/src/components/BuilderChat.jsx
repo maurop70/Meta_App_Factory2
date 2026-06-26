@@ -48,7 +48,8 @@ export default function BuilderChat() {
   const [chatHistory, setChatHistory] = useState(() => {
     try {
       const stored = sessionStorage.getItem('ma_chat_history');
-      return stored ? JSON.parse(stored) : [];
+      const parsed = stored ? JSON.parse(stored) : [];
+      return Array.isArray(parsed) ? parsed : [];
     } catch (e) {
       return [];
     }
@@ -59,7 +60,8 @@ export default function BuilderChat() {
   const [cachedDocumentIds, setCachedDocumentIds] = useState(() => {
     try {
       const stored = sessionStorage.getItem('ma_cached_document_ids');
-      return stored ? JSON.parse(stored) : [];
+      const parsed = stored ? JSON.parse(stored) : [];
+      return Array.isArray(parsed) ? parsed : [];
     } catch (e) {
       return [];
     }
@@ -602,7 +604,7 @@ export default function BuilderChat() {
     
     // Construct serialized history payload tracking document_ids associated with specific turns
     const serializedHistory = chatHistory
-      .filter(msg => msg.content && !msg.content.startsWith('[INGESTION FRACTURE]') && !msg.content.startsWith('[STREAM FRACTURE]'))
+      .filter(msg => typeof msg.content === 'string' && !msg.content.startsWith('[INGESTION FRACTURE]') && !msg.content.startsWith('[STREAM FRACTURE]'))
       .map(msg => ({
         role: msg.role === 'user' ? 'user' : 'model',
         content: msg.content,
@@ -1172,7 +1174,9 @@ export default function BuilderChat() {
       if (parsed.verdict && parsed.gate) return <EvaluationScorecard data={parsed} />;
     } catch (e) {}
     
-    const formattedContent = typeof content === 'string' ? content.replace(/\\n/g, '\n') : content;
+    const formattedContent = typeof content === 'string'
+      ? content.replace(/\\n/g, '\n')
+      : JSON.stringify(content);
     return <div className="whitespace-pre-wrap leading-relaxed">{formattedContent}</div>;
   };
 

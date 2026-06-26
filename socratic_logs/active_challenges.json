@@ -310,5 +310,44 @@
     "created_at": "2026-06-19T14:59:36.825678",
     "resolved_at": null,
     "resolution": null
+  },
+  "CHG-0009": {
+    "challenge_id": "CHG-0009",
+    "status": "PAUSED",
+    "score": 1.0,
+    "threshold": 9.5,
+    "gap": 8.5,
+    "proposal_preview": "## Verdict & Concept Critique\n\n**Verdict: Proceed with Critical Modifications.**\n\nThe foundational concept of a clean-label, frozen, cacao-covered fruit snack is strong and aligns with powerful market",
+    "weaknesses": [
+      {
+        "id": 1,
+        "category": "Scalability",
+        "severity": "CRITICAL",
+        "challenge": "WebSocket fan-out without message broker will cap at ~500 concurrent sessions.",
+        "required_evidence": "Provide data or reasoning addressing scalability."
+      },
+      {
+        "id": 2,
+        "category": "Technical Debt",
+        "severity": "CRITICAL",
+        "challenge": "Test coverage is below 40%. Any refactor risks silent regression in edge cases.",
+        "required_evidence": "Provide data or reasoning addressing technical debt."
+      },
+      {
+        "id": 3,
+        "category": "User Retention",
+        "severity": "CRITICAL",
+        "challenge": "No push notification or email drip campaign infrastructure is planned.",
+        "required_evidence": "Provide data or reasoning addressing user retention."
+      }
+    ],
+    "requires": "user_reasoning",
+    "options": [
+      "convince",
+      "force_proceed"
+    ],
+    "created_at": "2026-06-24T21:10:01.214030",
+    "resolved_at": null,
+    "resolution": null
   }
 }

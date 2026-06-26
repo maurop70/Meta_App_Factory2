@@ -546,4 +546,8 @@ def restart_service(req: RestartRequest, bg_tasks: BackgroundTasks):
         return {"status": "error", "message": f"Unknown service: {service}"}
 
 if __name__ == "__main__":
-    uvicorn.run("operator_agent:app", host="0.0.0.0", port=5100, reload=True)
+    # The live reloader watched the entire root dir and looped whenever log files
+    # were written, causing socket timeouts on /api/operator/scout. Default to off;
+    # opt back in for local dev with OPERATOR_RELOAD=1.
+    reload_enabled = os.getenv("OPERATOR_RELOAD", "0") == "1"
+    uvicorn.run("operator_agent:app", host="0.0.0.0", port=5100, reload=reload_enabled)

@@ -848,6 +848,9 @@ def agent_status():
 def get_registry():
     """Return the list of registered apps."""
     try:
+        if not os.path.exists(REGISTRY_PATH):
+            with open(REGISTRY_PATH, "w", encoding="utf-8") as f:
+                json.dump({"services": {}, "apps": {}, "last_updated": ""}, f, indent=4)
         with open(REGISTRY_PATH, "r", encoding="utf-8-sig") as f:
             data = json.load(f)
 

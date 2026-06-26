@@ -8,6 +8,8 @@ from fastapi import APIRouter, Request, HTTPException, BackgroundTasks
 from fastapi.responses import StreamingResponse
 import asyncio
 
+from model_router import CLAUDE_SONNET
+
 router = APIRouter()
 
 DATABASE_FILE = "factory_ephemeral.db"
@@ -108,62 +110,83 @@ async def builder_stream(session_id: str, request: Request):
 
         load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
-        if cognitive_engine == "claude-3-5-sonnet-20241022" or "claude" in cognitive_engine.lower():
+        async def stream_claude():
             anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
             if not anthropic_api_key:
-                yield f"data: {json.dumps({'agent': 'System', 'status': 'ERROR', 'payload': 'ANTHROPIC_API_KEY not loaded.'})}\n\n"
-                return
-                
-            yield f"data: {json.dumps({'agent': 'Architect', 'status': 'PROCESSING', 'payload': f'Session {session_id} locked. Dispatching to Claude 3.5 Sonnet...'})}\n\n"
-            
-            try:
-                client = anthropic.AsyncAnthropic(api_key=anthropic_api_key)
-                async with client.messages.stream(
-                    max_tokens=4096,
-                    messages=[{"role": "user", "content": prompt_payload}],
-                    model="claude-3-5-sonnet-20241022",
-                ) as stream:
-                    async for text in stream.text_stream:
-                        yield f"data: {json.dumps({'agent': 'Claude', 'status': 'STREAMING', 'payload': text})}\n\n"
-            except Exception as e:
-                yield f"data: {json.dumps({'agent': 'System', 'status': 'ERROR', 'payload': f'Anthropic Stream fracture: {str(e)[:100]}'})}\n\n"
-        else:
+                raise ValueError("ANTHROPIC_API_KEY not loaded.")
+            client = anthropic.AsyncAnthropic(api_key=anthropic_api_key)
+            async with client.messages.stream(
+                max_tokens=4096,
+                messages=[{"role": "user", "content": prompt_payload}],
+                model=CLAUDE_SONNET,
+            ) as stream:
+                async for text in stream.text_stream:
+                    yield text
+
+        async def stream_gemini(engine):
             api_key = os.getenv("GEMINI_API_KEY")
             if not api_key:
-                yield f"data: {json.dumps({'agent': 'System', 'status': 'ERROR', 'payload': 'GEMINI_API_KEY not loaded. Cognitive engine offline.'})}\n\n"
-                return
-
-            yield f"data: {json.dumps({'agent': 'Architect', 'status': 'PROCESSING', 'payload': f'Session {session_id} locked. Dispatching to Gemini...'})}\n\n"
-
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/{cognitive_engine}:streamGenerateContent?alt=sse&key={api_key}"
-
+                raise ValueError("GEMINI_API_KEY not loaded.")
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{engine}:streamGenerateContent?alt=sse&key={api_key}"
             req_payload = {
                 "contents": [{"role": "user", "parts": [{"text": prompt_payload}]}],
                 "generationConfig": {"temperature": 0.3}
             }
+            async with httpx.AsyncClient() as client:
+                async with client.stream("POST", url, json=req_payload, timeout=60.0) as resp:
+                    resp.raise_for_status()
+                    async for line in resp.aiter_lines():
+                        if not line.startswith("data: "):
+                            continue
+                        raw = line[6:]
+                        if raw.strip() == "[DONE]":
+                            break
+                        chunk = json.loads(raw)
+                        text = chunk.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+                        if text:
+                            yield text
 
+        # Determine start strategy
+        is_claude_preferred = "claude" in cognitive_engine.lower()
+
+        emitted_any = False
+
+        if is_claude_preferred:
+            yield f"data: {json.dumps({'agent': 'Architect', 'status': 'PROCESSING', 'payload': 'Dispatching to Claude...'})}\n\n"
             try:
-                async with httpx.AsyncClient() as client:
-                    async with client.stream("POST", url, json=req_payload, timeout=60.0) as resp:
-                        resp.raise_for_status()
-                        async for line in resp.aiter_lines():
-                            if not line.startswith("data: "):
-                                continue
-                            raw = line[6:]  # Strip "data: " prefix
-                            if raw.strip() == "[DONE]":
-                                break
-                            try:
-                                chunk = json.loads(raw)
-                                text = chunk.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
-                                if text:
-                                    yield f"data: {json.dumps({'agent': 'Gemini', 'status': 'STREAMING', 'payload': text})}\n\n"
-                            except (json.JSONDecodeError, IndexError, KeyError):
-                                continue
-
-            except httpx.HTTPStatusError as e:
-                yield f"data: {json.dumps({'agent': 'System', 'status': 'ERROR', 'payload': f'Gemini HTTP {e.response.status_code}'})}\n\n"
+                async for text in stream_claude():
+                    if text:
+                        emitted_any = True
+                    yield f"data: {json.dumps({'agent': 'Claude', 'status': 'STREAMING', 'payload': text})}\n\n"
             except Exception as e:
-                yield f"data: {json.dumps({'agent': 'System', 'status': 'ERROR', 'payload': f'Stream fracture: {str(e)[:100]}'})}\n\n"
+                if emitted_any:
+                    yield f"data: {json.dumps({'agent': 'System', 'status': 'ERROR', 'payload': f'Claude stream interrupted: {str(e)[:100]}'})}\n\n"
+                    return
+
+                yield f"data: {json.dumps({'agent': 'System', 'status': 'WARNING', 'payload': 'Claude stream failed. Falling back to Gemini...'})}\n\n"
+                try:
+                    async for text in stream_gemini("gemini-2.5-flash"):
+                        yield f"data: {json.dumps({'agent': 'Gemini', 'status': 'STREAMING', 'payload': text})}\n\n"
+                except Exception as ex:
+                    yield f"data: {json.dumps({'agent': 'System', 'status': 'ERROR', 'payload': f'All streams failed: {str(ex)[:100]}'})}\n\n"
+        else:
+            yield f"data: {json.dumps({'agent': 'Architect', 'status': 'PROCESSING', 'payload': 'Dispatching to Gemini...'})}\n\n"
+            try:
+                async for text in stream_gemini(cognitive_engine):
+                    if text:
+                        emitted_any = True
+                    yield f"data: {json.dumps({'agent': 'Gemini', 'status': 'STREAMING', 'payload': text})}\n\n"
+            except Exception as e:
+                if emitted_any:
+                    yield f"data: {json.dumps({'agent': 'System', 'status': 'ERROR', 'payload': f'Gemini stream interrupted: {str(e)[:100]}'})}\n\n"
+                    return
+
+                yield f"data: {json.dumps({'agent': 'System', 'status': 'WARNING', 'payload': 'Gemini stream failed. Falling back to Claude...'})}\n\n"
+                try:
+                    async for text in stream_claude():
+                        yield f"data: {json.dumps({'agent': 'Claude', 'status': 'STREAMING', 'payload': text})}\n\n"
+                except Exception as ex:
+                    yield f"data: {json.dumps({'agent': 'System', 'status': 'ERROR', 'payload': f'All streams failed: {str(ex)[:100]}'})}\n\n"
 
         yield f"data: {json.dumps({'agent': 'System', 'status': 'COMPLETE', 'payload': 'Cognitive stream terminated.'})}\n\n"
 
