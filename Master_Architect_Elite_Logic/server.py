@@ -632,6 +632,32 @@ DIRECT_AGENT_PERSONAS = {
     ),
 }
 
+def _derive_project_slug(project_context: Optional[dict], user_query: str) -> str:
+    """Resolve a filesystem-safe Workspace Vault project slug.
+
+    Resolution order:
+      1. project_context["project_name"] (authoritative — e.g. from the dashboard);
+      2. the first non-empty line of the user query;
+      3. the literal "Venture".
+
+    The allow-list regex [^A-Za-z0-9 _-] is deliberate: besides stripping odd
+    characters it also removes path separators (/ \\) and dots, so the slug can
+    never escape projects/<slug>/ or vault/venture/. Spaces collapse to
+    underscores; an empty result falls back to "Venture".
+    """
+    raw = ""
+    if project_context and str(project_context.get("project_name") or "").strip():
+        raw = str(project_context["project_name"]).strip()
+    else:
+        for _line in (user_query or "").splitlines():
+            if _line.strip():
+                raw = _line.strip()
+                break
+    # Cap the source length BEFORE sanitizing so a caller cannot pass a huge name.
+    raw = raw[:80] if raw else "Venture"
+    slug = re.sub(r'[^A-Za-z0-9 _-]', '', raw).strip().replace(' ', '_')
+    return slug or "Venture"
+
 async def classify_builder_venture_intent(prompt: str, history: List[dict] = None) -> str:
     api_key = os.getenv("GEMINI_API_KEY", "")
     if api_key:
@@ -2059,22 +2085,10 @@ async def review(req: ReviewRequest):
                     system_instruction=ceo_system_instruction
                 )
 
-                # Project slug for Workspace Vault artifacts (triage report, approved strategy, blueprint).
-                # Prefer an explicit project_context.project_name; otherwise honour a "Resonance"
-                # mention in the query, then fall back to the sanitized query snippet.
-                _proj_raw = None
-                if req.project_context and req.project_context.get("project_name"):
-                    _proj_raw = req.project_context.get("project_name")
-                else:
-                    q_words = (user_query or "").split()
-                    for word in q_words:
-                        cleaned = re.sub(r'[^A-Za-z0-9_-]', '', word)
-                        if cleaned.lower() == "resonance":
-                            _proj_raw = cleaned
-                            break
-                if not _proj_raw:
-                    _proj_raw = (user_query or "Venture").strip().splitlines()[0][:50] if (user_query or "").strip() else "Venture"
-                project_slug = re.sub(r'[^A-Za-z0-9 _-]', '', _proj_raw).strip().replace(' ', '_') or "Venture"
+                # Project slug for Workspace Vault artifacts (triage report, approved
+                # strategy, blueprint) and DB registration. Resolves from the explicit
+                # project_context.project_name first; see _derive_project_slug.
+                project_slug = _derive_project_slug(req.project_context, user_query)
 
                 def _write_vault(filename, content):
                     """Persist an artifact to vault/venture/ in BOTH the server dir and the project root."""
@@ -2090,6 +2104,20 @@ async def review(req: ReviewRequest):
                         except Exception as _ve:
                             logger.error(f"Vault write failed ({_base}): {_ve}")
                     return saved
+
+                def _spool_to_project(filename, content):
+                    """Mirror a deliverable into projects/<slug>/ so the workspace folder
+                    holds its own copy (durable — survives independent of vault/venture/)."""
+                    try:
+                        _pdir = os.path.join(_FACTORY_DIR, "projects", project_slug)
+                        os.makedirs(_pdir, exist_ok=True)
+                        _ppath = os.path.join(_pdir, filename)
+                        with open(_ppath, "w", encoding="utf-8") as _pf:
+                            _pf.write(content or "")
+                        return _ppath
+                    except Exception as _pe:
+                        logger.error(f"Project spool failed ({project_slug}): {_pe}")
+                        return None
 
                 full_ceo_strategy = ""
                 critic_score = 0.0
@@ -2372,8 +2400,12 @@ async def review(req: ReviewRequest):
                 # ── Workspace Vault Persistence (approved strategy + blueprint) ──
                 _md_saved = _write_vault(f"{project_slug}_Approved_Strategy.md", full_ceo_strategy)
                 _bp_saved = _write_vault(f"{project_slug}_Blueprint.json", blueprint_json)
+                # Durable copy into the project workspace so deliverables live in projects/<slug>/
+                # automatically on every run (no manual copy needed).
+                _spool_to_project(f"{project_slug}_Approved_Strategy.md", full_ceo_strategy)
+                _spool_to_project(f"{project_slug}_Blueprint.json", blueprint_json)
                 if _md_saved or _bp_saved:
-                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CTO', 'content': '\\n💾 Approved strategy + blueprint saved to vault/venture/.\\n'})}\n\n"
+                    yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CTO', 'content': '\\n💾 Approved strategy + blueprint saved to vault/venture/ and projects/<slug>/.\\n'})}\n\n"
 
                 # ── Workspace Vault DB Registration (UPSERT via the projects API) ──
                 # Register the completed project so it surfaces in the dashboard Workspace Vault.
