@@ -9,6 +9,11 @@ echo.
 
 :: ── Auto-Detect Google Drive Path ──────────────────────────
 set "GDRIVE="
+if exist "C:\Dev\Antigravity_AI_Agents\Meta_App_Factory\Resonance" (
+    set "APP_DIR=C:\Dev\Antigravity_AI_Agents\Meta_App_Factory\Resonance"
+    set "GDRIVE=C:\Dev"
+    goto :APP_DIR_FOUND
+)
 if exist "%USERPROFILE%\My Drive\Antigravity-AI Agents\Meta_App_Factory\Resonance" (
     set "GDRIVE=%USERPROFILE%\My Drive"
     goto :GDRIVE_FOUND
@@ -30,7 +35,8 @@ exit /b 1
 
 :GDRIVE_FOUND
 set "APP_DIR=%GDRIVE%\Antigravity-AI Agents\Meta_App_Factory\Resonance"
-echo  [OK] Google Drive: %GDRIVE%
+:APP_DIR_FOUND
+echo  [OK] Base Root:    %GDRIVE%
 echo  [OK] App Dir:      %APP_DIR%
 echo.
 
@@ -71,9 +77,9 @@ if exist "%APP_DIR%\create_resonance_shortcut.ps1" (
 )
 
 :: ── Open Browser ──────────────────────────────────────────
-echo  [3/3] Suppressing browser tab (Headless Mode Active)...
+echo  [3/3] Opening browser tab...
 ping 127.0.0.1 -n 5 >nul
-:: start http://localhost:5174
+start http://localhost:5006
 
 echo.
 echo  ===================================================

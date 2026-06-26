@@ -9,6 +9,7 @@ $ShortcutPath = "$DesktopPath\Resonance.lnk"
 
 # Auto-detect Google Drive Root (cascading search)
 $PossibleRoots = @(
+    "C:\Dev",
     "$env:USERPROFILE\My Drive",
     "$env:USERPROFILE\My Drive (maurotgs@gmail.com)",
     "$env:USERPROFILE\Google Drive",
@@ -20,15 +21,19 @@ $PossibleRoots = @(
 
 $BaseDir = ""
 foreach ($Root in $PossibleRoots) {
-    $TestDir = "$Root\Antigravity-AI Agents\Meta_App_Factory\Resonance"
-    if (Test-Path $TestDir) {
-        $BaseDir = $TestDir
+    $TestDir1 = "$Root\Antigravity-AI Agents\Meta_App_Factory\Resonance"
+    $TestDir2 = "$Root\Antigravity_AI_Agents\Meta_App_Factory\Resonance"
+    if (Test-Path $TestDir1) {
+        $BaseDir = $TestDir1
+        break
+    } elseif (Test-Path $TestDir2) {
+        $BaseDir = $TestDir2
         break
     }
 }
 
 if ($BaseDir -eq "") {
-    Write-Error "Resonance directory not found in any Google Drive root."
+    Write-Error "Resonance directory not found in any search root."
     exit 1
 }
 
