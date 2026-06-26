@@ -1742,31 +1742,31 @@ async def review(req: ReviewRequest):
                                     document_context += f"\n[Staged Binary Payload: {safe_doc_id} (Google URI: {uploaded_file.name})]\n"
                                 except Exception as e:
                                     logger.error(f"Error staging binary document {safe_doc_id} to Google: {e}")
-                    prior_context_str = ""
-                    if req.project_context:
-                        p_name = req.project_context.get("project_name", "Unknown")
-                        p_fin = req.project_context.get("financial_matrix")
-                        p_ops = req.project_context.get("operational_context")
-                        
-                        if isinstance(p_fin, str):
-                            try: p_fin = json.loads(p_fin)
-                            except Exception: pass
-                        if isinstance(p_ops, str):
-                            try: p_ops = json.loads(p_ops)
-                            except Exception: pass
-                            
-                        prior_context_str = (
-                            f"\n\n[PRIOR APPROVED PROJECT CONTEXT]\n"
-                            f"Active Project Name: {p_name}\n"
-                            f"Prior Financial Matrix: {json.dumps(p_fin, indent=2) if p_fin else 'None'}\n"
-                            f"Prior Operational Context: {json.dumps(p_ops, indent=2) if p_ops else 'None'}\n"
-                            f"Note: This active project is being modified. Ingest these prior metrics and build upon/refine them."
-                        )
+                prior_context_str = ""
+                if req.project_context:
+                    p_name = req.project_context.get("project_name", "Unknown")
+                    p_fin = req.project_context.get("financial_matrix")
+                    p_ops = req.project_context.get("operational_context")
 
-                    if document_context:
-                        active_query = user_query + f"\n\n[ATTACHED FOUNDATIONAL DOCUMENTS]:\n{document_context}" + prior_context_str
-                    else:
-                        active_query = user_query + prior_context_str
+                    if isinstance(p_fin, str):
+                        try: p_fin = json.loads(p_fin)
+                        except Exception: pass
+                    if isinstance(p_ops, str):
+                        try: p_ops = json.loads(p_ops)
+                        except Exception: pass
+
+                    prior_context_str = (
+                        f"\n\n[PRIOR APPROVED PROJECT CONTEXT]\n"
+                        f"Active Project Name: {p_name}\n"
+                        f"Prior Financial Matrix: {json.dumps(p_fin, indent=2) if p_fin else 'None'}\n"
+                        f"Prior Operational Context: {json.dumps(p_ops, indent=2) if p_ops else 'None'}\n"
+                        f"Note: This active project is being modified. Ingest these prior metrics and build upon/refine them."
+                    )
+
+                if document_context:
+                    active_query = user_query + f"\n\n[ATTACHED FOUNDATIONAL DOCUMENTS]:\n{document_context}" + prior_context_str
+                else:
+                    active_query = user_query + prior_context_str
 
                 # 1. CIO Deep Research Pre-flight Sweep (Port 5090)
                 yield f"data: {json.dumps({'type': 'agent_stream', 'emitter': 'CIO', 'content': '🔍 [CIO Sweep] Initiating live market research sensor sweep...\\n'})}\n\n"
@@ -2060,7 +2060,20 @@ async def review(req: ReviewRequest):
                 )
 
                 # Project slug for Workspace Vault artifacts (triage report, approved strategy, blueprint).
-                _proj_raw = (user_query or "Venture").strip().splitlines()[0][:50] if (user_query or "").strip() else "Venture"
+                # Prefer an explicit project_context.project_name; otherwise honour a "Resonance"
+                # mention in the query, then fall back to the sanitized query snippet.
+                _proj_raw = None
+                if req.project_context and req.project_context.get("project_name"):
+                    _proj_raw = req.project_context.get("project_name")
+                else:
+                    q_words = (user_query or "").split()
+                    for word in q_words:
+                        cleaned = re.sub(r'[^A-Za-z0-9_-]', '', word)
+                        if cleaned.lower() == "resonance":
+                            _proj_raw = cleaned
+                            break
+                if not _proj_raw:
+                    _proj_raw = (user_query or "Venture").strip().splitlines()[0][:50] if (user_query or "").strip() else "Venture"
                 project_slug = re.sub(r'[^A-Za-z0-9 _-]', '', _proj_raw).strip().replace(' ', '_') or "Venture"
 
                 def _write_vault(filename, content):

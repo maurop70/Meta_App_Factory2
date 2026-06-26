@@ -115,18 +115,28 @@ Do NOT wrap the JSON in Markdown block formatting. Output raw JSON only.
 """
         response = route("CFO", prompt, system_prompt="You are an elite CFO. Output strictly raw JSON.")
         
-        # Clean response string if Claude wrapped it in markdown or prefixed it
-        start_idx = response.find("{")
-        end_idx = response.rfind("}")
+        # Clean response: strip markdown fences (```json / ```) and any prose, then
+        # extract the JSON object span so wrapper formatting can't break parsing.
+        response_clean = (response or "").strip()
+        if response_clean.startswith("```"):
+            # Drop the opening fence line (``` or ```json) and a trailing fence if present.
+            response_clean = response_clean.split("\n", 1)[1] if "\n" in response_clean else ""
+            if response_clean.rstrip().endswith("```"):
+                response_clean = response_clean.rstrip()[:-3]
+            response_clean = response_clean.strip()
+        start_idx = response_clean.find("{")
+        end_idx = response_clean.rfind("}")
         if start_idx != -1 and end_idx > start_idx:
-            response_clean = response[start_idx:end_idx + 1]
-        else:
-            response_clean = response
-            
+            response_clean = response_clean[start_idx:end_idx + 1]
+
+        if not response_clean.strip():
+            logger.error(f"CFO model returned empty/parseless output. Raw response: {response!r}")
+            return {"status": "error", "message": "CFO JSON Parsing failed: model returned no JSON object."}
+
         try:
             metrics = json.loads(response_clean)
         except Exception as e:
-            logger.error(f"Failed to parse CFO JSON: {e} - Response: {response}")
+            logger.error(f"Failed to parse CFO JSON: {e} - Raw response: {response!r}")
             return {"status": "error", "message": f"CFO JSON Parsing failed: {e}"}
             
         architect = get_cfo_architect()
