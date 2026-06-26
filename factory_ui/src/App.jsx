@@ -1186,7 +1186,7 @@ const safeJson = async (res) => {
 function CIOIntelligenceDashboard({ setActiveView }) {
   const [memos, setMemos] = useState([]);
   const [selectedMemo, setSelectedMemo] = useState(null);
-  const CIO_BASE = "http://localhost:5090";
+  const CIO_BASE = "";
 
   useEffect(() => {
     fetch(`${CIO_BASE}/api/cio/memos`)

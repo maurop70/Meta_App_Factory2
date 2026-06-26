@@ -8,7 +8,7 @@ import axios from 'axios';
 
 // Only failures of these core engine APIs justify blocking the whole UI.
 // Secondary telemetry polling (e.g. QA Lab status/stream) must never block.
-const CORE_API_PREFIXES = ['/api/cio', '/api/operator', '/api/health'];
+const CORE_API_PREFIXES = ['/api/cio', '/api/operator'];
 
 function isCoreApiUrl(url = '') {
   return CORE_API_PREFIXES.some((u) => url.includes(u));
@@ -33,6 +33,7 @@ export default function GlobalDiagnosticOverlay() {
 
     const handleGlobalSuccess = () => {
       errorCount = 0;
+      setError(null); // Auto-dismiss overlay when a request succeeds again
     };
 
     window.addEventListener('global-api-error', handleGlobalError);
@@ -163,6 +164,16 @@ export default function GlobalDiagnosticOverlay() {
 
         {/* Actuators */}
         <div style={styles.actionsContainer}>
+          <button
+            onClick={() => setError(null)}
+            disabled={rebooting || healing}
+            style={styles.btnSecondary}
+            onMouseEnter={(e) => (e.target.style.background = 'rgba(255,255,255,0.08)')}
+            onMouseLeave={(e) => (e.target.style.background = 'rgba(255,255,255,0.03)')}
+          >
+            ✕ Close Overlay
+          </button>
+
           <button
             onClick={handleFlushCache}
             disabled={rebooting || healing}
