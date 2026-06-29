@@ -4220,6 +4220,15 @@ def hydrate_department(payload: DepartmentCreate, jwt_payload: dict = Depends(ve
         cursor = conn.cursor()
         cursor.execute("BEGIN IMMEDIATE TRANSACTION")
         dep_id = payload.id if payload.id else f"DEP-{uuid.uuid4().hex[:6].upper()}"
+        # Sentinel guard (WS-A2 SP1): '*' is the reserved tenant-wide scope value in
+        # erp_employee_capabilities.department_id. A real department with id '*' would
+        # silently promote department-scoped assignments to tenant-wide (privilege
+        # escalation via string collision). This is the ONLY caller-supplied dept-id
+        # write site; all others generate DEP-prefixed ids. NOTE: SP3's ingestion-side
+        # rejection must use this SAME exact-match rule so the two guards can't disagree.
+        if dep_id == "*":
+            raise HTTPException(status_code=400,
+                detail="Structural Violation: '*' is the reserved tenant-wide scope sentinel and cannot be a department id.")
         cursor.execute("INSERT INTO erp_departments (id, name) VALUES (?, ?)", (dep_id, payload.name))
         conn.commit()
         return {"detail": "Record successfully ingested."}

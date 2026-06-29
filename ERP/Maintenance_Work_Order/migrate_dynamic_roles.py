@@ -58,6 +58,10 @@ def target_databases():
 
 def _backup(db_path):
     """Timestamped pre-migration snapshot, matching the archives/ convention."""
+    # TODO(WS-A3): _backup needs sub-second/monotonic uniqueness. int(time.time())
+    # collides when two independent rollback artifacts are taken in the same second
+    # (already observed: the SP1 step's backup vs the per-DB _migrate_db backup) --
+    # the risk grows as SP2/SP3 add more mutation steps that each snapshot.
     os.makedirs(_ARCHIVES_DIR, exist_ok=True)
     stem = os.path.splitext(os.path.basename(db_path))[0]
     dest = os.path.join(_ARCHIVES_DIR, f"{stem}.pre_dynamic_roles.{int(time.time())}.db")
@@ -267,6 +271,87 @@ def _reconcile_gateway_roles():
         conn.close()
 
 
+def _migrate_capabilities_and_wo_department():
+    """SP1 default-DB migration: add work_orders.department_id (plain TEXT, no FK) and
+    backfill it from the equipment chain, then migrate is_inventory_manager=1 ->
+    STOREKEEPER assignments and seed PARTS_APPROVER to the CFO tenant-wide. Atomic +
+    fail-loud: any error rolls the whole step back, leaving the DB exactly as found.
+    Idempotent: the column add is guarded by a PRAGMA check, and all inserts are
+    INSERT OR IGNORE, so a re-run is a clean no-op."""
+    from local_db import CAPABILITY_DEFS, TENANT_WIDE
+    db = os.path.join(_DATA_DIR, "maintenance_erp.db")
+    if not os.path.exists(db):
+        print("    [WARN] default DB not found; SP1 migration skipped.")
+        return
+    backup = _backup(db)
+    print(f"    Backup: {backup}")
+    conn = sqlite3.connect(db)
+    conn.isolation_level = None  # explicit transaction control
+    cur = conn.cursor()
+    try:
+        cur.execute("BEGIN")
+        # Self-sufficient: ensure the SP1 tables exist even if run before app import.
+        cur.execute("CREATE TABLE IF NOT EXISTS erp_capabilities (capability TEXT PRIMARY KEY, description TEXT)")
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS erp_employee_capabilities ("
+            "employee_id TEXT NOT NULL, capability TEXT NOT NULL, department_id TEXT NOT NULL DEFAULT '*', "
+            "PRIMARY KEY (employee_id, capability, department_id), "
+            "FOREIGN KEY (employee_id) REFERENCES erp_employees(id) ON DELETE CASCADE, "
+            "FOREIGN KEY (capability) REFERENCES erp_capabilities(capability) ON DELETE RESTRICT)"
+        )
+        cur.executemany("INSERT OR IGNORE INTO erp_capabilities (capability, description) VALUES (?, ?)", CAPABILITY_DEFS)
+
+        # 1) work_orders.department_id snapshot column (idempotent add) + equipment backfill.
+        cols = {r[1] for r in cur.execute("PRAGMA table_info(work_orders)")}
+        if "department_id" not in cols:
+            cur.execute("ALTER TABLE work_orders ADD COLUMN department_id TEXT")
+        else:
+            print("    work_orders.department_id already present; column add SKIPPED.")
+        cur.execute(
+            """UPDATE work_orders
+               SET department_id = (SELECT e.department_id FROM erp_equipment e
+                                    WHERE e.equipment_id = work_orders.equipment_id)
+               WHERE department_id IS NULL
+                 AND equipment_id IS NOT NULL AND equipment_id <> ''"""
+        )
+        resolved = cur.execute("SELECT COUNT(*) FROM work_orders WHERE department_id IS NOT NULL").fetchone()[0]
+        unresolved = cur.execute("SELECT COUNT(*) FROM work_orders WHERE department_id IS NULL").fetchone()[0]
+        print(f"    work_orders.department_id: backfilled={resolved}, left NULL (SP2 fail-closed)={unresolved}")
+        if unresolved:
+            for (wo,) in cur.execute("SELECT mwo_id FROM work_orders WHERE department_id IS NULL"):
+                print(f"      [UNRESOLVED] {wo} -> department NULL (equipment missing/unresolvable)")
+
+        # 2) is_inventory_manager=1 -> STOREKEEPER (skip NULL dept, matching get_employee_cleared_skus).
+        migrated = cur.execute(
+            """INSERT OR IGNORE INTO erp_employee_capabilities (employee_id, capability, department_id)
+               SELECT id, 'STOREKEEPER', department_id FROM erp_employees
+               WHERE is_inventory_manager = 1
+                 AND department_id IS NOT NULL AND department_id <> ''"""
+        ).rowcount
+        skipped = cur.execute(
+            """SELECT COUNT(*) FROM erp_employees
+               WHERE is_inventory_manager = 1 AND (department_id IS NULL OR department_id = '')"""
+        ).fetchone()[0]
+        print(f"    STOREKEEPER assignments: migrated={migrated}, skipped (null dept)={skipped}")
+
+        # 3) PARTS_APPROVER seeded to the CFO tenant-wide (Option A; default DB only -- fresh
+        # tenants have no CFO yet, deferred to SP4). TENANT_WIDE ('*') = tenant-wide scope.
+        cfo_rows = cur.execute(
+            """INSERT OR IGNORE INTO erp_employee_capabilities (employee_id, capability, department_id)
+               SELECT id, 'PARTS_APPROVER', ? FROM erp_employees WHERE role='CFO'""",
+            (TENANT_WIDE,),
+        ).rowcount
+        print(f"    PARTS_APPROVER->CFO (tenant-wide): seeded={cfo_rows}")
+
+        cur.execute("COMMIT")
+        print("    [OK] SP1 schema+data migration complete.")
+    except Exception:
+        cur.execute("ROLLBACK")
+        raise
+    finally:
+        conn.close()
+
+
 def run():
     targets = target_databases()
     print("Dynamic-roles migration targets:")
@@ -303,6 +388,8 @@ def run():
     _reconcile_default_registry()
     print("\n>>> Reconciling gateway identity store (TECHNICIAN -> TECH)")
     _reconcile_gateway_roles()
+    print("\n>>> SP1: capability assignments + work_orders.department_id")
+    _migrate_capabilities_and_wo_department()
 
     print("\n=== Summary ===")
     print(f"  Migrated OK : {len(targets) - len(failures)}/{len(targets)}")

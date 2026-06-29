@@ -81,6 +81,22 @@ CANONICAL_ROLES = frozenset(name for name, _ in CANONICAL_ROLE_DEFS)
 # baseline location is co-equal with roles, not optional.
 DEFAULT_LOCATION = ("LOC-DEFAULT", "Main Facility")
 
+# WS-A2 capability model. Reserved sentinel for the assignment table's department_id
+# meaning "tenant-wide scope" -- a NON-NULL value so it dedups in the composite PK
+# (SQLite treats NULLs as distinct, which would allow duplicate tenant-wide rows).
+# Its safety rests on no real erp_departments.id ever equalling '*' (guarded at the
+# only caller-supplied department-id write site, hydrate_department).
+TENANT_WIDE = "*"
+
+# The 4 baseline capabilities. Tenant-scoped registry (mirrors erp_roles) so admins
+# can add tenant-scoped capabilities later; only these 4 are seeded now.
+CAPABILITY_DEFS = (
+    ("REQUESTER",      "Raise maintenance work orders"),
+    ("STOREKEEPER",    "Inventory & procurement operations"),
+    ("PLANNER",        "Assign and schedule work orders"),
+    ("PARTS_APPROVER", "Approve/actuate purchase orders (separation of duties)"),
+)
+
 # Authoritative gateway identity-store path. Lives here (not in maintenance_backend)
 # so the running app AND the migration resolve the IDENTICAL file.
 GATEWAY_DB_PATH = os.path.join(
@@ -99,8 +115,22 @@ def seed_canonical_baseline(conn) -> dict:
     cur.execute("CREATE TABLE IF NOT EXISTS erp_locations (id TEXT PRIMARY KEY, name TEXT UNIQUE NOT NULL)")
     cur.executemany("INSERT OR IGNORE INTO erp_roles (role_name, description) VALUES (?, ?)", CANONICAL_ROLE_DEFS)
     cur.execute("INSERT OR IGNORE INTO erp_locations (id, name) VALUES (?, ?)", DEFAULT_LOCATION)
+    # WS-A2 SP1: capability registry + the (empty) assignment table. Both call sites of
+    # this seeder (provision + default bootstrap) create them, and the schema clone
+    # inherits the DDL into every future tenant. department_id carries the TENANT_WIDE
+    # sentinel default; FK parent existence is deferred by SQLite to DML, so the CREATE
+    # is safe even on a bare bootstrap (the seeder inserts no assignment rows).
+    cur.execute("CREATE TABLE IF NOT EXISTS erp_capabilities (capability TEXT PRIMARY KEY, description TEXT)")
+    cur.execute(
+        "CREATE TABLE IF NOT EXISTS erp_employee_capabilities ("
+        "employee_id TEXT NOT NULL, capability TEXT NOT NULL, department_id TEXT NOT NULL DEFAULT '*', "
+        "PRIMARY KEY (employee_id, capability, department_id), "
+        "FOREIGN KEY (employee_id) REFERENCES erp_employees(id) ON DELETE CASCADE, "
+        "FOREIGN KEY (capability) REFERENCES erp_capabilities(capability) ON DELETE RESTRICT)"
+    )
+    cur.executemany("INSERT OR IGNORE INTO erp_capabilities (capability, description) VALUES (?, ?)", CAPABILITY_DEFS)
     conn.commit()
-    return {"roles": len(CANONICAL_ROLE_DEFS), "locations": 1}
+    return {"roles": len(CANONICAL_ROLE_DEFS), "locations": 1, "capabilities": len(CAPABILITY_DEFS)}
 
 
 def _apply_connection_pragmas(conn: sqlite3.Connection) -> sqlite3.Connection:
