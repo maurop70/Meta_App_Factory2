@@ -50,6 +50,7 @@ from local_db import (
     _validate_tenant_id,
     DEFAULT_TENANT_ID,
     DB_PATH,
+    seed_canonical_baseline,
 )
 import plugin_manager
 
@@ -442,6 +443,9 @@ def _seed_tenant_baseline(conn) -> dict:
     ]
     cur.executemany("INSERT OR IGNORE INTO erp_categories (id, name) VALUES (?, ?)", categories)
 
+    # Canonical role registry + default location via the ONE shared seeder.
+    baseline = seed_canonical_baseline(conn)
+
     cur.execute("SELECT 1 FROM erp_employees WHERE id = 'ERP-1000'")
     seeded_admin = False
     if not cur.fetchone():
@@ -454,7 +458,9 @@ def _seed_tenant_baseline(conn) -> dict:
         seeded_admin = True
 
     conn.commit()
-    return {"departments": len(departments), "categories": len(categories), "admin_seeded": seeded_admin}
+    return {"departments": len(departments), "categories": len(categories),
+            "roles": baseline["roles"], "locations": baseline["locations"],
+            "admin_seeded": seeded_admin}
 
 
 def _run_cmd(cmd: list) -> dict:

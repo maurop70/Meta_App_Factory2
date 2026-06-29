@@ -56,6 +56,53 @@ def get_current_tenant():
     return _current_tenant_id.get()
 
 
+# ===========================================================================
+# Canonical baseline: the single source of truth for the role registry and the
+# default location, plus the ONE seeder that fills them. Both the provision path
+# (agent_matrix._seed_tenant_baseline) and the default/bootstrap path
+# (init_tables, below) call seed_canonical_baseline -- never two divergent seeders.
+# ===========================================================================
+
+# EXACTLY the 6 canonical base roles -- no alias rows. DM is "Department Manager".
+CANONICAL_ROLE_DEFS = (
+    ("ADMINISTRATOR", "Master system administrator (bootstrap identity)"),
+    ("HM",            "Head of Maintenance"),
+    ("DM",            "Department Manager"),
+    ("TECH",          "Technician"),
+    ("CFO",           "Chief Financial Officer"),
+    # TODO(review): VIEWER is seeded as a real row but has NO mutation-deny
+    # enforcement until WS-A2 restructures verify_rbac_pipeline.
+    ("VIEWER",        "Read-only observer"),
+)
+# Name-only set driving the create/delete guards and the list_roles flag.
+CANONICAL_ROLES = frozenset(name for name, _ in CANONICAL_ROLE_DEFS)
+
+# An empty erp_locations blocks MWO creation (location_id is a required FK), so a
+# baseline location is co-equal with roles, not optional.
+DEFAULT_LOCATION = ("LOC-DEFAULT", "Main Facility")
+
+# Authoritative gateway identity-store path. Lives here (not in maintenance_backend)
+# so the running app AND the migration resolve the IDENTICAL file.
+GATEWAY_DB_PATH = os.path.join(
+    _here, "..", "Module_0_Gateway", "data", "gateway_core.db"
+)
+
+
+def seed_canonical_baseline(conn) -> dict:
+    """THE single canonical seeder for erp_roles + erp_locations. Idempotent
+    (INSERT OR IGNORE), self-contained (creates the tables if absent so it is safe
+    on a bare bootstrap). NOTE: INSERT OR IGNORE does NOT repair drift on a
+    non-empty registry (e.g. legacy alias rows) -- that is handled once by
+    migrate_dynamic_roles._reconcile_default_registry."""
+    cur = conn.cursor()
+    cur.execute("CREATE TABLE IF NOT EXISTS erp_roles (role_name TEXT PRIMARY KEY, description TEXT)")
+    cur.execute("CREATE TABLE IF NOT EXISTS erp_locations (id TEXT PRIMARY KEY, name TEXT UNIQUE NOT NULL)")
+    cur.executemany("INSERT OR IGNORE INTO erp_roles (role_name, description) VALUES (?, ?)", CANONICAL_ROLE_DEFS)
+    cur.execute("INSERT OR IGNORE INTO erp_locations (id, name) VALUES (?, ?)", DEFAULT_LOCATION)
+    conn.commit()
+    return {"roles": len(CANONICAL_ROLE_DEFS), "locations": 1}
+
+
 def _apply_connection_pragmas(conn: sqlite3.Connection) -> sqlite3.Connection:
     """Apply the strict concurrency / integrity pragmas shared by every
     connection (default and per-tenant alike)."""
@@ -411,6 +458,9 @@ def init_tables():
     conn = get_db_connection()
     try:
         _create_base_tables(conn)
+        # Same single seeder as the provision path -> the default DB always carries
+        # the canonical roles + default location (never zero seeders for a rebuild).
+        seed_canonical_baseline(conn)
     except Exception as e:
         logger.error(f"Failed to initialize tables: {e}")
     finally:

@@ -33,17 +33,6 @@ import sys
 import time
 from collections import Counter
 
-# Default roles seeded into the new registry.
-DEFAULT_ROLES = [
-    ("ADMINISTRATOR", "Master system administrator (bootstrap identity)"),
-    ("ADMIN", "Administrator"),
-    ("DM", "Department Manager"),
-    ("HM", "Head of Maintenance"),
-    ("TECH", "Technician"),
-    ("TECHNICIAN", "Technician (legacy gateway label; kept for back-compat)"),
-    ("CFO", "Chief Financial Officer"),
-]
-
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _DATA_DIR = os.path.join(_HERE, "data")
 _ARCHIVES_DIR = os.path.join(_HERE, "archives")
@@ -77,14 +66,11 @@ def _backup(db_path):
 
 
 def _ensure_roles_table(cursor):
-    """Create the registry and seed defaults. Idempotent."""
+    """Ensure the registry TABLE exists. Row seeding is owned solely by
+    local_db.seed_canonical_baseline -- this migration no longer seeds."""
     cursor.execute(
         "CREATE TABLE IF NOT EXISTS erp_roles ("
         "role_name TEXT PRIMARY KEY, description TEXT)"
-    )
-    cursor.executemany(
-        "INSERT OR IGNORE INTO erp_roles (role_name, description) VALUES (?, ?)",
-        DEFAULT_ROLES,
     )
 
 
@@ -209,7 +195,7 @@ def _migrate_db(db_path):
             )
             print(f"    [NOTE] pre-existing FK orphans preserved (out of scope): {preexisting}")
         cursor.execute("COMMIT")
-        print(f"    [OK] Committed. erp_roles seeded ({len(DEFAULT_ROLES)} defaults).")
+        print("    [OK] Committed.")
     except Exception as e:
         cursor.execute("ROLLBACK")
         print(f"    [ABORT] {db_path} rolled back: {e}")
@@ -217,6 +203,67 @@ def _migrate_db(db_path):
         raise
     finally:
         cursor.execute("PRAGMA foreign_keys=ON")
+        conn.close()
+
+
+def _reconcile_default_registry():
+    """Atomically reconcile the default DB registry to canonical-6: seed canonical
+    rows, then drop the ADMIN/TECHNICIAN alias rows. If an alias is still HELD by an
+    employee, ROLL BACK and RAISE -- WS-A1 never mutates employee data, and 'fail-loud'
+    must mean 'no partial mutation' (the DB is left exactly as found). Reuses
+    CANONICAL_ROLE_DEFS (single source of truth) rather than the auto-committing
+    seed_canonical_baseline so the whole reconcile shares one commit boundary."""
+    from local_db import CANONICAL_ROLE_DEFS
+    db = os.path.join(_DATA_DIR, "maintenance_erp.db")
+    if not os.path.exists(db):
+        print("    [WARN] default DB not found; registry reconcile skipped.")
+        return
+    conn = sqlite3.connect(db)
+    conn.isolation_level = None  # explicit transaction control
+    cur = conn.cursor()
+    try:
+        cur.execute("BEGIN")
+        cur.execute("CREATE TABLE IF NOT EXISTS erp_roles (role_name TEXT PRIMARY KEY, description TEXT)")
+        cur.executemany(
+            "INSERT OR IGNORE INTO erp_roles (role_name, description) VALUES (?, ?)",
+            CANONICAL_ROLE_DEFS,
+        )
+        for alias in ("ADMIN", "TECHNICIAN"):
+            held = cur.execute(
+                "SELECT COUNT(*) FROM erp_employees WHERE role=?", (alias,)
+            ).fetchone()[0]
+            if held:
+                raise RuntimeError(
+                    f"Default DB has {held} employee(s) holding alias role '{alias}'. "
+                    f"WS-A1 will not mutate employee data -- reassign them, then re-run."
+                )
+            cur.execute("DELETE FROM erp_roles WHERE role_name=?", (alias,))
+        cur.execute("COMMIT")
+        print("    [OK] default-DB registry reconciled to canonical-6.")
+    except Exception:
+        cur.execute("ROLLBACK")  # undoes the canonical seed + any alias delete already done
+        raise
+    finally:
+        conn.close()
+
+
+def _reconcile_gateway_roles():
+    """Data-only: collapse the legacy TECHNICIAN label to canonical TECH in the shared
+    gateway identity store. Reuses the app's authoritative GATEWAY_DB_PATH so it mutates
+    the exact file the running app reads. (Ingest-side input normalization is OUT of
+    WS-A1 scope -- handed to WS-A2.)"""
+    from local_db import GATEWAY_DB_PATH
+    if not os.path.exists(GATEWAY_DB_PATH):
+        print("    [WARN] gateway DB not found; TECHNICIAN->TECH skipped.")
+        return
+    backup = _backup(GATEWAY_DB_PATH)  # mirror the migration's snapshot convention
+    print(f"    Gateway backup: {backup}")
+    conn = sqlite3.connect(GATEWAY_DB_PATH)
+    try:
+        n = conn.execute("UPDATE erp_employees SET role='TECH' WHERE role='TECHNICIAN'").rowcount
+        conn.commit()
+        print(f"    [OK] gateway TECHNICIAN->TECH reconciled ({n} row(s)).")
+    finally:
         conn.close()
 
 
@@ -244,6 +291,18 @@ def run():
             _migrate_db(db_path)
         except Exception:
             failures.append(db_path)
+
+    # TODO(WS-B1a-review): the per-DB pass above surfaces pre-existing FK orphans in
+    # the TEMPLATE default DB (1x erp_employees->erp_departments fk1, 1x
+    # work_orders->erp_employees fk4). They are out of WS-A1 scope, but the
+    # work_orders->erp_employees orphan matters once identity is re-homed per-tenant:
+    # the template is cloned into Tenant 1, so the dangling reference must be resolved
+    # before that clone, not after.
+    # Post-migration reconciliations (fail-loud: a held-alias raise halts the run).
+    print("\n>>> Reconciling default-DB registry to canonical-6")
+    _reconcile_default_registry()
+    print("\n>>> Reconciling gateway identity store (TECHNICIAN -> TECH)")
+    _reconcile_gateway_roles()
 
     print("\n=== Summary ===")
     print(f"  Migrated OK : {len(targets) - len(failures)}/{len(targets)}")

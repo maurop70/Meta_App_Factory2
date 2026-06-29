@@ -70,6 +70,8 @@ from local_db import (
     get_current_tenant,
     _validate_tenant_id,
     DEFAULT_TENANT_ID,
+    CANONICAL_ROLES,
+    GATEWAY_DB_PATH,
 )
 from starlette.middleware.base import BaseHTTPMiddleware
 from plugin_manager import trigger_tenant_hook
@@ -2414,6 +2416,8 @@ async def create_mwo(payload: NewMWO, jwt_payload: dict = Depends(verify_jwt_tok
     except Exception as e:
         conn.rollback()
         logger.error(f"Failed to create MWO: {e}")
+        # TODO(WS-A3): sanitize 500 detail (don't leak raw DB errors). str(e) surfaces
+        # raw sqlite text like "FOREIGN KEY constraint failed" to the client.
         raise HTTPException(status_code=500, detail=str(e) or "Internal server error while creating MWO.")
     finally:
         conn.close()
@@ -3000,9 +3004,8 @@ async def terminate_user_access(
 # real-time Gateway (IAM) personnel sync.
 # =====================================================================
 
-GATEWAY_DB_PATH = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "..", "Module_0_Gateway", "data", "gateway_core.db"
-)
+# GATEWAY_DB_PATH is imported from local_db (single authoritative resolver shared
+# by the running app and the migration).
 
 
 def _split_name(full_name: str):
@@ -3213,9 +3216,9 @@ async def escalate_user(
 # Dynamic Role Registry — CRUD + helpers
 # ============================================================================
 
-# Roles that ship with the system and may never be deleted. Both TECH and the
-# legacy gateway label TECHNICIAN are protected (back-compat for synced accounts).
-SYSTEM_DEFAULT_ROLES = {"ADMINISTRATOR", "ADMIN", "DM", "HM", "TECH", "TECHNICIAN", "CFO"}
+# The canonical 6 roles are the single source of truth (imported from local_db).
+# They ship with the system, may never be deleted/renamed, and are the only roles
+# that may exist -- custom base-role minting is deferred to a future tier.
 
 
 def get_registered_roles(cursor) -> set:
@@ -3246,7 +3249,7 @@ def list_roles(jwt_payload: dict = Depends(verify_jwt_token)):
         roles = [dict(r) for r in cursor.fetchall()]
         # Flag system-default roles so the UI can disable their delete control.
         for r in roles:
-            r["is_system_default"] = r["role_name"] in SYSTEM_DEFAULT_ROLES
+            r["is_system_default"] = r["role_name"] in CANONICAL_ROLES
         return {"status": "success", "data": roles}
     except Exception as e:
         logger.error(f"Failed to list roles: {e}")
@@ -3260,6 +3263,12 @@ def create_role(payload: RoleCreate, jwt_payload: dict = Depends(verify_jwt_toke
     role = jwt_payload.get("role")
     if role not in ["ADMINISTRATOR", "ADMIN"]:
         raise HTTPException(status_code=403, detail="RBAC Violation: Administrative clearance required.")
+    # TODO(WS-A3): remove/quarantine -- custom base-role minting is deferred to a
+    # future tier, so this endpoint is now a permanently-failing path (the UI panel
+    # RoleManagement.jsx will always surface this 403). Canonical names already exist
+    # and fall through to the 409 below.
+    if payload.role_name not in CANONICAL_ROLES:
+        raise HTTPException(status_code=403, detail="Custom base-role creation is deferred to a future tier.")
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
@@ -3283,8 +3292,8 @@ def delete_role(role_name: str = Path(...), jwt_payload: dict = Depends(verify_j
     if role not in ["ADMINISTRATOR", "ADMIN"]:
         raise HTTPException(status_code=403, detail="RBAC Violation: Administrative clearance required.")
     target = role_name.upper().strip()
-    # Guard (a): system-default roles are immutable.
-    if target in SYSTEM_DEFAULT_ROLES:
+    # Guard (a): canonical roles are immutable (undeletable).
+    if target in CANONICAL_ROLES:
         raise HTTPException(status_code=400, detail=f"Cannot delete system-default role '{target}'.")
     conn = get_db_connection()
     try:
