@@ -62,24 +62,39 @@ PLAN_APPROVAL_ENV = "CLAUDEAY_PLAN_APPROVAL"
 MAX_PLAN_REVISIONS = 3
 
 
+class OperatorChannelUnavailable(Exception):
+    """A human gate is required but no operator channel exists. HALT — never skip,
+    never hang. This system fails toward refuse: when it cannot ask a human, it
+    stops, it does not proceed ungated (Phase 1 piece 3)."""
+
+
+def _operator_channel_available(web_mode: bool) -> bool:
+    """An operator channel = the web approval UI (serviced by _approval_event) or a
+    real interactive terminal (serviced by input())."""
+    return web_mode or (sys.stdin is not None and sys.stdin.isatty())
+
+
+def _require_operator_channel(web_mode: bool, gate: str, trace_id: str = "") -> None:
+    """The one rule, in one place: a gate is required + no operator channel => HALT
+    (explicit and logged), never skip and never hang."""
+    if not _operator_channel_available(web_mode):
+        log_loop_event("HALT_NO_OPERATOR",
+                       f"{gate}: no operator channel — refusing to proceed ungated", trace_id)
+        raise OperatorChannelUnavailable(
+            f"{gate}: no operator channel (not web, no tty) — HALT")
+
+
 def _plan_gate_needed(user_intent: str, web_mode: bool) -> bool:
     """
-    Decide whether the interactive planning gate applies to this run.
-    Headless runs (no terminal, not web-driven) skip the gate LOUDLY:
-    nothing would ever answer the approval prompt — blocking would
-    deadlock the thread (the web approval event is only serviced by
-    operator-facing surfaces).
+    Whether POLICY requires the plan gate (mode + tier). The operator-channel check
+    is intentionally NOT here: 'can we service the gate' is a HALT enforced at the
+    call site via _require_operator_channel — a missing channel must HALT, never
+    silently skip the gate (Phase 1 piece 3).
     """
     mode = os.getenv(PLAN_APPROVAL_ENV, "always").strip().lower()
     if mode == "off":
         return False
     if mode == "tier2" and classify_tier(user_intent).tier < 2:
-        return False
-    has_operator_channel = web_mode or (sys.stdin is not None and sys.stdin.isatty())
-    if not has_operator_channel:
-        # Plain ASCII: this branch runs in piped/headless contexts (cp1252-safe)
-        print("[PLANNER] WARNING: no operator channel (headless run) - plan "
-              "approval gate SKIPPED. Set CLAUDEAY_PLAN_APPROVAL=off to silence.")
         return False
     return True
 
@@ -167,7 +182,10 @@ class AutonomousLoop:
         self.context_files: list[str] = []
         self.web_mode = web_mode
         self.trace_id = str(uuid.uuid4())[:8]
-        self._tier3_authorized_for: str | None = None
+        self._authorization = None              # plan-scoped capability token (option c)
+        self._plan_id: str | None = None        # stable approved-plan identity it binds to
+        self._minted_ceiling: int | None = None # approved tier ceiling (None ⇒ no token)
+        self._workdir: str = ""                 # executor confinement handed to the hook
         self._history: list[dict] = []
 
     # ── Checkpointing ──────────────────────────────────────────────────────
@@ -201,14 +219,39 @@ class AutonomousLoop:
         instruction instead of halting the run.
         """
         loop_status_buffer.append({"type": "approval_required", "msg": prompt_msg})
-        # Deadlock guard: input() in a non-tty context blocks forever, so any
-        # run without a real terminal goes through the web approval event.
-        if self.web_mode or sys.stdin is None or not sys.stdin.isatty():
+        # The one rule: a gate needing an answer + no operator channel => HALT.
+        # Never wait on an approval event that nothing will ever set (the old
+        # deadlock), and never silently proceed.
+        if not _operator_channel_available(self.web_mode):
+            log_loop_event("HALT_NO_OPERATOR",
+                           f"await_directive: {prompt_msg[:120]}", self.trace_id)
+            raise OperatorChannelUnavailable(
+                "await_directive: no operator channel — HALT")
+        if self.web_mode:                       # serviced by the UI approval event
             _approval_event.wait()
             _approval_event.clear()
             return _approval_response[0].strip()
         print(f"\n[ARCHITECT] ⏸ {prompt_msg}")
         return input("Your decision: ").strip()
+
+    # ── Build scope (mitigation #2: plan-declared workdir) ────────────────
+
+    def _resolve_workdir(self) -> str:
+        """The executor is confined to the plan-declared subtree(s). Until the
+        panel/chair front-end supplies that scope field (FLAGGED Phase-2 design
+        input — the panel must emit a workdir/scope per approved plan), an operator
+        may declare it via CLAUDEAY_BUILD_WORKDIR; when undeclared it falls back to
+        the repo root and the approval gate surfaces that whole-repo breadth plainly
+        so the user is never confined-by-default to less than they can see. The
+        control plane is guarded regardless of workdir (mitigation #1), so an
+        undeclared/wide scope still cannot edit the wall."""
+        declared = os.getenv("CLAUDEAY_BUILD_WORKDIR", "").strip()
+        if declared:
+            p = Path(declared)
+            if not p.is_absolute():
+                p = BRIDGE_ROOT.parent / declared
+            return str(p.resolve())
+        return str(BRIDGE_ROOT.parent)          # repo root (undeclared) — surfaced as such
 
     # ── Interactive Planner (upfront plan approval + revision loop) ───────
 
@@ -233,12 +276,13 @@ class AutonomousLoop:
         except Exception as e:
             return f"[planner error: {str(e)[:160]}]"
 
-    def _planning_phase(self, user_intent: str) -> str | None:
+    def _planning_phase(self, user_intent: str, scope_note: str = "") -> str | None:
         """
         Draft → print → await approval. Non-approval, non-stop input is plan
         FEEDBACK: the plan is redrafted with it (course correction before any
         execution). Returns the approved intent, or None when the operator
-        stops the run.
+        stops the run. scope_note (item 3) is the plain-language size of what the
+        operator is about to mint — shown BEFORE the approve prompt.
         """
         feedback = ""
         for revision in range(MAX_PLAN_REVISIONS):
@@ -253,15 +297,21 @@ class AutonomousLoop:
                   f"──────────\n{plan}\n")
             log_loop_event("PLAN_DRAFTED", plan, self.trace_id)
             directive = self._await_directive(
-                "Plan drafted — 'yes' to approve, 'stop' to abort, or type "
-                "feedback to revise")
+                f"{scope_note}Plan drafted — 'yes' to approve, 'stop' to abort, or "
+                "type feedback to revise")
             low = directive.lower()
-            if low in ("yes", "y", "approve", "approved", "go", "proceed", ""):
+            if low in ("yes", "y", "approve", "approved", "go", "proceed"):
                 log_loop_event("PLAN_APPROVED", f"revision {revision + 1}",
                                self.trace_id)
                 return user_intent
             if low in ("stop", "halt", "abort", "no"):
                 return None
+            if low == "":
+                # Blank is NOT approval. This system fails toward refuse: approval
+                # requires a deliberate 'yes', never an accidental Enter. Re-prompt.
+                log_loop_event("PLAN_BLANK_REPROMPT", "blank input — not approval",
+                               self.trace_id)
+                continue
             feedback = directive
             log_loop_event("PLAN_FEEDBACK", directive, self.trace_id)
         print(f"[PLANNER] {MAX_PLAN_REVISIONS} revisions without approval — halting.")
@@ -286,7 +336,27 @@ class AutonomousLoop:
 
         # ── Interactive Planner gate (CLAUDEAY_PLAN_APPROVAL) ─────────────
         if _plan_gate_needed(user_intent, self.web_mode):
-            approved_intent = self._planning_phase(user_intent)
+            # Item 3: surface the size of what's about to be minted, in plain
+            # language, BEFORE the operator approves.
+            ceiling = classify_tier(user_intent).tier
+            workdir = self._resolve_workdir()
+            scope_note = (
+                f"This will authorize a TIER-{ceiling} build confined to:\n"
+                f"    {workdir}"
+                + ("   ⚠ WHOLE REPO (no subtree declared — set CLAUDEAY_BUILD_WORKDIR "
+                   "to narrow)\n" if workdir == str(BRIDGE_ROOT.parent) else "\n")
+                + "Approving mints ONE key for the whole multi-step build at that "
+                  "ceiling. A step needing a higher tier will stop and ask again.\n")
+            try:
+                _require_operator_channel(self.web_mode, "plan-approval", self.trace_id)
+                approved_intent = self._planning_phase(user_intent, scope_note)
+            except OperatorChannelUnavailable as _oc:
+                log_loop_event("HALT", str(_oc), self.trace_id)
+                self._checkpoint("halted", str(_oc))
+                record_episode(self.trace_id, user_intent, "halted",
+                               str(_oc), tags=["halted", "no_operator"])
+                print(f"\n[ARCHITECT] {_oc}")
+                return
             if approved_intent is None:
                 log_loop_event("PLAN_REJECTED", user_intent, self.trace_id)
                 self._checkpoint("halted", "operator rejected plan")
@@ -296,208 +366,236 @@ class AutonomousLoop:
                 print("\n[ARCHITECT] Run aborted at planning gate.")
                 return
             user_intent = approved_intent
+            # ── Option (c): the ONE mint, gated by the approval above. Bound to a
+            # stable plan identity (trace + approved-plan hash), carrying the approved
+            # tier ceiling + workdir. Reused across every iteration. Human-as-sole-
+            # minter preserved: this is the only mint() the loop performs.
+            import hashlib, executor_gate
+            self._minted_ceiling = ceiling
+            self._workdir = workdir
+            self._plan_id = (f"{self.trace_id}|"
+                             f"{hashlib.sha256(user_intent.encode('utf-8')).hexdigest()}")
+            self._authorization = executor_gate.mint(
+                self._plan_id, tier_ceiling=self._minted_ceiling,
+                trace_id=self.trace_id, workdir=self._workdir)
+            log_loop_event("TOKEN_MINTED",
+                           f"plan-scoped tier={self._minted_ceiling} "
+                           f"workdir={self._workdir}", self.trace_id)
 
         budget = RunBudget(self.trace_id, max_iterations=self.MAX_ITERATIONS)
         current_instruction = user_intent
         final_status, final_summary = "halted", ""
 
-        while not self.task_complete:
-            self.iteration += 1
-            print(f"\n[ARCHITECT] ── Iteration {self.iteration} "
-                  f"(trace {self.trace_id}) ──────────────")
+        try:
+            while not self.task_complete:
+                self.iteration += 1
+                print(f"\n[ARCHITECT] ── Iteration {self.iteration} "
+                      f"(trace {self.trace_id}) ──────────────")
 
-            # 1. Tier gate — on the instruction, BEFORE building the mandate
-            if current_instruction != self._tier3_authorized_for:
-                gate_reason = requires_user_input(current_instruction)
-                if gate_reason:
-                    directive = self._await_directive(
-                        f"Tier 3 action requires approval ({gate_reason}): "
-                        f"{current_instruction[:200]}")
-                    log_loop_event("TIER3_DIRECTIVE", directive, self.trace_id)
-                    if not directive or directive.lower() in ("stop", "halt", "abort", "no"):
-                        final_status, final_summary = "halted", f"operator declined: {gate_reason}"
-                        break
-                    if directive.lower() in ("yes", "approve", "approved", "go", "proceed"):
-                        # Same instruction, now operator-authorized
-                        self._tier3_authorized_for = current_instruction
-                        current_instruction = (
-                            f"{current_instruction}\n\n[OPERATOR AUTHORIZATION "
-                            f"GRANTED for this Tier 3 action — trace {self.trace_id}]")
-                        self._tier3_authorized_for = current_instruction
-                    else:
-                        current_instruction = directive
-                        continue
-
-            # 2. Budget charge
-            try:
-                budget.charge()
-            except BudgetExceeded as be:
-                loop_status_buffer.append({"type": "escalate", "msg": str(be)})
-                log_loop_event("BUDGET_EXCEEDED", str(be), self.trace_id)
-                print(f"[LOOP] 💸 {be}")
-                final_status, final_summary = "escalate", str(be)
-                break
-
-            # 3. Load telemetry (allowlist-filtered)
-            telemetry = load_recent_telemetry()
-            if telemetry["critical_events"]:
-                print(f"[TELEMETRY] ⚠ {len(telemetry['critical_events'])} "
-                      f"critical events detected")
-
-            # 4. Build mandate (scoped rules + untrusted telemetry + episodes)
-            code_context = (read_code_context(self.context_files)
-                           if self.context_files else None)
-            mandate = dispatcher.build_prompt(
-                instruction=current_instruction,
-                telemetry=telemetry if telemetry["total_events"] > 0 else None,
-                code_context=code_context,
-                trace_id=self.trace_id,
-            )
-
-            # 5. Dispatch to executor
-            print(f"[ARCHITECT] Sending mandate to executor...")
-            log_loop_event("MANDATE_SENT", mandate, self.trace_id)
-            try:
-                ledger = send_mandate(mandate)
-            except RuntimeError as e:
-                print(f"\n[HALT] {e}")
-                log_loop_event("HALT", str(e), self.trace_id)
-                final_status, final_summary = "error", str(e)
-                break
-
-            print(f"[EXECUTOR] Ledger received ({len(ledger)} chars)")
-            log_loop_event("LEDGER_RECEIVED", ledger, self.trace_id)
-
-            # 6. Evaluate (structured LEDGER_JSON primary)
-            result = evaluate_and_log(
-                ledger, mandate_id=f"{self.trace_id}:it{self.iteration}")
-            log_loop_event("LEDGER_EVALUATED",
-                           f"{result.status.value}: {result.summary}", self.trace_id)
-            self._history.append({
-                "iteration": self.iteration,
-                "instruction": current_instruction[:160],
-                "status": result.status.value,
-                "structured": result.structured,
-                "summary": result.summary[:160],
-            })
-            self._checkpoint(result.status.value, result.summary)
-
-            # Low-confidence COMPLETE (prose-only ledger) → verify, don't trust
-            if (result.status == LedgerStatus.COMPLETE
-                    and result.confidence < 0.5):
-                print(f"\n[ARCHITECT] ⚠ Unverified ledger "
-                      f"(confidence {result.confidence:.0%}, "
-                      f"{'no ' if not result.structured else ''}LEDGER_JSON) — "
-                      f"verification iteration")
-                result.status = LedgerStatus.ITERATE
-                result.summary = (
-                    f"Unverified ledger (confidence {result.confidence:.0%}) — "
-                    f"re-run with explicit verification and emit LEDGER_JSON")
-
-            # 7. COMPLETE → Auditor verification before acceptance
-            if result.status == LedgerStatus.COMPLETE:
-                tier = classify_tier(user_intent)
-                if tier.tier >= 1:
-                    print(f"[AUDITOR] Verifying executor claims "
-                          f"(tier {tier.tier})...")
-                    report = auditor.audit(
-                        instruction=user_intent,
-                        ledger_result=result,
-                        trace_id=self.trace_id,
-                        run_suites=True,
-                    )
-                    log_loop_event("AUDIT", report.summary(), self.trace_id)
-                    if not report.verified:
-                        print(f"[AUDITOR] ❌ {report.summary()}")
-                        failed = [c for c in report.checks if not c.ok]
-                        current_instruction = (
-                            "The Auditor rejected your COMPLETE claim. "
-                            "Fix these verified discrepancies and emit a new "
-                            "LEDGER_JSON:\n" +
-                            "\n".join(f"- {c.name}: {c.detail}" for c in failed[:5]))
-                        continue
-                    print(f"[AUDITOR] ✅ {report.summary()}")
-
-                loop_status_buffer.append({
-                    "type": "complete",
-                    "msg": result.summary,
-                    "confidence": result.confidence
-                })
-                print(f"\n[ARCHITECT] ✅ {result.summary}")
-                self.task_complete = True
-                final_status, final_summary = "complete", result.summary
-                break
-
-            elif result.status == LedgerStatus.ESCALATE:
-                reason = result.needs_human or result.next_action or result.summary
-                directive = self._await_directive(reason)
-                if directive.lower() in ("stop", "halt", "abort"):
-                    final_status, final_summary = "halted", f"escalation: {reason}"
+                # 1. Drift gate — re-classify the (possibly derived) instruction EACH
+                #    iteration against the MINTED ceiling (option c). Within ceiling ⇒
+                #    proceed under the one plan-scoped token. ABOVE ceiling ⇒ a NEW
+                #    decision: HALT for a fresh approval. An inline 'yes' must never raise
+                #    the approved ceiling by silently no-op'ing under the hook cap (#1) —
+                #    fail toward refuse, and honest to the operator.
+                step = classify_tier(current_instruction)
+                if self._minted_ceiling is not None and step.tier > self._minted_ceiling:
+                    msg = (f"This build was approved for tier {self._minted_ceiling}; this "
+                           f"step needs tier {step.tier} "
+                           f"({', '.join(step.reasons) or 'higher risk'}). That's a new "
+                           f"decision — approve a fresh tier-{step.tier} build or stop. An "
+                           f"inline 'yes' cannot raise the approved ceiling.")
+                    loop_status_buffer.append({"type": "approval_required", "msg": msg})
+                    log_loop_event("DRIFT_ABOVE_CEILING", msg, self.trace_id)
+                    final_status, final_summary = "halted", msg
                     break
-                current_instruction = directive
-                log_loop_event("ESCALATE_DIRECTIVE", directive, self.trace_id)
-                continue
 
-            elif result.status == LedgerStatus.ERROR:
-                loop_status_buffer.append({
-                    "type": "error",
-                    "msg": result.error_detail or result.summary
-                })
-                print(f"\n[ARCHITECT] ❌ {result.summary}")
-                log_loop_event("ERROR_DETECTED",
-                               result.error_detail or result.summary, self.trace_id)
-                # Postmortem draft → pending rules queue (§13.2)
-                postmortem.draft_from_failure(
-                    self.trace_id, user_intent,
-                    result.error_detail or result.summary, ledger[:300])
+                # 2. Budget charge
                 try:
-                    import httpx
+                    budget.charge()
+                except BudgetExceeded as be:
+                    loop_status_buffer.append({"type": "escalate", "msg": str(be)})
+                    log_loop_event("BUDGET_EXCEEDED", str(be), self.trace_id)
+                    print(f"[LOOP] 💸 {be}")
+                    final_status, final_summary = "escalate", str(be)
+                    break
 
-                    async def _alert():
-                        async with httpx.AsyncClient(timeout=5.0) as client:
-                            await client.post(
-                                "http://127.0.0.1:5030/api/qa/alerts",
-                                json={
-                                    "source": "LOOP_ENGINE",
-                                    "severity": "HIGH",
-                                    "message": result.error_detail,
-                                    "trace_id": self.trace_id,
-                                    "ledger_snippet": ledger[:500]
-                                }
-                            )
-                    asyncio.run(_alert())
-                except Exception:
-                    pass
-                final_status, final_summary = "error", result.summary
-                break
+                # 3. Load telemetry (allowlist-filtered)
+                telemetry = load_recent_telemetry()
+                if telemetry["critical_events"]:
+                    print(f"[TELEMETRY] ⚠ {len(telemetry['critical_events'])} "
+                          f"critical events detected")
 
-            elif result.status == LedgerStatus.ITERATE:
-                loop_status_buffer.append({
-                    "type": "iterate",
-                    "msg": result.summary
-                })
-                print(f"\n[ARCHITECT] 🔄 {result.summary}")
-                if result.next_action:
-                    # Structured ledger told us the next step — use it directly
-                    current_instruction = result.next_action
-                    continue
-                fallback_instruction = (
-                    f"Continue execution based on this completed ledger:\n\n"
-                    f"{ledger[:3000]}\n\n"
-                    f"Proceed to the next logical step per CLAUDE_RULES.md."
+                # 4. Build mandate (scoped rules + untrusted telemetry + episodes)
+                code_context = (read_code_context(self.context_files)
+                               if self.context_files else None)
+                mandate = dispatcher.build_prompt(
+                    instruction=current_instruction,
+                    telemetry=telemetry if telemetry["total_events"] > 0 else None,
+                    code_context=code_context,
+                    trace_id=self.trace_id,
                 )
+
+                # 5. Dispatch to executor
+                print(f"[ARCHITECT] Sending mandate to executor...")
+                log_loop_event("MANDATE_SENT", mandate, self.trace_id)
                 try:
-                    architect = asyncio.run(_consult_architect(
-                        ledger, current_instruction, self.iteration))
-                    current_instruction = (architect.get("next_mandate")
-                                           or fallback_instruction)
-                    if architect.get("decision") == "ESCALATE":
-                        loop_status_buffer.append({
-                            "type": "approval_required",
-                            "msg": architect.get("escalation_reason",
-                                                 "Escalation required")})
-                except Exception:
-                    current_instruction = fallback_instruction
+                    ledger = send_mandate(mandate, authorization=self._authorization,
+                                          plan_id=self._plan_id)
+                except RuntimeError as e:
+                    print(f"\n[HALT] {e}")
+                    log_loop_event("HALT", str(e), self.trace_id)
+                    final_status, final_summary = "error", str(e)
+                    break
+
+                print(f"[EXECUTOR] Ledger received ({len(ledger)} chars)")
+                log_loop_event("LEDGER_RECEIVED", ledger, self.trace_id)
+
+                # 6. Evaluate (structured LEDGER_JSON primary)
+                result = evaluate_and_log(
+                    ledger, mandate_id=f"{self.trace_id}:it{self.iteration}")
+                log_loop_event("LEDGER_EVALUATED",
+                               f"{result.status.value}: {result.summary}", self.trace_id)
+                self._history.append({
+                    "iteration": self.iteration,
+                    "instruction": current_instruction[:160],
+                    "status": result.status.value,
+                    "structured": result.structured,
+                    "summary": result.summary[:160],
+                })
+                self._checkpoint(result.status.value, result.summary)
+
+                # Low-confidence COMPLETE (prose-only ledger) → verify, don't trust
+                if (result.status == LedgerStatus.COMPLETE
+                        and result.confidence < 0.5):
+                    print(f"\n[ARCHITECT] ⚠ Unverified ledger "
+                          f"(confidence {result.confidence:.0%}, "
+                          f"{'no ' if not result.structured else ''}LEDGER_JSON) — "
+                          f"verification iteration")
+                    result.status = LedgerStatus.ITERATE
+                    result.summary = (
+                        f"Unverified ledger (confidence {result.confidence:.0%}) — "
+                        f"re-run with explicit verification and emit LEDGER_JSON")
+
+                # 7. COMPLETE → Auditor verification before acceptance
+                if result.status == LedgerStatus.COMPLETE:
+                    tier = classify_tier(user_intent)
+                    if tier.tier >= 1:
+                        print(f"[AUDITOR] Verifying executor claims "
+                              f"(tier {tier.tier})...")
+                        report = auditor.audit(
+                            instruction=user_intent,
+                            ledger_result=result,
+                            trace_id=self.trace_id,
+                            run_suites=True,
+                        )
+                        log_loop_event("AUDIT", report.summary(), self.trace_id)
+                        if not report.verified:
+                            print(f"[AUDITOR] ❌ {report.summary()}")
+                            failed = [c for c in report.checks if not c.ok]
+                            current_instruction = (
+                                "The Auditor rejected your COMPLETE claim. "
+                                "Fix these verified discrepancies and emit a new "
+                                "LEDGER_JSON:\n" +
+                                "\n".join(f"- {c.name}: {c.detail}" for c in failed[:5]))
+                            continue
+                        print(f"[AUDITOR] ✅ {report.summary()}")
+
+                    loop_status_buffer.append({
+                        "type": "complete",
+                        "msg": result.summary,
+                        "confidence": result.confidence
+                    })
+                    print(f"\n[ARCHITECT] ✅ {result.summary}")
+                    self.task_complete = True
+                    final_status, final_summary = "complete", result.summary
+                    break
+
+                elif result.status == LedgerStatus.ESCALATE:
+                    reason = result.needs_human or result.next_action or result.summary
+                    try:
+                        directive = self._await_directive(reason)
+                    except OperatorChannelUnavailable as _oc:
+                        log_loop_event("HALT", str(_oc), self.trace_id)
+                        final_status, final_summary = "halted", str(_oc)
+                        break
+                    if directive.lower() in ("stop", "halt", "abort"):
+                        final_status, final_summary = "halted", f"escalation: {reason}"
+                        break
+                    current_instruction = directive
+                    log_loop_event("ESCALATE_DIRECTIVE", directive, self.trace_id)
+                    continue
+
+                elif result.status == LedgerStatus.ERROR:
+                    loop_status_buffer.append({
+                        "type": "error",
+                        "msg": result.error_detail or result.summary
+                    })
+                    print(f"\n[ARCHITECT] ❌ {result.summary}")
+                    log_loop_event("ERROR_DETECTED",
+                                   result.error_detail or result.summary, self.trace_id)
+                    # Postmortem draft → pending rules queue (§13.2)
+                    postmortem.draft_from_failure(
+                        self.trace_id, user_intent,
+                        result.error_detail or result.summary, ledger[:300])
+                    try:
+                        import httpx
+
+                        async def _alert():
+                            async with httpx.AsyncClient(timeout=5.0) as client:
+                                await client.post(
+                                    "http://127.0.0.1:5030/api/qa/alerts",
+                                    json={
+                                        "source": "LOOP_ENGINE",
+                                        "severity": "HIGH",
+                                        "message": result.error_detail,
+                                        "trace_id": self.trace_id,
+                                        "ledger_snippet": ledger[:500]
+                                    }
+                                )
+                        asyncio.run(_alert())
+                    except Exception:
+                        pass
+                    final_status, final_summary = "error", result.summary
+                    break
+
+                elif result.status == LedgerStatus.ITERATE:
+                    loop_status_buffer.append({
+                        "type": "iterate",
+                        "msg": result.summary
+                    })
+                    print(f"\n[ARCHITECT] 🔄 {result.summary}")
+                    if result.next_action:
+                        # Structured ledger told us the next step — use it directly
+                        current_instruction = result.next_action
+                        continue
+                    fallback_instruction = (
+                        f"Continue execution based on this completed ledger:\n\n"
+                        f"{ledger[:3000]}\n\n"
+                        f"Proceed to the next logical step per CLAUDE_RULES.md."
+                    )
+                    try:
+                        architect = asyncio.run(_consult_architect(
+                            ledger, current_instruction, self.iteration))
+                        current_instruction = (architect.get("next_mandate")
+                                               or fallback_instruction)
+                        if architect.get("decision") == "ESCALATE":
+                            loop_status_buffer.append({
+                                "type": "approval_required",
+                                "msg": architect.get("escalation_reason",
+                                                     "Escalation required")})
+                    except Exception:
+                        current_instruction = fallback_instruction
+
+        finally:
+            # Item 4: spend the plan-scoped token on EVERY exit (break, normal
+            # completion, or an uncaught exception mid-loop). Single-use across
+            # sessions; a spend failure must be VISIBLE, never swallowed.
+            try:
+                import executor_gate as _eg
+                _eg.consume(self._authorization)
+            except Exception as _ce:
+                log_loop_event("TOKEN_SPEND_FAILED", str(_ce), self.trace_id)
 
         # ── Run end: episode + final checkpoint ────────────────────────────
         record_episode(

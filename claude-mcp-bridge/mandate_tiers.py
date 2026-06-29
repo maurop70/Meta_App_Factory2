@@ -73,6 +73,8 @@ _TIERS: list[tuple[int, list[tuple[str, str]]]] = [
 class TierResult:
     tier: int
     reasons: list[str] = field(default_factory=list)
+    needs_human: bool = False   # refuse-to-classify signal (fail-high on the unknown)
+    mislabeled: bool = False    # structured fields under-declared vs. concrete evidence
 
     @property
     def requires_human(self) -> bool:
@@ -95,6 +97,137 @@ def classify_tier(instruction: str) -> TierResult:
             return TierResult(tier=tier, reasons=reasons)
 
     return TierResult(tier=1, reasons=["no pattern matched — mutation assumed"])
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Phase 1 piece 2 — STRUCTURED-ACTION CLASSIFIER (two judges: declared ⊕ evidence)
+# ═════════════════════════════════════════════════════════════════════════════
+#
+# LIMITATION — READ BEFORE TRUSTING THIS (stated plainly, like the call-stack
+# boundary in executor_gate). The evidence judge is a regex/pattern scan: a SPEED
+# BUMP, NOT A WALL. It catches the disguises enumerated in the adversarial matrix,
+# NOT every possible one — that limit is inherent to pattern matching and cannot be
+# regex'd away. It is acceptable ONLY because this detector is ONE LAYER among
+# several: unrecognized mutations FAIL HIGH by design (the unknown is refused, not
+# waved through), and the real defense against a cleverly disguised plan is the
+# human approval gate and, later, the mixed-lineage panel. Do NOT treat this as a
+# complete defense against disguise — it REDUCES that risk, it does not eliminate it.
+
+
+def _known_prod_targets() -> set:
+    """Known-prod targets come from the SINGLE named source the SSH wire already
+    gates on (ssh_wire.APPROVED_HOSTS) — never a hardcoded IP list here, so a
+    changed/added prod host stays recognized as prod. Lazy import keeps this
+    module dependency-light."""
+    try:
+        from ssh_wire import APPROVED_HOSTS
+        out = set()
+        for ip, name in APPROVED_HOSTS.items():
+            if ip:
+                out.add(str(ip).lower())
+            if name:
+                out.add(str(name).lower())
+        return out
+    except Exception:
+        return set()
+
+
+# Evidence patterns run against the CONCRETE action payload, never free prose. They
+# can only RAISE the tier. (Prod *hosts* are sourced above, not hardcoded here.)
+_EVIDENCE_T3: list[tuple[str, str]] = [
+    (r"\bdeploy(?:ing|ment)?\b|deploy_(?:erp|maf|edge)\.py", "deploy"),
+    (r"\b(?:systemctl|service)\b.{0,30}\b(?:restart|stop|start|reload)\b|"
+     r"\b(?:restart|reboot|bounce|kill)\b.{0,30}\b(?:service|daemon|unit|server|core-engine|erp-backend)\b",
+     "service/prod restart"),
+    (r"\b(?:prod|production|droplet|digitalocean|nyc\d?)\b", "production keyword"),
+    (r"\b(?:delete|drop|truncate|wipe|purge)\b.{0,40}\b(?:table|database|db|records?|users?|schema)\b|"
+     r"\bmigrat(?:e|ion)\b.{0,40}\b(?:prod|live|remote)\b", "destructive/live DB"),
+    (r"\bmerge\b.{0,30}\b(?:into|to)\b.{0,10}\bmain\b|\bpush\b.{0,20}\b(?:origin/)?main\b", "merge/push to main"),
+    (r"\b(?:billing|invoice|charge|payment|stripe|payout|refund|subscription|pricing|ledger)\b", "money/billing"),
+    (r"\b(?:child[_\s-]?safety|coppa|age[_\s-]?gate|parental|minor|kids)\b", "child-safety (Module A)"),
+    (r"\b(?:disable|bypass|skip|relax|grant|elevate)\b.{0,20}\bauth|"
+     r"\b(?:auth[nz]?|rbac|acl|permission|role|oauth|session|firewall|cors|csp)\b.{0,25}"
+     r"\b(?:boundary|policy|middleware|change|disable|bypass)\b", "auth/security boundary"),
+    (r"\b(?:rm\s+-rf|format\s+[a-z]:|mkfs|del\s+/[sq])\b", "destructive OS command"),
+    (r"deploy_(?:erp|maf|edge)\.py|executor_gate\.py|(?:^|[\\/])\.env\b", "writes a protected/guard file"),
+]
+_EVIDENCE_T2: list[tuple[str, str]] = [
+    (r"\bgit\s+(?:add|commit|push)\b", "version control"),
+]
+
+# A shell command is benign ONLY if it is a SINGLE recognized command with NO tail.
+# Any shell-chaining or substitution metacharacter disqualifies it — closing the
+# benign-prefix-dangerous-tail bypass (e.g. "echo ok && rm -rf /prod").
+_SHELL_METACHARS = re.compile(r"[&;|`\n<>]|\$\(")
+_BENIGN_SHELL = re.compile(
+    r"^\s*(?:echo|ls|dir|pwd|cat|type|head|tail|grep|find|whoami|date|"
+    r"git\s+(?:status|log|diff|show)|pytest|python\s+-m\s+pytest|npm\s+(?:test|run\s+test))\b")
+
+
+def _is_benign_shell(cmd: str) -> bool:
+    if _SHELL_METACHARS.search(cmd):
+        return False                       # any chaining/substitution => NOT benign
+    return bool(_BENIGN_SHELL.match(cmd.strip().lower()))
+
+
+def _evidence_tier(hay: str) -> tuple:
+    for t in _known_prod_targets():
+        if t and t in hay:
+            return 3, [f"evidence: production target ({t})"]
+    for pat, desc in _EVIDENCE_T3:
+        if re.search(pat, hay):
+            return 3, [f"evidence: {desc}"]
+    for pat, desc in _EVIDENCE_T2:
+        if re.search(pat, hay):
+            return 2, [f"evidence: {desc}"]
+    return 0, []
+
+
+def _declared_tier(action: dict) -> tuple:
+    touches = {str(x).lower() for x in (action.get("touches") or [])}
+    tier, reasons = 0, []
+    if action.get("deploys") or "production" in touches:
+        tier = max(tier, 3); reasons.append("declared: production/deploy")
+    if {"billing", "money", "payments"} & touches:
+        tier = max(tier, 3); reasons.append("declared: billing")
+    if {"child_safety", "module_a"} & touches:
+        tier = max(tier, 3); reasons.append("declared: child-safety")
+    if {"auth_boundary", "security_boundary", "authz"} & touches:
+        tier = max(tier, 3); reasons.append("declared: auth boundary")
+    if action.get("merges_main"):
+        tier = max(tier, 3); reasons.append("declared: merge-main")
+    if action.get("db_op") in ("delete", "drop", "truncate", "migrate"):
+        tier = max(tier, 3); reasons.append(f"declared: db {action.get('db_op')}")
+    return tier, reasons
+
+
+def classify_action(action: dict) -> TierResult:
+    """Classify ONE structured action. Structured fields are primary; an independent
+    evidence scan of the concrete payload can only RAISE the tier (never lower it).
+    Unrecognized mutation => fail-high (Tier 3, needs_human). Never defaults to safe.
+    See the LIMITATION note above — this is one layer, not a complete defense."""
+    a_type  = str(action.get("type", "")).lower()
+    target  = str(action.get("target") or action.get("command") or action.get("path") or "")
+    touches = [str(x).lower() for x in (action.get("touches") or [])]
+
+    declared, dr = _declared_tier(action)
+    evidence, er = _evidence_tier(f"{a_type} {target} {' '.join(touches)}".lower())
+
+    tier = max(declared, evidence)
+    mislabeled = evidence > declared and (action.get("touches") is not None or declared > 0)
+    reasons = dr + er + (["MISLABEL: evidence exceeds declared fields"] if mislabeled else [])
+
+    if tier == 0:    # nothing flagged — benign allowlist, else FAIL HIGH
+        if a_type in ("read", "list", "exists", "status", "diagnose"):
+            return TierResult(0, ["read-only"])
+        if a_type == "shell" and _is_benign_shell(target):
+            return TierResult(1, ["recognized-benign shell (single command, no tail)"])
+        if a_type == "file_write":
+            return TierResult(1, ["local file mutation"])
+        if a_type == "git":
+            return TierResult(2, ["git op"])
+        return TierResult(3, ["unclassified mutation — fail-high"], needs_human=True)
+    return TierResult(tier, reasons, mislabeled=mislabeled)
 
 
 if __name__ == "__main__":
