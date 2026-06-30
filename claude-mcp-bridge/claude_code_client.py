@@ -86,10 +86,14 @@ def _build_argv(perm_tier: int, workdir: str = "") -> list[str]:
     # ONLY the named tools/commands for this tier and denies everything else; it is
     # fail-closed. --dangerously-skip-permissions is retired. Tier 0 = read-only plan.
     # Piece 5: workdir is passed to the hook so Edit/Write outside it are denied.
-    import sys as _sys, os as _os, json as _json
+    import sys as _sys, os as _os, json as _json, base64 as _b64
     _bridge = _os.path.dirname(_os.path.abspath(__file__))
     _hook = _os.path.join(_bridge, "executor_permit_hook.py")
-    _cmd = (f'"{_sys.executable}" "{_hook}" {int(perm_tier)} "{workdir}"').replace("\\", "/")
+    # workdir may be a single path OR a JSON array of subtrees (multi-subtree scope,
+    # Phase 4). base64 it so its quotes/brackets survive the hook command argv intact;
+    # the hook decodes it fail-closed.
+    _wd = _b64.urlsafe_b64encode((workdir or "").encode("utf-8")).decode("ascii")
+    _cmd = (f'"{_sys.executable}" "{_hook}" {int(perm_tier)} {_wd}').replace("\\", "/")
     _settings = _json.dumps({"hooks": {"PreToolUse": [
         {"matcher": "*", "hooks": [{"type": "command", "command": _cmd}]}]}})
     _mode = "plan" if int(perm_tier) == 0 else "default"
@@ -116,7 +120,7 @@ def _send_via_claude_code(mandate: str, timeout: int, perm_tier: int = 0,
         input=mandate,
         capture_output=True,
         text=True,
-        cwd=(workdir or str(MAF_ROOT)),
+        cwd=str(MAF_ROOT),   # confinement is enforced by the hook (multi-subtree), not cwd
         timeout=timeout,
         encoding="utf-8",
         errors="replace"

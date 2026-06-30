@@ -46,7 +46,13 @@ GUARD_BASENAMES = {
 }
 
 def is_guard_path(path: str) -> bool:
-    base = str(path or "").replace("\\", "/").rstrip("/").split("/")[-1].lower()
+    norm = str(path or "").replace("\\", "/").lower()
+    base = norm.rstrip("/").split("/")[-1]
+    # Phase 4: the ClaudeAY panel is enforcement-path — it originates the scope that
+    # mints the token and runs the fail-closed lineage check. A build must not edit the
+    # panel that scoped it; guard the whole package by path (avoids basename over-match).
+    if "claude-mcp-bridge/panel/" in norm:
+        return True
     return base in GUARD_BASENAMES or base.endswith("_wire.py")
 
 # ── Permitted TOOLS per tier ──
@@ -97,6 +103,32 @@ def _within(path: str, workdir: str) -> bool:
         return False
 
 
+def _parse_workdirs(workdir) -> list:
+    """Accept a single path string OR a JSON array of paths (multi-subtree scope, Phase
+    4). Fail-closed: a non-empty value that looks like a list but won't parse => [] so
+    the caller denies (never silently 'no confinement')."""
+    import json as _json
+    if isinstance(workdir, (list, tuple)):
+        return [str(w) for w in workdir if w]
+    s = str(workdir or "").strip()
+    if not s:
+        return []
+    if s[0] == "[":
+        try:
+            v = _json.loads(s)
+            return [str(w) for w in v if w] if isinstance(v, list) else []
+        except Exception:
+            return []
+    return [s]
+
+
+def _within_any(path: str, workdirs: list) -> bool:
+    """True iff path resolves inside ANY declared subtree. Each subtree is checked
+    individually with _within (realpath+commonpath, fail-closed). Inside none => denied:
+    the executor may touch exactly the declared areas, nothing between them."""
+    return any(w and _within(path, w) for w in workdirs)
+
+
 def tool_permitted(tool_name: str, tool_input: dict, tier: int, workdir: str = "") -> tuple:
     """Return (allowed: bool, reason: str). Default-DENY for anything unrecognized."""
     tier = int(tier)
@@ -110,6 +142,10 @@ def tool_permitted(tool_name: str, tool_input: dict, tier: int, workdir: str = "
         path = (tool_input or {}).get("file_path") or (tool_input or {}).get("path") or ""
         if is_guard_path(path):
             return False, f"guard file is write-protected at all tiers: {path}"
-        if workdir and not _within(path, workdir):
-            return False, f"write outside declared workdir {workdir}: {path}"
+        dirs = _parse_workdirs(workdir)
+        if str(workdir or "").strip() and not dirs:
+            # scope was declared but unparseable => fail-closed, never allow-anywhere
+            return False, f"declared workdir scope is malformed — refusing write: {path}"
+        if dirs and not _within_any(path, dirs):
+            return False, f"write outside declared workdir(s) {dirs}: {path}"
     return True, "permitted"

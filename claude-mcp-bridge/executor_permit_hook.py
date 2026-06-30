@@ -51,7 +51,15 @@ def main() -> None:
             tier = 0
     except Exception:
         tier = 0
-    workdir = sys.argv[2] if len(sys.argv) > 2 else ""
+    # workdir arrives base64-encoded (it may be a JSON array of subtrees whose quotes
+    # would otherwise break the hook command argv). Decode fail-closed.
+    workdir = ""
+    if len(sys.argv) > 2 and sys.argv[2]:
+        try:
+            import base64
+            workdir = base64.urlsafe_b64decode(sys.argv[2].encode("ascii")).decode("utf-8")
+        except Exception:
+            _deny("malformed workdir scope (base64) — fail-closed", "", tier)
 
     try:
         data = json.loads(sys.stdin.read() or "{}")
