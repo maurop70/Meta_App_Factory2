@@ -31,6 +31,7 @@ keys never logged (handled in lineage).
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -213,9 +214,26 @@ def _build_ledger(parsed: dict | None, dissents: list[dict]) -> dict:
 
 
 # ── Human-chair ratification (accept / send-back / override) ────────────────
+def ratification_hash(chairplan: dict) -> str:
+    """Canonical hash of the parts that must NOT change between the ratify gate and the
+    mint gate: the plan, the declared scope, and each dissent's id+disposition. The mint
+    re-checks this — if the plan changed after ratification, the mint refuses (no gap
+    between approved and enforced)."""
+    canon = json.dumps({
+        "plan": chairplan.get("plan"),
+        "scope": (chairplan.get("scope") or {}).get("declared"),
+        "ledger": [(e.get("id"), e.get("disposition"))
+                   for e in (chairplan.get("dissent_ledger") or {}).get("full", [])],
+    }, sort_keys=True, ensure_ascii=True)
+    return hashlib.sha256(canon.encode("utf-8")).hexdigest()
+
+
 def accept(chairplan: dict) -> dict:
+    """Gate 1 — the human ratifies the synthesis as faithful. Stamps a ratification hash
+    binding the EXACT plan; the mint gate (gate.py) verifies it before authorizing."""
     chairplan["status"] = "ratified"
     chairplan["ratified_ts"] = datetime.now(timezone.utc).isoformat()
+    chairplan["ratification_hash"] = ratification_hash(chairplan)
     return _persist(chairplan)
 
 

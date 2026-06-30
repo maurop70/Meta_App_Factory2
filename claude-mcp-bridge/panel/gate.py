@@ -30,11 +30,13 @@ from pathlib import Path
 
 BRIDGE_ROOT = Path(__file__).resolve().parent.parent
 MAF_ROOT = BRIDGE_ROOT.parent
-for _p in (str(BRIDGE_ROOT), str(MAF_ROOT)):
+PANEL_DIR = Path(__file__).resolve().parent
+for _p in (str(PANEL_DIR), str(BRIDGE_ROOT), str(MAF_ROOT)):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
 import executor_gate
+import chair as _chair                       # shared ratification_hash (one source)
 from mandate_tiers import classify_tier
 
 
@@ -80,6 +82,24 @@ def authorize_and_mint(chairplan: dict, human_authorized: bool, trace_id: str = 
     chair_tier = declared.get("tier_ceiling")
     cc = cross_check_ceiling(chairplan.get("plan") or "", chair_tier)
 
+    # Integrity of the ratified synthesis is checked FIRST (before scope/human), so an
+    # altered plan or an unfaithful ledger is the surfaced reason, not a later check.
+    # Gate-binding (criterion 2): the minted plan must be the EXACT plan that was ratified.
+    if chairplan.get("status") != "ratified" or not chairplan.get("ratification_hash"):
+        return {"minted": False, "reason": "not ratified — the ratify gate must precede the mint",
+                "ceiling_check": cc, "token": None}
+    if _chair.ratification_hash(chairplan) != chairplan["ratification_hash"]:
+        return {"minted": False,
+                "reason": "plan altered after ratification — mint REFUSED (no gap between approved and enforced)",
+                "ceiling_check": cc, "token": None}
+    # Reconciliation hard-gate (criterion 3): an unfaithful (omitting) dissent ledger
+    # cannot mint — checked before scope so the omission itself is the surfaced reason.
+    recon = chairplan.get("reconciliation") or {}
+    if not recon.get("ok"):
+        return {"minted": False,
+                "reason": (f"dissent ledger did not reconcile (verdict={recon.get('verdict')}, "
+                           f"missing={recon.get('missing')}) — mint REFUSED"),
+                "ceiling_check": cc, "token": None}
     if not scope.get("well_formed"):
         return {"minted": False, "reason": "scope not well-formed (missing where/ceiling) — refused",
                 "ceiling_check": cc, "token": None}
