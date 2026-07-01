@@ -10,6 +10,12 @@ from qa_architect import QAArchitect
 import model_router
 from socratic_challenger import evaluate_payload
 
+import sys as _sys, os as _os
+_FDIR = _os.path.dirname(_os.path.abspath(__file__))
+if _FDIR not in _sys.path:
+    _sys.path.insert(0, _FDIR)
+from shared_modules import build_guard as _bg   # Phase 5b: sanctioned-build choke (shared infra)
+
 logger = logging.getLogger("ForgeOrchestrator")
 logging.basicConfig(level=logging.INFO)
 
@@ -315,6 +321,8 @@ class ForgeOrchestrator:
 
         raise ExecutiveForkTriggered("Execution halted awaiting executive directive from War Room UI.")
 
+    @_bg.sanctioned_build(lambda self, staging_file_path, live_file_path, *a, **kw:
+                          [_os.path.dirname(_os.path.abspath(live_file_path))])
     def merge_to_live(self, staging_file_path: str, live_file_path: str) -> bool:
         """
         Safely merges verified code to the live environment by taking a timestamped

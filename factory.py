@@ -39,6 +39,9 @@ sys.path.insert(0, SYSTEM_CORE_DIR)
 
 # Add skill path to sys.path — validate that critical modules (n8n_architect) are present
 FACTORY_DIR = os.path.dirname(os.path.abspath(__file__))
+if FACTORY_DIR not in sys.path:
+    sys.path.insert(0, FACTORY_DIR)
+from shared_modules import build_guard as _bg   # Phase 5b: sanctioned-build choke (shared infra)
 _SKILL_CANDIDATES = [
     os.path.abspath(os.path.join(FACTORY_DIR, "..", "..", "_ANTIGRAVITY_SKILLS_LIBRARY")),
     os.path.abspath(os.path.join(FACTORY_DIR, "..", "skills")),
@@ -133,6 +136,9 @@ class MetaAppFactory:
                 return port
         raise RuntimeError("No available ports in range {}-{}".format(self.PORT_BASE, self.PORT_BASE + self.PORT_RANGE))
 
+    @_bg.sanctioned_build(lambda self, app_name, *a, **kw: [
+        os.path.join(self.base_dir, app_name),
+        os.path.abspath(os.path.join(FACTORY_DIR, "..", "skills", app_name.lower().replace(' ', '_')))])
     def create_app(self, app_name: str, blueprint_name: str, description: str, system_prompt: Optional[str] = None):
         print(f"--- Creating Meta App: {app_name} ---")
 

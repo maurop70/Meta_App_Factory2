@@ -118,15 +118,37 @@ def sanctioned_build(roots_fn):
     return deco
 
 
+_capture = None                               # discovery mode: a list collecting write paths
+
+
+class capturing:
+    """DISCOVERY mode — collect every write path during a build (log-only, no refusal), so
+    the build itself reveals its app-output roots. Use to find roots empirically, never to
+    hand-list them (a hand-list is complete only until the writer you forgot)."""
+    def __enter__(self):
+        global _capture
+        _capture = []
+        _ensure_hook()
+        return _capture
+
+    def __exit__(self, *exc):
+        global _capture
+        _capture = None
+        return False
+
+
 def _guard(path) -> None:
     if getattr(_local, "busy", False):        # re-entry guard: our own stat calls, etc.
-        return
-    if not _protected:
         return
     if not isinstance(path, (str, bytes, os.PathLike)):
         return                                # a file-descriptor int / non-path event arg
     _local.busy = True
     try:
+        if _capture is not None:              # discovery: record every write, never refuse
+            _capture.append(_resolved(os.fspath(path)))
+            return
+        if not _protected:
+            return
         raw = _raw_abs(path)
         res = _resolved(os.fspath(path))
         active = _active()
