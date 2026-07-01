@@ -231,13 +231,41 @@ def run_e2e_evaluation(app_name: str, run_id: str = None) -> str:
     return json.dumps(report_dict, default=str, indent=2)
 
 
-def send_mandate(mandate: str, timeout: int = 300) -> str:
+def send_mandate(mandate: str, timeout: int = 300, authorization=None,
+                 plan_id: str | None = None) -> str:
     """
     Sends a structured mandate to the native local execution bridge.
     Uses Gemini function calling to execute shell commands and file
     mutations directly on the local MAF filesystem.
     Returns the final ledger string.
+
+    Executor authorization FLOOR (2026-07-01): this fallback executor now sits BEHIND
+    the same executor_gate floor as the primary path (claude_code_client.send_mandate),
+    not beside it. A caller holding no minted token (authorization=None) is REFUSED before
+    the Gemini tool-loop is ever created — closing the auto_trigger→/diagnose autonomous
+    road and every other un-tokened caller in one move. NOTE (owed): this is the FLOOR
+    (token required); per-plan tier+workdir PARITY with the primary would need threading
+    the token's workdir into the in-process wires — a tokened dispatch here still runs its
+    tools under the wires' STATIC sandbox, not the token's specific workdir. Floor holds;
+    per-plan cage still owed.
     """
+    # ── Executor authorization floor (mirror of claude_code_client.send_mandate) ──
+    import sys as _sys
+    from pathlib import Path as _P
+    _sys.path.insert(0, str(_P(__file__).parent))
+    import executor_gate
+    _tier = (authorization.tier_ceiling
+             if isinstance(authorization, executor_gate.Authorization) else 3)
+    _bind = plan_id if plan_id is not None else mandate
+    _ok, _reason = executor_gate.authorize(authorization, _tier, mandate[:200],
+                                           "ay_client.send_mandate", mandate_text=_bind)
+    if not _ok:
+        return "LEDGER_JSON: " + json.dumps({
+            "status": "ERROR",
+            "summary": f"Executor refused — {_reason}",
+            "needs_human": "operator authorization required (Phase 1 tier-scoped key)",
+        })
+
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
