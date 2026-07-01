@@ -672,3 +672,47 @@ stash is now exercised only in the suite's isolated temp repo. Corollary rule:
 smoke/verification suites must NEVER perform state-changing operations against
 the real shared repository - use isolated temp fixtures (live-probe discipline
 14.2 applies to our own test suites too).]
+
+
+## [APPROVED RULE 2026-06-29] (provenance: trace=phase1-closeout-2026-06-28, source=phase1-closeout, approved by operator)
+PROPOSED MAF CORE STANDARD — Prove from the real path. A safety-relevant mechanism is not complete until it is demonstrated working through the real execution path the system actually uses — observed firing, not asserted and not inferred from configuration. Configuration is not enforcement. Every safety control ships with a test that exercises it end-to-end through the production path; 'the flags/settings say so' is not evidence that it binds.
+
+
+## [APPROVED RULE 2026-06-29] (provenance: trace=phase1-closeout-2026-06-28, source=phase1-closeout, approved by operator)
+PROPOSED MAF CORE STANDARD — Fail toward refuse. When a safety mechanism is uncertain — an error, malformed input, a missing or invalid parameter, an unhandled case — it must default to the most restrictive outcome: deny, halt, or escalate to the human. It must never proceed on doubt. Binds the authorization gate, the tier detector, the permit hook, the approval surface, and every safety control built later.
+
+
+## [APPROVED RULE 2026-06-29] (provenance: trace=phase1-closeout-2026-06-28, source=phase1-closeout, approved by operator)
+PROPOSED MAF CORE STANDARD — No safety claim on an untested third-party assumption. Any safety property that depends on the behavior of software we did not write (a CLI, library, runtime, or external service) must be verified against the actually-installed version before the property is claimed. A surprising or contradicting result is a halt-and-report — never a silent workaround, never a claim shipped on assumed behavior.
+
+
+## [APPROVED RULE 2026-06-29] (provenance: trace=phase1-closeout-2026-06-28, source=phase1-closeout, approved by operator)
+PROPOSED MAF CORE STANDARD — The executor cannot modify its own guardrails. No executor capability, at any tier including the highest, may edit, delete, move, rename, or disable the controls that constrain it — the authorization gate, the wires, the permit hook, the permit/deny sets, the workdir confinement, or the secrets. Every future change must preserve this invariant; a change that lets the executor reach its own guardrails is a defect, not a feature.
+
+
+## [APPROVED RULE 2026-06-29] (provenance: trace=phase1-closeout-2026-06-28, source=phase1-closeout, approved by operator)
+PROPOSED MAF CORE STANDARD — Watch the lock, not the model's politeness. A safety test must demonstrate that the ENFORCING mechanism fired, distinguishable from the model choosing to comply. A test that only shows the model declining proves nothing about the enforcement. Where compliance and enforcement are otherwise indistinguishable, instrument the mechanism (e.g. decision logging) so the lock's own action is on record.
+
+
+## [APPROVED RULE 2026-06-29] (provenance: trace=phase2-closeout-2026-06-29, source=rule-harvest, approved by operator)
+EACH PHASE ENDS WITH A RULE-HARVEST. At every phase close, before moving on, the Architect and the executor must explicitly ask "did this phase earn a durable rule?" — surfacing candidates rather than waiting to be prompted. A phase is not complete until this check has been made and its answer (a proposed rule, or an explicit "none earned") is recorded. This check is part of the mandatory Compliance Gate: the gate block carries a Rule-harvest line stating the proposed rule or "none earned". Binds the Architect and CC, not runtime — proven by being practiced.
+
+
+## [APPROVED RULE 2026-06-30] (provenance: trace=phase3-closeout-2026-06-30, source=phase3-closeout, approved by operator — watched on the live path)
+"A compression is checkable against its source." When any layer folds multiple safety-relevant findings into a summary, synthesis, or verdict (the chair's dissent ledger; later, executive summaries, verdicts, dashboard rollups), the summary must be mechanically reconcilable against the faithful source record — every dropped or softened item visible, never trusted. The summarizer is never trusted to be complete; completeness is verified. The original source wording must be preserved beside each disposition so that softening, not just omission, is visible. Distinct from "Watch the lock" (which governs enforcement firing); this governs information compression — and will recur wherever the growing system summarizes.
+
+
+## [APPROVED RULE 2026-06-30] (provenance: trace=phase4-closeout-2026-06-30, source=phase4-closeout, approved by operator — watched on the live path)
+"No gap between approved and enforced." The plan that is enforced must be the EXACT plan the human approved. Ratifying a synthesis ("this is faithful") and authorizing action ("build it now") are bound to the same, unaltered plan: if the plan or its scope changes between the two gates, the mint REFUSES. Distinct from option-(c) — which proves the token faithfully confines to the plan it is handed; this governs whether the plan it is handed is the one the human approved. Folding the two together is how the unproven link disappears under a passing checkmark.
+
+
+## [APPROVED RULE 2026-06-30] (provenance: trace=phase4-closeout-methodology-2026-06-30, source=phase4-closeout, approved by operator)
+PROVE WITH A REAL ARTIFACT, NOT A STAND-IN. A safety proof must exercise the actual artifact that flowed through the upstream gates — not a hand-built stand-in. A stand-in satisfies each stage in isolation while HIDING THE BINDINGS BETWEEN STAGES: whether what is enforced is what was approved, whether the boundary being enforced came from the approval, and whether an independent second opinion can actually diverge from the first. A real mechanism can fire correctly on a fake input and pass while those bindings stay invisible — which is exactly what a future reader must watch for. Distinct from "prove from the real path" (which is about the MECHANISM firing for real); this is about the INPUT being the real thing that came through the upstream gates.
+
+
+## [APPROVED RULE 2026-07-01] (provenance: trace=claudeay-close-2026-07-01, source=panel-firewall-close, approved by operator — three live instances)
+A CONTROL NAMED FOR A JOB ISN'T DOING THAT JOB UNTIL IT'S WATCHED GATING THE REAL ACT. The name, the flag, the well-formed function all pass inspection while enforcing nothing — verify the named thing is actually IN THE PATH the real act crosses, not sitting beside it. Earned by three live instances found by asking "is this named thing actually in the path": approve() disconnected, /api/build/direct unauthenticated, the mint gate (authorize_and_mint) with ZERO callers. THIS IS THE FIRST LENS OF ANY AUDIT of the wider MAF system (e.g. the C-Suite): a system full of named-but-unwired controls is exactly what it catches. Applies at the deployment level too — a verifier present in source ≠ a verifier live in the path after boot. Distinct from "watch the lock, not the model's politeness" (which distinguishes enforcement firing from model compliance); this distinguishes a control that is WIRED INTO THE PATH from one that merely exists and is named for the job.
+
+
+## [APPROVED RULE 2026-07-01] (provenance: trace=claudeay-close-methodology-2026-07-01, source=panel-firewall-close, approved by operator — earned twice this phase)
+A COMMAND RETURNING SUCCESS ISN'T PROOF THE INTENDED CHANGE LANDED — VERIFY THE ARTIFACT, NOT THE EXIT CODE. A tool reporting exit 0 attests that it ran, not that it did what you intended. Verify the resulting artifact: the commit's actual contents (not that `git commit` succeeded), the module importing at runtime (not that py_compile passed), the proof's instrument detecting what it watches for (not that the harness printed green). Earned live: a `git add` aborted on a bad pathspec and silently under-committed (only a rename landed); a false-skipped import would have made a module NameError on load yet PASSED py_compile; a proof's sentinel was swallowed by a broad except so a green run proved nothing until the instrument itself was verified. Same family as "watch the lock not the label" and "prove the artifact not the stand-in": verify the result, never the report of the result.

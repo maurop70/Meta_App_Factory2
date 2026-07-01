@@ -79,6 +79,21 @@ except ImportError:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # ── ClaudeAY sanctioned-build choke ARM (MAF Core Standards D2) ───────────
+    # Register the panel Selection verifier at startup so build_guard's session
+    # entry has a live verifier. Fail-closed by construction: if the panel can't
+    # load, the verifier stays unregistered and EVERY build session refuses (D2).
+    # The seal is the differential behavior watched after boot (build refuses
+    # without a Selection, passes with one) — this log line is present-not-wired.
+    try:
+        import sys as _s, os as _o
+        _s.path.insert(0, _o.path.join(_o.path.dirname(__file__), "claude-mcp-bridge"))
+        from panel import selection as _sel                      # import registers the verifier
+        from shared_modules import build_guard as _bg
+        logger.warning(f"[ClaudeAY] sanctioned-build choke ARMED="
+                       f"{_bg._selection_verifier is not None} (verifier live at boot)")
+    except Exception as _e:
+        logger.critical(f"[ClaudeAY] choke NOT armed at boot ({_e}) — builds refuse (D2 fail-closed)")
     await start_memory_engine()
     # Phase 1: Eradicate zombie OCR/processing tasks orphaned by prior engine crash
     sweep_zombie_jobs()
