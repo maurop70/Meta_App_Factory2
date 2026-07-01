@@ -37,7 +37,14 @@ for _p in (str(PANEL_DIR), str(BRIDGE_ROOT), str(MAF_ROOT)):
 
 import executor_gate
 import chair as _chair                       # shared ratification_hash (one source)
+import taint                                  # sticky-taint infra (Phase 5a)
 from mandate_tiers import classify_tier
+
+
+def surface_taint(chairplan: dict, references=None) -> str:
+    """Phase 5a — the SURFACING. Plain-language disclosure of any untrusted provenance the
+    plan carries, shown to the human BEFORE any clearance decision. Empty if untainted."""
+    return taint.disclosure(chairplan.get("provenance") or {}, references)
 
 
 def _resolve_subtrees(workdir_list) -> list:
@@ -73,9 +80,11 @@ def cross_check_ceiling(plan_text: str, chair_tier) -> dict:
             "minted_ceiling": minted, "mismatch": assessed != chair_tier, "note": note}
 
 
-def authorize_and_mint(chairplan: dict, human_authorized: bool, trace_id: str = "panel") -> dict:
-    """SECOND gate. Mints ONLY on explicit human authorization. Returns a record with the
-    token (or None) and the shown-vs-minted scope so equality is checkable."""
+def authorize_and_mint(chairplan: dict, human_authorized: bool, taint_cleared: bool = False,
+                       trace_id: str = "panel") -> dict:
+    """SECOND gate. Mints ONLY on explicit human authorization. A plan carrying untrusted
+    provenance additionally requires taint_cleared=True — the human, having been SHOWN the
+    taint (surface_taint), clears it. Returns a record with the token (or None)."""
     scope = chairplan.get("scope") or {}
     declared = scope.get("declared") or {}
     shown_workdir = declared.get("workdir") or []
@@ -100,6 +109,16 @@ def authorize_and_mint(chairplan: dict, human_authorized: bool, trace_id: str = 
                 "reason": (f"dissent ledger did not reconcile (verdict={recon.get('verdict')}, "
                            f"missing={recon.get('missing')}) — mint REFUSED"),
                 "ceiling_check": cc, "token": None}
+    # Sticky-taint gate (Phase 5a, seam 1): a plan carrying UNTRUSTED provenance cannot
+    # authorize an action unless a HUMAN, shown the taint, clears it. Checked before the
+    # 'build' authorization, so untrusted content can never act via laundering — the taint
+    # survived the fold (chairplan['provenance']) and the model's prose cannot wash it.
+    prov = chairplan.get("provenance") or {}
+    if prov.get("tainted") and not taint_cleared:
+        return {"minted": False,
+                "reason": ("plan carries UNTRUSTED provenance not cleared by a human — mint "
+                           f"REFUSED (informs never acts); sources={prov.get('sources')}"),
+                "ceiling_check": cc, "token": None, "taint_disclosure": taint.disclosure(prov)}
     if not scope.get("well_formed"):
         return {"minted": False, "reason": "scope not well-formed (missing where/ceiling) — refused",
                 "ceiling_check": cc, "token": None}

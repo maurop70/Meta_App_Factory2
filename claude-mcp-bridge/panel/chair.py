@@ -47,6 +47,7 @@ for _p in (str(PANEL_DIR), str(BRIDGE_ROOT)):
         sys.path.insert(0, _p)
 
 import lineage                                    # panel.lineage (sibling)
+import taint                                      # sticky-taint infra (Phase 5a)
 
 SESSIONS_DIR = BRIDGE_ROOT / "logs" / "panel_sessions"
 CHAIR_DIR = BRIDGE_ROOT / "logs" / "panel_chair"
@@ -146,6 +147,10 @@ def draft(session: dict, steer: str = "", max_tokens: int = 4000) -> dict:
         "dissent_ledger": _build_ledger(parsed, dissents),
         "reconciliation": recon,
         "one_plan_ok": bool(parsed and isinstance(parsed.get("plan"), str) and parsed.get("plan").strip()),
+        # STICKY TAINT: the plan carries the union of its folded sources' provenance —
+        # computed structurally, so the fold cannot wash the taint (survives the summary).
+        "provenance": taint.union(session.get("reference_provenance") or {},
+                                  [s.get("provenance") for s in session.get("seats", [])]),
         "status": "drafted",
         "raw": run.content,
     }
@@ -224,6 +229,7 @@ def ratification_hash(chairplan: dict) -> str:
         "scope": (chairplan.get("scope") or {}).get("declared"),
         "ledger": [(e.get("id"), e.get("disposition"))
                    for e in (chairplan.get("dissent_ledger") or {}).get("full", [])],
+        "provenance": chairplan.get("provenance"),   # bind taint — stripping it breaks the hash
     }, sort_keys=True, ensure_ascii=True)
     return hashlib.sha256(canon.encode("utf-8")).hexdigest()
 
