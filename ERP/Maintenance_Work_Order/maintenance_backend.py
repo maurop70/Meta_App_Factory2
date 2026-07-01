@@ -72,6 +72,7 @@ from local_db import (
     DEFAULT_TENANT_ID,
     CANONICAL_ROLES,
     GATEWAY_DB_PATH,
+    TENANT_WIDE,
 )
 from starlette.middleware.base import BaseHTTPMiddleware
 from plugin_manager import trigger_tenant_hook
@@ -625,49 +626,65 @@ def get_current_mwo(mwo_id: str):
     finally:
         conn.close()
 
+# ── WS-A2 SP2: union-model pipeline. Per-condition contribution sets stay DISJOINT;
+# the UNION of every satisfied condition is what one person wearing two hats gets
+# (monotonic: an extra grant only enlarges, never shrinks or shadows another).
+_PLANNER_FIELDS      = {"assigned_tech", "hm_priority", "status", "manual_log"}
+_PLANNER_TRANSITIONS = {("UNASSIGNED", "ASSIGNED"), ("PENDING_REVIEW", "COMPLETED")}  # + any->UNASSIGNED
+_EXECUTOR_FIELDS      = {"status", "manual_log"}
+_EXECUTOR_TRANSITIONS = {("ASSIGNED", "IN_PROGRESS"), ("IN_PROGRESS", "PENDING_REVIEW")}
+_REQUESTER_FIELDS     = {"dm_urgency"}
+
+
 def verify_rbac_pipeline(
-    payload: MWOUpdate = Body(...), 
+    payload: MWOUpdate = Body(...),
     current_mwo: dict = Depends(get_current_mwo),
     jwt_payload: dict = Depends(verify_jwt_token)
 ):
     updates = payload.model_dump(exclude_unset=True)
     if not updates:
         return current_mwo
-        
+
     role = jwt_payload.get("role")
+    sub = jwt_payload.get("sub")
     current_status = current_mwo.get("status")
     new_status = updates.get("status", current_status)
-    
-    if role == "ADMINISTRATOR":
-        return current_mwo
-        
-    if role == "DM":
-        if not set(updates.keys()).issubset({"dm_urgency"}):
-            raise HTTPException(status_code=403, detail="RBAC Violation: DM unauthorized mutation.")
-        return current_mwo
-        
-    if role == "TECHNICIAN":
-        if not set(updates.keys()).issubset({"status", "manual_log"}):
-            raise HTTPException(status_code=403, detail="RBAC Violation: Technician unauthorized mutation.")
-            
-        if new_status != current_status:
-            if not ((current_status == "ASSIGNED" and new_status == "IN_PROGRESS") or
-                    (current_status == "IN_PROGRESS" and new_status == "PENDING_REVIEW")):
-                raise HTTPException(status_code=403, detail="RBAC Violation: Invalid pipeline transition.")
-        return current_mwo
-        
-    if role == "HM":
-        if not set(updates.keys()).issubset({"assigned_tech", "hm_priority", "status", "manual_log"}):
-            raise HTTPException(status_code=403, detail="RBAC Violation: HM unauthorized mutation.")
-            
-        if new_status != current_status:
-            if not ((current_status == "UNASSIGNED" and new_status == "ASSIGNED") or
-                    (current_status == "PENDING_REVIEW" and new_status == "COMPLETED") or
-                    (new_status == "UNASSIGNED")):
-                raise HTTPException(status_code=403, detail="RBAC Violation: Invalid pipeline transition.")
-        return current_mwo
-        
-    raise HTTPException(status_code=403, detail="RBAC / Pipeline Violation: Unrecognized role.")
+
+    # STAGE 1 — terminal (first match returns; never unioned).
+    if role in ("ADMINISTRATOR", "ADMIN"):
+        return current_mwo                                   # T1: full bypass (ADMIN synonym until WS-B1a)
+    if role == "VIEWER":
+        raise HTTPException(status_code=403, detail="RBAC Violation: VIEWER is read-only.")
+
+    # STAGE 2 — union of contributions from EVERY satisfied condition. Capabilities
+    # resolve per-request from the tenant DB (never the JWT); scope = the work order's
+    # department SNAPSHOT. A null-department WO is fail-closed: capability conditions
+    # cannot fire, leaving only admin (above) or the assigned tech (identity, below).
+    allowed_fields, allowed_transitions, any_to_unassigned = set(), set(), False
+    conn = get_db_connection()
+    try:
+        wo_dept = resolve_wo_department(conn, current_mwo["mwo_id"])
+        if wo_dept:
+            if has_capability(conn, sub, "PLANNER", wo_dept):
+                allowed_fields |= _PLANNER_FIELDS
+                allowed_transitions |= _PLANNER_TRANSITIONS
+                any_to_unassigned = True
+            if has_capability(conn, sub, "REQUESTER", wo_dept):
+                allowed_fields |= _REQUESTER_FIELDS
+        if sub is not None and sub == current_mwo.get("assigned_tech"):  # C-EXECUTOR: ownership, not a capability
+            allowed_fields |= _EXECUTOR_FIELDS
+            allowed_transitions |= _EXECUTOR_TRANSITIONS
+    finally:
+        conn.close()
+
+    if not set(updates.keys()).issubset(allowed_fields):
+        raise HTTPException(status_code=403, detail="RBAC Violation: unauthorized field mutation.")
+    if new_status != current_status:
+        ok = ((current_status, new_status) in allowed_transitions
+              or (any_to_unassigned and new_status == "UNASSIGNED"))
+        if not ok:
+            raise HTTPException(status_code=403, detail="RBAC Violation: invalid pipeline transition.")
+    return current_mwo
 
 
 # --- ENDPOINTS ---
@@ -2388,17 +2405,26 @@ async def create_mwo(payload: NewMWO, jwt_payload: dict = Depends(verify_jwt_tok
         if not final_mwo_id or not final_mwo_id.strip():
             raise ValueError("Generated MWO ID is invalid.")
 
-        cursor.execute("SELECT assigned_hm_id FROM erp_equipment WHERE equipment_id = ?", (payload.equipment_id,))
+        cursor.execute("SELECT assigned_hm_id, department_id FROM erp_equipment WHERE equipment_id = ?", (payload.equipment_id,))
         eq_row = cursor.fetchone()
-        assigned_hm_id = eq_row['assigned_hm_id'] if eq_row else None
+        # Fail-closed (WS-A2 SP2): a work order MUST carry an owning-department snapshot,
+        # copied from its equipment at creation (same pattern as assigned_hm_id). If the
+        # equipment is missing or has no department, deny BEFORE insert — never write a
+        # NULL-department WO (replaces the opaque equipment-FK 500 with an explicit denial).
+        if eq_row is None or not eq_row['department_id']:
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot create work order: equipment missing or has no owning department.")
+        assigned_hm_id = eq_row['assigned_hm_id']
+        wo_department_id = eq_row['department_id']
 
         cursor.execute(
             """
-            INSERT INTO work_orders 
-            (mwo_id, description, equipment_id, location_id, dm_urgency, assigned_tech, assigned_hm_id, status, hm_priority, execution_start, created_by) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO work_orders
+            (mwo_id, description, equipment_id, location_id, dm_urgency, assigned_tech, assigned_hm_id, department_id, status, hm_priority, execution_start, created_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (final_mwo_id, payload.description, payload.equipment_id, payload.location_id, payload.urgency, payload.assigned_tech, assigned_hm_id, "UNASSIGNED", "Normal", current_time, final_creator_id)
+            (final_mwo_id, payload.description, payload.equipment_id, payload.location_id, payload.urgency, payload.assigned_tech, assigned_hm_id, wo_department_id, "UNASSIGNED", "Normal", current_time, final_creator_id)
         )
         conn.commit()
         
@@ -4594,6 +4620,36 @@ SKU_ACCESS_ADMIN_ROLES = ["ADMINISTRATOR", "ADMIN"]
 PROCUREMENT_GLOBAL_ROLES = ["ADMINISTRATOR", "ADMIN", "CFO", "HM"]
 # Roles permitted into procurement only when they hold >=1 SKU clearance row.
 PROCUREMENT_RESTRICTED_ROLES = ["DM", "TECH"]
+
+
+# ── WS-A2 SP2: capability resolution (shared chokepoint — the ONLY reader of
+# erp_employee_capabilities; consumed by the pipeline here and the 2b-i guard sweep).
+def has_capability(conn, employee_id, capability, department_id) -> bool:
+    """True iff the employee holds `capability` scoped to `department_id` OR tenant-wide
+    ('*'). Per-request read of erp_employee_capabilities; never trusts the JWT for
+    capabilities (base-role identity stays in the JWT until WS-B1a)."""
+    return conn.execute(
+        "SELECT 1 FROM erp_employee_capabilities "
+        "WHERE employee_id = ? AND capability = ? AND (department_id = ? OR department_id = ?) LIMIT 1",
+        (employee_id, capability, department_id, TENANT_WIDE),
+    ).fetchone() is not None
+
+
+def resolve_wo_department(conn, mwo_id):
+    """WO-action scope = the work order's department SNAPSHOT column (copied from its
+    equipment at creation) — never a live equipment walk."""
+    row = conn.execute("SELECT department_id FROM work_orders WHERE mwo_id = ?", (mwo_id,)).fetchone()
+    return row["department_id"] if row else None
+
+
+def resolve_sku_department(conn, sku_id):
+    """SKU/inventory-action scope = the SKU's category's owning department. Returns None
+    for a missing or category-less SKU (callers treat None as fail-closed)."""
+    row = conn.execute(
+        "SELECT c.department_id FROM erp_skus s JOIN erp_categories c ON c.id = s.category_id "
+        "WHERE s.sku_id = ?", (sku_id,)
+    ).fetchone()
+    return row["department_id"] if row else None
 
 
 def get_employee_cleared_skus(conn, employee_id: str) -> set:
