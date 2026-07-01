@@ -79,7 +79,15 @@ def propose(plan_id: str, roots, plan_text: str = "") -> dict:
 
 def select(proposal: dict, *, taint_cleared: bool = False, tainted: bool = False) -> Selection:
     """THE positive human-select event — the ONLY minter of a Selection. A tainted plan
-    requires the human, having been SHOWN the taint, to clear it (seam 1, same event)."""
+    requires the human, having been SHOWN the taint, to clear it (seam 1, same event).
+
+    REPLAY-SAFE at the primitive (added for the HTTP door): a proposal selects at most ONCE.
+    The guard lives here, not in the caller, so single-use holds for EVERY caller (HTTP or
+    in-process) — a captured/replayed select can never mint a second Selection. Distinct from
+    the choke's single-CONSUME (verify_and_consume): this is single-SELECT at the mint."""
+    if proposal.get("selected"):
+        raise SelectionRefused(
+            "proposal already selected — replayed/duplicate select mints nothing (single-use)")
     if tainted and not taint_cleared:
         raise SelectionRefused(
             "plan carries UNTRUSTED provenance not cleared by a human — no Selection minted")
@@ -89,6 +97,7 @@ def select(proposal: dict, *, taint_cleared: bool = False, tainted: bool = False
         roots=tuple(proposal["roots"]),
         selected_at=datetime.now(timezone.utc).isoformat(),
     )
+    proposal["selected"] = True            # mark BEFORE returning so any replay finds it set
     _selections[sel.selection_id] = sel
     return sel
 

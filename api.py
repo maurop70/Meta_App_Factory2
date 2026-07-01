@@ -706,6 +706,90 @@ def build_direct(req: BuildRequest):
         sys.stdout = old_stdout
 
 
+# ── ClaudeAY build DOOR (select→build): the HTTP front of the sealed locks ───────
+# propose (mints NOTHING) → select (the ONLY mint, a positive human act) → build/direct
+# (the choke consumes the Selection). Safety: mint ONLY via selection.select() (fold &
+# silence are structural in the primitive); select() is replay-safe at the primitive
+# (single-select); a tainted proposal needs a disclosure_ack proving the taint was
+# DELIVERED before the mint; and the mint surface is LOOPBACK-ONLY — the server also binds
+# 127.0.0.1, but since a bind is not a lock, this check is the enforced gate (see the
+# network-auth ledger item: it proves "from this machine", not "who approved").
+def _claudeay_bridge_path():
+    import sys as _sys
+    from pathlib import Path as _P
+    p = str(_P(__file__).parent / "claude-mcp-bridge")
+    if p not in _sys.path:
+        _sys.path.insert(0, p)
+
+def _is_loopback(request: Request) -> bool:
+    host = (request.client.host if request.client else "") or ""
+    return host in ("127.0.0.1", "::1", "localhost")
+
+def _door_build_roots(app_name: str):
+    _claudeay_bridge_path()
+    import factory as _factory
+    fac = _factory.MetaAppFactory()
+    return [os.path.join(fac.base_dir, app_name),
+            os.path.abspath(os.path.join(_factory.FACTORY_DIR, "..", "skills",
+                                         app_name.lower().replace(" ", "_")))]
+
+@app.post("/api/claudeay/build/propose")
+async def claudeay_build_propose(request: Request):
+    """Record a build PROPOSAL and SURFACE any untrusted provenance. Mints NOTHING.
+    Loopback-only. The disclosure is proposal-specific; the ack is unguessable-blind."""
+    if not _is_loopback(request):
+        return JSONResponse({"status": "refused", "reason": "mint surface is loopback-only"}, status_code=403)
+    _claudeay_bridge_path()
+    import hashlib, uuid as _uuid
+    from panel import selection as _sel
+    from panel import taint as _taint
+    body = await request.json()
+    app_name = (body.get("app_name") or "").strip()
+    if not app_name:
+        return JSONResponse({"status": "error", "reason": "app_name required"}, status_code=400)
+    references = body.get("references") or []          # ingested untrusted records that informed the build
+    provenance = _taint.union(references)
+    disclosure = _taint.disclosure(provenance, references)   # proposal-specific: names real sources + content
+    roots = _door_build_roots(app_name)
+    prop = _sel.propose(plan_id=f"door|{app_name}", roots=roots, plan_text=body.get("description", ""))
+    prop["blueprint"] = body.get("blueprint", "multi_agent_core")
+    prop["tainted"] = bool(provenance.get("tainted"))
+    # delivery-proof ack: unguessable nonce bound to THIS disclosure text — only a client
+    # that RECEIVED this propose response can echo it (proves the taint was shown first).
+    prop["_expected_ack"] = (hashlib.sha256((_uuid.uuid4().hex + "\n" + disclosure).encode("utf-8")).hexdigest()
+                             if prop["tainted"] else "")
+    return JSONResponse({
+        "status": "proposed", "proposal_id": prop["proposal_id"], "app_name": app_name,
+        "roots": list(prop["roots"]), "tainted": prop["tainted"],
+        "taint_disclosure": disclosure, "disclosure_ack": prop["_expected_ack"],
+    })
+
+@app.post("/api/claudeay/build/select")
+async def claudeay_build_select(request: Request):
+    """THE mint. Mints a Selection ONLY on a positive human act for an EXISTING proposal:
+    approve==true, not already selected (replay-safe in select()), and — if tainted — a
+    disclosure_ack that matches (taint DELIVERED before the mint). Loopback-only."""
+    if not _is_loopback(request):
+        return JSONResponse({"status": "refused", "reason": "mint surface is loopback-only"}, status_code=403)
+    _claudeay_bridge_path()
+    from panel import selection as _sel
+    body = await request.json()
+    prop = _sel._proposals.get(body.get("proposal_id"))
+    if not prop:
+        return JSONResponse({"status": "refused", "reason": "unknown proposal — propose first"}, status_code=404)
+    if body.get("approve") is not True:                # silence / non-positive act → mint nothing
+        return JSONResponse({"status": "refused", "reason": "no explicit human approval (approve must be true)"}, status_code=403)
+    if prop.get("tainted"):                             # taint must have been SHOWN (delivered) before the mint
+        if not body.get("disclosure_ack") or body.get("disclosure_ack") != prop.get("_expected_ack"):
+            return JSONResponse({"status": "refused",
+                                 "reason": "tainted plan: disclosure_ack missing/mismatch — taint not shown before mint"},
+                                status_code=403)
+    try:
+        sel = _sel.select(prop, tainted=bool(prop.get("tainted")), taint_cleared=True)
+    except _sel.SelectionRefused as e:                 # replay (already selected) or uncleared taint
+        return JSONResponse({"status": "refused", "reason": str(e)}, status_code=409)
+    return JSONResponse({"status": "selected", "selection_id": sel.selection_id, "proposal_id": prop["proposal_id"]})
+
 
 class RefineRequest(BaseModel):
     app_name: str
@@ -7576,7 +7660,9 @@ async def qa_lab_screenshot(filename: str):
 
 if __name__ == "__main__":
     import uvicorn
-    # AETHER-NATIVE: Lock to port 5000 to act as Central Brain
-    uvicorn.run(app, host="0.0.0.0", port=5000)
+    # AETHER-NATIVE: Lock to port 5000 to act as Central Brain.
+    # ClaudeAY hardening: bind LOOPBACK only (defense-in-depth for the mint door — the
+    # door's loopback check is the enforced lock, this bind is the belt-and-suspenders).
+    uvicorn.run(app, host="127.0.0.1", port=5000)
 
 # V3 MIGRATION COMPLETE
