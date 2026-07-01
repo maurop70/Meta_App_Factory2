@@ -43,6 +43,7 @@ GUARD_BASENAMES = {
     "approval_gate.py",        # mint path
     "loop_engine.py",          # drift-HALT gate + the one plan-scoped mint + dispatch
     "ay_client.py",            # FALLBACK dispatcher (trace-surfaced; hand list missed)
+    "playwright_agent.py",     # seam 3: QA is report-only — a build must not re-attach the cut auto-fix edge
 }
 
 def is_guard_path(path: str) -> bool:

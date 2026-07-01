@@ -20,6 +20,11 @@ import uuid
 UNTRUSTED_SOURCES = {
     "web", "crawler", "venture_scout", "cio_deep_research", "deep_research",
     "external_agent", "telemetry",
+    # seam 3 (2026-07-01): a QA finding folded into a plan ("the tests say we must do X")
+    # is machine-asserted authority from outside the trust boundary. Tainted at ingestion so
+    # a laundered finding surfaces at the gate and must be human-cleared + selected — it can
+    # inform a plan, but it cannot authorize an action on its own.
+    "qa",
 }
 
 

@@ -1,17 +1,20 @@
 """
-Playwright Agent — MAF E2E Evaluator
+Playwright Agent — MAF E2E Evaluator (REPORT-ONLY)
 --------------------------------------
 Takes a TestPlan, executes every test case using playwright_wire, records
-results, fires ClaudeAY fix mandates on failures, and manages the
-5-cycle fix loop.
+results, and returns an EvaluationReport. It REPORTS; it does not fire.
 
-Fix loop:
-  1. Run all test cases.
+seam 3 (2026-07-01): the auto-fix edge was severed. A failing test used to build
+a fix mandate and dispatch it to ay_client.send_mandate — a DIRECT executor (shell
++ file writes on the local FS, the un-hooked fallback path), so a failing OR
+manufactured test auto-drove arbitrary ungated local execution. That edge is deleted
+(not gated): a fix now routes propose → human select → mint like any plan, through
+the choke. QA informs; it cannot act alone.
+
+Flow:
+  1. Run all test cases once.
   2. If all pass → return READY.
-  3. If any fail AND fix_cycles < MAX_FIX_CYCLES → fire mandate, wait 30s,
-     clear auth, re-run all tests.
-  4. If fix_cycles >= MAX_FIX_CYCLES → emit escalate event, poll for
-     human response, then act on it.
+  3. If any fail → return FAILED with the findings. No mandate. No dispatch.
 """
 
 from __future__ import annotations
@@ -98,42 +101,12 @@ def _emit(callback: Optional[Callable], event_type: str, data: Any) -> None:
             pass
 
 
-def build_escalation_message(
-    failed: list,
-    app_config: dict,
-    cycles: int,
-) -> str:
-    """Return a human-readable summary for the escalation prompt."""
-    names = [
-        (r["name"] if isinstance(r, dict) else r.name)
-        for r in failed
-    ]
-    errors = [
-        (r.get("error", "") if isinstance(r, dict) else r.error)
-        for r in failed
-    ]
-    lines = [
-        f"After {cycles} fix cycle(s), {len(failed)} test(s) are still failing in "
-        f"{app_config.get('name', 'the app')} ({app_config.get('base_url', '')}):",
-    ]
-    for name, err in zip(names, errors):
-        lines.append(f"  - {name}: {err[:120]}")
-    lines += [
-        "",
-        "Options:",
-        "  A — Give the agent 2 more fix cycles",
-        "  B — Mark failing tests as skipped and proceed (READY)",
-        "  C — Give the agent 5 more fix cycles (deep fix mode)",
-    ]
-    return "\n".join(lines)
-
-
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # PlaywrightAgent
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 class PlaywrightAgent:
-    MAX_FIX_CYCLES: int = int(os.getenv("E2E_MAX_FIX_CYCLES", "5"))
+    # REPORT-ONLY (seam 3): no fix loop, no auto-dispatch. QA reports; it does not fire.
 
     # ── Public entry-point ────────────────────────────────────────────────────
 
@@ -192,169 +165,82 @@ class PlaywrightAgent:
                         "console_errors": [], "network_errors": [],
                         "session_id": params.get("session_id")}
 
-        # ── Main fix loop ──────────────────────────────────────────────────────
-        while True:
-            session_id         = str(uuid.uuid4())
-            authenticated_roles: dict[str, bool] = {}
-            results: list[TestResult] = []
+        # ── Run the suite ONCE and REPORT (seam 3: QA reports, it does not fire) ──
+        session_id         = str(uuid.uuid4())
+        authenticated_roles: dict[str, bool] = {}
+        results: list[TestResult] = []
 
-            # Sort test cases: P1 → P2 → P3
-            raw_cases = _tc_attr(test_plan, "test_cases") or []
-            test_cases = sorted(
-                raw_cases,
-                key=lambda tc: int(_tc_attr(tc, "priority", 3) or 3),
+        # Sort test cases: P1 → P2 → P3
+        raw_cases = _tc_attr(test_plan, "test_cases") or []
+        test_cases = sorted(
+            raw_cases,
+            key=lambda tc: int(_tc_attr(tc, "priority", 3) or 3),
+        )
+
+        # ── Phase 2: Run each test case ───────────────────────────────────────
+        for tc in test_cases:
+            tc_id   = str(_tc_attr(tc, "id")   or str(uuid.uuid4())[:8])
+            tc_name = str(_tc_attr(tc, "name") or "Unnamed test")
+
+            _emit(event_callback, "test_start", {"name": tc_name, "id": tc_id})
+
+            tc_start = time.time() * 1000
+            result   = self._run_one_test(
+                tc, tc_id, tc_name,
+                base_url, auth_config,
+                session_id, authenticated_roles,
+                screenshot_dir, fix_cycles,
+                execute_pw,
+            )
+            result.duration_ms = int(time.time() * 1000 - tc_start)
+            result.cycle       = fix_cycles
+
+            results.append(result)
+            evt = "test_pass" if result.status == "pass" else "test_fail"
+            _emit(event_callback, evt, asdict(result))
+
+        # ── Phase 3: Report the outcome ───────────────────────────────────────
+        failed_results = [r for r in results if r.status in ("fail", "error")]
+        passed_count   = sum(1 for r in results if r.status == "pass")
+        duration       = int(time.time() * 1000 - start_ms)
+
+        if not failed_results:
+            # All green — READY
+            return EvaluationReport(
+                app_name          = app_name,
+                run_id            = run_id,
+                status            = "READY",
+                fix_cycles        = fix_cycles,
+                total_tests       = len(results),
+                passed            = passed_count,
+                failed            = 0,
+                test_results      = [asdict(r) for r in results],
+                fix_history       = [asdict(fa) for fa in fix_history],
+                duration_ms       = duration,
+                timestamp         = datetime.now(timezone.utc).isoformat(),
             )
 
-            # ── Phase 2: Run each test case ───────────────────────────────────
-            for tc in test_cases:
-                tc_id   = str(_tc_attr(tc, "id")   or str(uuid.uuid4())[:8])
-                tc_name = str(_tc_attr(tc, "name") or "Unnamed test")
-
-                _emit(event_callback, "test_start", {"name": tc_name, "id": tc_id})
-
-                tc_start = time.time() * 1000
-                result   = self._run_one_test(
-                    tc, tc_id, tc_name,
-                    base_url, auth_config,
-                    session_id, authenticated_roles,
-                    screenshot_dir, fix_cycles,
-                    execute_pw,
-                )
-                result.duration_ms = int(time.time() * 1000 - tc_start)
-                result.cycle       = fix_cycles
-
-                results.append(result)
-                evt = "test_pass" if result.status == "pass" else "test_fail"
-                _emit(event_callback, evt, asdict(result))
-
-            # ── Phase 3: Check results ────────────────────────────────────────
-            failed_results = [r for r in results if r.status in ("fail", "error")]
-            passed_count   = sum(1 for r in results if r.status == "pass")
-
-            if not failed_results:
-                # All green — done
-                duration = int(time.time() * 1000 - start_ms)
-                return EvaluationReport(
-                    app_name          = app_name,
-                    run_id            = run_id,
-                    status            = "READY",
-                    fix_cycles        = fix_cycles,
-                    total_tests       = len(results),
-                    passed            = passed_count,
-                    failed            = 0,
-                    test_results      = [asdict(r) for r in results],
-                    fix_history       = [asdict(fa) for fa in fix_history],
-                    duration_ms       = duration,
-                    timestamp         = datetime.now(timezone.utc).isoformat(),
-                )
-
-            if fix_cycles >= self.MAX_FIX_CYCLES:
-                # ── Escalate ──────────────────────────────────────────────────
-                reason = build_escalation_message(failed_results, app_config, fix_cycles)
-                _emit(event_callback, "escalate", {
-                    "question": reason,
-                    "options":  ["A", "B", "C"],
-                })
-
-                # Poll run state file for escalation_response (30-min timeout)
-                run_file = str(_MAF_ROOT / "logs" / "qa_runs" / f"{run_id}.json")
-                resp = None
-                for _ in range(1800):
-                    if os.path.exists(run_file):
-                        try:
-                            with open(run_file) as f:
-                                state = json.load(f)
-                            resp = state.get("escalation_response")
-                            if resp:
-                                break
-                        except Exception:
-                            pass
-                    time.sleep(1)
-
-                if resp == "A":
-                    self.MAX_FIX_CYCLES += 2
-                elif resp == "B":
-                    for r in failed_results:
-                        r.status = "skip"
-                    duration = int(time.time() * 1000 - start_ms)
-                    return EvaluationReport(
-                        app_name          = app_name,
-                        run_id            = run_id,
-                        status            = "READY",
-                        fix_cycles        = fix_cycles,
-                        total_tests       = len(results),
-                        passed            = passed_count,
-                        failed            = 0,
-                        test_results      = [asdict(r) for r in results],
-                        fix_history       = [asdict(fa) for fa in fix_history],
-                        escalation_reason = reason,
-                        duration_ms       = duration,
-                        timestamp         = datetime.now(timezone.utc).isoformat(),
-                    )
-                elif resp == "C":
-                    self.MAX_FIX_CYCLES += 5
-                else:
-                    # Timed out or unknown — return ESCALATE
-                    duration = int(time.time() * 1000 - start_ms)
-                    return EvaluationReport(
-                        app_name          = app_name,
-                        run_id            = run_id,
-                        status            = "ESCALATE",
-                        fix_cycles        = fix_cycles,
-                        total_tests       = len(results),
-                        passed            = passed_count,
-                        failed            = len(failed_results),
-                        test_results      = [asdict(r) for r in results],
-                        fix_history       = [asdict(fa) for fa in fix_history],
-                        escalation_reason = reason,
-                        duration_ms       = duration,
-                        timestamp         = datetime.now(timezone.utc).isoformat(),
-                    )
-                # After escalation response A or C — continue to fix phase below.
-
-            # ── Phase 4: Fire fix mandate ─────────────────────────────────────
-            fix_cycles += 1
-            _emit(event_callback, "fix_cycle_start", {
-                "cycle": fix_cycles,
-                "failing": len(failed_results),
-            })
-
-            mandate = self._build_mandate(
-                failed_results, app_config, fix_cycles, base_url
-            )
-
-            ay_response = ""
-            try:
-                from ay_client import send_mandate as _send_mandate
-                ay_response = _send_mandate(mandate, timeout=600)
-            except ImportError:
-                ay_response = "[ay_client not available — fix skipped]"
-            except Exception as exc:
-                ay_response = f"[mandate failed: {exc}]"
-
-            fix_attempt = FixAttempt(
-                cycle         = fix_cycles,
-                failing_tests = [r.name for r in failed_results],
-                mandate_sent  = mandate[:500],
-                ay_response   = (ay_response or "")[:500],
-                tests_before  = len(failed_results),
-                timestamp     = datetime.now(timezone.utc).isoformat(),
-            )
-            fix_history.append(fix_attempt)
-
-            _emit(event_callback, "fix_mandate_sent", {
-                "cycle":    fix_cycles,
-                "mandate":  mandate[:200],
-                "response": (ay_response or "")[:200],
-            })
-
-            # Wait for deploy to complete
-            print(f"[PlaywrightAgent] Waiting 30s for deploy after fix cycle {fix_cycles}...")
-            time.sleep(30)
-
-            # Invalidate auth tokens (redeploy resets sessions)
-            authenticated_roles = {}
-            # Loop back to re-run all tests
+        # ── Phase 4 SEVERED (seam 3, option a) ────────────────────────────────
+        # A failing QA run REPORTS its findings; it does not fire. The removed edge
+        # built a fix mandate and dispatched it to ay_client.send_mandate — a DIRECT
+        # executor (shell + file writes on the local FS, the un-hooked fallback path),
+        # so a failing OR MANUFACTURED test auto-drove arbitrary ungated local
+        # execution. Deleted entirely (not gated): a fix routes propose → human select
+        # → mint like any plan, through the choke. Nothing in a QA run reaches the
+        # executor by any path. QA informs; it cannot act alone.
+        return EvaluationReport(
+            app_name          = app_name,
+            run_id            = run_id,
+            status            = "FAILED",
+            fix_cycles        = fix_cycles,
+            total_tests       = len(results),
+            passed            = passed_count,
+            failed            = len(failed_results),
+            test_results      = [asdict(r) for r in results],
+            fix_history       = [asdict(fa) for fa in fix_history],
+            duration_ms       = duration,
+            timestamp         = datetime.now(timezone.utc).isoformat(),
+        )
 
     # ── Single test execution ─────────────────────────────────────────────────
 
@@ -813,53 +699,8 @@ class PlaywrightAgent:
 
     # ── Mandate builder ───────────────────────────────────────────────────────
 
-    def _build_mandate(
-        self,
-        failed: list[TestResult],
-        app_config: dict,
-        cycle: int,
-        base_url: str,
-    ) -> str:
-        app_name    = app_config.get("name", "the app")
-        local_path  = app_config.get("local_path", "")
-        deploy_script = app_config.get("deploy_script", "")
-
-        fail_lines = []
-        for r in failed:
-            fail_lines.append(
-                f"  - [{r.id}] {r.name}\n"
-                f"    Error: {r.error[:200]}\n"
-                f"    Console errors: {len(r.console_errors)}\n"
-                f"    Network errors: {len(r.network_errors)}"
-            )
-        fails = "\n".join(fail_lines)
-
-        return f"""MANDATE — E2E Fix Cycle {cycle}
-App: {app_name}
-Base URL: {base_url}
-Local path: {local_path}
-
-The following E2E tests are failing:
-
-{fails}
-
-Your task:
-1. Read the relevant source files to understand the root cause.
-2. Fix the code so all failing tests pass.
-3. Run the deploy script: {deploy_script}
-4. Confirm the fixes are deployed.
-
-Constraints:
-- Do NOT break any passing tests.
-- Do NOT delete existing data or DB records.
-- All changes must be committed (git add + git commit -m "fix: E2E cycle {cycle} — <description>").
-
-IMPORTANT: Fix the root cause — do not just hide or skip the tests.
-"""
-
-
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# __main__ — smoke test against MWO ERP (P1 tests, no auto-fix)
+# __main__ — smoke test against MWO ERP (P1 tests, report-only)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 if __name__ == "__main__":
@@ -896,9 +737,9 @@ if __name__ == "__main__":
     plan.app_name = plan_data.get("app_name", "MWO ERP")
     all_tcs       = [TC(t) for t in plan_data.get("test_cases", [])]
 
-    # Only P1 tests; MAX_FIX_CYCLES=0 → report only, no auto-fix
+    # Only P1 tests; report-only (seam 3 — the agent no longer auto-fixes)
     plan.test_cases = [t for t in all_tcs if getattr(t, "priority", 3) == 1]
-    print(f"Running {len(plan.test_cases)} P1 tests (MAX_FIX_CYCLES=0, no auto-fix)...")
+    print(f"Running {len(plan.test_cases)} P1 tests (report-only, no auto-fix)...")
     print(f"Target: {app_config['base_url']}")
     print()
 
@@ -918,8 +759,7 @@ if __name__ == "__main__":
         else:
             print(f"  [{event_type}] {str(data)[:120]}")
 
-    agent                = PlaywrightAgent()
-    agent.MAX_FIX_CYCLES = 0
+    agent  = PlaywrightAgent()
 
     report = agent.run(app_config, plan, "playwright_smoke", cb)
 
