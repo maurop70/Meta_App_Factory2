@@ -16,8 +16,18 @@ REQUIREMENT 1 — judge by resolved path, both directions:
   Resolve first (realpath: symlinks + `..`), then decide. Same class as the Phase-1
   symlink-escape open item — closed here for the app tree.
 
-Session entry is where seam 2's select + taint gate will sit (next). This module only
-provides the choke + the guard; it holds no executor path.
+SEAM 2 — select + taint sit on SESSION ENTRY (below). A build session opens ONLY on a
+positive, plan-bound human Selection for its roots, verified by a registered verifier
+(set_selection_verifier). This is the choke every build crosses — the same reasoning that
+made the write-guard a session and not a function: gate the act every build must cross,
+not a named door beside it.
+
+C4 DEPLOYMENT INVARIANT (declared, not buried; canonical in DEPLOYMENT REQUIREMENTS D2):
+if NO verifier is registered, session entry REFUSES (fail-closed). An unarmed lock means
+builds do not proceed — never that they run unguarded. Consequence: any build path
+(factory.create_app via /api/build/direct, forge_orchestrator.merge_to_live, and any
+future caller) must load the panel select module (which registers the verifier) and hold
+a Selection before scaffolding. This module holds the seam + the guard; no executor path.
 """
 from __future__ import annotations
 
@@ -29,11 +39,26 @@ import threading
 _protected: set[str] = set()          # app roots that require a sanctioned session to write
 _local = threading.local()            # per-thread session stack + re-entry flag
 _installed = False
+_selection_verifier = None            # seam 2: set by the panel; UNSET → session entry refuses
 
 
 class ScaffoldBypass(Exception):
     """A write into the protected app tree from outside a sanctioned session, or an
     escape out of the session's app tree. Fail-closed: the write does not happen."""
+
+
+class SelectionRequired(Exception):
+    """A build session was opened without a positive, plan-bound human Selection for its
+    roots (or with no verifier registered at all). Fail-closed: the session does not open,
+    so no scaffolding happens. This is 'propose ≠ select' enforced on the choke."""
+
+
+def set_selection_verifier(fn) -> None:
+    """Arm the choke: register the human-select verifier `fn(roots) -> bool` that session
+    entry consults. Loading the panel calls this. While UNSET, every app-root session
+    entry refuses (the C4 fail-closed invariant)."""
+    global _selection_verifier
+    _selection_verifier = fn
 
 
 def _norm(p: str) -> str:
@@ -86,6 +111,22 @@ class sanctioned_session:
         self.roots = [_resolved(d) for d in app_dirs if d]
 
     def __enter__(self):
+        # SEAM 2 — propose ≠ select, on the one act every build crosses. A session over
+        # app roots opens ONLY on a verified positive human Selection for those roots.
+        # Fail-closed (C4/D2): unregistered verifier OR no matching Selection → REFUSE.
+        # Silence refuses here by ABSENCE — a proposal never selected mints no Selection,
+        # so verify_and_consume finds nothing. The fold refuses here too — a proposal's
+        # own 'selected' flag is never consulted; only the Selection store is.
+        if self.roots:
+            v = _selection_verifier
+            if v is None:
+                raise SelectionRequired(
+                    "no Selection verifier registered — sanctioned build session refused "
+                    "(load the panel select module to arm the choke)")
+            if not v(self.roots):
+                raise SelectionRequired(
+                    f"no positive human Selection for these roots — session refused "
+                    f"(propose ≠ select): {self.roots}")
         for r in self.roots:
             _protected.add(r)
         stack = getattr(_local, "stack", None)

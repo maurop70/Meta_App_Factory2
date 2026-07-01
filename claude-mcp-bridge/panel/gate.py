@@ -38,6 +38,7 @@ for _p in (str(PANEL_DIR), str(BRIDGE_ROOT), str(MAF_ROOT)):
 import executor_gate
 import chair as _chair                       # shared ratification_hash (one source)
 import taint                                  # sticky-taint infra (Phase 5a)
+import selection as _selection               # seam 2: propose ≠ select (Selection artifact)
 from mandate_tiers import classify_tier
 
 
@@ -80,11 +81,14 @@ def cross_check_ceiling(plan_text: str, chair_tier) -> dict:
             "minted_ceiling": minted, "mismatch": assessed != chair_tier, "note": note}
 
 
-def authorize_and_mint(chairplan: dict, human_authorized: bool, taint_cleared: bool = False,
+def authorize_and_mint(chairplan: dict, selection=None, taint_cleared: bool = False,
                        trace_id: str = "panel") -> dict:
-    """SECOND gate. Mints ONLY on explicit human authorization. A plan carrying untrusted
-    provenance additionally requires taint_cleared=True — the human, having been SHOWN the
-    taint (surface_taint), clears it. Returns a record with the token (or None)."""
+    """SECOND gate. Mints ONLY on a positive human SELECTION of THIS plan — a Selection
+    artifact bound to the ratified plan's identity (seam 2: propose ≠ select). The bare
+    `human_authorized: bool` it replaced was a label anyone could pass True; a Selection is
+    a lock only an explicit human-select event mints. A plan carrying untrusted provenance
+    additionally requires taint_cleared=True — the human, having been SHOWN the taint
+    (surface_taint), clears it. Returns a record with the token (or None)."""
     scope = chairplan.get("scope") or {}
     declared = scope.get("declared") or {}
     shown_workdir = declared.get("workdir") or []
@@ -122,9 +126,19 @@ def authorize_and_mint(chairplan: dict, human_authorized: bool, taint_cleared: b
     if not scope.get("well_formed"):
         return {"minted": False, "reason": "scope not well-formed (missing where/ceiling) — refused",
                 "ceiling_check": cc, "token": None}
-    if not human_authorized:
+    # Seam 2: propose ≠ select. Mint requires a positive human Selection bound to THIS
+    # ratified plan — not a boolean. A proposal left sitting (silence) mints no Selection;
+    # a default dressed as chosen (the fold) is a proposal flag, never a Selection. The
+    # binding is to the ratification_hash, so a Selection for a different plan can't mint.
+    rat_hash = chairplan.get("ratification_hash")
+    valid = (selection is not None
+             and getattr(selection, "plan_id", None) == rat_hash
+             and not getattr(selection, "consumed", True)
+             and _selection.plan_id_selected(rat_hash))   # a LIVE Selection in the store, not a forged look-alike
+    if not valid:
         return {"minted": False,
-                "reason": "no human authorization at the mint gate — refused (no autonomous mint)",
+                "reason": ("no positive human Selection for this ratified plan — refused "
+                           "(propose ≠ select; no autonomous mint, no default, no silence)"),
                 "ceiling_check": cc, "token": None}
 
     resolved = _resolve_subtrees(shown_workdir)
