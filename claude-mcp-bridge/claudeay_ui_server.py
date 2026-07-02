@@ -249,5 +249,7 @@ async def dispatch_to_queue(request: Request):
 
 
 if __name__ == "__main__":
-    print("ClaudeAY Web UI starting on http://localhost:9002")
-    uvicorn.run(app, host="0.0.0.0", port=9002, log_level="warning")
+    print("ClaudeAY Web UI starting on http://127.0.0.1:9002 (loopback-only)")
+    # Loopback-only: the approval surface is this-machine-only, consistent with the
+    # select->build door (api.py binds 127.0.0.1 + the mint endpoint enforces loopback).
+    uvicorn.run(app, host="127.0.0.1", port=9002, log_level="warning")
